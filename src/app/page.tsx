@@ -1670,6 +1670,78 @@ async function revertirAlbaranExistente(albaranId: string) {
           </>
         )}
 
+        {tab === 'auditoria' && (
+  <>
+    <div className="mt-1">
+      <input
+        type="search"
+        value={busquedaAuditoria}
+        onChange={(e) => setBusquedaAuditoria(e.target.value)}
+        placeholder="Buscar por entidad, acción, operario..."
+        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-400"
+      />
+    </div>
+
+    <div className="mb-3 rounded-2xl bg-yellow-50 px-4 py-3 text-sm text-slate-700">
+      Registros cargados: {auditoria.length}
+    </div>
+
+    <div className="mt-4 rounded-3xl bg-white p-3 shadow-sm">
+      {loadingAuditoria && (
+        <div className="py-10 text-center text-sm text-slate-400">
+          Cargando auditoría...
+        </div>
+      )}
+
+      {!loadingAuditoria &&
+        auditoria
+          .filter((item) => {
+            const q = busquedaAuditoria.trim().toLowerCase()
+            if (!q) return true
+
+            return (
+              (item.entidad || '').toLowerCase().includes(q) ||
+              (item.accion || '').toLowerCase().includes(q) ||
+              (item.actor_nombre || '').toLowerCase().includes(q) ||
+              (item.detalle || '').toLowerCase().includes(q)
+            )
+          })
+          .map((item) => (
+            <div
+              key={item.id}
+              className="border-b border-slate-100 py-3 last:border-b-0"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold text-slate-900">
+                    {item.entidad} · {item.accion}
+                  </div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {item.detalle || 'Sin detalle'}
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-400">
+                    Operario: {item.actor_nombre || 'Sin identificar'}
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <div className="text-[11px] text-slate-500">
+                    {formatFechaHora(item.created_at)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+
+      {!loadingAuditoria && auditoria.length === 0 && (
+        <div className="py-10 text-center text-sm text-slate-400">
+          No hay registros de auditoría todavía.
+        </div>
+      )}
+    </div>
+  </>
+)}
+
         {tab === 'proveedores' && (
           <>
             <div className="mt-1">
