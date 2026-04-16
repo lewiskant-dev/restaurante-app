@@ -352,6 +352,84 @@ export default function HomePage() {
     await loadProductos()
   }
 
+  async function eliminarAlbaran(albaran: Albaran) {
+  const ok = window.confirm(
+    `¿Seguro que quieres eliminar el albarán "${albaran.numero}"?\n\nEsta acción revertirá el stock asociado.`
+  )
+  if (!ok) return
+
+  setError('')
+
+  try {
+    const { data: lineas, error: lineasError } = await supabase
+      .from('albaran_lineas')
+      .select('*')
+      .eq('albaran_id', albaran.id)
+
+    if (lineasError) {
+      throw new Error(lineasError.message)
+    }
+
+    const lineasAlbaran = (lineas ?? []) as AlbaranLinea[]
+
+    for (const linea of lineasAlbaran) {
+      if (!linea.producto_id) continue
+
+      const producto = productos.find((p) => p.id === linea.producto_id)
+      if (!producto) continue
+
+      const stockActual = Number(producto.stock_actual)
+      const nuevoStock = stockActual - Number(linea.cantidad)
+
+      const { error: updateError } = await supabase
+        .from('productos')
+        .update({ stock_actual: nuevoStock < 0 ? 0 : nuevoStock })
+        .eq('id', producto.id)
+
+      if (updateError) {
+        throw new Error(updateError.message)
+      }
+    }
+
+    const { error: deleteMovError } = await supabase
+      .from('movimientos_stock')
+      .delete()
+      .eq('origen_tipo', 'albaran')
+      .eq('origen_id', albaran.id)
+
+    if (deleteMovError) {
+      throw new Error(deleteMovError.message)
+    }
+
+    const { error: deleteLineasError } = await supabase
+      .from('albaran_lineas')
+      .delete()
+      .eq('albaran_id', albaran.id)
+
+    if (deleteLineasError) {
+      throw new Error(deleteLineasError.message)
+    }
+
+    const { error: deleteAlbError } = await supabase
+      .from('albaranes')
+      .delete()
+      .eq('id', albaran.id)
+
+    if (deleteAlbError) {
+      throw new Error(deleteAlbError.message)
+    }
+
+    setDetalleAlbaranOpen(false)
+    setDetalleAlbaran(null)
+    setAlbaranLineasDetalle([])
+    setToast('Albarán eliminado')
+
+    await Promise.all([loadProductos(), loadMovimientos(), loadAlbaranes()])
+  } catch (err: any) {
+    setError(err.message || 'No se pudo eliminar el albarán')
+  }
+}
+
   function openConsumoModal(producto: Producto) {
     setError('')
     setConsumoProducto(producto)
@@ -1627,16 +1705,25 @@ export default function HomePage() {
                   {detalleAlbaran.proveedor_nombre || 'Sin proveedor'}
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  setDetalleAlbaranOpen(false)
-                  setDetalleAlbaran(null)
-                  setAlbaranLineasDetalle([])
-                }}
-                className="text-sm font-medium text-slate-500"
-              >
-                Cerrar
-              </button>
+              <div className="flex items-center gap-2">
+  <button
+    onClick={() => eliminarAlbaran(detalleAlbaran)}
+    className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600"
+  >
+    Eliminar
+  </button>
+
+  <button
+    onClick={() => {
+      setDetalleAlbaranOpen(false)
+      setDetalleAlbaran(null)
+      setAlbaranLineasDetalle([])
+    }}
+    className="text-sm font-medium text-slate-500"
+  >
+    Cerrar
+  </button>
+</div>
             </div>
 
             <div className="space-y-3">
