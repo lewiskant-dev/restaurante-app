@@ -2,9 +2,15 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import type { MovimientoStock, Producto, Proveedor } from '@/types'
+import type {
+  MovimientoStock,
+  Producto,
+  Proveedor,
+  Albaran,
+  AlbaranLinea,
+} from '@/types'
 
-type TabKey = 'stock' | 'historial' | 'albaran'
+type TabKey = 'stock' | 'historial' | 'albaran' | 'albaranes'
 
 type NuevoProductoForm = {
   nombre: string
@@ -51,6 +57,18 @@ function todayLocalInputDate() {
 
 function formatFecha(fecha: string) {
   try {
+    return new Date(fecha).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
+  } catch {
+    return fecha
+  }
+}
+
+function formatFechaHora(fecha: string) {
+  try {
     return new Date(fecha).toLocaleString('es-ES', {
       day: '2-digit',
       month: 'short',
@@ -74,18 +92,31 @@ function nivelClasses(nivel: string) {
   return 'bg-emerald-50 text-emerald-700 border-emerald-200'
 }
 
+function formatEuro(n: number) {
+  return n.toLocaleString('es-ES', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }) + ' €'
+}
+
 export default function HomePage() {
   const [tab, setTab] = useState<TabKey>('stock')
 
   const [productos, setProductos] = useState<Producto[]>([])
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [movimientos, setMovimientos] = useState<MovimientoConProducto[]>([])
+  const [albaranes, setAlbaranes] = useState<Albaran[]>([])
+  const [albaranLineasDetalle, setAlbaranLineasDetalle] = useState<AlbaranLinea[]>([])
 
   const [busqueda, setBusqueda] = useState('')
   const [busquedaMov, setBusquedaMov] = useState('')
+  const [busquedaAlbaran, setBusquedaAlbaran] = useState('')
 
   const [loadingProductos, setLoadingProductos] = useState(true)
   const [loadingMovimientos, setLoadingMovimientos] = useState(true)
+  const [loadingAlbaranes, setLoadingAlbaranes] = useState(true)
+  const [loadingAlbaranDetalle, setLoadingAlbaranDetalle] = useState(false)
+
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
 
@@ -111,6 +142,9 @@ export default function HomePage() {
   const [albaranFoto, setAlbaranFoto] = useState<File | null>(null)
   const [albaranSaving, setAlbaranSaving] = useState(false)
 
+  const [detalleAlbaranOpen, setDetalleAlbaranOpen] = useState(false)
+  const [detalleAlbaran, setDetalleAlbaran] = useState<Albaran | null>(null)
+
   useEffect(() => {
     void loadInitialData()
   }, [])
@@ -122,7 +156,12 @@ export default function HomePage() {
   }, [toast])
 
   async function loadInitialData() {
-    await Promise.all([loadProductos(), loadProveedores(), loadMovimientos()])
+    await Promise.all([
+      loadProductos(),
+      loadProveedores(),
+      loadMovimientos(),
+      loadAlbaranes(),
+    ])
   }
 
   async function loadProductos() {
@@ -180,6 +219,46 @@ export default function HomePage() {
 
     setMovimientos((data ?? []) as MovimientoConProducto[])
     setLoadingMovimientos(false)
+  }
+
+  async function loadAlbaranes() {
+    setLoadingAlbaranes(true)
+
+    const { data, error } = await supabase
+      .from('albaranes')
+      .select('*')
+      .order('fecha', { ascending: false })
+
+    if (error) {
+      setError(error.message)
+      setLoadingAlbaranes(false)
+      return
+    }
+
+    setAlbaranes((data ?? []) as Albaran[])
+    setLoadingAlbaranes(false)
+  }
+
+  async function openDetalleAlbaran(albaran: Albaran) {
+    setDetalleAlbaran(albaran)
+    setDetalleAlbaranOpen(true)
+    setLoadingAlbaranDetalle(true)
+    setAlbaranLineasDetalle([])
+
+    const { data, error } = await supabase
+      .from('albaran_lineas')
+      .select('*')
+      .eq('albaran_id', albaran.id)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      setError(error.message)
+      setLoadingAlbaranDetalle(false)
+      return
+    }
+
+    setAlbaranLineasDetalle((data ?? []) as AlbaranLinea[])
+    setLoadingAlbaranDetalle(false)
   }
 
   async function guardarProducto() {
@@ -486,8 +565,8 @@ export default function HomePage() {
 
       setToast('Albarán guardado')
       resetAlbaranForm()
-      await Promise.all([loadProductos(), loadMovimientos()])
-      setTab('stock')
+      await Promise.all([loadProductos(), loadMovimientos(), loadAlbaranes()])
+      setTab('albaranes')
     } catch (err: any) {
       setError(err.message || 'Error guardando albarán')
     } finally {
@@ -524,6 +603,18 @@ export default function HomePage() {
     })
   }, [movimientos, busquedaMov])
 
+  const albaranesFiltrados = useMemo(() => {
+    const q = busquedaAlbaran.trim().toLowerCase()
+    if (!q) return albaranes
+
+    return albaranes.filter((a) => {
+      const numero = a.numero?.toLowerCase() ?? ''
+      const proveedor = a.proveedor_nombre?.toLowerCase() ?? ''
+      const notas = a.notas?.toLowerCase() ?? ''
+      return numero.includes(q) || proveedor.includes(q) || notas.includes(q)
+    })
+  }, [albaranes, busquedaAlbaran])
+
   const totalProductos = productos.length
   const stockBajo = productos.filter(
     (p) => p.stock_minimo > 0 && p.stock_actual <= p.stock_minimo
@@ -545,10 +636,10 @@ export default function HomePage() {
       </header>
 
       <section className="px-3 pt-3">
-        <div className="mb-3 grid grid-cols-3 gap-2 rounded-2xl bg-slate-200 p-1">
+        <div className="mb-3 grid grid-cols-4 gap-2 rounded-2xl bg-slate-200 p-1">
           <button
             onClick={() => setTab('stock')}
-            className={`rounded-xl px-3 py-2 text-sm font-semibold ${
+            className={`rounded-xl px-2 py-2 text-xs font-semibold ${
               tab === 'stock' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
             }`}
           >
@@ -557,7 +648,7 @@ export default function HomePage() {
 
           <button
             onClick={() => setTab('historial')}
-            className={`rounded-xl px-3 py-2 text-sm font-semibold ${
+            className={`rounded-xl px-2 py-2 text-xs font-semibold ${
               tab === 'historial' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
             }`}
           >
@@ -566,11 +657,20 @@ export default function HomePage() {
 
           <button
             onClick={() => setTab('albaran')}
-            className={`rounded-xl px-3 py-2 text-sm font-semibold ${
+            className={`rounded-xl px-2 py-2 text-xs font-semibold ${
               tab === 'albaran' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
             }`}
           >
-            Albarán
+            Nuevo alb.
+          </button>
+
+          <button
+            onClick={() => setTab('albaranes')}
+            className={`rounded-xl px-2 py-2 text-xs font-semibold ${
+              tab === 'albaranes' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+            }`}
+          >
+            Albaranes
           </button>
         </div>
 
@@ -744,7 +844,7 @@ export default function HomePage() {
                           {mov.motivo || 'Sin motivo'}
                         </div>
                         <div className="mt-1 text-[11px] text-slate-400">
-                          {formatFecha(mov.created_at)}
+                          {formatFechaHora(mov.created_at)}
                         </div>
                       </div>
 
@@ -940,6 +1040,66 @@ export default function HomePage() {
           </div>
         )}
 
+        {tab === 'albaranes' && (
+          <>
+            <div className="mt-1">
+              <input
+                type="search"
+                value={busquedaAlbaran}
+                onChange={(e) => setBusquedaAlbaran(e.target.value)}
+                placeholder="Buscar albarán o proveedor..."
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-400"
+              />
+            </div>
+
+            <div className="mt-4 rounded-3xl bg-white p-3 shadow-sm">
+              {loadingAlbaranes && (
+                <div className="py-10 text-center text-sm text-slate-400">
+                  Cargando albaranes...
+                </div>
+              )}
+
+              {!loadingAlbaranes && albaranesFiltrados.length === 0 && (
+                <div className="py-10 text-center text-sm text-slate-400">
+                  No hay albaranes todavía.
+                </div>
+              )}
+
+              {!loadingAlbaranes &&
+                albaranesFiltrados.map((alb) => (
+                  <button
+                    key={alb.id}
+                    type="button"
+                    onClick={() => openDetalleAlbaran(alb)}
+                    className="flex w-full items-center gap-3 border-b border-slate-100 py-3 text-left last:border-b-0"
+                  >
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 text-lg">
+                      {alb.foto_url ? '📷' : '🧾'}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold text-slate-900">
+                        {alb.numero}
+                      </div>
+                      <div className="truncate text-xs text-slate-500">
+                        {alb.proveedor_nombre || 'Sin proveedor'}
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-blue-600">
+                        {formatEuro(Number(alb.total || 0))}
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        {formatFecha(alb.fecha)}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+            </div>
+          </>
+        )}
+
         {error && (
           <div className="mt-3 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">
             {error}
@@ -1105,8 +1265,114 @@ export default function HomePage() {
         </div>
       )}
 
+      {detalleAlbaranOpen && detalleAlbaran && (
+        <div className="fixed inset-0 z-40 flex items-end bg-black/40">
+          <div className="max-h-[90vh] w-full overflow-y-auto rounded-t-3xl bg-white p-4 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">
+                  {detalleAlbaran.numero}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  {detalleAlbaran.proveedor_nombre || 'Sin proveedor'}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setDetalleAlbaranOpen(false)
+                  setDetalleAlbaran(null)
+                  setAlbaranLineasDetalle([])
+                }}
+                className="text-sm font-medium text-slate-500"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="rounded-2xl bg-slate-50 p-3">
+                <div className="flex justify-between py-1 text-sm">
+                  <span className="text-slate-500">Fecha</span>
+                  <span className="font-medium text-slate-900">
+                    {formatFecha(detalleAlbaran.fecha)}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 text-sm">
+                  <span className="text-slate-500">Total</span>
+                  <span className="font-semibold text-blue-600">
+                    {formatEuro(Number(detalleAlbaran.total || 0))}
+                  </span>
+                </div>
+                {detalleAlbaran.notas ? (
+                  <div className="pt-2 text-sm text-slate-600">
+                    {detalleAlbaran.notas}
+                  </div>
+                ) : null}
+              </div>
+
+              {detalleAlbaran.foto_url ? (
+                <div className="rounded-2xl border border-slate-200 p-3">
+                  <div className="mb-2 text-sm font-semibold text-slate-900">
+                    Foto del albarán
+                  </div>
+                  <a
+                    href={detalleAlbaran.foto_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <img
+                      src={detalleAlbaran.foto_url}
+                      alt="Foto del albarán"
+                      className="w-full rounded-2xl border border-slate-200 object-cover"
+                    />
+                  </a>
+                </div>
+              ) : null}
+
+              <div className="rounded-2xl border border-slate-200 p-3">
+                <div className="mb-2 text-sm font-semibold text-slate-900">
+                  Líneas
+                </div>
+
+                {loadingAlbaranDetalle && (
+                  <div className="py-6 text-center text-sm text-slate-400">
+                    Cargando líneas...
+                  </div>
+                )}
+
+                {!loadingAlbaranDetalle && albaranLineasDetalle.length === 0 && (
+                  <div className="py-6 text-center text-sm text-slate-400">
+                    Sin líneas registradas.
+                  </div>
+                )}
+
+                {!loadingAlbaranDetalle &&
+                  albaranLineasDetalle.map((linea) => (
+                    <div
+                      key={linea.id}
+                      className="border-b border-slate-100 py-3 last:border-b-0"
+                    >
+                      <div className="text-sm font-semibold text-slate-900">
+                        {linea.nombre_producto}
+                      </div>
+                      <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
+                        <span>
+                          {linea.cantidad} × {formatEuro(Number(linea.precio_unitario))}
+                        </span>
+                        <span className="font-semibold text-slate-900">
+                          {formatEuro(Number(linea.subtotal))}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {toast && (
-        <div className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-lg">
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-lg">
           {toast}
         </div>
       )}
