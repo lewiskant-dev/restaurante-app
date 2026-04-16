@@ -164,6 +164,7 @@ export default function HomePage() {
   ])
   const [albaranFoto, setAlbaranFoto] = useState<File | null>(null)
   const [albaranSaving, setAlbaranSaving] = useState(false)
+  const [editingAlbaranId, setEditingAlbaranId] = useState<string | null>(null)
 
   const [detalleAlbaranOpen, setDetalleAlbaranOpen] = useState(false)
   const [detalleAlbaran, setDetalleAlbaran] = useState<Albaran | null>(null)
@@ -430,6 +431,97 @@ export default function HomePage() {
   }
 }
 
+async function cargarAlbaranParaEditar(albaran: Albaran) {
+  setError('')
+
+  const { data, error } = await supabase
+    .from('albaran_lineas')
+    .select('*')
+    .eq('albaran_id', albaran.id)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    setError(error.message)
+    return
+  }
+
+  const lineas = (data ?? []) as AlbaranLinea[]
+
+  setEditingAlbaranId(albaran.id)
+  setAlbaranNumero(albaran.numero || '')
+  setAlbaranProveedorId(albaran.proveedor_id || '')
+  setAlbaranFecha(albaran.fecha || todayLocalInputDate())
+  setAlbaranNotas(albaran.notas || '')
+  setAlbaranFoto(null)
+
+  setAlbaranLineas(
+    lineas.length
+      ? lineas.map((l) => ({
+          producto_id: l.producto_id || '',
+          cantidad: String(l.cantidad ?? ''),
+          precio_unitario: String(l.precio_unitario ?? ''),
+        }))
+      : [{ ...initialLinea }]
+  )
+
+  setDetalleAlbaranOpen(false)
+  setDetalleAlbaran(null)
+  setAlbaranLineasDetalle([])
+  setTab('albaran')
+  setToast('Albarán cargado para editar')
+}
+
+async function revertirAlbaranExistente(albaranId: string) {
+  const { data: lineas, error: lineasError } = await supabase
+    .from('albaran_lineas')
+    .select('*')
+    .eq('albaran_id', albaranId)
+
+  if (lineasError) {
+    throw new Error(lineasError.message)
+  }
+
+  const lineasExistentes = (lineas ?? []) as AlbaranLinea[]
+
+  for (const linea of lineasExistentes) {
+    if (!linea.producto_id) continue
+
+    const producto = productos.find((p) => p.id === linea.producto_id)
+    if (!producto) continue
+
+    const stockActual = Number(producto.stock_actual)
+    const nuevoStock = stockActual - Number(linea.cantidad)
+
+    const { error: updateError } = await supabase
+      .from('productos')
+      .update({ stock_actual: nuevoStock < 0 ? 0 : nuevoStock })
+      .eq('id', producto.id)
+
+    if (updateError) {
+      throw new Error(updateError.message)
+    }
+  }
+
+  const { error: deleteMovError } = await supabase
+    .from('movimientos_stock')
+    .delete()
+    .eq('origen_tipo', 'albaran')
+    .eq('origen_id', albaranId)
+
+  if (deleteMovError) {
+    throw new Error(deleteMovError.message)
+  }
+
+  const { error: deleteLineasError } = await supabase
+    .from('albaran_lineas')
+    .delete()
+    .eq('albaran_id', albaranId)
+
+  if (deleteLineasError) {
+    throw new Error(deleteLineasError.message)
+  }
+}
+
   function openConsumoModal(producto: Producto) {
     setError('')
     setConsumoProducto(producto)
@@ -518,96 +610,124 @@ export default function HomePage() {
   }
 
   function resetAlbaranForm() {
-    setAlbaranNumero('')
-    setAlbaranProveedorId('')
-    setAlbaranFecha(todayLocalInputDate())
-    setAlbaranNotas('')
-    setAlbaranLineas([{ ...initialLinea }])
-    setAlbaranFoto(null)
-  }
+  setEditingAlbaranId(null)
+  setAlbaranNumero('')
+  setAlbaranProveedorId('')
+  setAlbaranFecha(todayLocalInputDate())
+  setAlbaranNotas('')
+  setAlbaranLineas([{ ...initialLinea }])
+  setAlbaranFoto(null)
+}
 
   async function guardarAlbaran() {
-    setError('')
+  setError('')
 
-    if (!albaranNumero.trim()) {
-      setError('El número de albarán es obligatorio')
-      return
+  if (!albaranNumero.trim()) {
+    setError('El número de albarán es obligatorio')
+    return
+  }
+
+  if (!albaranProveedorId) {
+    setError('Selecciona un proveedor')
+    return
+  }
+
+  if (!albaranFecha) {
+    setError('Selecciona una fecha')
+    return
+  }
+
+  if (albaranLineas.length === 0) {
+    setError('Añade al menos una línea')
+    return
+  }
+
+  const proveedor = proveedores.find((p) => p.id === albaranProveedorId)
+  if (!proveedor) {
+    setError('Proveedor no válido')
+    return
+  }
+
+  const lineasPreparadas = albaranLineas.map((linea) => {
+    const producto = productos.find((p) => p.id === linea.producto_id)
+    return {
+      producto,
+      producto_id: linea.producto_id,
+      cantidad: Number(linea.cantidad),
+      precio_unitario: Number(linea.precio_unitario),
     }
+  })
 
-    if (!albaranProveedorId) {
-      setError('Selecciona un proveedor')
-      return
-    }
+  const hayLineaInvalida = lineasPreparadas.some(
+    (l) =>
+      !l.producto ||
+      !l.producto_id ||
+      !l.cantidad ||
+      l.cantidad <= 0 ||
+      l.precio_unitario < 0
+  )
 
-    if (!albaranFecha) {
-      setError('Selecciona una fecha')
-      return
-    }
+  if (hayLineaInvalida) {
+    setError('Revisa las líneas del albarán')
+    return
+  }
 
-    if (albaranLineas.length === 0) {
-      setError('Añade al menos una línea')
-      return
-    }
+  setAlbaranSaving(true)
 
-    const proveedor = proveedores.find((p) => p.id === albaranProveedorId)
-    if (!proveedor) {
-      setError('Proveedor no válido')
-      return
-    }
+  try {
+    let fotoUrl = ''
 
-    const lineasPreparadas = albaranLineas.map((linea) => {
-      const producto = productos.find((p) => p.id === linea.producto_id)
-      return {
-        producto,
-        producto_id: linea.producto_id,
-        cantidad: Number(linea.cantidad),
-        precio_unitario: Number(linea.precio_unitario),
+    if (albaranFoto) {
+      const safeName = albaranFoto.name.replace(/\s+/g, '_')
+      const fileName = `${Date.now()}_${safeName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('albaranes')
+        .upload(fileName, albaranFoto)
+
+      if (uploadError) {
+        throw new Error(`Error subiendo imagen: ${uploadError.message}`)
       }
-    })
 
-    const hayLineaInvalida = lineasPreparadas.some(
-      (l) =>
-        !l.producto ||
-        !l.producto_id ||
-        !l.cantidad ||
-        l.cantidad <= 0 ||
-        l.precio_unitario < 0
+      const { data: publicUrlData } = supabase.storage
+        .from('albaranes')
+        .getPublicUrl(fileName)
+
+      fotoUrl = publicUrlData.publicUrl
+    }
+
+    const total = lineasPreparadas.reduce(
+      (acc, l) => acc + l.cantidad * l.precio_unitario,
+      0
     )
 
-    if (hayLineaInvalida) {
-      setError('Revisa las líneas del albarán')
-      return
-    }
+    let albaranId = editingAlbaranId
 
-    setAlbaranSaving(true)
+    if (editingAlbaranId) {
+      await revertirAlbaranExistente(editingAlbaranId)
 
-    try {
-      let fotoUrl = ''
-
-      if (albaranFoto) {
-        const safeName = albaranFoto.name.replace(/\s+/g, '_')
-        const fileName = `${Date.now()}_${safeName}`
-
-        const { error: uploadError } = await supabase.storage
-          .from('albaranes')
-          .upload(fileName, albaranFoto)
-
-        if (uploadError) {
-          throw new Error(`Error subiendo imagen: ${uploadError.message}`)
-        }
-
-        const { data: publicUrlData } = supabase.storage
-          .from('albaranes')
-          .getPublicUrl(fileName)
-
-        fotoUrl = publicUrlData.publicUrl
+      const updatePayload: Record<string, unknown> = {
+        numero: albaranNumero.trim(),
+        proveedor_id: proveedor.id,
+        proveedor_nombre: proveedor.nombre,
+        fecha: albaranFecha,
+        notas: albaranNotas.trim(),
+        total,
       }
 
-      const total = lineasPreparadas.reduce(
-        (acc, l) => acc + l.cantidad * l.precio_unitario,
-        0
-      )
+      if (fotoUrl) {
+        updatePayload.foto_url = fotoUrl
+      }
 
+      const { error: updateAlbError } = await supabase
+        .from('albaranes')
+        .update(updatePayload)
+        .eq('id', editingAlbaranId)
+
+      if (updateAlbError) {
+        throw new Error(updateAlbError.message)
+      }
+    } else {
       const { data: albaranInsertado, error: albError } = await supabase
         .from('albaranes')
         .insert({
@@ -626,65 +746,72 @@ export default function HomePage() {
         throw new Error(albError?.message || 'No se pudo crear el albarán')
       }
 
-      const lineasPayload = lineasPreparadas.map((l) => ({
-        albaran_id: albaranInsertado.id,
-        producto_id: l.producto_id,
-        nombre_producto: l.producto!.nombre,
-        cantidad: l.cantidad,
-        precio_unitario: l.precio_unitario,
-        subtotal: l.cantidad * l.precio_unitario,
-      }))
-
-      const { error: lineasError } = await supabase
-        .from('albaran_lineas')
-        .insert(lineasPayload)
-
-      if (lineasError) {
-        throw new Error(lineasError.message)
-      }
-
-      for (const linea of lineasPreparadas) {
-        const producto = linea.producto!
-        const stockAntes = Number(producto.stock_actual)
-        const stockDespues = stockAntes + linea.cantidad
-
-        const { error: updateError } = await supabase
-          .from('productos')
-          .update({ stock_actual: stockDespues })
-          .eq('id', producto.id)
-
-        if (updateError) {
-          throw new Error(updateError.message)
-        }
-
-        const { error: movError } = await supabase
-          .from('movimientos_stock')
-          .insert({
-            producto_id: producto.id,
-            tipo: 'entrada',
-            cantidad: linea.cantidad,
-            motivo: `Albarán ${albaranNumero.trim()}`,
-            origen_tipo: 'albaran',
-            origen_id: albaranInsertado.id,
-            stock_antes: stockAntes,
-            stock_despues: stockDespues,
-          })
-
-        if (movError) {
-          throw new Error(movError.message)
-        }
-      }
-
-      setToast('Albarán guardado')
-      resetAlbaranForm()
-      await Promise.all([loadProductos(), loadMovimientos(), loadAlbaranes()])
-      setTab('albaranes')
-    } catch (err: any) {
-      setError(err.message || 'Error guardando albarán')
-    } finally {
-      setAlbaranSaving(false)
+      albaranId = albaranInsertado.id
     }
+
+    if (!albaranId) {
+      throw new Error('No se pudo determinar el albarán a guardar')
+    }
+
+    const lineasPayload = lineasPreparadas.map((l) => ({
+      albaran_id: albaranId,
+      producto_id: l.producto_id,
+      nombre_producto: l.producto!.nombre,
+      cantidad: l.cantidad,
+      precio_unitario: l.precio_unitario,
+      subtotal: l.cantidad * l.precio_unitario,
+    }))
+
+    const { error: lineasError } = await supabase
+      .from('albaran_lineas')
+      .insert(lineasPayload)
+
+    if (lineasError) {
+      throw new Error(lineasError.message)
+    }
+
+    for (const linea of lineasPreparadas) {
+      const producto = linea.producto!
+      const stockAntes = Number(producto.stock_actual)
+      const stockDespues = stockAntes + linea.cantidad
+
+      const { error: updateError } = await supabase
+        .from('productos')
+        .update({ stock_actual: stockDespues })
+        .eq('id', producto.id)
+
+      if (updateError) {
+        throw new Error(updateError.message)
+      }
+
+      const { error: movError } = await supabase
+        .from('movimientos_stock')
+        .insert({
+          producto_id: producto.id,
+          tipo: 'entrada',
+          cantidad: linea.cantidad,
+          motivo: `Albarán ${albaranNumero.trim()}`,
+          origen_tipo: 'albaran',
+          origen_id: albaranId,
+          stock_antes: stockAntes,
+          stock_despues: stockDespues,
+        })
+
+      if (movError) {
+        throw new Error(movError.message)
+      }
+    }
+
+    setToast(editingAlbaranId ? 'Albarán actualizado' : 'Albarán guardado')
+    resetAlbaranForm()
+    await Promise.all([loadProductos(), loadMovimientos(), loadAlbaranes()])
+    setTab('albaranes')
+  } catch (err: any) {
+    setError(err.message || 'Error guardando albarán')
+  } finally {
+    setAlbaranSaving(false)
   }
+}
 
   function openCrearProveedor() {
     setProveedorEditId(null)
@@ -1121,7 +1248,9 @@ export default function HomePage() {
         {tab === 'albaran' && (
           <div className="space-y-4">
             <div className="rounded-3xl bg-white p-4 shadow-sm">
-              <h2 className="text-base font-semibold text-slate-900">Nuevo albarán</h2>
+              <h2 className="text-base font-semibold text-slate-900">
+  {editingAlbaranId ? 'Editar albarán' : 'Nuevo albarán'}
+</h2>
 
               <div className="mt-4 space-y-3">
                 <input
@@ -1291,12 +1420,18 @@ export default function HomePage() {
               </div>
 
               <button
-                onClick={guardarAlbaran}
-                disabled={albaranSaving}
-                className="mt-4 w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
-              >
-                {albaranSaving ? 'Guardando albarán...' : 'Guardar albarán'}
-              </button>
+  onClick={guardarAlbaran}
+  disabled={albaranSaving}
+  className="mt-4 w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
+>
+  {albaranSaving
+    ? editingAlbaranId
+      ? 'Actualizando albarán...'
+      : 'Guardando albarán...'
+    : editingAlbaranId
+    ? 'Actualizar albarán'
+    : 'Guardar albarán'}
+</button>
             </div>
           </div>
         )}
@@ -1706,6 +1841,13 @@ export default function HomePage() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+  <button
+    onClick={() => cargarAlbaranParaEditar(detalleAlbaran)}
+    className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+  >
+    Editar
+  </button>
+
   <button
     onClick={() => eliminarAlbaran(detalleAlbaran)}
     className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600"
