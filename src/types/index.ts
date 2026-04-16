@@ -6,6 +6,8 @@ export type Producto = {
   stock_actual: number
   stock_minimo: number
   referencia: string
+  activo: boolean
+  archivado: boolean
   created_at: string
 }
 
@@ -29,6 +31,8 @@ export type Proveedor = {
   telefono: string
   email: string
   notas: string
+  activo: boolean
+  archivado: boolean
   created_at: string
 }
 
@@ -42,6 +46,8 @@ export type Albaran = {
   total: number
   foto_url: string
   ocr_texto: string
+  anulado: boolean
+  anulado_motivo: string
   created_at: string
 }
 
@@ -53,5 +59,18 @@ export type AlbaranLinea = {
   cantidad: number
   precio_unitario: number
   subtotal: number
+  created_at: string
+}
+
+export type Auditoria = {
+  id: string
+  entidad: string
+  entidad_id: string | null
+  accion: string
+  actor_nombre: string
+  actor_id: string
+  detalle: string
+  payload_antes: unknown
+  payload_despues: unknown
   created_at: string
 }

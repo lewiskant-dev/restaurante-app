@@ -8,6 +8,7 @@ import type {
   Proveedor,
   Albaran,
   AlbaranLinea,
+  Auditoria,
 } from '@/types'
 
 type TabKey =
@@ -16,6 +17,7 @@ type TabKey =
   | 'albaran'
   | 'albaranes'
   | 'proveedores'
+  | 'auditoria'
 
 type NuevoProductoForm = {
   nombre: string
@@ -128,6 +130,10 @@ export default function HomePage() {
   const [movimientos, setMovimientos] = useState<MovimientoConProducto[]>([])
   const [albaranes, setAlbaranes] = useState<Albaran[]>([])
   const [albaranLineasDetalle, setAlbaranLineasDetalle] = useState<AlbaranLinea[]>([])
+  const [operarioActual, setOperarioActual] = useState('')
+  const [auditoria, setAuditoria] = useState<Auditoria[]>([])
+  const [loadingAuditoria, setLoadingAuditoria] = useState(true)
+  const [busquedaAuditoria, setBusquedaAuditoria] = useState('')
 
   const [busqueda, setBusqueda] = useState('')
   const [busquedaMov, setBusquedaMov] = useState('')
@@ -186,21 +192,36 @@ export default function HomePage() {
     return () => clearTimeout(timer)
   }, [toast])
 
+  useEffect(() => {
+  const saved = window.localStorage.getItem('operario_actual')
+  if (saved) {
+    setOperarioActual(saved)
+  }
+}, [])
+
+useEffect(() => {
+  if (operarioActual.trim()) {
+    window.localStorage.setItem('operario_actual', operarioActual.trim())
+  }
+}, [operarioActual])
+
   async function loadInitialData() {
     await Promise.all([
-      loadProductos(),
-      loadProveedores(),
-      loadMovimientos(),
-      loadAlbaranes(),
-    ])
+  loadProductos(),
+  loadProveedores(),
+  loadMovimientos(),
+  loadAlbaranes(),
+  loadAuditoria(),
+])
   }
 
   async function loadProductos() {
     setLoadingProductos(true)
     const { data, error } = await supabase
-      .from('productos')
-      .select('*')
-      .order('nombre', { ascending: true })
+  .from('productos')
+  .select('*')
+  .eq('archivado', false)
+  .order('nombre', { ascending: true })
 
     if (error) {
       setError(error.message)
@@ -216,9 +237,10 @@ export default function HomePage() {
     setLoadingProveedores(true)
 
     const { data, error } = await supabase
-      .from('proveedores')
-      .select('*')
-      .order('nombre', { ascending: true })
+  .from('proveedores')
+  .select('*')
+  .eq('archivado', false)
+  .order('nombre', { ascending: true })
 
     if (error) {
       setError(error.message)
@@ -260,9 +282,10 @@ export default function HomePage() {
     setLoadingAlbaranes(true)
 
     const { data, error } = await supabase
-      .from('albaranes')
-      .select('*')
-      .order('fecha', { ascending: false })
+  .from('albaranes')
+  .select('*')
+  .eq('anulado', false)
+  .order('fecha', { ascending: false })
 
     if (error) {
       setError(error.message)
@@ -273,6 +296,24 @@ export default function HomePage() {
     setAlbaranes((data ?? []) as Albaran[])
     setLoadingAlbaranes(false)
   }
+
+  async function loadAuditoria() {
+  setLoadingAuditoria(true)
+
+  const { data, error } = await supabase
+    .from('auditoria')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    setError(error.message)
+    setLoadingAuditoria(false)
+    return
+  }
+
+  setAuditoria((data ?? []) as Auditoria[])
+  setLoadingAuditoria(false)
+}
 
   async function openDetalleAlbaran(albaran: Albaran) {
     setDetalleAlbaran(albaran)
@@ -316,13 +357,25 @@ export default function HomePage() {
       referencia: productoForm.referencia.trim(),
     }
 
-    const { error } = await supabase.from('productos').insert(payload)
+    const { data, error } = await supabase
+  .from('productos')
+  .insert(payload)
+  .select()
+  .single()
 
-    if (error) {
-      setError(error.message)
-      setProductoSaving(false)
-      return
-    }
+if (error) {
+  setError(error.message)
+  setProductoSaving(false)
+  return
+}
+
+await registrarAuditoria({
+  entidad: 'producto',
+  entidad_id: data?.id,
+  accion: 'crear',
+  detalle: `Producto creado: ${payload.nombre}`,
+  payload_despues: data,
+})
 
     setProductoForm(initialProductoForm)
     setProductoModalOpen(false)
@@ -332,36 +385,82 @@ export default function HomePage() {
   }
 
   async function deleteProducto(producto: Producto) {
-    const ok = window.confirm(`¿Seguro que quieres eliminar "${producto.nombre}"?`)
-    if (!ok) return
-
-    setError('')
-
-    const { error } = await supabase
-      .from('productos')
-      .delete()
-      .eq('id', producto.id)
-
-    if (error) {
-      setError(
-        'No se pudo eliminar. Puede que el producto tenga movimientos o líneas de albarán asociadas.'
-      )
-      return
-    }
-
-    setToast('Producto eliminado')
-    await loadProductos()
-  }
-
-  async function eliminarAlbaran(albaran: Albaran) {
-  const ok = window.confirm(
-    `¿Seguro que quieres eliminar el albarán "${albaran.numero}"?\n\nEsta acción revertirá el stock asociado.`
-  )
+  const ok = window.confirm(`¿Archivar producto "${producto.nombre}"?`)
   if (!ok) return
 
   setError('')
 
+  const payloadAntes = { ...producto }
+
+  const { error } = await supabase
+    .from('productos')
+    .update({
+      activo: false,
+      archivado: true,
+    })
+    .eq('id', producto.id)
+
+  if (error) {
+    setError(error.message)
+    return
+  }
+
+  await registrarAuditoria({
+    entidad: 'producto',
+    entidad_id: producto.id,
+    accion: 'archivar',
+    detalle: `Producto archivado: ${producto.nombre}`,
+    payload_antes: payloadAntes,
+    payload_despues: {
+      ...payloadAntes,
+      activo: false,
+      archivado: true,
+    },
+  })
+
+  setToast('Producto archivado')
+  await loadProductos()
+}
+
+  async function registrarAuditoria(params: {
+  entidad: string
+  entidad_id?: string | null
+  accion: string
+  detalle?: string
+  payload_antes?: unknown
+  payload_despues?: unknown
+}) {
+  const { entidad, entidad_id, accion, detalle, payload_antes, payload_despues } = params
+
+  const { error } = await supabase.from('auditoria').insert({
+    entidad,
+    entidad_id: entidad_id ?? null,
+    accion,
+    actor_nombre: operarioActual.trim() || 'Sin identificar',
+    actor_id: '',
+    detalle: detalle ?? '',
+    payload_antes: payload_antes ?? null,
+    payload_despues: payload_despues ?? null,
+  })
+
+  if (!error) {
+    await loadAuditoria()
+  }
+}
+
+  async function eliminarAlbaran(albaran: Albaran) {
+  const motivo = window.prompt(
+    `Motivo de anulación del albarán "${albaran.numero}":`,
+    'Error de registro'
+  )
+
+  if (motivo === null) return
+
+  setError('')
+
   try {
+    const payloadAntes = { ...albaran }
+
     const { data: lineas, error: lineasError } = await supabase
       .from('albaran_lineas')
       .select('*')
@@ -402,32 +501,39 @@ export default function HomePage() {
       throw new Error(deleteMovError.message)
     }
 
-    const { error: deleteLineasError } = await supabase
-      .from('albaran_lineas')
-      .delete()
-      .eq('albaran_id', albaran.id)
-
-    if (deleteLineasError) {
-      throw new Error(deleteLineasError.message)
-    }
-
-    const { error: deleteAlbError } = await supabase
+    const { error: updateAlbError } = await supabase
       .from('albaranes')
-      .delete()
+      .update({
+        anulado: true,
+        anulado_motivo: motivo || 'Sin motivo',
+      })
       .eq('id', albaran.id)
 
-    if (deleteAlbError) {
-      throw new Error(deleteAlbError.message)
+    if (updateAlbError) {
+      throw new Error(updateAlbError.message)
     }
+
+    await registrarAuditoria({
+      entidad: 'albaran',
+      entidad_id: albaran.id,
+      accion: 'anular',
+      detalle: `Albarán anulado: ${albaran.numero}. Motivo: ${motivo || 'Sin motivo'}`,
+      payload_antes: payloadAntes,
+      payload_despues: {
+        ...payloadAntes,
+        anulado: true,
+        anulado_motivo: motivo || 'Sin motivo',
+      },
+    })
 
     setDetalleAlbaranOpen(false)
     setDetalleAlbaran(null)
     setAlbaranLineasDetalle([])
-    setToast('Albarán eliminado')
+    setToast('Albarán anulado')
 
     await Promise.all([loadProductos(), loadMovimientos(), loadAlbaranes()])
   } catch (err: any) {
-    setError(err.message || 'No se pudo eliminar el albarán')
+    setError(err.message || 'No se pudo anular el albarán')
   }
 }
 
@@ -578,6 +684,19 @@ async function revertirAlbaranExistente(albaranId: string) {
       setConsumoSaving(false)
       return
     }
+
+    await registrarAuditoria({
+  entidad: 'producto',
+  entidad_id: consumoProducto.id,
+  accion: 'consumo',
+  detalle: `${consumoMotivo}: ${cantidad} ${consumoProducto.unidad}`,
+  payload_antes: {
+    stock_actual: stockAntes,
+  },
+  payload_despues: {
+    stock_actual: stockDespues,
+  },
+})
 
     setConsumoModalOpen(false)
     setConsumoProducto(null)
@@ -858,6 +977,15 @@ async function revertirAlbaranExistente(albaranId: string) {
         if (error) {
           throw new Error(error.message)
         }
+        await registrarAuditoria({
+  entidad: 'proveedor',
+  entidad_id: proveedorEditId,
+  accion: 'editar',
+  detalle: `Proveedor actualizado: ${proveedorForm.nombre}`,
+  payload_despues: {
+    ...proveedorForm,
+  },
+})
 
         setToast('Proveedor actualizado')
       } else {
@@ -881,6 +1009,14 @@ async function revertirAlbaranExistente(albaranId: string) {
           setAlbaranProveedorId(data.id)
         }
 
+        await registrarAuditoria({
+  entidad: 'proveedor',
+  entidad_id: data?.id,
+  accion: 'crear',
+  detalle: `Proveedor creado: ${proveedorForm.nombre}`,
+  payload_despues: data,
+})
+
         setToast('Proveedor creado')
       }
 
@@ -896,26 +1032,42 @@ async function revertirAlbaranExistente(albaranId: string) {
   }
 
   async function deleteProveedor(proveedor: Proveedor) {
-    const ok = window.confirm(`¿Seguro que quieres eliminar "${proveedor.nombre}"?`)
-    if (!ok) return
+  const ok = window.confirm(`¿Archivar proveedor "${proveedor.nombre}"?`)
+  if (!ok) return
 
-    setError('')
+  setError('')
 
-    const { error } = await supabase
-      .from('proveedores')
-      .delete()
-      .eq('id', proveedor.id)
+  const payloadAntes = { ...proveedor }
 
-    if (error) {
-      setError(
-        'No se pudo eliminar. Puede que tenga albaranes asociados.'
-      )
-      return
-    }
+  const { error } = await supabase
+    .from('proveedores')
+    .update({
+      activo: false,
+      archivado: true,
+    })
+    .eq('id', proveedor.id)
 
-    setToast('Proveedor eliminado')
-    await loadProveedores()
+  if (error) {
+    setError(error.message)
+    return
   }
+
+  await registrarAuditoria({
+    entidad: 'proveedor',
+    entidad_id: proveedor.id,
+    accion: 'archivar',
+    detalle: `Proveedor archivado: ${proveedor.nombre}`,
+    payload_antes: payloadAntes,
+    payload_despues: {
+      ...payloadAntes,
+      activo: false,
+      archivado: true,
+    },
+  })
+
+  setToast('Proveedor archivado')
+  await loadProveedores()
+}
 
   const productosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
@@ -1000,7 +1152,19 @@ async function revertirAlbaranExistente(albaranId: string) {
       </header>
 
       <section className="px-3 pt-3">
-        <div className="mb-3 grid grid-cols-5 gap-2 rounded-2xl bg-slate-200 p-1">
+        <div className="mb-3 rounded-3xl bg-white p-3 shadow-sm">
+  <label className="mb-2 block text-sm font-semibold text-slate-700">
+    Operario actual
+  </label>
+  <input
+    type="text"
+    value={operarioActual}
+    onChange={(e) => setOperarioActual(e.target.value)}
+    placeholder="Ej: Jorge / Cocina / Sala"
+    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-400"
+  />
+</div>
+        <div className="mb-3 grid grid-cols-6 gap-2 rounded-2xl bg-slate-200 p-1">
           <button
             onClick={() => setTab('stock')}
             className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
@@ -1045,6 +1209,16 @@ async function revertirAlbaranExistente(albaranId: string) {
           >
             Prov.
           </button>
+
+          <button
+  onClick={() => setTab('auditoria')}
+  className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
+    tab === 'auditoria' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+  }`}
+>
+  Audit.
+</button>
+
         </div>
 
         {tab === 'stock' && (
