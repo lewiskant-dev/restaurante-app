@@ -10,7 +10,12 @@ import type {
   AlbaranLinea,
 } from '@/types'
 
-type TabKey = 'stock' | 'historial' | 'albaran' | 'albaranes'
+type TabKey =
+  | 'stock'
+  | 'historial'
+  | 'albaran'
+  | 'albaranes'
+  | 'proveedores'
 
 type NuevoProductoForm = {
   nombre: string
@@ -25,6 +30,14 @@ type AlbaranLineaForm = {
   producto_id: string
   cantidad: string
   precio_unitario: string
+}
+
+type ProveedorForm = {
+  nombre: string
+  cif: string
+  telefono: string
+  email: string
+  notas: string
 }
 
 type MovimientoConProducto = MovimientoStock & {
@@ -47,6 +60,14 @@ const initialLinea: AlbaranLineaForm = {
   producto_id: '',
   cantidad: '',
   precio_unitario: '',
+}
+
+const initialProveedorForm: ProveedorForm = {
+  nombre: '',
+  cif: '',
+  telefono: '',
+  email: '',
+  notas: '',
 }
 
 function todayLocalInputDate() {
@@ -111,11 +132,13 @@ export default function HomePage() {
   const [busqueda, setBusqueda] = useState('')
   const [busquedaMov, setBusquedaMov] = useState('')
   const [busquedaAlbaran, setBusquedaAlbaran] = useState('')
+  const [busquedaProveedor, setBusquedaProveedor] = useState('')
 
   const [loadingProductos, setLoadingProductos] = useState(true)
   const [loadingMovimientos, setLoadingMovimientos] = useState(true)
   const [loadingAlbaranes, setLoadingAlbaranes] = useState(true)
   const [loadingAlbaranDetalle, setLoadingAlbaranDetalle] = useState(false)
+  const [loadingProveedores, setLoadingProveedores] = useState(true)
 
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
@@ -144,6 +167,13 @@ export default function HomePage() {
 
   const [detalleAlbaranOpen, setDetalleAlbaranOpen] = useState(false)
   const [detalleAlbaran, setDetalleAlbaran] = useState<Albaran | null>(null)
+
+  const [proveedorModalOpen, setProveedorModalOpen] = useState(false)
+  const [proveedorSaving, setProveedorSaving] = useState(false)
+  const [proveedorEditId, setProveedorEditId] = useState<string | null>(null)
+  const [proveedorForm, setProveedorForm] = useState<ProveedorForm>(
+    initialProveedorForm
+  )
 
   useEffect(() => {
     void loadInitialData()
@@ -182,6 +212,8 @@ export default function HomePage() {
   }
 
   async function loadProveedores() {
+    setLoadingProveedores(true)
+
     const { data, error } = await supabase
       .from('proveedores')
       .select('*')
@@ -189,10 +221,12 @@ export default function HomePage() {
 
     if (error) {
       setError(error.message)
+      setLoadingProveedores(false)
       return
     }
 
     setProveedores((data ?? []) as Proveedor[])
+    setLoadingProveedores(false)
   }
 
   async function loadMovimientos() {
@@ -574,6 +608,110 @@ export default function HomePage() {
     }
   }
 
+  function openCrearProveedor() {
+    setProveedorEditId(null)
+    setProveedorForm(initialProveedorForm)
+    setError('')
+    setProveedorModalOpen(true)
+  }
+
+  function openEditarProveedor(proveedor: Proveedor) {
+    setProveedorEditId(proveedor.id)
+    setProveedorForm({
+      nombre: proveedor.nombre || '',
+      cif: proveedor.cif || '',
+      telefono: proveedor.telefono || '',
+      email: proveedor.email || '',
+      notas: proveedor.notas || '',
+    })
+    setError('')
+    setProveedorModalOpen(true)
+  }
+
+  async function guardarProveedor() {
+    if (!proveedorForm.nombre.trim()) {
+      setError('El nombre del proveedor es obligatorio')
+      return
+    }
+
+    setProveedorSaving(true)
+    setError('')
+
+    try {
+      if (proveedorEditId) {
+        const { error } = await supabase
+          .from('proveedores')
+          .update({
+            nombre: proveedorForm.nombre.trim(),
+            cif: proveedorForm.cif.trim(),
+            telefono: proveedorForm.telefono.trim(),
+            email: proveedorForm.email.trim(),
+            notas: proveedorForm.notas.trim(),
+          })
+          .eq('id', proveedorEditId)
+
+        if (error) {
+          throw new Error(error.message)
+        }
+
+        setToast('Proveedor actualizado')
+      } else {
+        const { data, error } = await supabase
+          .from('proveedores')
+          .insert({
+            nombre: proveedorForm.nombre.trim(),
+            cif: proveedorForm.cif.trim(),
+            telefono: proveedorForm.telefono.trim(),
+            email: proveedorForm.email.trim(),
+            notas: proveedorForm.notas.trim(),
+          })
+          .select()
+          .single()
+
+        if (error) {
+          throw new Error(error.message)
+        }
+
+        if (data?.id) {
+          setAlbaranProveedorId(data.id)
+        }
+
+        setToast('Proveedor creado')
+      }
+
+      setProveedorModalOpen(false)
+      setProveedorEditId(null)
+      setProveedorForm(initialProveedorForm)
+      await loadProveedores()
+    } catch (err: any) {
+      setError(err.message || 'Error guardando proveedor')
+    } finally {
+      setProveedorSaving(false)
+    }
+  }
+
+  async function deleteProveedor(proveedor: Proveedor) {
+    const ok = window.confirm(`¿Seguro que quieres eliminar "${proveedor.nombre}"?`)
+    if (!ok) return
+
+    setError('')
+
+    const { error } = await supabase
+      .from('proveedores')
+      .delete()
+      .eq('id', proveedor.id)
+
+    if (error) {
+      setError(
+        'No se pudo eliminar. Puede que tenga albaranes asociados.'
+      )
+      return
+    }
+
+    setToast('Proveedor eliminado')
+    await loadProveedores()
+  }
+
   const productosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
     if (!q) return productos
@@ -615,6 +753,27 @@ export default function HomePage() {
     })
   }, [albaranes, busquedaAlbaran])
 
+  const proveedoresFiltrados = useMemo(() => {
+    const q = busquedaProveedor.trim().toLowerCase()
+    if (!q) return proveedores
+
+    return proveedores.filter((p) => {
+      const nombre = p.nombre?.toLowerCase() ?? ''
+      const cif = p.cif?.toLowerCase() ?? ''
+      const telefono = p.telefono?.toLowerCase() ?? ''
+      const email = p.email?.toLowerCase() ?? ''
+      const notas = p.notas?.toLowerCase() ?? ''
+
+      return (
+        nombre.includes(q) ||
+        cif.includes(q) ||
+        telefono.includes(q) ||
+        email.includes(q) ||
+        notas.includes(q)
+      )
+    })
+  }, [proveedores, busquedaProveedor])
+
   const totalProductos = productos.length
   const stockBajo = productos.filter(
     (p) => p.stock_minimo > 0 && p.stock_actual <= p.stock_minimo
@@ -636,10 +795,10 @@ export default function HomePage() {
       </header>
 
       <section className="px-3 pt-3">
-        <div className="mb-3 grid grid-cols-4 gap-2 rounded-2xl bg-slate-200 p-1">
+        <div className="mb-3 grid grid-cols-5 gap-2 rounded-2xl bg-slate-200 p-1">
           <button
             onClick={() => setTab('stock')}
-            className={`rounded-xl px-2 py-2 text-xs font-semibold ${
+            className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
               tab === 'stock' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
             }`}
           >
@@ -648,7 +807,7 @@ export default function HomePage() {
 
           <button
             onClick={() => setTab('historial')}
-            className={`rounded-xl px-2 py-2 text-xs font-semibold ${
+            className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
               tab === 'historial' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
             }`}
           >
@@ -657,7 +816,7 @@ export default function HomePage() {
 
           <button
             onClick={() => setTab('albaran')}
-            className={`rounded-xl px-2 py-2 text-xs font-semibold ${
+            className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
               tab === 'albaran' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
             }`}
           >
@@ -666,11 +825,20 @@ export default function HomePage() {
 
           <button
             onClick={() => setTab('albaranes')}
-            className={`rounded-xl px-2 py-2 text-xs font-semibold ${
+            className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
               tab === 'albaranes' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
             }`}
           >
             Albaranes
+          </button>
+
+          <button
+            onClick={() => setTab('proveedores')}
+            className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
+              tab === 'proveedores' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+            }`}
+          >
+            Prov.
           </button>
         </div>
 
@@ -885,18 +1053,33 @@ export default function HomePage() {
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
                 />
 
-                <select
-                  value={albaranProveedorId}
-                  onChange={(e) => setAlbaranProveedorId(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
-                >
-                  <option value="">Selecciona proveedor</option>
-                  {proveedores.map((prov) => (
-                    <option key={prov.id} value={prov.id}>
-                      {prov.nombre}
-                    </option>
-                  ))}
-                </select>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-slate-600">
+                      Proveedor
+                    </label>
+                    <button
+                      type="button"
+                      onClick={openCrearProveedor}
+                      className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+                    >
+                      + Proveedor
+                    </button>
+                  </div>
+
+                  <select
+                    value={albaranProveedorId}
+                    onChange={(e) => setAlbaranProveedorId(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+                  >
+                    <option value="">Selecciona proveedor</option>
+                    {proveedores.map((prov) => (
+                      <option key={prov.id} value={prov.id}>
+                        {prov.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <input
                   type="date"
@@ -1100,6 +1283,95 @@ export default function HomePage() {
           </>
         )}
 
+        {tab === 'proveedores' && (
+          <>
+            <div className="mt-1">
+              <input
+                type="search"
+                value={busquedaProveedor}
+                onChange={(e) => setBusquedaProveedor(e.target.value)}
+                placeholder="Buscar proveedor..."
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-400"
+              />
+            </div>
+
+            <div className="mt-4 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-slate-900">Proveedores</h2>
+              <button
+                onClick={openCrearProveedor}
+                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white"
+              >
+                + Proveedor
+              </button>
+            </div>
+
+            <div className="mt-3 rounded-3xl bg-white p-3 shadow-sm">
+              {loadingProveedores && (
+                <div className="py-10 text-center text-sm text-slate-400">
+                  Cargando proveedores...
+                </div>
+              )}
+
+              {!loadingProveedores && proveedoresFiltrados.length === 0 && (
+                <div className="py-10 text-center text-sm text-slate-400">
+                  No hay proveedores todavía.
+                </div>
+              )}
+
+              {!loadingProveedores &&
+                proveedoresFiltrados.map((prov) => (
+                  <div
+                    key={prov.id}
+                    className="border-b border-slate-100 py-3 last:border-b-0"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold text-slate-900">
+                          {prov.nombre}
+                        </div>
+                        {prov.cif ? (
+                          <div className="mt-1 text-xs text-slate-500">
+                            CIF: {prov.cif}
+                          </div>
+                        ) : null}
+                        {prov.telefono ? (
+                          <div className="mt-1 text-xs text-slate-500">
+                            Tel: {prov.telefono}
+                          </div>
+                        ) : null}
+                        {prov.email ? (
+                          <div className="mt-1 text-xs text-slate-500">
+                            {prov.email}
+                          </div>
+                        ) : null}
+                        {prov.notas ? (
+                          <div className="mt-1 text-xs text-slate-400">
+                            {prov.notas}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="flex shrink-0 flex-col gap-2">
+                        <button
+                          onClick={() => openEditarProveedor(prov)}
+                          className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => deleteProveedor(prov)}
+                          className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </>
+        )}
+
         {error && (
           <div className="mt-3 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">
             {error}
@@ -1259,6 +1531,84 @@ export default function HomePage() {
                 className="mt-2 w-full rounded-2xl bg-amber-500 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
               >
                 {consumoSaving ? 'Registrando...' : 'Registrar consumo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {proveedorModalOpen && (
+        <div className="fixed inset-0 z-40 flex items-end bg-black/40">
+          <div className="w-full rounded-t-3xl bg-white p-4 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-slate-900">
+                {proveedorEditId ? 'Editar proveedor' : 'Nuevo proveedor'}
+              </h3>
+              <button
+                onClick={() => {
+                  setProveedorModalOpen(false)
+                  setProveedorEditId(null)
+                  setProveedorForm(initialProveedorForm)
+                  setError('')
+                }}
+                className="text-sm font-medium text-slate-500"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                placeholder="Nombre"
+                value={proveedorForm.nombre}
+                onChange={(e) =>
+                  setProveedorForm({ ...proveedorForm, nombre: e.target.value })
+                }
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+              />
+
+              <input
+                placeholder="CIF"
+                value={proveedorForm.cif}
+                onChange={(e) =>
+                  setProveedorForm({ ...proveedorForm, cif: e.target.value })
+                }
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+              />
+
+              <input
+                placeholder="Teléfono"
+                value={proveedorForm.telefono}
+                onChange={(e) =>
+                  setProveedorForm({ ...proveedorForm, telefono: e.target.value })
+                }
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+              />
+
+              <input
+                placeholder="Email"
+                value={proveedorForm.email}
+                onChange={(e) =>
+                  setProveedorForm({ ...proveedorForm, email: e.target.value })
+                }
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+              />
+
+              <textarea
+                placeholder="Notas"
+                value={proveedorForm.notas}
+                onChange={(e) =>
+                  setProveedorForm({ ...proveedorForm, notas: e.target.value })
+                }
+                className="min-h-24 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+              />
+
+              <button
+                onClick={guardarProveedor}
+                disabled={proveedorSaving}
+                className="mt-2 w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
+              >
+                {proveedorSaving ? 'Guardando...' : 'Guardar proveedor'}
               </button>
             </div>
           </div>
