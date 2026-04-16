@@ -175,6 +175,15 @@ export default function HomePage() {
   const [detalleAlbaranOpen, setDetalleAlbaranOpen] = useState(false)
   const [detalleAlbaran, setDetalleAlbaran] = useState<Albaran | null>(null)
 
+  // ALBARANES
+const [albaranDesde, setAlbaranDesde] = useState('')
+const [albaranHasta, setAlbaranHasta] = useState('')
+const [albaranEstado, setAlbaranEstado] = useState<'activos' | 'anulados' | 'todos'>('activos')
+
+// AUDITORIA
+const [auditoriaDesde, setAuditoriaDesde] = useState('')
+const [auditoriaHasta, setAuditoriaHasta] = useState('')
+
   const [proveedorModalOpen, setProveedorModalOpen] = useState(false)
   const [proveedorSaving, setProveedorSaving] = useState(false)
   const [proveedorEditId, setProveedorEditId] = useState<string | null>(null)
@@ -1612,6 +1621,36 @@ async function revertirAlbaranExistente(albaranId: string) {
 
         {tab === 'albaranes' && (
           <>
+          <div className="mt-1 grid grid-cols-2 gap-2">
+  <input
+    type="date"
+    value={albaranDesde}
+    onChange={(e) => setAlbaranDesde(e.target.value)}
+    className="rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+  />
+  <input
+    type="date"
+    value={albaranHasta}
+    onChange={(e) => setAlbaranHasta(e.target.value)}
+    className="rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+  />
+</div>
+
+<div className="mt-2 flex gap-2">
+  {['activos', 'anulados', 'todos'].map((estado) => (
+    <button
+      key={estado}
+      onClick={() => setAlbaranEstado(estado as any)}
+      className={`rounded-xl px-3 py-1 text-xs font-semibold ${
+        albaranEstado === estado
+          ? 'bg-slate-900 text-white'
+          : 'bg-slate-100 text-slate-600'
+      }`}
+    >
+      {estado}
+    </button>
+  ))}
+</div>
             <div className="mt-1">
               <input
                 type="search"
@@ -1636,7 +1675,18 @@ async function revertirAlbaranExistente(albaranId: string) {
               )}
 
               {!loadingAlbaranes &&
-                albaranesFiltrados.map((alb) => (
+  albaranesFiltrados
+    .filter((alb) => {
+      if (albaranEstado === 'activos' && alb.anulado) return false
+      if (albaranEstado === 'anulados' && !alb.anulado) return false
+      return true
+    })
+    .filter((alb) => {
+      if (albaranDesde && alb.fecha < albaranDesde) return false
+      if (albaranHasta && alb.fecha > albaranHasta) return false
+      return true
+    })
+    .map((alb) => (
                   <button
                     key={alb.id}
                     type="button"
@@ -1682,6 +1732,21 @@ async function revertirAlbaranExistente(albaranId: string) {
       />
     </div>
 
+    <div className="mt-2 grid grid-cols-2 gap-2">
+  <input
+    type="date"
+    value={auditoriaDesde}
+    onChange={(e) => setAuditoriaDesde(e.target.value)}
+    className="rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+  />
+  <input
+    type="date"
+    value={auditoriaHasta}
+    onChange={(e) => setAuditoriaHasta(e.target.value)}
+    className="rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+  />
+</div>
+
     <div className="mb-3 rounded-2xl bg-yellow-50 px-4 py-3 text-sm text-slate-700">
       Registros cargados: {auditoria.length}
     </div>
@@ -1694,19 +1759,27 @@ async function revertirAlbaranExistente(albaranId: string) {
       )}
 
       {!loadingAuditoria &&
-        auditoria
-          .filter((item) => {
-            const q = busquedaAuditoria.trim().toLowerCase()
-            if (!q) return true
+  auditoria
+    .filter((item) => {
+      const q = busquedaAuditoria.trim().toLowerCase()
+      if (!q) return true
 
-            return (
-              (item.entidad || '').toLowerCase().includes(q) ||
-              (item.accion || '').toLowerCase().includes(q) ||
-              (item.actor_nombre || '').toLowerCase().includes(q) ||
-              (item.detalle || '').toLowerCase().includes(q)
-            )
-          })
-          .map((item) => (
+      return (
+        (item.entidad || '').toLowerCase().includes(q) ||
+        (item.accion || '').toLowerCase().includes(q) ||
+        (item.actor_nombre || '').toLowerCase().includes(q) ||
+        (item.detalle || '').toLowerCase().includes(q)
+      )
+    })
+    .filter((item) => {
+      const fecha = item.created_at?.slice(0, 10) || ''
+
+      if (auditoriaDesde && fecha < auditoriaDesde) return false
+      if (auditoriaHasta && fecha > auditoriaHasta) return false
+
+      return true
+    })
+    .map((item) => (
             <div
               key={item.id}
               className="border-b border-slate-100 py-3 last:border-b-0"
