@@ -533,6 +533,91 @@ export default function HomePage() {
     await Promise.all([loadProductos(), loadMovimientos()])
   }
 
+  async function deshacerAccionAuditoria(item: Auditoria) {
+  if (!item.entidad_id) {
+    setError('La acción no tiene entidad asociada')
+    return
+  }
+
+  setError('')
+
+  try {
+    if (item.entidad === 'producto' && item.accion === 'archivar') {
+      const { error } = await supabase
+        .from('productos')
+        .update({
+          activo: true,
+          archivado: false,
+        })
+        .eq('id', item.entidad_id)
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      await registrarAuditoria({
+        entidad: 'producto',
+        entidad_id: item.entidad_id,
+        accion: 'deshacer_archivar',
+        detalle: `Se deshizo el archivado del producto`,
+        payload_antes: item.payload_despues ?? null,
+        payload_despues: {
+          ...(typeof item.payload_despues === 'object' && item.payload_despues !== null
+            ? item.payload_despues
+            : {}),
+          activo: true,
+          archivado: false,
+        },
+      })
+
+      setToast('Producto reactivado')
+      await Promise.all([loadProductos(), loadAuditoria()])
+      return
+    }
+
+    if (item.entidad === 'proveedor' && item.accion === 'archivar') {
+      const { error } = await supabase
+        .from('proveedores')
+        .update({
+          activo: true,
+          archivado: false,
+        })
+        .eq('id', item.entidad_id)
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      await registrarAuditoria({
+        entidad: 'proveedor',
+        entidad_id: item.entidad_id,
+        accion: 'deshacer_archivar',
+        detalle: `Se deshizo el archivado del proveedor`,
+        payload_antes: item.payload_despues ?? null,
+        payload_despues: {
+          ...(typeof item.payload_despues === 'object' && item.payload_despues !== null
+            ? item.payload_despues
+            : {}),
+          activo: true,
+          archivado: false,
+        },
+      })
+
+      setToast('Proveedor reactivado')
+      await Promise.all([loadProveedores(), loadAuditoria()])
+      return
+    }
+
+    setError('Esta acción todavía no se puede deshacer')
+  } catch (err: any) {
+    setError(err.message || 'No se pudo deshacer la acción')
+  }
+}
+
+function puedeDeshacerAuditoria(item: Auditoria) {
+  return item.accion === 'archivar' && (item.entidad === 'producto' || item.entidad === 'proveedor')
+}
+
   async function eliminarAlbaran(albaran: Albaran) {
     const motivo = window.prompt(
       `Motivo de anulación del albarán "${albaran.numero}":`,
@@ -1801,24 +1886,33 @@ export default function HomePage() {
                     className="border-b border-slate-100 py-3 last:border-b-0"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-semibold text-slate-900">
-                          {item.entidad} · {item.accion}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {item.detalle || 'Sin detalle'}
-                        </div>
-                        <div className="mt-1 text-[11px] text-slate-400">
-                          Operario: {item.actor_nombre || 'Sin identificar'}
-                        </div>
-                      </div>
+  <div className="min-w-0 flex-1">
+    <div className="truncate text-sm font-semibold text-slate-900">
+      {item.entidad} · {item.accion}
+    </div>
+    <div className="mt-1 text-xs text-slate-500">
+      {item.detalle || 'Sin detalle'}
+    </div>
+    <div className="mt-1 text-[11px] text-slate-400">
+      Operario: {item.actor_nombre || 'Sin identificar'}
+    </div>
+  </div>
 
-                      <div className="text-right">
-                        <div className="text-[11px] text-slate-500">
-                          {formatFechaHora(item.created_at)}
-                        </div>
-                      </div>
-                    </div>
+  <div className="flex shrink-0 flex-col items-end gap-2">
+    <div className="text-[11px] text-slate-500">
+      {formatFechaHora(item.created_at)}
+    </div>
+
+    {puedeDeshacerAuditoria(item) && (
+      <button
+        onClick={() => deshacerAccionAuditoria(item)}
+        className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+      >
+        Deshacer
+      </button>
+    )}
+  </div>
+</div>
                   </div>
                 ))}
             </div>
