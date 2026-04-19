@@ -169,6 +169,11 @@ export default function HomePage() {
   const [consumoCantidad, setConsumoCantidad] = useState('')
   const [consumoMotivo, setConsumoMotivo] = useState('Uso en cocina')
   const [consumoSaving, setConsumoSaving] = useState(false)
+  const [ajusteModalOpen, setAjusteModalOpen] = useState(false)
+const [ajusteProducto, setAjusteProducto] = useState<Producto | null>(null)
+const [ajusteStockNuevo, setAjusteStockNuevo] = useState('')
+const [ajusteMotivo, setAjusteMotivo] = useState('Recuento manual')
+const [ajusteSaving, setAjusteSaving] = useState(false)
 
   const [albaranNumero, setAlbaranNumero] = useState('')
   const [albaranProveedorId, setAlbaranProveedorId] = useState('')
@@ -1437,6 +1442,85 @@ const productosStockBajo = useMemo(() => {
     .slice(0, 5)
 }, [productos])
 
+function openAjusteModal(producto: Producto) {
+  setError('')
+  setAjusteProducto(producto)
+  setAjusteStockNuevo(String(producto.stock_actual))
+  setAjusteMotivo('Recuento manual')
+  setAjusteModalOpen(true)
+}
+
+async function guardarAjusteStock() {
+  if (!ajusteProducto) return
+
+  const nuevoStock = Number(ajusteStockNuevo)
+
+  if (Number.isNaN(nuevoStock) || nuevoStock < 0) {
+    setError('El nuevo stock debe ser un número válido mayor o igual a 0')
+    return
+  }
+
+  setAjusteSaving(true)
+  setError('')
+
+  const stockAntes = Number(ajusteProducto.stock_actual)
+  const stockDespues = nuevoStock
+  const diferencia = stockDespues - stockAntes
+
+  try {
+    const { error: updateError } = await supabase
+      .from('productos')
+      .update({ stock_actual: stockDespues })
+      .eq('id', ajusteProducto.id)
+
+    if (updateError) {
+      throw new Error(updateError.message)
+    }
+
+    const { error: movError } = await supabase.from('movimientos_stock').insert({
+      producto_id: ajusteProducto.id,
+      tipo: 'ajuste',
+      cantidad: Math.abs(diferencia),
+      motivo: ajusteMotivo,
+      origen_tipo: 'manual',
+      origen_id: null,
+      stock_antes: stockAntes,
+      stock_despues: stockDespues,
+    })
+
+    if (movError) {
+      throw new Error(movError.message)
+    }
+
+    await registrarAuditoria({
+      entidad: 'producto',
+      entidad_id: ajusteProducto.id,
+      accion: 'ajuste_stock',
+      detalle: `Producto: ${ajusteProducto.nombre} · Motivo: ${ajusteMotivo} · Antes: ${stockAntes} · Después: ${stockDespues}`,
+      payload_antes: {
+        producto: ajusteProducto.nombre,
+        stock_actual: stockAntes,
+      },
+      payload_despues: {
+        producto: ajusteProducto.nombre,
+        stock_actual: stockDespues,
+      },
+    })
+
+    setAjusteModalOpen(false)
+    setAjusteProducto(null)
+    setAjusteStockNuevo('')
+    setAjusteMotivo('Recuento manual')
+    setToast('Stock ajustado')
+
+    await Promise.all([loadProductos(), loadMovimientos(), loadAuditoria()])
+  } catch (err: any) {
+    setError(err.message || 'No se pudo ajustar el stock')
+  } finally {
+    setAjusteSaving(false)
+  }
+}
+
   return (
     <main className="min-h-screen bg-slate-50 pb-24">
       <header className="sticky top-0 z-10 rounded-b-3xl bg-slate-900 px-4 pb-4 pt-8 text-white shadow-lg">
@@ -1789,7 +1873,8 @@ const productosStockBajo = useMemo(() => {
                           </div>
                         </button>
 
-                        <div className="flex shrink-0 flex-col gap-2">
+                        
+<div className="flex shrink-0 flex-col gap-2">
   {producto.archivado ? (
     <button
       type="button"
@@ -1806,6 +1891,13 @@ const productosStockBajo = useMemo(() => {
         className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
       >
         Editar
+      </button>
+      <button
+        type="button"
+        onClick={() => openAjusteModal(producto)}
+        className="rounded-xl bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700"
+      >
+        Ajustar
       </button>
       <button
         type="button"
@@ -2554,6 +2646,62 @@ const productosStockBajo = useMemo(() => {
           </div>
         </div>
       )}
+{ajusteModalOpen && ajusteProducto && (
+  <div className="fixed inset-0 z-30 flex items-end bg-black/40">
+    <div className="w-full rounded-t-3xl bg-white p-4 shadow-xl">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-slate-900">
+            Ajustar stock
+          </h3>
+          <p className="mt-1 text-sm text-slate-500">
+            {ajusteProducto.nombre} · stock actual: {ajusteProducto.stock_actual} {ajusteProducto.unidad}
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            setAjusteModalOpen(false)
+            setAjusteProducto(null)
+            setError('')
+          }}
+          className="text-sm font-medium text-slate-500"
+        >
+          Cerrar
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        <input
+          type="number"
+          placeholder="Nuevo stock"
+          value={ajusteStockNuevo}
+          onChange={(e) => setAjusteStockNuevo(e.target.value)}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+        />
+
+        <select
+          value={ajusteMotivo}
+          onChange={(e) => setAjusteMotivo(e.target.value)}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+        >
+          <option value="Recuento manual">Recuento manual</option>
+          <option value="Corrección de error">Corrección de error</option>
+          <option value="Merma no registrada">Merma no registrada</option>
+          <option value="Rotura no registrada">Rotura no registrada</option>
+          <option value="Otro ajuste">Otro ajuste</option>
+        </select>
+
+        <button
+          onClick={guardarAjusteStock}
+          disabled={ajusteSaving}
+          className="mt-2 w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
+        >
+          {ajusteSaving ? 'Guardando ajuste...' : 'Guardar ajuste'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {proveedorModalOpen && (
         <div className="fixed inset-0 z-40 flex items-end bg-black/40">
