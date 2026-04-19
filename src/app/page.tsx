@@ -1367,6 +1367,28 @@ export default function HomePage() {
     return acc + Number(linea.cantidad || 0) * Number(linea.precio_unitario || 0)
   }, 0)
 
+  const ultimosConsumos = useMemo(() => {
+  return movimientos
+    .filter((m) => m.tipo === 'consumo')
+    .slice(0, 5)
+}, [movimientos])
+
+const ultimosAlbaranes = useMemo(() => {
+  return [...albaranes]
+    .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+    .slice(0, 5)
+}, [albaranes])
+
+const actividadReciente = useMemo(() => {
+  return auditoria.slice(0, 5)
+}, [auditoria])
+
+const productosStockBajo = useMemo(() => {
+  return productos
+    .filter((p) => !p.archivado && p.stock_minimo > 0 && p.stock_actual <= p.stock_minimo)
+    .slice(0, 5)
+}, [productos])
+
   return (
     <main className="min-h-screen bg-slate-50 pb-24">
       <header className="sticky top-0 z-10 rounded-b-3xl bg-slate-900 px-4 pb-4 pt-8 text-white shadow-lg">
@@ -1449,6 +1471,155 @@ export default function HomePage() {
         {tab === 'stock' && (
           <>
             <div className="grid grid-cols-3 gap-2">
+              <div className="mt-4 space-y-4">
+  <div className="rounded-3xl bg-white p-4 shadow-sm">
+    <div className="mb-3 flex items-center justify-between">
+      <h3 className="text-sm font-semibold text-slate-900">Alertas de stock</h3>
+      <span className="text-xs text-slate-400">{productosStockBajo.length} visibles</span>
+    </div>
+
+    {productosStockBajo.length === 0 ? (
+      <div className="text-sm text-slate-400">No hay alertas ahora mismo.</div>
+    ) : (
+      <div className="space-y-3">
+        {productosStockBajo.map((producto) => (
+          <div key={producto.id} className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold text-slate-900">
+                {producto.nombre}
+              </div>
+              <div className="text-xs text-slate-500">
+                Mínimo: {producto.stock_minimo} · Actual: {producto.stock_actual}
+              </div>
+            </div>
+            <button
+              onClick={() => openConsumoModal(producto)}
+              className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700"
+            >
+              Ver
+            </button>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+
+  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div className="rounded-3xl bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-slate-900">Últimos consumos</h3>
+        <button
+          onClick={() => setTab('historial')}
+          className="text-xs font-semibold text-blue-600"
+        >
+          Ver todo
+        </button>
+      </div>
+
+      {ultimosConsumos.length === 0 ? (
+        <div className="text-sm text-slate-400">Todavía no hay consumos.</div>
+      ) : (
+        <div className="space-y-3">
+          {ultimosConsumos.map((mov) => (
+            <div key={mov.id} className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-slate-900">
+                  {mov.productos?.nombre || 'Producto'}
+                </div>
+                <div className="text-xs text-slate-500">{mov.motivo}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm font-bold text-red-600">-{mov.cantidad}</div>
+                <div className="text-[11px] text-slate-400">
+                  {formatFechaHora(mov.created_at)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+
+    <div className="rounded-3xl bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-slate-900">Últimos albaranes</h3>
+        <button
+          onClick={() => setTab('albaranes')}
+          className="text-xs font-semibold text-blue-600"
+        >
+          Ver todo
+        </button>
+      </div>
+
+      {ultimosAlbaranes.length === 0 ? (
+        <div className="text-sm text-slate-400">Todavía no hay albaranes.</div>
+      ) : (
+        <div className="space-y-3">
+          {ultimosAlbaranes.map((alb) => (
+            <button
+              key={alb.id}
+              type="button"
+              onClick={() => openDetalleAlbaran(alb)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-slate-900">
+                  {alb.numero}
+                </div>
+                <div className="truncate text-xs text-slate-500">
+                  {alb.proveedor_nombre || 'Sin proveedor'}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm font-bold text-blue-600">
+                  {formatEuro(Number(alb.total || 0))}
+                </div>
+                <div className="text-[11px] text-slate-400">{formatFecha(alb.fecha)}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+
+  <div className="rounded-3xl bg-white p-4 shadow-sm">
+    <div className="mb-3 flex items-center justify-between">
+      <h3 className="text-sm font-semibold text-slate-900">Actividad reciente</h3>
+      <button
+        onClick={() => setTab('auditoria')}
+        className="text-xs font-semibold text-blue-600"
+      >
+        Ver auditoría
+      </button>
+    </div>
+
+    {actividadReciente.length === 0 ? (
+      <div className="text-sm text-slate-400">Sin actividad reciente.</div>
+    ) : (
+      <div className="space-y-3">
+        {actividadReciente.map((item) => (
+          <div key={item.id} className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold text-slate-900">
+                {item.entidad} · {item.accion}
+              </div>
+              <div className="truncate text-xs text-slate-500">
+                {item.detalle || 'Sin detalle'}
+              </div>
+              <div className="text-[11px] text-slate-400">
+                {item.actor_nombre || 'Sin identificar'}
+              </div>
+            </div>
+            <div className="text-[11px] text-slate-400">
+              {formatFechaHora(item.created_at)}
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</div>
               <div className="rounded-2xl bg-white p-3 shadow-sm">
                 <div className="text-2xl font-bold text-emerald-600">{totalProductos}</div>
                 <div className="mt-1 text-xs font-medium text-slate-500">Productos</div>
