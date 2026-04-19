@@ -131,6 +131,7 @@ export default function HomePage() {
   const [albaranes, setAlbaranes] = useState<Albaran[]>([])
   const [albaranLineasDetalle, setAlbaranLineasDetalle] = useState<AlbaranLinea[]>([])
   const [auditoria, setAuditoria] = useState<Auditoria[]>([])
+  const [productoEditId, setProductoEditId] = useState<string | null>(null)
 
   const [operarioActual, setOperarioActual] = useState('')
 
@@ -453,53 +454,86 @@ export default function HomePage() {
   }
 
   async function guardarProducto() {
-    if (!productoForm.nombre.trim()) {
-      setError('El nombre del producto es obligatorio')
-      return
+  if (!productoForm.nombre.trim()) {
+    setError('El nombre del producto es obligatorio')
+    return
+  }
+
+  setProductoSaving(true)
+  setError('')
+
+  const payload = {
+    nombre: productoForm.nombre.trim(),
+    categoria: productoForm.categoria.trim(),
+    unidad: productoForm.unidad.trim() || 'uds',
+    stock_actual:
+      productoForm.stock_actual === '' ? 0 : Number(productoForm.stock_actual),
+    stock_minimo:
+      productoForm.stock_minimo === '' ? 0 : Number(productoForm.stock_minimo),
+    referencia: productoForm.referencia.trim(),
+  }
+
+  try {
+    if (productoEditId) {
+      const productoAntes = productos.find((p) => p.id === productoEditId) || null
+
+      const { data, error } = await supabase
+        .from('productos')
+        .update(payload)
+        .eq('id', productoEditId)
+        .select()
+        .single()
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      await registrarAuditoria({
+        entidad: 'producto',
+        entidad_id: productoEditId,
+        accion: 'editar',
+        detalle: `Producto actualizado: ${payload.nombre}`,
+        payload_antes: productoAntes,
+        payload_despues: data,
+      })
+
+      setToast('Producto actualizado')
+    } else {
+      const { data, error } = await supabase
+        .from('productos')
+        .insert({
+          ...payload,
+          activo: true,
+          archivado: false,
+        })
+        .select()
+        .single()
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      await registrarAuditoria({
+        entidad: 'producto',
+        entidad_id: data?.id,
+        accion: 'crear',
+        detalle: `Producto creado: ${payload.nombre} · Categoría: ${payload.categoria || 'Sin categoría'} · Stock inicial: ${payload.stock_actual} ${payload.unidad}`,
+        payload_despues: data,
+      })
+
+      setToast('Producto creado')
     }
 
-    setProductoSaving(true)
-    setError('')
-
-    const payload = {
-      nombre: productoForm.nombre.trim(),
-      categoria: productoForm.categoria.trim(),
-      unidad: productoForm.unidad.trim() || 'uds',
-      stock_actual:
-        productoForm.stock_actual === '' ? 0 : Number(productoForm.stock_actual),
-      stock_minimo:
-        productoForm.stock_minimo === '' ? 0 : Number(productoForm.stock_minimo),
-      referencia: productoForm.referencia.trim(),
-      activo: true,
-      archivado: false,
-    }
-
-    const { data, error } = await supabase
-      .from('productos')
-      .insert(payload)
-      .select()
-      .single()
-
-    if (error) {
-      setError(error.message)
-      setProductoSaving(false)
-      return
-    }
-
-    await registrarAuditoria({
-      entidad: 'producto',
-      entidad_id: data?.id,
-      accion: 'crear',
-      detalle: `Producto creado: ${payload.nombre} · Categoría: ${payload.categoria || 'Sin categoría'} · Stock inicial: ${payload.stock_actual} ${payload.unidad}`,
-      payload_despues: data,
-    })
-
+    setProductoEditId(null)
     setProductoForm(initialProductoForm)
     setProductoModalOpen(false)
-    setProductoSaving(false)
-    setToast('Producto creado')
     await loadProductos()
+  } catch (err: any) {
+    setError(err.message || 'Error guardando producto')
+  } finally {
+    setProductoSaving(false)
   }
+}
 
   async function archiveProducto(producto: Producto) {
     const ok = window.confirm(`¿Archivar producto "${producto.nombre}"?`)
@@ -1102,6 +1136,20 @@ export default function HomePage() {
     setProveedorModalOpen(true)
   }
 
+  function openEditarProducto(producto: Producto) {
+  setProductoEditId(producto.id)
+  setProductoForm({
+    nombre: producto.nombre || '',
+    categoria: producto.categoria || '',
+    unidad: producto.unidad || 'uds',
+    stock_actual: String(producto.stock_actual ?? ''),
+    stock_minimo: String(producto.stock_minimo ?? ''),
+    referencia: producto.referencia || '',
+  })
+  setError('')
+  setProductoModalOpen(true)
+}
+
   async function guardarProveedor() {
     if (!proveedorForm.nombre.trim()) {
       setError('El nombre del proveedor es obligatorio')
@@ -1666,9 +1714,11 @@ const productosStockBajo = useMemo(() => {
               <h2 className="text-base font-semibold text-slate-900">Inventario</h2>
               <button
                 onClick={() => {
-                  setError('')
-                  setProductoModalOpen(true)
-                }}
+  setProductoEditId(null)
+  setProductoForm(initialProductoForm)
+  setError('')
+  setProductoModalOpen(true)
+}}
                 className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white"
               >
                 + Producto
@@ -1739,23 +1789,34 @@ const productosStockBajo = useMemo(() => {
                           </div>
                         </button>
 
-                        {producto.archivado ? (
-                          <button
-                            type="button"
-                            onClick={() => reactivarProducto(producto)}
-                            className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
-                          >
-                            Reactivar
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => archiveProducto(producto)}
-                            className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600"
-                          >
-                            Archivar
-                          </button>
-                        )}
+                        <div className="flex shrink-0 flex-col gap-2">
+  {producto.archivado ? (
+    <button
+      type="button"
+      onClick={() => reactivarProducto(producto)}
+      className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+    >
+      Reactivar
+    </button>
+  ) : (
+    <>
+      <button
+        type="button"
+        onClick={() => openEditarProducto(producto)}
+        className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+      >
+        Editar
+      </button>
+      <button
+        type="button"
+        onClick={() => archiveProducto(producto)}
+        className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600"
+      >
+        Archivar
+      </button>
+    </>
+  )}
+</div>
                       </div>
                     </div>
                   )
@@ -2331,13 +2392,16 @@ const productosStockBajo = useMemo(() => {
         <div className="fixed inset-0 z-20 flex items-end bg-black/40">
           <div className="w-full rounded-t-3xl bg-white p-4 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-900">Nuevo producto</h3>
+              <h3 className="text-base font-semibold text-slate-900">
+  {productoEditId ? 'Editar producto' : 'Nuevo producto'}
+</h3>
               <button
                 onClick={() => {
-                  setProductoModalOpen(false)
-                  setProductoForm(initialProductoForm)
-                  setError('')
-                }}
+  setProductoModalOpen(false)
+  setProductoEditId(null)
+  setProductoForm(initialProductoForm)
+  setError('')
+}}
                 className="text-sm font-medium text-slate-500"
               >
                 Cerrar
@@ -2419,7 +2483,13 @@ const productosStockBajo = useMemo(() => {
                 disabled={productoSaving}
                 className="mt-2 w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
               >
-                {productoSaving ? 'Guardando...' : 'Guardar producto'}
+                {productoSaving
+  ? productoEditId
+    ? 'Actualizando...'
+    : 'Guardando...'
+  : productoEditId
+  ? 'Actualizar producto'
+  : 'Guardar producto'}
               </button>
             </div>
           </div>
