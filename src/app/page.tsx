@@ -131,7 +131,6 @@ export default function HomePage() {
   const [albaranes, setAlbaranes] = useState<Albaran[]>([])
   const [albaranLineasDetalle, setAlbaranLineasDetalle] = useState<AlbaranLinea[]>([])
   const [auditoria, setAuditoria] = useState<Auditoria[]>([])
-  const [productoEditId, setProductoEditId] = useState<string | null>(null)
 
   const [operarioActual, setOperarioActual] = useState('')
 
@@ -169,11 +168,6 @@ export default function HomePage() {
   const [consumoCantidad, setConsumoCantidad] = useState('')
   const [consumoMotivo, setConsumoMotivo] = useState('Uso en cocina')
   const [consumoSaving, setConsumoSaving] = useState(false)
-  const [ajusteModalOpen, setAjusteModalOpen] = useState(false)
-const [ajusteProducto, setAjusteProducto] = useState<Producto | null>(null)
-const [ajusteStockNuevo, setAjusteStockNuevo] = useState('')
-const [ajusteMotivo, setAjusteMotivo] = useState('Recuento manual')
-const [ajusteSaving, setAjusteSaving] = useState(false)
 
   const [albaranNumero, setAlbaranNumero] = useState('')
   const [albaranProveedorId, setAlbaranProveedorId] = useState('')
@@ -459,86 +453,53 @@ const [ajusteSaving, setAjusteSaving] = useState(false)
   }
 
   async function guardarProducto() {
-  if (!productoForm.nombre.trim()) {
-    setError('El nombre del producto es obligatorio')
-    return
-  }
-
-  setProductoSaving(true)
-  setError('')
-
-  const payload = {
-    nombre: productoForm.nombre.trim(),
-    categoria: productoForm.categoria.trim(),
-    unidad: productoForm.unidad.trim() || 'uds',
-    stock_actual:
-      productoForm.stock_actual === '' ? 0 : Number(productoForm.stock_actual),
-    stock_minimo:
-      productoForm.stock_minimo === '' ? 0 : Number(productoForm.stock_minimo),
-    referencia: productoForm.referencia.trim(),
-  }
-
-  try {
-    if (productoEditId) {
-      const productoAntes = productos.find((p) => p.id === productoEditId) || null
-
-      const { data, error } = await supabase
-        .from('productos')
-        .update(payload)
-        .eq('id', productoEditId)
-        .select()
-        .single()
-
-      if (error) {
-        throw new Error(error.message)
-      }
-
-      await registrarAuditoria({
-        entidad: 'producto',
-        entidad_id: productoEditId,
-        accion: 'editar',
-        detalle: `Producto actualizado: ${payload.nombre}`,
-        payload_antes: productoAntes,
-        payload_despues: data,
-      })
-
-      setToast('Producto actualizado')
-    } else {
-      const { data, error } = await supabase
-        .from('productos')
-        .insert({
-          ...payload,
-          activo: true,
-          archivado: false,
-        })
-        .select()
-        .single()
-
-      if (error) {
-        throw new Error(error.message)
-      }
-
-      await registrarAuditoria({
-        entidad: 'producto',
-        entidad_id: data?.id,
-        accion: 'crear',
-        detalle: `Producto creado: ${payload.nombre} · Categoría: ${payload.categoria || 'Sin categoría'} · Stock inicial: ${payload.stock_actual} ${payload.unidad}`,
-        payload_despues: data,
-      })
-
-      setToast('Producto creado')
+    if (!productoForm.nombre.trim()) {
+      setError('El nombre del producto es obligatorio')
+      return
     }
 
-    setProductoEditId(null)
+    setProductoSaving(true)
+    setError('')
+
+    const payload = {
+      nombre: productoForm.nombre.trim(),
+      categoria: productoForm.categoria.trim(),
+      unidad: productoForm.unidad.trim() || 'uds',
+      stock_actual:
+        productoForm.stock_actual === '' ? 0 : Number(productoForm.stock_actual),
+      stock_minimo:
+        productoForm.stock_minimo === '' ? 0 : Number(productoForm.stock_minimo),
+      referencia: productoForm.referencia.trim(),
+      activo: true,
+      archivado: false,
+    }
+
+    const { data, error } = await supabase
+      .from('productos')
+      .insert(payload)
+      .select()
+      .single()
+
+    if (error) {
+      setError(error.message)
+      setProductoSaving(false)
+      return
+    }
+
+    await registrarAuditoria({
+      entidad: 'producto',
+      entidad_id: data?.id,
+      accion: 'crear',
+      detalle: `Producto creado: ${payload.nombre} · Categoría: ${payload.categoria || 'Sin categoría'} · Stock inicial: ${payload.stock_actual} ${payload.unidad}`,
+      payload_despues: data,
+    })
+
     setProductoForm(initialProductoForm)
     setProductoModalOpen(false)
-    await loadProductos()
-  } catch (err: any) {
-    setError(err.message || 'Error guardando producto')
-  } finally {
     setProductoSaving(false)
+    setToast('Producto creado')
+    await loadProductos()
   }
-}
 
   async function archiveProducto(producto: Producto) {
     const ok = window.confirm(`¿Archivar producto "${producto.nombre}"?`)
@@ -1141,20 +1102,6 @@ const [ajusteSaving, setAjusteSaving] = useState(false)
     setProveedorModalOpen(true)
   }
 
-  function openEditarProducto(producto: Producto) {
-  setProductoEditId(producto.id)
-  setProductoForm({
-    nombre: producto.nombre || '',
-    categoria: producto.categoria || '',
-    unidad: producto.unidad || 'uds',
-    stock_actual: String(producto.stock_actual ?? ''),
-    stock_minimo: String(producto.stock_minimo ?? ''),
-    referencia: producto.referencia || '',
-  })
-  setError('')
-  setProductoModalOpen(true)
-}
-
   async function guardarProveedor() {
     if (!proveedorForm.nombre.trim()) {
       setError('El nombre del proveedor es obligatorio')
@@ -1416,110 +1363,29 @@ const [ajusteSaving, setAjusteSaving] = useState(false)
     (p) => !p.archivado && p.stock_minimo > 0 && p.stock_actual <= p.stock_minimo
   ).length
 
+  const ultimosConsumos = useMemo(() => {
+    return movimientos.filter((m) => m.tipo === 'consumo').slice(0, 5)
+  }, [movimientos])
+
+  const ultimosAlbaranes = useMemo(() => {
+    return [...albaranes]
+      .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+      .slice(0, 5)
+  }, [albaranes])
+
+  const actividadReciente = useMemo(() => {
+    return auditoria.slice(0, 5)
+  }, [auditoria])
+
+  const productosStockBajo = useMemo(() => {
+    return productos
+      .filter((p) => !p.archivado && p.stock_minimo > 0 && p.stock_actual <= p.stock_minimo)
+      .slice(0, 5)
+  }, [productos])
+
   const totalAlbaran = albaranLineas.reduce((acc, linea) => {
     return acc + Number(linea.cantidad || 0) * Number(linea.precio_unitario || 0)
   }, 0)
-
-  const ultimosConsumos = useMemo(() => {
-  return movimientos
-    .filter((m) => m.tipo === 'consumo')
-    .slice(0, 5)
-}, [movimientos])
-
-const ultimosAlbaranes = useMemo(() => {
-  return [...albaranes]
-    .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-    .slice(0, 5)
-}, [albaranes])
-
-const actividadReciente = useMemo(() => {
-  return auditoria.slice(0, 5)
-}, [auditoria])
-
-const productosStockBajo = useMemo(() => {
-  return productos
-    .filter((p) => !p.archivado && p.stock_minimo > 0 && p.stock_actual <= p.stock_minimo)
-    .slice(0, 5)
-}, [productos])
-
-function openAjusteModal(producto: Producto) {
-  setError('')
-  setAjusteProducto(producto)
-  setAjusteStockNuevo(String(producto.stock_actual))
-  setAjusteMotivo('Recuento manual')
-  setAjusteModalOpen(true)
-}
-
-async function guardarAjusteStock() {
-  if (!ajusteProducto) return
-
-  const nuevoStock = Number(ajusteStockNuevo)
-
-  if (Number.isNaN(nuevoStock) || nuevoStock < 0) {
-    setError('El nuevo stock debe ser un número válido mayor o igual a 0')
-    return
-  }
-
-  setAjusteSaving(true)
-  setError('')
-
-  const stockAntes = Number(ajusteProducto.stock_actual)
-  const stockDespues = nuevoStock
-  const diferencia = stockDespues - stockAntes
-
-  try {
-    const { error: updateError } = await supabase
-      .from('productos')
-      .update({ stock_actual: stockDespues })
-      .eq('id', ajusteProducto.id)
-
-    if (updateError) {
-      throw new Error(updateError.message)
-    }
-
-    const { error: movError } = await supabase.from('movimientos_stock').insert({
-      producto_id: ajusteProducto.id,
-      tipo: 'ajuste',
-      cantidad: Math.abs(diferencia),
-      motivo: ajusteMotivo,
-      origen_tipo: 'manual',
-      origen_id: null,
-      stock_antes: stockAntes,
-      stock_despues: stockDespues,
-    })
-
-    if (movError) {
-      throw new Error(movError.message)
-    }
-
-    await registrarAuditoria({
-      entidad: 'producto',
-      entidad_id: ajusteProducto.id,
-      accion: 'ajuste_stock',
-      detalle: `Producto: ${ajusteProducto.nombre} · Motivo: ${ajusteMotivo} · Antes: ${stockAntes} · Después: ${stockDespues}`,
-      payload_antes: {
-        producto: ajusteProducto.nombre,
-        stock_actual: stockAntes,
-      },
-      payload_despues: {
-        producto: ajusteProducto.nombre,
-        stock_actual: stockDespues,
-      },
-    })
-
-    setAjusteModalOpen(false)
-    setAjusteProducto(null)
-    setAjusteStockNuevo('')
-    setAjusteMotivo('Recuento manual')
-    setToast('Stock ajustado')
-
-    await Promise.all([loadProductos(), loadMovimientos(), loadAuditoria()])
-  } catch (err: any) {
-    setError(err.message || 'No se pudo ajustar el stock')
-  } finally {
-    setAjusteSaving(false)
-  }
-}
 
   return (
     <main className="min-h-screen bg-slate-50 pb-24">
@@ -1603,155 +1469,6 @@ async function guardarAjusteStock() {
         {tab === 'stock' && (
           <>
             <div className="grid grid-cols-3 gap-2">
-              <div className="mt-4 space-y-4">
-  <div className="rounded-3xl bg-white p-4 shadow-sm">
-    <div className="mb-3 flex items-center justify-between">
-      <h3 className="text-sm font-semibold text-slate-900">Alertas de stock</h3>
-      <span className="text-xs text-slate-400">{productosStockBajo.length} visibles</span>
-    </div>
-
-    {productosStockBajo.length === 0 ? (
-      <div className="text-sm text-slate-400">No hay alertas ahora mismo.</div>
-    ) : (
-      <div className="space-y-3">
-        {productosStockBajo.map((producto) => (
-          <div key={producto.id} className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-slate-900">
-                {producto.nombre}
-              </div>
-              <div className="text-xs text-slate-500">
-                Mínimo: {producto.stock_minimo} · Actual: {producto.stock_actual}
-              </div>
-            </div>
-            <button
-              onClick={() => openConsumoModal(producto)}
-              className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700"
-            >
-              Ver
-            </button>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-
-  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-    <div className="rounded-3xl bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-900">Últimos consumos</h3>
-        <button
-          onClick={() => setTab('historial')}
-          className="text-xs font-semibold text-blue-600"
-        >
-          Ver todo
-        </button>
-      </div>
-
-      {ultimosConsumos.length === 0 ? (
-        <div className="text-sm text-slate-400">Todavía no hay consumos.</div>
-      ) : (
-        <div className="space-y-3">
-          {ultimosConsumos.map((mov) => (
-            <div key={mov.id} className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-slate-900">
-                  {mov.productos?.nombre || 'Producto'}
-                </div>
-                <div className="text-xs text-slate-500">{mov.motivo}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-bold text-red-600">-{mov.cantidad}</div>
-                <div className="text-[11px] text-slate-400">
-                  {formatFechaHora(mov.created_at)}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-
-    <div className="rounded-3xl bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-900">Últimos albaranes</h3>
-        <button
-          onClick={() => setTab('albaranes')}
-          className="text-xs font-semibold text-blue-600"
-        >
-          Ver todo
-        </button>
-      </div>
-
-      {ultimosAlbaranes.length === 0 ? (
-        <div className="text-sm text-slate-400">Todavía no hay albaranes.</div>
-      ) : (
-        <div className="space-y-3">
-          {ultimosAlbaranes.map((alb) => (
-            <button
-              key={alb.id}
-              type="button"
-              onClick={() => openDetalleAlbaran(alb)}
-              className="flex w-full items-center justify-between gap-3 text-left"
-            >
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-slate-900">
-                  {alb.numero}
-                </div>
-                <div className="truncate text-xs text-slate-500">
-                  {alb.proveedor_nombre || 'Sin proveedor'}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-bold text-blue-600">
-                  {formatEuro(Number(alb.total || 0))}
-                </div>
-                <div className="text-[11px] text-slate-400">{formatFecha(alb.fecha)}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  </div>
-
-  <div className="rounded-3xl bg-white p-4 shadow-sm">
-    <div className="mb-3 flex items-center justify-between">
-      <h3 className="text-sm font-semibold text-slate-900">Actividad reciente</h3>
-      <button
-        onClick={() => setTab('auditoria')}
-        className="text-xs font-semibold text-blue-600"
-      >
-        Ver auditoría
-      </button>
-    </div>
-
-    {actividadReciente.length === 0 ? (
-      <div className="text-sm text-slate-400">Sin actividad reciente.</div>
-    ) : (
-      <div className="space-y-3">
-        {actividadReciente.map((item) => (
-          <div key={item.id} className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-slate-900">
-                {item.entidad} · {item.accion}
-              </div>
-              <div className="truncate text-xs text-slate-500">
-                {item.detalle || 'Sin detalle'}
-              </div>
-              <div className="text-[11px] text-slate-400">
-                {item.actor_nombre || 'Sin identificar'}
-              </div>
-            </div>
-            <div className="text-[11px] text-slate-400">
-              {formatFechaHora(item.created_at)}
-            </div>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-</div>
               <div className="rounded-2xl bg-white p-3 shadow-sm">
                 <div className="text-2xl font-bold text-emerald-600">{totalProductos}</div>
                 <div className="mt-1 text-xs font-medium text-slate-500">Productos</div>
@@ -1794,15 +1511,165 @@ async function guardarAjusteStock() {
               ))}
             </div>
 
+            <div className="mt-4 space-y-4">
+              <div className="rounded-3xl bg-white p-4 shadow-sm">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-slate-900">Alertas de stock</h3>
+                  <span className="text-xs text-slate-400">{productosStockBajo.length} visibles</span>
+                </div>
+
+                {productosStockBajo.length === 0 ? (
+                  <div className="text-sm text-slate-400">No hay alertas ahora mismo.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {productosStockBajo.map((producto) => (
+                      <div key={producto.id} className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold text-slate-900">
+                            {producto.nombre}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            Mínimo: {producto.stock_minimo} · Actual: {producto.stock_actual} {producto.unidad}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => openConsumoModal(producto)}
+                          className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700"
+                        >
+                          Revisar
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <div className="rounded-3xl bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-slate-900">Últimos consumos</h3>
+                    <button
+                      onClick={() => setTab('historial')}
+                      className="text-xs font-semibold text-blue-600"
+                    >
+                      Ver todo
+                    </button>
+                  </div>
+
+                  {ultimosConsumos.length === 0 ? (
+                    <div className="text-sm text-slate-400">Todavía no hay consumos.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {ultimosConsumos.map((mov) => (
+                        <div key={mov.id} className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-semibold text-slate-900">
+                              {mov.productos?.nombre || 'Producto'}
+                            </div>
+                            <div className="text-xs text-slate-500">{mov.motivo}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-bold text-red-600">-{mov.cantidad}</div>
+                            <div className="text-[11px] text-slate-400">
+                              {formatFechaHora(mov.created_at)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-3xl bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-slate-900">Últimos albaranes</h3>
+                    <button
+                      onClick={() => setTab('albaranes')}
+                      className="text-xs font-semibold text-blue-600"
+                    >
+                      Ver todo
+                    </button>
+                  </div>
+
+                  {ultimosAlbaranes.length === 0 ? (
+                    <div className="text-sm text-slate-400">Todavía no hay albaranes.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {ultimosAlbaranes.map((alb) => (
+                        <button
+                          key={alb.id}
+                          type="button"
+                          onClick={() => openDetalleAlbaran(alb)}
+                          className="flex w-full items-center justify-between gap-3 text-left"
+                        >
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-semibold text-slate-900">
+                              {alb.numero}
+                            </div>
+                            <div className="truncate text-xs text-slate-500">
+                              {alb.proveedor_nombre || 'Sin proveedor'}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-bold text-blue-600">
+                              {formatEuro(Number(alb.total || 0))}
+                            </div>
+                            <div className="text-[11px] text-slate-400">
+                              {formatFecha(alb.fecha)}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-3xl bg-white p-4 shadow-sm">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-slate-900">Actividad reciente</h3>
+                  <button
+                    onClick={() => setTab('auditoria')}
+                    className="text-xs font-semibold text-blue-600"
+                  >
+                    Ver auditoría
+                  </button>
+                </div>
+
+                {actividadReciente.length === 0 ? (
+                  <div className="text-sm text-slate-400">Sin actividad reciente.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {actividadReciente.map((item) => (
+                      <div key={item.id} className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold text-slate-900">
+                            {item.entidad} · {item.accion}
+                          </div>
+                          <div className="truncate text-xs text-slate-500">
+                            {item.detalle || 'Sin detalle'}
+                          </div>
+                          <div className="text-[11px] text-slate-400">
+                            {item.actor_nombre || 'Sin identificar'}
+                          </div>
+                        </div>
+                        <div className="text-[11px] text-slate-400">
+                          {formatFechaHora(item.created_at)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="mt-4 flex items-center justify-between">
               <h2 className="text-base font-semibold text-slate-900">Inventario</h2>
               <button
                 onClick={() => {
-  setProductoEditId(null)
-  setProductoForm(initialProductoForm)
-  setError('')
-  setProductoModalOpen(true)
-}}
+                  setError('')
+                  setProductoModalOpen(true)
+                }}
                 className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white"
               >
                 + Producto
@@ -1873,42 +1740,23 @@ async function guardarAjusteStock() {
                           </div>
                         </button>
 
-                        
-<div className="flex shrink-0 flex-col gap-2">
-  {producto.archivado ? (
-    <button
-      type="button"
-      onClick={() => reactivarProducto(producto)}
-      className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
-    >
-      Reactivar
-    </button>
-  ) : (
-    <>
-      <button
-        type="button"
-        onClick={() => openEditarProducto(producto)}
-        className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
-      >
-        Editar
-      </button>
-      <button
-        type="button"
-        onClick={() => openAjusteModal(producto)}
-        className="rounded-xl bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700"
-      >
-        Ajustar
-      </button>
-      <button
-        type="button"
-        onClick={() => archiveProducto(producto)}
-        className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600"
-      >
-        Archivar
-      </button>
-    </>
-  )}
-</div>
+                        {producto.archivado ? (
+                          <button
+                            type="button"
+                            onClick={() => reactivarProducto(producto)}
+                            className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+                          >
+                            Reactivar
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => archiveProducto(producto)}
+                            className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600"
+                          >
+                            Archivar
+                          </button>
+                        )}
                       </div>
                     </div>
                   )
@@ -2484,16 +2332,13 @@ async function guardarAjusteStock() {
         <div className="fixed inset-0 z-20 flex items-end bg-black/40">
           <div className="w-full rounded-t-3xl bg-white p-4 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-900">
-  {productoEditId ? 'Editar producto' : 'Nuevo producto'}
-</h3>
+              <h3 className="text-base font-semibold text-slate-900">Nuevo producto</h3>
               <button
                 onClick={() => {
-  setProductoModalOpen(false)
-  setProductoEditId(null)
-  setProductoForm(initialProductoForm)
-  setError('')
-}}
+                  setProductoModalOpen(false)
+                  setProductoForm(initialProductoForm)
+                  setError('')
+                }}
                 className="text-sm font-medium text-slate-500"
               >
                 Cerrar
@@ -2575,13 +2420,7 @@ async function guardarAjusteStock() {
                 disabled={productoSaving}
                 className="mt-2 w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
               >
-                {productoSaving
-  ? productoEditId
-    ? 'Actualizando...'
-    : 'Guardando...'
-  : productoEditId
-  ? 'Actualizar producto'
-  : 'Guardar producto'}
+                {productoSaving ? 'Guardando...' : 'Guardar producto'}
               </button>
             </div>
           </div>
@@ -2646,62 +2485,6 @@ async function guardarAjusteStock() {
           </div>
         </div>
       )}
-{ajusteModalOpen && ajusteProducto && (
-  <div className="fixed inset-0 z-30 flex items-end bg-black/40">
-    <div className="w-full rounded-t-3xl bg-white p-4 shadow-xl">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h3 className="text-base font-semibold text-slate-900">
-            Ajustar stock
-          </h3>
-          <p className="mt-1 text-sm text-slate-500">
-            {ajusteProducto.nombre} · stock actual: {ajusteProducto.stock_actual} {ajusteProducto.unidad}
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            setAjusteModalOpen(false)
-            setAjusteProducto(null)
-            setError('')
-          }}
-          className="text-sm font-medium text-slate-500"
-        >
-          Cerrar
-        </button>
-      </div>
-
-      <div className="space-y-3">
-        <input
-          type="number"
-          placeholder="Nuevo stock"
-          value={ajusteStockNuevo}
-          onChange={(e) => setAjusteStockNuevo(e.target.value)}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
-        />
-
-        <select
-          value={ajusteMotivo}
-          onChange={(e) => setAjusteMotivo(e.target.value)}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
-        >
-          <option value="Recuento manual">Recuento manual</option>
-          <option value="Corrección de error">Corrección de error</option>
-          <option value="Merma no registrada">Merma no registrada</option>
-          <option value="Rotura no registrada">Rotura no registrada</option>
-          <option value="Otro ajuste">Otro ajuste</option>
-        </select>
-
-        <button
-          onClick={guardarAjusteStock}
-          disabled={ajusteSaving}
-          className="mt-2 w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
-        >
-          {ajusteSaving ? 'Guardando ajuste...' : 'Guardar ajuste'}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
 
       {proveedorModalOpen && (
         <div className="fixed inset-0 z-40 flex items-end bg-black/40">
