@@ -168,6 +168,35 @@ function normalizeText(value: string) {
     .trim()
 }
 
+
+function tokenSet(value: string) {
+  return normalizeText(value)
+    .split(' ')
+    .map((token) => token.trim())
+    .filter(Boolean)
+}
+
+function scoreRecipeMatch(articuloTPV: string, receta: { nombre: string; nombre_tpv: string | null }) {
+  const articulo = normalizeText(articuloTPV)
+  const nombreReceta = normalizeText(receta.nombre || '')
+  const nombreTPV = normalizeText(receta.nombre_tpv || '')
+
+  let score = 0
+
+  if (articulo && nombreTPV && articulo === nombreTPV) score += 100
+  if (articulo && nombreReceta && articulo === nombreReceta) score += 90
+  if (articulo && nombreReceta && articulo.includes(nombreReceta)) score += 55
+  if (articulo && nombreReceta && nombreReceta.includes(articulo)) score += 45
+  if (articulo && nombreTPV && articulo.includes(nombreTPV)) score += 40
+
+  const articuloTokens = tokenSet(articulo)
+  const recetaTokens = new Set([...tokenSet(nombreReceta), ...tokenSet(nombreTPV)])
+  const shared = articuloTokens.filter((token) => recetaTokens.has(token)).length
+  score += shared * 10
+
+  return score
+}
+
 export default function HomePage() {
   const [tab, setTab] = useState<TabKey>('stock')
 
@@ -257,6 +286,8 @@ export default function HomePage() {
   const [tpvVentasCrudas, setTpvVentasCrudas] = useState<VentaTPVCruda[]>([])
   const [tpvSeparador, setTpvSeparador] = useState(';')
   const [tpvImportacionId, setTpvImportacionId] = useState<string | null>(null)
+  const [tpvMapeosSeleccionados, setTpvMapeosSeleccionados] = useState<Record<string, string>>({})
+  const [tpvGuardandoMapeo, setTpvGuardandoMapeo] = useState('')
 
   useEffect(() => {
     void loadInitialData()
@@ -1681,6 +1712,49 @@ export default function HomePage() {
     await loadRecetas()
   }
 
+  async function guardarMapeoTPV(productoExterno: string, recetaId: string) {
+    if (!recetaId) {
+      setError('Selecciona una receta para guardar el mapeo')
+      return
+    }
+
+    setTpvGuardandoMapeo(productoExterno)
+    setError('')
+
+    try {
+      const recetaAntes = recetas.find((r) => r.id === recetaId) || null
+
+      const { error } = await supabase
+        .from('recetas')
+        .update({ nombre_tpv: productoExterno.trim() })
+        .eq('id', recetaId)
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      await registrarAuditoria({
+        entidad: 'receta',
+        entidad_id: recetaId,
+        accion: 'editar',
+        detalle: `Mapeo TPV guardado: "${productoExterno}"`,
+        payload_antes: recetaAntes,
+        payload_despues: {
+          ...(recetaAntes || {}),
+          nombre_tpv: productoExterno.trim(),
+        },
+      })
+
+      setTpvMapeosSeleccionados((prev) => ({ ...prev, [productoExterno]: recetaId }))
+      await loadRecetas()
+      setToast(`Mapeo guardado para ${productoExterno}`)
+    } catch (err: any) {
+      setError(err.message || 'No se pudo guardar el mapeo TPV')
+    } finally {
+      setTpvGuardandoMapeo('')
+    }
+  }
+
   async function parseCSVTPVFile(file: File) {
     const fileText = await file.text()
     const rawLines = fileText
@@ -1743,6 +1817,7 @@ export default function HomePage() {
       const ventas = await parseCSVTPVFile(tpvFile)
       setTpvVentasCrudas(ventas)
       setTpvImportacionId(null)
+      setTpvMapeosSeleccionados({})
       setToast(`CSV cargado para revisión (${ventas.length} líneas)`)
     } catch (err: any) {
       setError(err.message || 'No se pudo leer el CSV del TPV')
@@ -2021,6 +2096,42 @@ export default function HomePage() {
         return true
       })
   }, [auditoria, busquedaAuditoria, auditoriaDesde, auditoriaHasta, auditoriaEntidadFiltro, auditoriaAccionFiltro])
+
+  const tpvPendientesMapeo = useMemo(() => {
+    const recetasActivas = recetas.filter((receta) => receta.activo !== false)
+    const recetasMap = new Map(
+      recetasActivas
+        .filter((receta) => receta.nombre_tpv)
+        .map((receta) => [normalizeText(receta.nombre_tpv || ''), receta.id])
+    )
+
+    const agrupadas = new Map<string, { producto_externo: string; total: number; sugerencias: Receta[] }>()
+
+    tpvVentasCrudas.forEach((venta) => {
+      const key = normalizeText(venta.producto_externo)
+      if (!key || recetasMap.has(key)) return
+
+      const existente = agrupadas.get(key)
+      const sugerencias = [...recetasActivas]
+        .map((receta) => ({ receta, score: scoreRecipeMatch(venta.producto_externo, receta) }))
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
+        .map((item) => item.receta)
+
+      if (existente) {
+        existente.total += Number(venta.cantidad)
+      } else {
+        agrupadas.set(key, {
+          producto_externo: venta.producto_externo,
+          total: Number(venta.cantidad),
+          sugerencias,
+        })
+      }
+    })
+
+    return Array.from(agrupadas.values()).sort((a, b) => a.producto_externo.localeCompare(b.producto_externo))
+  }, [tpvVentasCrudas, recetas])
 
   const totalProductos = productos.filter((p) => !p.archivado).length
   const stockBajo = productos.filter(
@@ -3365,6 +3476,84 @@ Coca-Cola Zero;6;1/4/2026
 
                       <div className="mt-2 text-[11px] text-slate-400">
                         Línea original: {venta.raw}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-3xl bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-base font-semibold text-slate-900">Pendientes de mapear</h3>
+                <div className="text-xs text-slate-500">{tpvPendientesMapeo.length} artículo(s)</div>
+              </div>
+
+              {tpvVentasCrudas.length === 0 ? (
+                <div className="py-6 text-center text-sm text-slate-400">
+                  Carga primero un CSV para ver sugerencias de mapeo.
+                </div>
+              ) : tpvPendientesMapeo.length === 0 ? (
+                <div className="py-6 text-center text-sm text-emerald-600">
+                  Todo lo cargado tiene receta asociada. Ya puedes aplicar la importación.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {tpvPendientesMapeo.map((item) => (
+                    <div
+                      key={item.producto_externo}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold text-slate-900">
+                            {item.producto_externo}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            Total en CSV: {item.total}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto]">
+                        <select
+                          value={tpvMapeosSeleccionados[item.producto_externo] || item.sugerencias[0]?.id || ''}
+                          onChange={(e) =>
+                            setTpvMapeosSeleccionados((prev) => ({
+                              ...prev,
+                              [item.producto_externo]: e.target.value,
+                            }))
+                          }
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+                        >
+                          <option value="">Selecciona receta sugerida</option>
+                          {item.sugerencias.map((receta) => (
+                            <option key={receta.id} value={receta.id}>
+                              {receta.nombre} {receta.nombre_tpv ? `· TPV actual: ${receta.nombre_tpv}` : ''}
+                            </option>
+                          ))}
+                          {item.sugerencias.length === 0 &&
+                            recetas
+                              .filter((receta) => receta.activo !== false)
+                              .map((receta) => (
+                                <option key={receta.id} value={receta.id}>
+                                  {receta.nombre}
+                                </option>
+                              ))}
+                        </select>
+
+                        <button
+                          onClick={() =>
+                            guardarMapeoTPV(
+                              item.producto_externo,
+                              tpvMapeosSeleccionados[item.producto_externo] || item.sugerencias[0]?.id || ''
+                            )
+                          }
+                          disabled={tpvGuardandoMapeo === item.producto_externo}
+                          className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                        >
+                          {tpvGuardandoMapeo === item.producto_externo ? 'Guardando...' : 'Guardar mapeo'}
+                        </button>
                       </div>
                     </div>
                   ))}
