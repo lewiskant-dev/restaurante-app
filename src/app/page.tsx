@@ -1760,6 +1760,53 @@ export default function HomePage() {
       setTpvVentasCrudas(ventas)
       setTpvImportacionId(importacion.id)
 
+      // 🔥 CONSUMO AUTOMÁTICO DESDE TPV
+      const { data: recetasData } = await supabase.from('recetas').select('*')
+      const { data: lineasData } = await supabase.from('recetas_lineas').select('*')
+
+      const recetasMap = new Map()
+      recetasData?.forEach(r => {
+        if (r.nombre_tpv) recetasMap.set(r.nombre_tpv.toLowerCase(), r)
+      })
+
+      for (const venta of ventas) {
+        const receta = recetasMap.get(venta.producto_externo.toLowerCase())
+        if (!receta) continue
+
+        const lineas = lineasData?.filter(l => l.receta_id === receta.id) || []
+
+        for (const linea of lineas) {
+          const producto = productos.find(p => p.id === linea.producto_id)
+          if (!producto) continue
+
+          const consumo = Number(linea.cantidad) * Number(venta.cantidad)
+          const stockAntes = Number(producto.stock_actual)
+          const stockDespues = Math.max(0, stockAntes - consumo)
+
+          await supabase.from('productos')
+            .update({ stock_actual: stockDespues })
+            .eq('id', producto.id)
+
+          await supabase.from('movimientos_stock').insert({
+            producto_id: producto.id,
+            tipo: 'consumo',
+            cantidad: consumo,
+            motivo: `TPV: ${venta.producto_externo}`,
+            origen_tipo: 'tpv',
+            origen_id: importacion.id,
+            stock_antes: stockAntes,
+            stock_despues: stockDespues,
+          })
+
+          await registrarAuditoria({
+            entidad: 'producto',
+            entidad_id: producto.id,
+            accion: 'consumo',
+            detalle: `TPV: ${venta.producto_externo} (${consumo})`,
+          })
+        }
+      }
+
       await registrarAuditoria({
         entidad: 'tpv',
         entidad_id: importacion.id,
