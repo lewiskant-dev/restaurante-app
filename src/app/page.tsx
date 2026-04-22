@@ -73,6 +73,14 @@ type OCRAlbaranResult = {
   resumen?: string
 }
 
+type MapeoProducto = {
+  id: string
+  nombre_externo: string
+  producto_id: string | null
+  created_at: string
+}
+
+
 type Receta = {
   id: string
   nombre: string
@@ -243,6 +251,7 @@ export default function HomePage() {
 
   const [productos, setProductos] = useState<Producto[]>([])
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
+  const [mapeosProductos, setMapeosProductos] = useState<MapeoProducto[]>([])
   const [movimientos, setMovimientos] = useState<MovimientoConProducto[]>([])
   const [albaranes, setAlbaranes] = useState<Albaran[]>([])
   const [albaranLineasDetalle, setAlbaranLineasDetalle] = useState<AlbaranLinea[]>([])
@@ -361,6 +370,7 @@ export default function HomePage() {
       loadAlbaranes(),
       loadAuditoria(),
       loadRecetas(),
+      loadMapeosProductos(),
     ])
   }
 
@@ -478,6 +488,20 @@ export default function HomePage() {
 
     setRecetas((data ?? []) as Receta[])
     setLoadingRecetas(false)
+  }
+
+  async function loadMapeosProductos() {
+    const { data, error } = await supabase
+      .from('mapeos_productos')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.warn('No se pudieron cargar mapeos_productos:', error.message)
+      return
+    }
+
+    setMapeosProductos((data ?? []) as MapeoProducto[])
   }
 
   async function registrarAuditoria(params: {
@@ -614,6 +638,13 @@ export default function HomePage() {
     const objetivo = normalizeText(nombreProducto)
     if (!objetivo) return ''
 
+    const mapeoGuardado = mapeosProductos.find(
+      (mapeo) => normalizeText(mapeo.nombre_externo || '') === objetivo && mapeo.producto_id
+    )
+    if (mapeoGuardado?.producto_id) {
+      return mapeoGuardado.producto_id
+    }
+
     let mejorId = ''
     let mejorScore = 0
 
@@ -629,7 +660,7 @@ export default function HomePage() {
           const tokensObjetivo = objetivo.split(' ').filter(Boolean)
           const tokensNombre = nombre.split(' ').filter(Boolean)
           const comunes = tokensObjetivo.filter((token) => tokensNombre.includes(token)).length
-          score = comunes
+          score = comunes * 10
         }
 
         if (score > mejorScore) {
@@ -638,7 +669,59 @@ export default function HomePage() {
         }
       })
 
-    return mejorScore >= 2 ? mejorId : ''
+    return mejorScore >= 20 ? mejorId : ''
+  }
+
+  function getProductoNombre(productoId: string) {
+    return productos.find((prod) => prod.id === productoId)?.nombre || ''
+  }
+
+  async function guardarMapeoProducto(nombreExterno: string, productoId: string) {
+    if (!nombreExterno || !productoId) {
+      setError('No se pudo guardar el mapeo')
+      return
+    }
+
+    setError('')
+
+    const existente = mapeosProductos.find(
+      (item) => normalizeText(item.nombre_externo || '') === normalizeText(nombreExterno)
+    )
+
+    if (existente?.id) {
+      const { error } = await supabase
+        .from('mapeos_productos')
+        .update({ producto_id: productoId })
+        .eq('id', existente.id)
+
+      if (error) {
+        setError(error.message)
+        return
+      }
+    } else {
+      const { error } = await supabase.from('mapeos_productos').insert({
+        nombre_externo: nombreExterno,
+        producto_id: productoId,
+      })
+
+      if (error) {
+        setError(error.message)
+        return
+      }
+    }
+
+    await registrarAuditoria({
+      entidad: 'producto',
+      accion: 'crear',
+      detalle: `Mapeo OCR guardado: ${nombreExterno} → ${getProductoNombre(productoId)}`,
+      payload_despues: {
+        nombre_externo: nombreExterno,
+        producto_id: productoId,
+      },
+    })
+
+    await loadMapeosProductos()
+    setToast('Mapeo guardado')
   }
 
   function fileToDataUrl(file: File) {
@@ -651,64 +734,56 @@ export default function HomePage() {
   }
 
   async function analizarAlbaranConOCR() {
-  if (!albaranFoto) {
-    setError('Selecciona primero una foto o PDF del albarán')
-    return
-  }
+    if (!albaranFoto) {
+      setError('Selecciona primero una foto o PDF del albarán')
+      return
+    }
 
-  setAlbaranOCRLoading(true)
-  setError('')
+    setAlbaranOCRLoading(true)
+    setError('')
 
-  try {
-    const imageBase64 = await fileToDataUrl(albaranFoto)
+    try {
+      const imageBase64 = await fileToDataUrl(albaranFoto)
 
-    const { data, error } = await supabase.functions.invoke('ocr-albaran', {
-      body: { imageBase64 },
-    })
+      const { data, error } = await supabase.functions.invoke('ocr-albaran', {
+        body: {
+          imageBase64,
+        },
+      })
 
-    if (error) {
-      let details = error.message || 'Error en función OCR'
-
-      try {
-        const maybeContext = (error as any).context
-        if (maybeContext && typeof maybeContext.json === 'function') {
-          const body = await maybeContext.json()
-          details = JSON.stringify(body)
-        }
-      } catch {
-        // dejamos details tal cual
+      if (error) {
+        throw new Error(error.message)
       }
 
-      throw new Error(details)
+      const resultado = (data || {}) as OCRAlbaranResult
+
+      setAlbaranNumero(resultado.numero || '')
+      setAlbaranFecha(formatOCRDateToInput(resultado.fecha || ''))
+      setAlbaranOCRResumen(resultado.resumen || '')
+
+      const proveedorId = findProveedorIdFromOCR(resultado.proveedor || '')
+      if (proveedorId) {
+        setAlbaranProveedorId(proveedorId)
+      }
+
+      const lineasDetectadas = (resultado.lineas || []).map((linea) => ({
+        producto_id: findProductoIdFromOCR(linea.nombre || ''),
+        cantidad: String(linea.cantidad ?? ''),
+        precio_unitario: String(linea.precio_unitario ?? ''),
+        nombre_detectado: linea.nombre || '',
+      }))
+
+      if (lineasDetectadas.length > 0) {
+        setAlbaranLineas(lineasDetectadas)
+      }
+
+      setToast(`OCR completado (${lineasDetectadas.length} línea(s) detectadas)`)
+    } catch (err: any) {
+      setError(err.message || 'No se pudo analizar el albarán')
+    } finally {
+      setAlbaranOCRLoading(false)
     }
-
-    const resultado = data || {}
-
-    setAlbaranNumero(resultado.numero || '')
-    setAlbaranFecha(formatOCRDateToInput(resultado.fecha || ''))
-    setAlbaranOCRResumen(resultado.resumen || '')
-
-    const proveedorId = findProveedorIdFromOCR(resultado.proveedor || '')
-    if (proveedorId) {
-      setAlbaranProveedorId(proveedorId)
-    }
-
-    const lineasDetectadas = (resultado.lineas || []).map((linea: any) => ({
-      producto_id: findProductoIdFromOCR(linea.nombre || ''),
-      cantidad: String(linea.cantidad ?? ''),
-      precio_unitario: String(linea.precio_unitario ?? ''),
-      nombre_detectado: linea.nombre || '',
-    }))
-
-    if (lineasDetectadas.length > 0) {
-      setAlbaranLineas(lineasDetectadas)
-    }
-  } catch (err: any) {
-    setError(err.message || 'Error desconocido OCR')
-  } finally {
-    setAlbaranOCRLoading(false)
   }
-}
 
   async function openDetalleAlbaran(albaran: Albaran) {
     setDetalleAlbaran(albaran)
@@ -3057,8 +3132,29 @@ export default function HomePage() {
                         </select>
 
                         {linea.nombre_detectado ? (
-                          <div className="text-xs text-slate-500">
-                            Detectado por OCR: {linea.nombre_detectado}
+                          <div className="space-y-2">
+                            <div className="text-xs text-slate-500">
+                              Detectado por OCR: {linea.nombre_detectado}
+                            </div>
+
+                            {linea.producto_id ? (
+                              <div className="flex items-center justify-between gap-3 rounded-2xl bg-emerald-50 px-3 py-2 text-xs">
+                                <span className="text-emerald-700">
+                                  Sugerido: {getProductoNombre(linea.producto_id)}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => guardarMapeoProducto(linea.nombre_detectado || '', linea.producto_id)}
+                                  className="rounded-xl bg-emerald-600 px-3 py-2 font-semibold text-white"
+                                >
+                                  Guardar mapeo
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="rounded-2xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                                Sin coincidencia automática. Selecciona el producto correcto y guarda el mapeo.
+                              </div>
+                            )}
                           </div>
                         ) : null}
 
