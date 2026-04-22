@@ -651,56 +651,64 @@ export default function HomePage() {
   }
 
   async function analizarAlbaranConOCR() {
-    if (!albaranFoto) {
-      setError('Selecciona primero una foto o PDF del albarán')
-      return
-    }
-
-    setAlbaranOCRLoading(true)
-    setError('')
-
-    try {
-      const imageBase64 = await fileToDataUrl(albaranFoto)
-
-      const { data, error } = await supabase.functions.invoke('ocr-albaran', {
-        body: {
-          imageBase64,
-        },
-      })
-
-      if (error) {
-        throw new Error(error.message)
-      }
-
-      const resultado = (data || {}) as OCRAlbaranResult
-
-      setAlbaranNumero(resultado.numero || '')
-      setAlbaranFecha(formatOCRDateToInput(resultado.fecha || ''))
-      setAlbaranOCRResumen(resultado.resumen || '')
-
-      const proveedorId = findProveedorIdFromOCR(resultado.proveedor || '')
-      if (proveedorId) {
-        setAlbaranProveedorId(proveedorId)
-      }
-
-      const lineasDetectadas = (resultado.lineas || []).map((linea) => ({
-        producto_id: findProductoIdFromOCR(linea.nombre || ''),
-        cantidad: String(linea.cantidad ?? ''),
-        precio_unitario: String(linea.precio_unitario ?? ''),
-        nombre_detectado: linea.nombre || '',
-      }))
-
-      if (lineasDetectadas.length > 0) {
-        setAlbaranLineas(lineasDetectadas)
-      }
-
-      setToast(`OCR completado (${lineasDetectadas.length} línea(s) detectadas)`)
-    } catch (err: any) {
-      setError(err.message || 'No se pudo analizar el albarán')
-    } finally {
-      setAlbaranOCRLoading(false)
-    }
+  if (!albaranFoto) {
+    setError('Selecciona primero una foto o PDF del albarán')
+    return
   }
+
+  setAlbaranOCRLoading(true)
+  setError('')
+
+  try {
+    const imageBase64 = await fileToDataUrl(albaranFoto)
+
+    const { data, error } = await supabase.functions.invoke('ocr-albaran', {
+      body: { imageBase64 },
+    })
+
+    if (error) {
+      let details = error.message || 'Error en función OCR'
+
+      try {
+        const maybeContext = (error as any).context
+        if (maybeContext && typeof maybeContext.json === 'function') {
+          const body = await maybeContext.json()
+          details = JSON.stringify(body)
+        }
+      } catch {
+        // dejamos details tal cual
+      }
+
+      throw new Error(details)
+    }
+
+    const resultado = data || {}
+
+    setAlbaranNumero(resultado.numero || '')
+    setAlbaranFecha(formatOCRDateToInput(resultado.fecha || ''))
+    setAlbaranOCRResumen(resultado.resumen || '')
+
+    const proveedorId = findProveedorIdFromOCR(resultado.proveedor || '')
+    if (proveedorId) {
+      setAlbaranProveedorId(proveedorId)
+    }
+
+    const lineasDetectadas = (resultado.lineas || []).map((linea: any) => ({
+      producto_id: findProductoIdFromOCR(linea.nombre || ''),
+      cantidad: String(linea.cantidad ?? ''),
+      precio_unitario: String(linea.precio_unitario ?? ''),
+      nombre_detectado: linea.nombre || '',
+    }))
+
+    if (lineasDetectadas.length > 0) {
+      setAlbaranLineas(lineasDetectadas)
+    }
+  } catch (err: any) {
+    setError(err.message || 'Error desconocido OCR')
+  } finally {
+    setAlbaranOCRLoading(false)
+  }
+}
 
   async function openDetalleAlbaran(albaran: Albaran) {
     setDetalleAlbaran(albaran)
