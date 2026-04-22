@@ -34,6 +34,7 @@ type AlbaranLineaForm = {
   producto_id: string
   cantidad: string
   precio_unitario: string
+  nombre_detectado?: string
 }
 
 type ProveedorForm = {
@@ -56,6 +57,20 @@ type VentaTPVCruda = {
   cantidad: number
   fecha: string
   raw: string
+}
+
+type OCRAlbaranLinea = {
+  nombre: string
+  cantidad: number
+  precio_unitario: number
+}
+
+type OCRAlbaranResult = {
+  proveedor: string
+  numero: string
+  fecha: string
+  lineas: OCRAlbaranLinea[]
+  resumen?: string
 }
 
 type Receta = {
@@ -93,6 +108,7 @@ const initialLinea: AlbaranLineaForm = {
   producto_id: '',
   cantidad: '',
   precio_unitario: '',
+  nombre_detectado: '',
 }
 
 const initialProveedorForm: ProveedorForm = {
@@ -137,6 +153,31 @@ function formatFechaHora(fecha: string) {
   } catch {
     return fecha
   }
+}
+
+function formatOCRDateToInput(value: string) {
+  if (!value) return todayLocalInputDate()
+
+  const clean = value.trim()
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+    return clean
+  }
+
+  const match = clean.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/)
+  if (match) {
+    const day = match[1].padStart(2, '0')
+    const month = match[2].padStart(2, '0')
+    const year = match[3].length === 2 ? `20${match[3]}` : match[3]
+    return `${year}-${month}-${day}`
+  }
+
+  const parsed = new Date(clean)
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10)
+  }
+
+  return todayLocalInputDate()
 }
 
 function getNivel(producto: Producto) {
@@ -260,6 +301,8 @@ export default function HomePage() {
   const [albaranLineas, setAlbaranLineas] = useState<AlbaranLineaForm[]>([{ ...initialLinea }])
   const [albaranFoto, setAlbaranFoto] = useState<File | null>(null)
   const [albaranSaving, setAlbaranSaving] = useState(false)
+  const [albaranOCRLoading, setAlbaranOCRLoading] = useState(false)
+  const [albaranOCRResumen, setAlbaranOCRResumen] = useState('')
   const [editingAlbaranId, setEditingAlbaranId] = useState<string | null>(null)
 
   const [detalleAlbaranOpen, setDetalleAlbaranOpen] = useState(false)
@@ -549,6 +592,113 @@ export default function HomePage() {
       setError('Esta acción todavía no se puede deshacer')
     } catch (err: any) {
       setError(err.message || 'No se pudo deshacer la acción')
+    }
+  }
+
+  function findProveedorIdFromOCR(nombreProveedor: string) {
+    const objetivo = normalizeText(nombreProveedor)
+    if (!objetivo) return ''
+
+    const exacto = proveedores.find((prov) => normalizeText(prov.nombre || '') === objetivo)
+    if (exacto) return exacto.id
+
+    const parcial = proveedores.find((prov) => {
+      const nombre = normalizeText(prov.nombre || '')
+      return nombre.includes(objetivo) || objetivo.includes(nombre)
+    })
+
+    return parcial?.id || ''
+  }
+
+  function findProductoIdFromOCR(nombreProducto: string) {
+    const objetivo = normalizeText(nombreProducto)
+    if (!objetivo) return ''
+
+    let mejorId = ''
+    let mejorScore = 0
+
+    productos
+      .filter((prod) => !prod.archivado)
+      .forEach((prod) => {
+        const nombre = normalizeText(prod.nombre || '')
+        let score = 0
+
+        if (nombre === objetivo) score = 100
+        else if (nombre.includes(objetivo) || objetivo.includes(nombre)) score = 80
+        else {
+          const tokensObjetivo = objetivo.split(' ').filter(Boolean)
+          const tokensNombre = nombre.split(' ').filter(Boolean)
+          const comunes = tokensObjetivo.filter((token) => tokensNombre.includes(token)).length
+          score = comunes
+        }
+
+        if (score > mejorScore) {
+          mejorScore = score
+          mejorId = prod.id
+        }
+      })
+
+    return mejorScore >= 2 ? mejorId : ''
+  }
+
+  function fileToDataUrl(file: File) {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result || ''))
+      reader.onerror = () => reject(new Error('No se pudo leer la imagen'))
+      reader.readAsDataURL(file)
+    })
+  }
+
+  async function analizarAlbaranConOCR() {
+    if (!albaranFoto) {
+      setError('Selecciona primero una foto o PDF del albarán')
+      return
+    }
+
+    setAlbaranOCRLoading(true)
+    setError('')
+
+    try {
+      const imageBase64 = await fileToDataUrl(albaranFoto)
+
+      const { data, error } = await supabase.functions.invoke('ocr-albaran', {
+        body: {
+          imageBase64,
+        },
+      })
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      const resultado = (data || {}) as OCRAlbaranResult
+
+      setAlbaranNumero(resultado.numero || '')
+      setAlbaranFecha(formatOCRDateToInput(resultado.fecha || ''))
+      setAlbaranOCRResumen(resultado.resumen || '')
+
+      const proveedorId = findProveedorIdFromOCR(resultado.proveedor || '')
+      if (proveedorId) {
+        setAlbaranProveedorId(proveedorId)
+      }
+
+      const lineasDetectadas = (resultado.lineas || []).map((linea) => ({
+        producto_id: findProductoIdFromOCR(linea.nombre || ''),
+        cantidad: String(linea.cantidad ?? ''),
+        precio_unitario: String(linea.precio_unitario ?? ''),
+        nombre_detectado: linea.nombre || '',
+      }))
+
+      if (lineasDetectadas.length > 0) {
+        setAlbaranLineas(lineasDetectadas)
+      }
+
+      setToast(`OCR completado (${lineasDetectadas.length} línea(s) detectadas)`)
+    } catch (err: any) {
+      setError(err.message || 'No se pudo analizar el albarán')
+    } finally {
+      setAlbaranOCRLoading(false)
     }
   }
 
@@ -1020,10 +1170,12 @@ export default function HomePage() {
             producto_id: l.producto_id || '',
             cantidad: String(l.cantidad ?? ''),
             precio_unitario: String(l.precio_unitario ?? ''),
+            nombre_detectado: l.nombre_producto || '',
           }))
         : [{ ...initialLinea }]
     )
 
+    setAlbaranOCRResumen('')
     setDetalleAlbaranOpen(false)
     setDetalleAlbaran(null)
     setAlbaranLineasDetalle([])
@@ -1110,6 +1262,7 @@ export default function HomePage() {
     setAlbaranNotas('')
     setAlbaranLineas([{ ...initialLinea }])
     setAlbaranFoto(null)
+    setAlbaranOCRResumen('')
   }
 
   async function guardarAlbaran() {
@@ -2821,17 +2974,32 @@ export default function HomePage() {
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-600">
-                    Foto del albarán
+                    Foto o PDF del albarán
                   </label>
 
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/*,.pdf,application/pdf"
                     capture="environment"
                     onChange={(e) => setAlbaranFoto(e.target.files?.[0] || null)}
                     className="w-full text-sm text-slate-700"
                   />
+
+                  <button
+                    type="button"
+                    onClick={analizarAlbaranConOCR}
+                    disabled={albaranOCRLoading || !albaranFoto}
+                    className="mt-3 w-full rounded-2xl bg-amber-500 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
+                  >
+                    {albaranOCRLoading ? 'Analizando albarán...' : 'Analizar albarán'}
+                  </button>
                 </div>
+
+                {albaranOCRResumen ? (
+                  <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-slate-700">
+                    {albaranOCRResumen}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -2879,6 +3047,12 @@ export default function HomePage() {
                               </option>
                             ))}
                         </select>
+
+                        {linea.nombre_detectado ? (
+                          <div className="text-xs text-slate-500">
+                            Detectado por OCR: {linea.nombre_detectado}
+                          </div>
+                        ) : null}
 
                         <div className="grid grid-cols-2 gap-3">
                           <input
