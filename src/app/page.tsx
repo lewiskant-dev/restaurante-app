@@ -253,6 +253,7 @@ export default function HomePage() {
 
   const [tpvFile, setTpvFile] = useState<File | null>(null)
   const [tpvImportando, setTpvImportando] = useState(false)
+  const [tpvAplicando, setTpvAplicando] = useState(false)
   const [tpvVentasCrudas, setTpvVentasCrudas] = useState<VentaTPVCruda[]>([])
   const [tpvSeparador, setTpvSeparador] = useState(';')
   const [tpvImportacionId, setTpvImportacionId] = useState<string | null>(null)
@@ -1680,6 +1681,55 @@ export default function HomePage() {
     await loadRecetas()
   }
 
+  async function parseCSVTPVFile(file: File) {
+    const fileText = await file.text()
+    const rawLines = fileText
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+
+    if (rawLines.length <= 1) {
+      throw new Error('El CSV no contiene datos suficientes')
+    }
+
+    const headerCols = rawLines[0].split(';').map((col) => col.trim())
+    const lineas = rawLines.slice(1)
+
+    const articuloIndex = headerCols.findIndex((col) => col.toLowerCase() === 'articulo')
+    const cantidadIndex = headerCols.findIndex((col) => col.toLowerCase() === 'cantidad')
+    const fechaIndex = headerCols.findIndex((col) => col.toLowerCase() === 'fecha')
+
+    if (articuloIndex === -1 || cantidadIndex === -1) {
+      throw new Error(
+        `No encuentro las columnas necesarias en el CSV. Columnas detectadas: ${headerCols.join(', ')}`
+      )
+    }
+
+    const ventas: VentaTPVCruda[] = lineas
+      .map((linea) => {
+        const cols = linea.split(';').map((v) => v.trim())
+        const producto = cols[articuloIndex] || ''
+        const cantidad = Number((cols[cantidadIndex] || '0').replace(',', '.'))
+        const fecha = fechaIndex >= 0 ? cols[fechaIndex] || new Date().toISOString() : new Date().toISOString()
+
+        if (!producto || !cantidad || cantidad <= 0) return null
+
+        return {
+          producto_externo: producto,
+          cantidad,
+          fecha,
+          raw: linea,
+        }
+      })
+      .filter(Boolean) as VentaTPVCruda[]
+
+    if (!ventas.length) {
+      throw new Error('No se han encontrado líneas válidas de ventas en el CSV')
+    }
+
+    return ventas
+  }
+
   async function importarCSVTPV() {
     if (!tpvFile) {
       setError('Selecciona un archivo CSV del TPV')
@@ -1690,50 +1740,28 @@ export default function HomePage() {
     setError('')
 
     try {
-      const fileText = await tpvFile.text()
-      const rawLines = fileText
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean)
+      const ventas = await parseCSVTPVFile(tpvFile)
+      setTpvVentasCrudas(ventas)
+      setTpvImportacionId(null)
+      setToast(`CSV cargado para revisión (${ventas.length} líneas)`)
+    } catch (err: any) {
+      setError(err.message || 'No se pudo leer el CSV del TPV')
+    } finally {
+      setTpvImportando(false)
+    }
+  }
 
-      if (rawLines.length <= 1) {
-        throw new Error('El CSV no contiene datos suficientes')
-      }
+  async function aplicarImportacionTPV() {
+    if (!tpvFile || tpvVentasCrudas.length === 0) {
+      setError('Primero importa y revisa un CSV válido')
+      return
+    }
 
-      const headerCols = rawLines[0].split(';').map((col) => col.trim())
-      const lineas = rawLines.slice(1)
+    setTpvAplicando(true)
+    setError('')
 
-      const articuloIndex = headerCols.findIndex((col) => col.toLowerCase() === 'articulo')
-      const cantidadIndex = headerCols.findIndex((col) => col.toLowerCase() === 'cantidad')
-      const fechaIndex = headerCols.findIndex((col) => col.toLowerCase() === 'fecha')
-
-      if (articuloIndex === -1 || cantidadIndex === -1) {
-        throw new Error(
-          `No encuentro las columnas necesarias en el CSV. Columnas detectadas: ${headerCols.join(', ')}`
-        )
-      }
-
-      const ventas: VentaTPVCruda[] = lineas
-        .map((linea) => {
-          const cols = linea.split(';').map((v) => v.trim())
-          const producto = cols[articuloIndex] || ''
-          const cantidad = Number((cols[cantidadIndex] || '0').replace(',', '.'))
-          const fecha = fechaIndex >= 0 ? cols[fechaIndex] || new Date().toISOString() : new Date().toISOString()
-
-          if (!producto || !cantidad || cantidad <= 0) return null
-
-          return {
-            producto_externo: producto,
-            cantidad,
-            fecha,
-            raw: linea,
-          }
-        })
-        .filter(Boolean) as VentaTPVCruda[]
-
-      if (!ventas.length) {
-        throw new Error('No se han encontrado líneas válidas de ventas en el CSV')
-      }
+    try {
+      const ventas = tpvVentasCrudas
 
       const { data: importacion, error: importError } = await supabase
         .from('tpv_importaciones')
@@ -1767,10 +1795,8 @@ export default function HomePage() {
         throw new Error(ventasError.message)
       }
 
-      setTpvVentasCrudas(ventas)
       setTpvImportacionId(importacion.id)
 
-      // 🔥 CONSUMO AUTOMÁTICO DESDE TPV
       const { data: recetasData } = await supabase.from('recetas').select('*')
       const { data: lineasData } = await supabase.from('recetas_lineas').select('*')
       const { data: productosActuales } = await supabase.from('productos').select('*')
@@ -1862,19 +1888,23 @@ export default function HomePage() {
         entidad: 'tpv',
         entidad_id: importacion.id,
         accion: 'importar_csv',
-        detalle: `Importación TPV: ${tpvFile.name} · Líneas válidas: ${ventas.length}`,
+        detalle: `Importación TPV aplicada: ${tpvFile.name} · Líneas válidas: ${ventas.length} · Con receta: ${ventasConReceta} · Sin receta: ${ventasSinReceta} · Consumos generados: ${consumosGenerados}`,
         payload_despues: {
           archivo: tpvFile.name,
           filas: ventas.length,
-          columnas_detectadas: headerCols,
+          ventas_con_receta: ventasConReceta,
+          ventas_sin_receta: ventasSinReceta,
+          consumos_generados: consumosGenerados,
         },
       })
 
-      setToast(`CSV TPV importado (${ventas.length} líneas)`)
+      await Promise.all([loadProductos(), loadMovimientos(), loadAuditoria()])
+
+      setToast(`Importación aplicada · Recetas: ${ventasConReceta} · Sin receta: ${ventasSinReceta}`)
     } catch (err: any) {
-      setError(err.message || 'No se pudo importar el CSV del TPV')
+      setError(err.message || 'No se pudo aplicar la importación del TPV')
     } finally {
-      setTpvImportando(false)
+      setTpvAplicando(false)
     }
   }
 
@@ -3239,7 +3269,7 @@ export default function HomePage() {
             <div className="rounded-3xl bg-white p-4 shadow-sm">
               <h2 className="text-base font-semibold text-slate-900">Importar ventas del TPV</h2>
               <p className="mt-1 text-sm text-slate-500">
-                Adaptado al CSV real de tu TPV. Se leerán las columnas Articulo, Cantidad y Fecha.
+                Primero carga el CSV y revisa las líneas. Después pulsa aplicar para descontar stock.
               </p>
 
               <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -3265,13 +3295,23 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <button
-                onClick={importarCSVTPV}
-                disabled={tpvImportando}
-                className="mt-4 w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
-              >
-                {tpvImportando ? 'Importando CSV...' : 'Importar CSV TPV'}
-              </button>
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <button
+                  onClick={importarCSVTPV}
+                  disabled={tpvImportando}
+                  className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
+                >
+                  {tpvImportando ? 'Cargando CSV...' : 'Cargar y revisar CSV'}
+                </button>
+
+                <button
+                  onClick={aplicarImportacionTPV}
+                  disabled={tpvAplicando || tpvVentasCrudas.length === 0}
+                  className="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
+                >
+                  {tpvAplicando ? 'Aplicando importación...' : 'Aplicar importación'}
+                </button>
+              </div>
 
               <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
                 <div className="font-semibold text-slate-900">Formato esperado</div>
@@ -3333,10 +3373,9 @@ Coca-Cola Zero;6;1/4/2026
             </div>
 
             <div className="rounded-3xl bg-amber-50 p-4 text-sm text-slate-700 shadow-sm">
-              <div className="font-semibold text-slate-900">Descuento automático activo</div>
+              <div className="font-semibold text-slate-900">Flujo recomendado</div>
               <div className="mt-1">
-                Si el nombre del artículo del CSV coincide con el campo <span className="font-semibold">nombre TPV</span> de una receta,
-                el sistema ya descontará stock automáticamente al importar.
+                1) Carga el CSV para revisar líneas. 2) Comprueba que todo está bien. 3) Pulsa <span className="font-semibold">Aplicar importación</span> para descontar stock.
               </div>
             </div>
           </div>
