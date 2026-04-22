@@ -1680,8 +1680,8 @@ export default function HomePage() {
     setError('')
 
     try {
-      const text = await tpvFile.text()
-      const rawLines = text
+      const fileText = await tpvFile.text()
+      const rawLines = fileText
         .split(/\r?\n/)
         .map((line) => line.trim())
         .filter(Boolean)
@@ -1690,8 +1690,40 @@ export default function HomePage() {
         throw new Error('El CSV no contiene datos suficientes')
       }
 
-      const header = rawLines[0]
+      const headerCols = rawLines[0].split(';').map((col) => col.trim())
       const lineas = rawLines.slice(1)
+
+      const articuloIndex = headerCols.findIndex((col) => col.toLowerCase() === 'articulo')
+      const cantidadIndex = headerCols.findIndex((col) => col.toLowerCase() === 'cantidad')
+      const fechaIndex = headerCols.findIndex((col) => col.toLowerCase() === 'fecha')
+
+      if (articuloIndex === -1 || cantidadIndex === -1) {
+        throw new Error(
+          `No encuentro las columnas necesarias en el CSV. Columnas detectadas: ${headerCols.join(', ')}`
+        )
+      }
+
+      const ventas: VentaTPVCruda[] = lineas
+        .map((linea) => {
+          const cols = linea.split(';').map((v) => v.trim())
+          const producto = cols[articuloIndex] || ''
+          const cantidad = Number((cols[cantidadIndex] || '0').replace(',', '.'))
+          const fecha = fechaIndex >= 0 ? cols[fechaIndex] || new Date().toISOString() : new Date().toISOString()
+
+          if (!producto || !cantidad || cantidad <= 0) return null
+
+          return {
+            producto_externo: producto,
+            cantidad,
+            fecha,
+            raw: linea,
+          }
+        })
+        .filter(Boolean) as VentaTPVCruda[]
+
+      if (!ventas.length) {
+        throw new Error('No se han encontrado líneas válidas de ventas en el CSV')
+      }
 
       const { data: importacion, error: importError } = await supabase
         .from('tpv_importaciones')
@@ -1704,28 +1736,6 @@ export default function HomePage() {
 
       if (importError || !importacion) {
         throw new Error(importError?.message || 'No se pudo crear la importación TPV')
-      }
-
-      const ventas: VentaTPVCruda[] = lineas
-        .map((linea) => {
-          const cols = linea.split(tpvSeparador).map((v) => v.trim())
-          const producto = cols[0] || ''
-          const cantidad = Number((cols[1] || '0').replace(',', '.'))
-          const fecha = cols[2] || new Date().toISOString()
-
-          if (!producto || !cantidad) return null
-
-          return {
-            producto_externo: producto,
-            cantidad,
-            fecha,
-            raw: linea,
-          }
-        })
-        .filter(Boolean) as VentaTPVCruda[]
-
-      if (!ventas.length) {
-        throw new Error(`No se pudieron interpretar líneas del CSV. Cabecera detectada: ${header}`)
       }
 
       const payload = ventas.map((venta) => ({
@@ -1758,7 +1768,7 @@ export default function HomePage() {
         payload_despues: {
           archivo: tpvFile.name,
           filas: ventas.length,
-          separador: tpvSeparador,
+          columnas_detectadas: headerCols,
         },
       })
 
@@ -3131,7 +3141,7 @@ export default function HomePage() {
             <div className="rounded-3xl bg-white p-4 shadow-sm">
               <h2 className="text-base font-semibold text-slate-900">Importar ventas del TPV</h2>
               <p className="mt-1 text-sm text-slate-500">
-                Sube un CSV base con columnas en este orden: producto; cantidad; fecha
+                Adaptado al CSV real de tu TPV. Se leerán las columnas Articulo, Cantidad y Fecha.
               </p>
 
               <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -3149,17 +3159,11 @@ export default function HomePage() {
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-600">
-                    Separador
+                    Separador detectado
                   </label>
-                  <select
-                    value={tpvSeparador}
-                    onChange={(e) => setTpvSeparador(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
-                  >
-                    <option value=";">Punto y coma (;)</option>
-                    <option value=",">Coma (,)</option>
-                    <option value="\t">Tabulación</option>
-                  </select>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                    Punto y coma (;)
+                  </div>
                 </div>
               </div>
 
@@ -3173,11 +3177,11 @@ export default function HomePage() {
 
               <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
                 <div className="font-semibold text-slate-900">Formato esperado</div>
-                <div className="mt-1">Ejemplo:</div>
+                <div className="mt-1">Columnas que usamos del CSV real:</div>
                 <div className="mt-2 whitespace-pre-wrap rounded-xl bg-white p-3 font-mono text-xs text-slate-700">
-producto;cantidad;fecha
-Hamburguesa completa;12;2026-04-22T14:00:00
-Coca Cola 33cl;8;2026-04-22T14:00:00
+Articulo;Cantidad;Fecha
+Coca-Cola;9;1/4/2026
+Coca-Cola Zero;6;1/4/2026
                 </div>
               </div>
             </div>
