@@ -158,6 +158,16 @@ function formatEuro(n: number) {
   }) + ' €'
 }
 
+
+function normalizeText(value: string) {
+  return (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export default function HomePage() {
   const [tab, setTab] = useState<TabKey>('stock')
 
@@ -1763,31 +1773,54 @@ export default function HomePage() {
       // 🔥 CONSUMO AUTOMÁTICO DESDE TPV
       const { data: recetasData } = await supabase.from('recetas').select('*')
       const { data: lineasData } = await supabase.from('recetas_lineas').select('*')
+      const { data: productosActuales } = await supabase.from('productos').select('*')
 
-      const recetasMap = new Map()
-      recetasData?.forEach(r => {
-        if (r.nombre_tpv) recetasMap.set(r.nombre_tpv.toLowerCase(), r)
+      const recetasMap = new Map<string, any>()
+      recetasData?.forEach((r: any) => {
+        if (r.nombre_tpv && r.activo !== false) {
+          recetasMap.set(normalizeText(r.nombre_tpv), r)
+        }
       })
 
-      for (const venta of ventas) {
-        const receta = recetasMap.get(venta.producto_externo.toLowerCase())
-        if (!receta) continue
+      const productosMap = new Map<string, any>()
+      productosActuales?.forEach((p: any) => {
+        productosMap.set(p.id, p)
+      })
 
-        const lineas = lineasData?.filter(l => l.receta_id === receta.id) || []
+      let ventasConReceta = 0
+      let ventasSinReceta = 0
+      let consumosGenerados = 0
+
+      for (const venta of ventas) {
+        const receta = recetasMap.get(normalizeText(venta.producto_externo))
+
+        if (!receta) {
+          ventasSinReceta += 1
+          continue
+        }
+
+        ventasConReceta += 1
+
+        const lineas = lineasData?.filter((l: any) => l.receta_id === receta.id) || []
 
         for (const linea of lineas) {
-          const producto = productos.find(p => p.id === linea.producto_id)
+          const producto = productosMap.get(linea.producto_id)
           if (!producto) continue
 
           const consumo = Number(linea.cantidad) * Number(venta.cantidad)
-          const stockAntes = Number(producto.stock_actual)
+          const stockAntes = Number(producto.stock_actual || 0)
           const stockDespues = Math.max(0, stockAntes - consumo)
 
-          await supabase.from('productos')
+          const { error: updateProductoError } = await supabase
+            .from('productos')
             .update({ stock_actual: stockDespues })
             .eq('id', producto.id)
 
-          await supabase.from('movimientos_stock').insert({
+          if (updateProductoError) {
+            throw new Error(updateProductoError.message)
+          }
+
+          const { error: movError } = await supabase.from('movimientos_stock').insert({
             producto_id: producto.id,
             tipo: 'consumo',
             cantidad: consumo,
@@ -1798,12 +1831,30 @@ export default function HomePage() {
             stock_despues: stockDespues,
           })
 
+          if (movError) {
+            throw new Error(movError.message)
+          }
+
           await registrarAuditoria({
             entidad: 'producto',
             entidad_id: producto.id,
             accion: 'consumo',
-            detalle: `TPV: ${venta.producto_externo} (${consumo})`,
+            detalle: `TPV: ${venta.producto_externo} · Producto: ${producto.nombre} · Consumo: ${consumo}`,
+            payload_antes: {
+              producto: producto.nombre,
+              stock_actual: stockAntes,
+            },
+            payload_despues: {
+              producto: producto.nombre,
+              stock_actual: stockDespues,
+            },
           })
+
+          productosMap.set(producto.id, {
+            ...producto,
+            stock_actual: stockDespues,
+          })
+          consumosGenerados += 1
         }
       }
 
@@ -3282,10 +3333,10 @@ Coca-Cola Zero;6;1/4/2026
             </div>
 
             <div className="rounded-3xl bg-amber-50 p-4 text-sm text-slate-700 shadow-sm">
-              <div className="font-semibold text-slate-900">Siguiente paso recomendado</div>
+              <div className="font-semibold text-slate-900">Descuento automático activo</div>
               <div className="mt-1">
-                El siguiente bloque será mapear cada producto externo del TPV a un plato o producto interno
-                para poder descontar stock automáticamente sin errores.
+                Si el nombre del artículo del CSV coincide con el campo <span className="font-semibold">nombre TPV</span> de una receta,
+                el sistema ya descontará stock automáticamente al importar.
               </div>
             </div>
           </div>
