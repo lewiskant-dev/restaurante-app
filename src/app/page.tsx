@@ -35,6 +35,7 @@ type AlbaranLineaForm = {
   cantidad: string
   precio_unitario: string
   nombre_detectado?: string
+  mapeo_estado?: 'automatico' | 'aprendido' | 'manual' | 'pendiente'
 }
 
 type ProveedorForm = {
@@ -117,6 +118,7 @@ const initialLinea: AlbaranLineaForm = {
   cantidad: '',
   precio_unitario: '',
   nombre_detectado: '',
+  mapeo_estado: 'manual',
 }
 
 const initialProveedorForm: ProveedorForm = {
@@ -634,15 +636,15 @@ export default function HomePage() {
     return parcial?.id || ''
   }
 
-  function findProductoIdFromOCR(nombreProducto: string) {
+  function getProductoMatchInfoFromOCR(nombreProducto: string) {
     const objetivo = normalizeText(nombreProducto)
-    if (!objetivo) return ''
+    if (!objetivo) return { productoId: '', estado: 'pendiente' as const }
 
     const mapeoGuardado = mapeosProductos.find(
       (mapeo) => normalizeText(mapeo.nombre_externo || '') === objetivo && mapeo.producto_id
     )
     if (mapeoGuardado?.producto_id) {
-      return mapeoGuardado.producto_id
+      return { productoId: mapeoGuardado.producto_id, estado: 'aprendido' as const }
     }
 
     let mejorId = ''
@@ -669,11 +671,54 @@ export default function HomePage() {
         }
       })
 
-    return mejorScore >= 20 ? mejorId : ''
+    if (mejorScore >= 20) {
+      return { productoId: mejorId, estado: 'automatico' as const }
+    }
+
+    return { productoId: '', estado: 'pendiente' as const }
+  }
+
+  function findProductoIdFromOCR(nombreProducto: string) {
+    return getProductoMatchInfoFromOCR(nombreProducto).productoId
   }
 
   function getProductoNombre(productoId: string) {
     return productos.find((prod) => prod.id === productoId)?.nombre || ''
+  }
+
+  function getOCRStatusLabel(estado?: string) {
+    if (estado === 'aprendido') return 'Aprendido'
+    if (estado === 'automatico') return 'Mapeado automático'
+    if (estado === 'pendiente') return 'Pendiente'
+    return 'Manual'
+  }
+
+  function getOCRStatusClasses(estado?: string) {
+    if (estado === 'aprendido') return 'bg-blue-50 text-blue-700 border-blue-200'
+    if (estado === 'automatico') return 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    if (estado === 'pendiente') return 'bg-amber-50 text-amber-700 border-amber-200'
+    return 'bg-slate-100 text-slate-600 border-slate-200'
+  }
+
+  async function handleProductoSeleccionadoOCR(index: number, productoId: string) {
+    const linea = albaranLineas[index]
+    updateAlbaranLinea(index, 'producto_id', productoId)
+
+    setAlbaranLineas((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              producto_id: productoId,
+              mapeo_estado: productoId ? 'aprendido' : 'pendiente',
+            }
+          : item
+      )
+    )
+
+    if (linea?.nombre_detectado && productoId) {
+      await guardarMapeoProducto(linea.nombre_detectado, productoId)
+    }
   }
 
   async function guardarMapeoProducto(nombreExterno: string, productoId: string) {
@@ -2398,6 +2443,10 @@ export default function HomePage() {
     return acc + Number(linea.cantidad || 0) * Number(linea.precio_unitario || 0)
   }, 0)
 
+  const lineasOCRPendientes = albaranLineas.filter(
+    (linea) => !!linea.nombre_detectado && !linea.producto_id
+  ).length
+
   function descargarCSV(nombreArchivo: string, filas: Record<string, unknown>[]) {
     if (!filas.length) {
       setError('No hay datos para exportar')
@@ -3080,7 +3129,7 @@ export default function HomePage() {
 
                 {albaranOCRResumen ? (
                   <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-slate-700">
-                    {albaranOCRResumen}
+                    {albaranOCRResumen} · Revisa líneas y aplica cuando todo esté en verde o azul.
                   </div>
                 ) : null}
               </div>
@@ -3117,7 +3166,9 @@ export default function HomePage() {
                         <select
                           value={linea.producto_id}
                           onChange={(e) =>
-                            updateAlbaranLinea(index, 'producto_id', e.target.value)
+                            linea.nombre_detectado
+                              ? void handleProductoSeleccionadoOCR(index, e.target.value)
+                              : updateAlbaranLinea(index, 'producto_id', e.target.value)
                           }
                           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
                         >
@@ -3133,26 +3184,29 @@ export default function HomePage() {
 
                         {linea.nombre_detectado ? (
                           <div className="space-y-2">
-                            <div className="text-xs text-slate-500">
-                              Detectado por OCR: {linea.nombre_detectado}
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="text-xs text-slate-500">
+                                Detectado por OCR: {linea.nombre_detectado}
+                              </div>
+                              <div className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${getOCRStatusClasses(linea.mapeo_estado)}`}>
+                                {getOCRStatusLabel(linea.mapeo_estado)}
+                              </div>
                             </div>
 
                             {linea.producto_id ? (
-                              <div className="flex items-center justify-between gap-3 rounded-2xl bg-emerald-50 px-3 py-2 text-xs">
-                                <span className="text-emerald-700">
-                                  Sugerido: {getProductoNombre(linea.producto_id)}
+                              <div className={`flex items-center justify-between gap-3 rounded-2xl px-3 py-2 text-xs ${linea.mapeo_estado === 'aprendido' ? 'bg-blue-50' : 'bg-emerald-50'}`}>
+                                <span className={linea.mapeo_estado === 'aprendido' ? 'text-blue-700' : 'text-emerald-700'}>
+                                  {linea.mapeo_estado === 'aprendido' ? 'Aprendido:' : 'Asignado:'} {getProductoNombre(linea.producto_id)}
                                 </span>
-                                <button
-                                  type="button"
-                                  onClick={() => guardarMapeoProducto(linea.nombre_detectado || '', linea.producto_id)}
-                                  className="rounded-xl bg-emerald-600 px-3 py-2 font-semibold text-white"
-                                >
-                                  Guardar mapeo
-                                </button>
+                                <span className="text-slate-500">
+                                  {linea.mapeo_estado === 'aprendido'
+                                    ? 'Se guardará para próximos albaranes'
+                                    : 'Coincidencia automática'}
+                                </span>
                               </div>
                             ) : (
                               <div className="rounded-2xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                                Sin coincidencia automática. Selecciona el producto correcto y guarda el mapeo.
+                                Línea pendiente. Selecciona el producto correcto para poder aplicar el albarán.
                               </div>
                             )}
                           </div>
@@ -3212,17 +3266,25 @@ export default function HomePage() {
                 </span>
               </div>
 
+              {lineasOCRPendientes > 0 ? (
+                <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  Hay {lineasOCRPendientes} línea(s) pendientes de asignar. Revísalas antes de aplicar el albarán.
+                </div>
+              ) : null}
+
               <button
                 onClick={guardarAlbaran}
-                disabled={albaranSaving}
+                disabled={albaranSaving || lineasOCRPendientes > 0}
                 className="mt-4 w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
               >
                 {albaranSaving
                   ? editingAlbaranId
                     ? 'Actualizando albarán...'
-                    : 'Guardando albarán...'
+                    : 'Aplicando albarán...'
                   : editingAlbaranId
                   ? 'Actualizar albarán'
+                  : albaranOCRResumen
+                  ? 'Aplicar albarán'
                   : 'Guardar albarán'}
               </button>
             </div>
