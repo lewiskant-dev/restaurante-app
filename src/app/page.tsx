@@ -19,6 +19,7 @@ type TabKey =
   | 'proveedores'
   | 'auditoria'
   | 'tpv'
+  | 'recetas'
 
 type NuevoProductoForm = {
   nombre: string
@@ -57,6 +58,28 @@ type VentaTPVCruda = {
   raw: string
 }
 
+type Receta = {
+  id: string
+  nombre: string
+  nombre_tpv: string | null
+  activo: boolean | null
+  created_at: string
+}
+
+type RecetaLinea = {
+  id: string
+  receta_id: string
+  producto_id: string
+  cantidad: number
+  created_at: string
+}
+
+type RecetaLineaForm = {
+  producto_id: string
+  cantidad: string
+}
+
+
 const initialProductoForm: NuevoProductoForm = {
   nombre: '',
   categoria: '',
@@ -78,6 +101,11 @@ const initialProveedorForm: ProveedorForm = {
   telefono: '',
   email: '',
   notas: '',
+}
+
+const initialRecetaLinea: RecetaLineaForm = {
+  producto_id: '',
+  cantidad: '',
 }
 
 function todayLocalInputDate() {
@@ -147,7 +175,7 @@ export default function HomePage() {
   const [busquedaAlbaran, setBusquedaAlbaran] = useState('')
   const [busquedaProveedor, setBusquedaProveedor] = useState('')
   const [busquedaAuditoria, setBusquedaAuditoria] = useState('')
-  const [auditoriaEntidadFiltro, setAuditoriaEntidadFiltro] = useState<'todas' | 'producto' | 'proveedor' | 'albaran'>('todas')
+  const [auditoriaEntidadFiltro, setAuditoriaEntidadFiltro] = useState<'todas' | 'producto' | 'proveedor' | 'albaran' | 'receta' | 'tpv'>('todas')
   const [auditoriaAccionFiltro, setAuditoriaAccionFiltro] = useState<string>('todas')
 
   const [productoEstado, setProductoEstado] = useState<'activos' | 'archivados' | 'todos'>('activos')
@@ -203,6 +231,16 @@ export default function HomePage() {
   const [proveedorEditId, setProveedorEditId] = useState<string | null>(null)
   const [proveedorForm, setProveedorForm] = useState<ProveedorForm>(initialProveedorForm)
 
+  const [recetas, setRecetas] = useState<Receta[]>([])
+  const [loadingRecetas, setLoadingRecetas] = useState(true)
+  const [recetaModalOpen, setRecetaModalOpen] = useState(false)
+  const [recetaSaving, setRecetaSaving] = useState(false)
+  const [recetaEditId, setRecetaEditId] = useState<string | null>(null)
+  const [recetaNombre, setRecetaNombre] = useState('')
+  const [recetaNombreTPV, setRecetaNombreTPV] = useState('')
+  const [recetaActiva, setRecetaActiva] = useState(true)
+  const [recetaLineas, setRecetaLineas] = useState<RecetaLineaForm[]>([{ ...initialRecetaLinea }])
+
   const [tpvFile, setTpvFile] = useState<File | null>(null)
   const [tpvImportando, setTpvImportando] = useState(false)
   const [tpvVentasCrudas, setTpvVentasCrudas] = useState<VentaTPVCruda[]>([])
@@ -237,6 +275,7 @@ export default function HomePage() {
       loadMovimientos(),
       loadAlbaranes(),
       loadAuditoria(),
+      loadRecetas(),
     ])
   }
 
@@ -336,6 +375,24 @@ export default function HomePage() {
 
     setAuditoria((data ?? []) as Auditoria[])
     setLoadingAuditoria(false)
+  }
+
+  async function loadRecetas() {
+    setLoadingRecetas(true)
+
+    const { data, error } = await supabase
+      .from('recetas')
+      .select('*')
+      .order('nombre', { ascending: true })
+
+    if (error) {
+      setError(error.message)
+      setLoadingRecetas(false)
+      return
+    }
+
+    setRecetas((data ?? []) as Receta[])
+    setLoadingRecetas(false)
   }
 
   async function registrarAuditoria(params: {
@@ -1404,6 +1461,215 @@ export default function HomePage() {
     await Promise.all([loadProveedores(), loadAuditoria()])
   }
 
+  function resetRecetaForm() {
+    setRecetaEditId(null)
+    setRecetaNombre('')
+    setRecetaNombreTPV('')
+    setRecetaActiva(true)
+    setRecetaLineas([{ ...initialRecetaLinea }])
+  }
+
+  function addRecetaLinea() {
+    setRecetaLineas((prev) => [...prev, { ...initialRecetaLinea }])
+  }
+
+  function removeRecetaLinea(index: number) {
+    setRecetaLineas((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function updateRecetaLinea(index: number, field: keyof RecetaLineaForm, value: string) {
+    setRecetaLineas((prev) =>
+      prev.map((linea, i) => (i === index ? { ...linea, [field]: value } : linea))
+    )
+  }
+
+  function openCrearReceta() {
+    resetRecetaForm()
+    setError('')
+    setRecetaModalOpen(true)
+  }
+
+  async function openEditarReceta(receta: Receta) {
+    setError('')
+    setRecetaEditId(receta.id)
+    setRecetaNombre(receta.nombre || '')
+    setRecetaNombreTPV(receta.nombre_tpv || '')
+    setRecetaActiva(receta.activo !== false)
+
+    const { data, error } = await supabase
+      .from('recetas_lineas')
+      .select('*')
+      .eq('receta_id', receta.id)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      setError(error.message)
+      return
+    }
+
+    const lineas = (data ?? []) as RecetaLinea[]
+    setRecetaLineas(
+      lineas.length
+        ? lineas.map((linea) => ({
+            producto_id: linea.producto_id || '',
+            cantidad: String(linea.cantidad ?? ''),
+          }))
+        : [{ ...initialRecetaLinea }]
+    )
+
+    setRecetaModalOpen(true)
+  }
+
+  async function guardarReceta() {
+    if (!recetaNombre.trim()) {
+      setError('El nombre de la receta es obligatorio')
+      return
+    }
+
+    const lineasPreparadas = recetaLineas
+      .map((linea) => ({
+        producto_id: linea.producto_id,
+        cantidad: Number(linea.cantidad),
+      }))
+      .filter((linea) => linea.producto_id && linea.cantidad > 0)
+
+    if (!lineasPreparadas.length) {
+      setError('Añade al menos una línea válida a la receta')
+      return
+    }
+
+    setRecetaSaving(true)
+    setError('')
+
+    try {
+      let recetaId = recetaEditId
+
+      if (recetaEditId) {
+        const recetaAntes = recetas.find((r) => r.id === recetaEditId) || null
+
+        const { error: updateError } = await supabase
+          .from('recetas')
+          .update({
+            nombre: recetaNombre.trim(),
+            nombre_tpv: recetaNombreTPV.trim() || null,
+            activo: recetaActiva,
+          })
+          .eq('id', recetaEditId)
+
+        if (updateError) {
+          throw new Error(updateError.message)
+        }
+
+        const { error: deleteLinesError } = await supabase
+          .from('recetas_lineas')
+          .delete()
+          .eq('receta_id', recetaEditId)
+
+        if (deleteLinesError) {
+          throw new Error(deleteLinesError.message)
+        }
+
+        await registrarAuditoria({
+          entidad: 'receta',
+          entidad_id: recetaEditId,
+          accion: 'editar',
+          detalle: `Receta actualizada: ${recetaNombre.trim()}`,
+          payload_antes: recetaAntes,
+          payload_despues: {
+            nombre: recetaNombre.trim(),
+            nombre_tpv: recetaNombreTPV.trim() || null,
+            activo: recetaActiva,
+            lineas: lineasPreparadas,
+          },
+        })
+      } else {
+        const { data, error: insertError } = await supabase
+          .from('recetas')
+          .insert({
+            nombre: recetaNombre.trim(),
+            nombre_tpv: recetaNombreTPV.trim() || null,
+            activo: recetaActiva,
+          })
+          .select()
+          .single()
+
+        if (insertError || !data) {
+          throw new Error(insertError?.message || 'No se pudo crear la receta')
+        }
+
+        recetaId = data.id
+
+        await registrarAuditoria({
+          entidad: 'receta',
+          entidad_id: data.id,
+          accion: 'crear',
+          detalle: `Receta creada: ${recetaNombre.trim()}`,
+          payload_despues: {
+            nombre: recetaNombre.trim(),
+            nombre_tpv: recetaNombreTPV.trim() || null,
+            activo: recetaActiva,
+            lineas: lineasPreparadas,
+          },
+        })
+      }
+
+      if (!recetaId) {
+        throw new Error('No se pudo determinar la receta')
+      }
+
+      const payloadLineas = lineasPreparadas.map((linea) => ({
+        receta_id: recetaId,
+        producto_id: linea.producto_id,
+        cantidad: linea.cantidad,
+      }))
+
+      const { error: lineasError } = await supabase
+        .from('recetas_lineas')
+        .insert(payloadLineas)
+
+      if (lineasError) {
+        throw new Error(lineasError.message)
+      }
+
+      setToast(recetaEditId ? 'Receta actualizada' : 'Receta creada')
+      setRecetaModalOpen(false)
+      resetRecetaForm()
+      await loadRecetas()
+    } catch (err: any) {
+      setError(err.message || 'No se pudo guardar la receta')
+    } finally {
+      setRecetaSaving(false)
+    }
+  }
+
+  async function toggleActivaReceta(receta: Receta) {
+    setError('')
+
+    const nuevoEstado = receta.activo === false ? true : false
+
+    const { error } = await supabase
+      .from('recetas')
+      .update({ activo: nuevoEstado })
+      .eq('id', receta.id)
+
+    if (error) {
+      setError(error.message)
+      return
+    }
+
+    await registrarAuditoria({
+      entidad: 'receta',
+      entidad_id: receta.id,
+      accion: nuevoEstado ? 'reactivar' : 'archivar',
+      detalle: `${nuevoEstado ? 'Receta reactivada' : 'Receta archivada'}: ${receta.nombre}`,
+      payload_antes: receta,
+      payload_despues: { ...receta, activo: nuevoEstado },
+    })
+
+    setToast(nuevoEstado ? 'Receta reactivada' : 'Receta archivada')
+    await loadRecetas()
+  }
+
   async function importarCSVTPV() {
     if (!tpvFile) {
       setError('Selecciona un archivo CSV del TPV')
@@ -1765,7 +2031,7 @@ export default function HomePage() {
           />
         </div>
 
-        <div className="mb-3 grid grid-cols-7 gap-2 rounded-2xl bg-slate-200 p-1">
+        <div className="mb-3 grid grid-cols-8 gap-2 rounded-2xl bg-slate-200 p-1">
           <button
             onClick={() => setTab('stock')}
             className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
@@ -1818,6 +2084,15 @@ export default function HomePage() {
             }`}
           >
             Audit.
+          </button>
+
+          <button
+            onClick={() => setTab('recetas')}
+            className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
+              tab === 'recetas' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+            }`}
+          >
+            Recetas
           </button>
 
           <button
@@ -2556,7 +2831,7 @@ export default function HomePage() {
             </div>
 
             <div className="mt-2 flex flex-wrap gap-2">
-              {(['todas', 'producto', 'proveedor', 'albaran'] as const).map((entidad) => (
+              {(['todas', 'producto', 'proveedor', 'albaran', 'receta', 'tpv'] as const).map((entidad) => (
                 <button
                   key={entidad}
                   onClick={() => setAuditoriaEntidadFiltro(entidad)}
@@ -2572,7 +2847,7 @@ export default function HomePage() {
             </div>
 
             <div className="mt-2 flex flex-wrap gap-2">
-              {['todas', 'crear', 'editar', 'archivar', 'reactivar', 'consumo', 'ajuste_stock', 'anular', 'deshacer_archivar'].map((accion) => (
+              {['todas', 'crear', 'editar', 'archivar', 'reactivar', 'consumo', 'ajuste_stock', 'anular', 'deshacer_archivar', 'importar_csv'].map((accion) => (
                 <button
                   key={accion}
                   onClick={() => setAuditoriaAccionFiltro(accion)}
@@ -2772,6 +3047,83 @@ export default function HomePage() {
                 ))}
             </div>
           </>
+        )}
+
+        {tab === 'recetas' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-slate-900">Recetas</h2>
+              <button
+                onClick={openCrearReceta}
+                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white"
+              >
+                + Receta
+              </button>
+            </div>
+
+            <div className="rounded-3xl bg-white p-4 shadow-sm">
+              {loadingRecetas && (
+                <div className="py-10 text-center text-sm text-slate-400">
+                  Cargando recetas...
+                </div>
+              )}
+
+              {!loadingRecetas && recetas.length === 0 && (
+                <div className="py-10 text-center text-sm text-slate-400">
+                  Todavía no hay recetas creadas.
+                </div>
+              )}
+
+              {!loadingRecetas &&
+                recetas.map((receta) => (
+                  <div
+                    key={receta.id}
+                    className="border-b border-slate-100 py-3 last:border-b-0"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold text-slate-900">
+                          {receta.nombre}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          TPV: {receta.nombre_tpv || 'Sin vincular'}
+                        </div>
+                        <div className="mt-1 text-[11px] text-slate-400">
+                          Estado: {receta.activo === false ? 'Inactiva' : 'Activa'}
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 flex-col gap-2">
+                        <button
+                          onClick={() => openEditarReceta(receta)}
+                          className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => toggleActivaReceta(receta)}
+                          className={`rounded-xl px-3 py-2 text-xs font-semibold ${
+                            receta.activo === false
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-red-50 text-red-600'
+                          }`}
+                        >
+                          {receta.activo === false ? 'Reactivar' : 'Archivar'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            <div className="rounded-3xl bg-amber-50 p-4 text-sm text-slate-700 shadow-sm">
+              <div className="font-semibold text-slate-900">Qué viene después</div>
+              <div className="mt-1">
+                En el siguiente bloque conectaremos estas recetas con el TPV para restar stock automáticamente
+                a partir de las ventas importadas.
+              </div>
+            </div>
+          </div>
         )}
 
         {tab === 'tpv' && (
@@ -3322,6 +3674,125 @@ Coca Cola 33cl;8;2026-04-22T14:00:00
                     </div>
                   ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {recetaModalOpen && (
+        <div className="fixed inset-0 z-40 flex items-end bg-black/40">
+          <div className="max-h-[90vh] w-full overflow-y-auto rounded-t-3xl bg-white p-4 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-slate-900">
+                {recetaEditId ? 'Editar receta' : 'Nueva receta'}
+              </h3>
+              <button
+                onClick={() => {
+                  setRecetaModalOpen(false)
+                  resetRecetaForm()
+                  setError('')
+                }}
+                className="text-sm font-medium text-slate-500"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-3xl bg-slate-50 p-4">
+                <div className="space-y-3">
+                  <input
+                    value={recetaNombre}
+                    onChange={(e) => setRecetaNombre(e.target.value)}
+                    placeholder="Nombre de la receta"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+                  />
+
+                  <input
+                    value={recetaNombreTPV}
+                    onChange={(e) => setRecetaNombreTPV(e.target.value)}
+                    placeholder="Nombre del producto en TPV"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+                  />
+
+                  <label className="flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={recetaActiva}
+                      onChange={(e) => setRecetaActiva(e.target.checked)}
+                    />
+                    Receta activa
+                  </label>
+                </div>
+              </div>
+
+              <div className="rounded-3xl bg-white p-4 shadow-sm">
+                <div className="mb-3 flex items-center justify-between">
+                  <h4 className="text-base font-semibold text-slate-900">Ingredientes</h4>
+                  <button
+                    onClick={addRecetaLinea}
+                    className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
+                  >
+                    + Ingrediente
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {recetaLineas.map((linea, index) => (
+                    <div
+                      key={index}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                    >
+                      <div className="space-y-3">
+                        <select
+                          value={linea.producto_id}
+                          onChange={(e) => updateRecetaLinea(index, 'producto_id', e.target.value)}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+                        >
+                          <option value="">Selecciona producto</option>
+                          {productos
+                            .filter((prod) => !prod.archivado)
+                            .map((prod) => (
+                              <option key={prod.id} value={prod.id}>
+                                {prod.nombre}
+                              </option>
+                            ))}
+                        </select>
+
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={linea.cantidad}
+                          onChange={(e) => updateRecetaLinea(index, 'cantidad', e.target.value)}
+                          placeholder="Cantidad que consume la receta"
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+                        />
+
+                        <button
+                          onClick={() => removeRecetaLinea(index)}
+                          className="w-full rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-600"
+                        >
+                          Eliminar ingrediente
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={guardarReceta}
+                disabled={recetaSaving}
+                className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
+              >
+                {recetaSaving
+                  ? recetaEditId
+                    ? 'Actualizando receta...'
+                    : 'Guardando receta...'
+                  : recetaEditId
+                  ? 'Actualizar receta'
+                  : 'Guardar receta'}
+              </button>
             </div>
           </div>
         </div>
