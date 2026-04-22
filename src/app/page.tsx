@@ -1520,6 +1520,88 @@ export default function HomePage() {
     return acc + Number(linea.cantidad || 0) * Number(linea.precio_unitario || 0)
   }, 0)
 
+  function descargarCSV(nombreArchivo: string, filas: Record<string, unknown>[]) {
+    if (!filas.length) {
+      setError('No hay datos para exportar')
+      return
+    }
+
+    const columnas = Object.keys(filas[0])
+
+    const escapar = (valor: unknown) => {
+      const texto = String(valor ?? '')
+      if (texto.includes('"') || texto.includes(';') || texto.includes('\n')) {
+        return `"${texto.replace(/"/g, '""')}"`
+      }
+      return texto
+    }
+
+    const csv = [
+      columnas.join(';'),
+      ...filas.map((fila) => columnas.map((col) => escapar(fila[col])).join(';')),
+    ].join('\n')
+
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+
+    const link = document.createElement('a')
+    link.href = url
+    link.download = nombreArchivo
+    link.click()
+
+    URL.revokeObjectURL(url)
+  }
+
+  function exportarProductosCSV() {
+    descargarCSV(
+      `productos_${todayLocalInputDate()}.csv`,
+      productosFiltrados.map((p) => ({
+        nombre: p.nombre,
+        categoria: p.categoria,
+        unidad: p.unidad,
+        stock_actual: p.stock_actual,
+        stock_minimo: p.stock_minimo,
+        referencia: p.referencia,
+        activo: p.activo,
+        archivado: p.archivado,
+      }))
+    )
+  }
+
+  function exportarMovimientosCSV() {
+    descargarCSV(
+      `movimientos_${todayLocalInputDate()}.csv`,
+      movimientosFiltrados.map((m) => ({
+        fecha: m.created_at,
+        producto: m.productos?.nombre || '',
+        tipo: m.tipo,
+        cantidad: m.cantidad,
+        unidad: m.productos?.unidad || '',
+        motivo: m.motivo,
+        stock_antes: m.stock_antes,
+        stock_despues: m.stock_despues,
+        origen_tipo: m.origen_tipo,
+      }))
+    )
+  }
+
+  function exportarAlbaranesCSV() {
+    descargarCSV(
+      `albaranes_${todayLocalInputDate()}.csv`,
+      albaranesFiltrados.map((a) => ({
+        numero: a.numero,
+        fecha: a.fecha,
+        proveedor: a.proveedor_nombre,
+        total: a.total,
+        notas: a.notas,
+        anulado: a.anulado,
+        anulado_motivo: a.anulado_motivo,
+        foto_url: a.foto_url,
+      }))
+    )
+  }
+
+
   return (
     <main className="min-h-screen bg-slate-50 pb-24">
       <header className="sticky top-0 z-10 rounded-b-3xl bg-slate-900 px-4 pb-4 pt-8 text-white shadow-lg">
@@ -1796,19 +1878,29 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="mt-4 flex items-center justify-between">
+            <div className="mt-4 flex items-center justify-between gap-2">
               <h2 className="text-base font-semibold text-slate-900">Inventario</h2>
-              <button
-                onClick={() => {
-                  setProductoEditId(null)
-                  setProductoForm(initialProductoForm)
-                  setError('')
-                  setProductoModalOpen(true)
-                }}
-                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white"
-              >
-                + Producto
-              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={exportarProductosCSV}
+                  className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+                >
+                  Exportar
+                </button>
+
+                <button
+                  onClick={() => {
+                    setProductoEditId(null)
+                    setProductoForm(initialProductoForm)
+                    setError('')
+                    setProductoModalOpen(true)
+                  }}
+                  className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white"
+                >
+                  + Producto
+                </button>
+              </div>
             </div>
 
             <div className="mt-3 rounded-3xl bg-white p-3 shadow-sm">
@@ -1928,6 +2020,15 @@ export default function HomePage() {
                 placeholder="Buscar por producto o motivo..."
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-400"
               />
+            </div>
+
+            <div className="mt-3 flex justify-end">
+              <button
+                onClick={exportarMovimientosCSV}
+                className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+              >
+                Exportar CSV
+              </button>
             </div>
 
             <div className="mt-4 rounded-3xl bg-white p-3 shadow-sm">
@@ -2218,6 +2319,15 @@ export default function HomePage() {
                   {estado}
                 </button>
               ))}
+            </div>
+
+            <div className="mt-3 flex justify-end">
+              <button
+                onClick={exportarAlbaranesCSV}
+                className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+              >
+                Exportar CSV
+              </button>
             </div>
 
             <div className="mt-4 rounded-3xl bg-white p-3 shadow-sm">
