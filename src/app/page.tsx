@@ -18,6 +18,7 @@ type TabKey =
   | 'albaranes'
   | 'proveedores'
   | 'auditoria'
+  | 'tpv'
 
 type NuevoProductoForm = {
   nombre: string
@@ -47,6 +48,13 @@ type MovimientoConProducto = MovimientoStock & {
     nombre: string
     unidad: string
   } | null
+}
+
+type VentaTPVCruda = {
+  producto_externo: string
+  cantidad: number
+  fecha: string
+  raw: string
 }
 
 const initialProductoForm: NuevoProductoForm = {
@@ -194,6 +202,12 @@ export default function HomePage() {
   const [proveedorSaving, setProveedorSaving] = useState(false)
   const [proveedorEditId, setProveedorEditId] = useState<string | null>(null)
   const [proveedorForm, setProveedorForm] = useState<ProveedorForm>(initialProveedorForm)
+
+  const [tpvFile, setTpvFile] = useState<File | null>(null)
+  const [tpvImportando, setTpvImportando] = useState(false)
+  const [tpvVentasCrudas, setTpvVentasCrudas] = useState<VentaTPVCruda[]>([])
+  const [tpvSeparador, setTpvSeparador] = useState(';')
+  const [tpvImportacionId, setTpvImportacionId] = useState<string | null>(null)
 
   useEffect(() => {
     void loadInitialData()
@@ -1390,6 +1404,106 @@ export default function HomePage() {
     await Promise.all([loadProveedores(), loadAuditoria()])
   }
 
+  async function importarCSVTPV() {
+    if (!tpvFile) {
+      setError('Selecciona un archivo CSV del TPV')
+      return
+    }
+
+    setTpvImportando(true)
+    setError('')
+
+    try {
+      const text = await tpvFile.text()
+      const rawLines = text
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+
+      if (rawLines.length <= 1) {
+        throw new Error('El CSV no contiene datos suficientes')
+      }
+
+      const header = rawLines[0]
+      const lineas = rawLines.slice(1)
+
+      const { data: importacion, error: importError } = await supabase
+        .from('tpv_importaciones')
+        .insert({
+          nombre_archivo: tpvFile.name,
+          procesado: false,
+        })
+        .select()
+        .single()
+
+      if (importError || !importacion) {
+        throw new Error(importError?.message || 'No se pudo crear la importación TPV')
+      }
+
+      const ventas: VentaTPVCruda[] = lineas
+        .map((linea) => {
+          const cols = linea.split(tpvSeparador).map((v) => v.trim())
+          const producto = cols[0] || ''
+          const cantidad = Number((cols[1] || '0').replace(',', '.'))
+          const fecha = cols[2] || new Date().toISOString()
+
+          if (!producto || !cantidad) return null
+
+          return {
+            producto_externo: producto,
+            cantidad,
+            fecha,
+            raw: linea,
+          }
+        })
+        .filter(Boolean) as VentaTPVCruda[]
+
+      if (!ventas.length) {
+        throw new Error(`No se pudieron interpretar líneas del CSV. Cabecera detectada: ${header}`)
+      }
+
+      const payload = ventas.map((venta) => ({
+        importacion_id: importacion.id,
+        producto_externo: venta.producto_externo,
+        cantidad: venta.cantidad,
+        fecha: venta.fecha,
+        raw: {
+          linea: venta.raw,
+          archivo: tpvFile.name,
+        },
+      }))
+
+      const { error: ventasError } = await supabase
+        .from('tpv_ventas_crudas')
+        .insert(payload)
+
+      if (ventasError) {
+        throw new Error(ventasError.message)
+      }
+
+      setTpvVentasCrudas(ventas)
+      setTpvImportacionId(importacion.id)
+
+      await registrarAuditoria({
+        entidad: 'tpv',
+        entidad_id: importacion.id,
+        accion: 'importar_csv',
+        detalle: `Importación TPV: ${tpvFile.name} · Líneas válidas: ${ventas.length}`,
+        payload_despues: {
+          archivo: tpvFile.name,
+          filas: ventas.length,
+          separador: tpvSeparador,
+        },
+      })
+
+      setToast(`CSV TPV importado (${ventas.length} líneas)`)
+    } catch (err: any) {
+      setError(err.message || 'No se pudo importar el CSV del TPV')
+    } finally {
+      setTpvImportando(false)
+    }
+  }
+
   const productosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
     return productos
@@ -1628,7 +1742,6 @@ export default function HomePage() {
     )
   }
 
-
   return (
     <main className="min-h-screen bg-slate-50 pb-24">
       <header className="sticky top-0 z-10 rounded-b-3xl bg-slate-900 px-4 pb-4 pt-8 text-white shadow-lg">
@@ -1652,7 +1765,7 @@ export default function HomePage() {
           />
         </div>
 
-        <div className="mb-3 grid grid-cols-6 gap-2 rounded-2xl bg-slate-200 p-1">
+        <div className="mb-3 grid grid-cols-7 gap-2 rounded-2xl bg-slate-200 p-1">
           <button
             onClick={() => setTab('stock')}
             className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
@@ -1705,6 +1818,15 @@ export default function HomePage() {
             }`}
           >
             Audit.
+          </button>
+
+          <button
+            onClick={() => setTab('tpv')}
+            className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
+              tab === 'tpv' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+            }`}
+          >
+            TPV
           </button>
         </div>
 
@@ -2650,6 +2772,120 @@ export default function HomePage() {
                 ))}
             </div>
           </>
+        )}
+
+        {tab === 'tpv' && (
+          <div className="space-y-4">
+            <div className="rounded-3xl bg-white p-4 shadow-sm">
+              <h2 className="text-base font-semibold text-slate-900">Importar ventas del TPV</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Sube un CSV base con columnas en este orden: producto; cantidad; fecha
+              </p>
+
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-600">
+                    Archivo CSV
+                  </label>
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={(e) => setTpvFile(e.target.files?.[0] || null)}
+                    className="w-full text-sm text-slate-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-600">
+                    Separador
+                  </label>
+                  <select
+                    value={tpvSeparador}
+                    onChange={(e) => setTpvSeparador(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+                  >
+                    <option value=";">Punto y coma (;)</option>
+                    <option value=",">Coma (,)</option>
+                    <option value="\t">Tabulación</option>
+                  </select>
+                </div>
+              </div>
+
+              <button
+                onClick={importarCSVTPV}
+                disabled={tpvImportando}
+                className="mt-4 w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
+              >
+                {tpvImportando ? 'Importando CSV...' : 'Importar CSV TPV'}
+              </button>
+
+              <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
+                <div className="font-semibold text-slate-900">Formato esperado</div>
+                <div className="mt-1">Ejemplo:</div>
+                <div className="mt-2 whitespace-pre-wrap rounded-xl bg-white p-3 font-mono text-xs text-slate-700">
+producto;cantidad;fecha
+Hamburguesa completa;12;2026-04-22T14:00:00
+Coca Cola 33cl;8;2026-04-22T14:00:00
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-base font-semibold text-slate-900">Vista previa de ventas crudas</h3>
+                <div className="text-xs text-slate-500">
+                  {tpvImportacionId ? `Importación: ${tpvImportacionId}` : 'Sin importar'}
+                </div>
+              </div>
+
+              {tpvVentasCrudas.length === 0 ? (
+                <div className="py-8 text-center text-sm text-slate-400">
+                  Aún no has importado un CSV del TPV.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {tpvVentasCrudas.map((venta, index) => (
+                    <div
+                      key={`${venta.producto_externo}-${index}`}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold text-slate-900">
+                            {venta.producto_externo}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            Fecha: {formatFechaHora(venta.fecha)}
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <div className="text-sm font-bold text-blue-600">
+                            {venta.cantidad}
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            unidades vendidas
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-2 text-[11px] text-slate-400">
+                        Línea original: {venta.raw}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-3xl bg-amber-50 p-4 text-sm text-slate-700 shadow-sm">
+              <div className="font-semibold text-slate-900">Siguiente paso recomendado</div>
+              <div className="mt-1">
+                El siguiente bloque será mapear cada producto externo del TPV a un plato o producto interno
+                para poder descontar stock automáticamente sin errores.
+              </div>
+            </div>
+          </div>
         )}
 
         {error && (
