@@ -56,7 +56,9 @@ export async function POST(request: Request) {
     )
   }
 
-  const role = String(data.user.user_metadata?.role || '').trim().toLowerCase()
+  const role = String(data.user.app_metadata?.role || data.user.user_metadata?.role || '')
+    .trim()
+    .toLowerCase()
 
   if (role !== 'master') {
     return NextResponse.json(

@@ -19,6 +19,13 @@ function hasManagementAccess(role: UserRole) {
   return role === 'administrador' || role === 'master'
 }
 
+function getUserRoleFromAuthUser(user: {
+  app_metadata?: Record<string, unknown>
+  user_metadata?: Record<string, unknown>
+}) {
+  return normalizeRole(user.app_metadata?.role ?? user.user_metadata?.role)
+}
+
 async function getRequestUser(request: Request) {
   let supabaseAdmin
 
@@ -44,7 +51,7 @@ async function getRequestUser(request: Request) {
     return { error: error?.message || 'No se pudo validar la sesión', status: 401 as const }
   }
 
-  const role = normalizeRole(data.user.user_metadata?.role)
+  const role = getUserRoleFromAuthUser(data.user)
 
   if (!hasManagementAccess(role)) {
     return { error: 'No tienes permisos para gestionar usuarios', status: 403 as const }
@@ -81,7 +88,7 @@ export async function GET(request: Request) {
     id: user.id,
     email: user.email || '',
     full_name: String(user.user_metadata?.full_name || user.email || 'Usuario'),
-    role: normalizeRole(user.user_metadata?.role),
+    role: getUserRoleFromAuthUser(user),
     created_at: user.created_at,
     last_sign_in_at: user.last_sign_in_at,
   }))
@@ -136,7 +143,7 @@ export async function PATCH(request: Request) {
   }
 
   const targetUser = targetUserData.user
-  const targetRole = normalizeRole(targetUser.user_metadata?.role)
+  const targetRole = getUserRoleFromAuthUser(targetUser)
 
   if (targetRole === 'master' && authResult.role !== 'master') {
     return NextResponse.json(
@@ -146,8 +153,8 @@ export async function PATCH(request: Request) {
   }
 
   const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-    user_metadata: {
-      ...targetUser.user_metadata,
+    app_metadata: {
+      ...targetUser.app_metadata,
       role: nextRole,
     },
   })
@@ -164,7 +171,7 @@ export async function PATCH(request: Request) {
       id: data.user.id,
       email: data.user.email || '',
       full_name: String(data.user.user_metadata?.full_name || data.user.email || 'Usuario'),
-      role: normalizeRole(data.user.user_metadata?.role),
+      role: getUserRoleFromAuthUser(data.user),
       created_at: data.user.created_at,
       last_sign_in_at: data.user.last_sign_in_at,
     },

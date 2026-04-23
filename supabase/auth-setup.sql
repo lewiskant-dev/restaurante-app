@@ -6,7 +6,7 @@
 -- 2. Permite acceso completo solo a usuarios autenticados.
 -- 3. Restringe el bucket "albaranes" a usuarios autenticados.
 --
--- Roles de aplicación esperados en auth.users.user_metadata.role:
+-- Roles de aplicación esperados en auth.users.raw_app_meta_data.role:
 -- - empleado
 -- - encargado
 -- - administrador

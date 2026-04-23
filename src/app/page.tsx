@@ -240,7 +240,7 @@ function getUserDisplayName(user: User | null) {
 function getUserRoleLabel(user: User | null) {
   if (!user) return ''
 
-  return getRoleLabel(normalizeUserRole(user.user_metadata?.role))
+  return getRoleLabel(getUserRole(user))
 }
 
 function getInitials(value: string) {
@@ -263,6 +263,11 @@ function normalizeUserRole(value: unknown): UserRole {
   if (normalized === 'administrador' || normalized === 'admin') return 'administrador'
   if (normalized === 'encargado') return 'encargado'
   return 'empleado'
+}
+
+function getUserRole(user: User | null): UserRole {
+  if (!user) return 'empleado'
+  return normalizeUserRole(user.app_metadata?.role ?? user.user_metadata?.role)
 }
 
 function getRoleLabel(role: UserRole) {
@@ -600,7 +605,7 @@ export default function HomePage() {
   }, [authReady, session?.user.id])
 
   useEffect(() => {
-    if (!session || !canManageUsers(normalizeUserRole(currentUser?.user_metadata?.role))) {
+    if (!session || !canManageUsers(getUserRole(currentUser))) {
       setManagedUsers([])
       return
     }
@@ -624,10 +629,10 @@ export default function HomePage() {
   }, [tab, mainTab])
 
   useEffect(() => {
-    if (tab === 'usuarios' && !canManageUsers(normalizeUserRole(currentUser?.user_metadata?.role))) {
+    if (tab === 'usuarios' && !canManageUsers(getUserRole(currentUser))) {
       setTab('proveedores')
     }
-  }, [tab, currentUser?.id, currentUser?.user_metadata])
+  }, [tab, currentUser?.id, currentUser?.app_metadata, currentUser?.user_metadata])
 
   async function loadInitialData() {
     await Promise.all([
@@ -2850,7 +2855,7 @@ export default function HomePage() {
         .filter(Boolean)
     )
   ).sort((a, b) => a.localeCompare(b, 'es'))
-  const currentUserRole = normalizeUserRole(currentUser?.user_metadata?.role)
+  const currentUserRole = getUserRole(currentUser)
   const userCanManageUsers = canManageUsers(currentUserRole)
   const visibleMainTabs = mainTabConfig[mainTab].tabs.filter(
     (item) => item !== 'usuarios' || userCanManageUsers
