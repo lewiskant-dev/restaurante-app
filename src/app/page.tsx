@@ -21,6 +21,36 @@ type TabKey =
   | 'tpv'
   | 'recetas'
 
+type MainTab = 'operativa' | 'gestion' | 'control'
+
+const TAB_TO_MAIN: Record<TabKey, MainTab> = {
+  stock: 'operativa',
+  albaran: 'operativa',
+  tpv: 'operativa',
+  albaranes: 'gestion',
+  proveedores: 'gestion',
+  recetas: 'gestion',
+  historial: 'control',
+  auditoria: 'control',
+}
+
+const SUB_TABS: Record<MainTab, { key: TabKey; label: string }[]> = {
+  operativa: [
+    { key: 'stock', label: 'Stock' },
+    { key: 'albaran', label: 'Nuevo alb.' },
+    { key: 'tpv', label: 'TPV' },
+  ],
+  gestion: [
+    { key: 'albaranes', label: 'Albaranes' },
+    { key: 'proveedores', label: 'Prov.' },
+    { key: 'recetas', label: 'Recetas' },
+  ],
+  control: [
+    { key: 'historial', label: 'Historial' },
+    { key: 'auditoria', label: 'Audit.' },
+  ],
+}
+
 type NuevoProductoForm = {
   nombre: string
   categoria: string
@@ -270,6 +300,7 @@ function scoreRecipeMatch(articuloTPV: string, receta: { nombre: string; nombre_
 
 export default function HomePage() {
   const [tab, setTab] = useState<TabKey>('stock')
+  const [mainTab, setMainTab] = useState<MainTab>(TAB_TO_MAIN.stock)
 
   const [productos, setProductos] = useState<Producto[]>([])
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
@@ -383,6 +414,10 @@ export default function HomePage() {
   useEffect(() => {
     window.localStorage.setItem('operario_actual', operarioActual.trim())
   }, [operarioActual])
+
+  useEffect(() => {
+    setMainTab(TAB_TO_MAIN[tab])
+  }, [tab])
 
   async function loadInitialData() {
     await Promise.all([
@@ -2585,78 +2620,42 @@ export default function HomePage() {
           />
         </div>
 
-        <div className="mb-3 grid grid-cols-8 gap-2 rounded-2xl bg-slate-200 p-1">
-          <button
-            onClick={() => setTab('stock')}
-            className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
-              tab === 'stock' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-            }`}
-          >
-            Stock
-          </button>
+        <div className="mb-2 grid grid-cols-3 gap-2 rounded-2xl bg-slate-200 p-1">
+          {[
+            { key: 'operativa', label: 'Operativa' },
+            { key: 'gestion', label: 'Gestión' },
+            { key: 'control', label: 'Control' },
+          ].map((item) => (
+            <button
+              key={item.key}
+              onClick={() => {
+                const nextMain = item.key as MainTab
+                setMainTab(nextMain)
+                setTab(SUB_TABS[nextMain][0].key)
+              }}
+              className={`rounded-xl px-3 py-2 text-sm font-semibold ${
+                mainTab === item.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
 
-          <button
-            onClick={() => setTab('historial')}
-            className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
-              tab === 'historial' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-            }`}
-          >
-            Historial
-          </button>
-
-          <button
-            onClick={() => setTab('albaran')}
-            className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
-              tab === 'albaran' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-            }`}
-          >
-            Nuevo alb.
-          </button>
-
-          <button
-            onClick={() => setTab('albaranes')}
-            className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
-              tab === 'albaranes' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-            }`}
-          >
-            Albaranes
-          </button>
-
-          <button
-            onClick={() => setTab('proveedores')}
-            className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
-              tab === 'proveedores' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-            }`}
-          >
-            Prov.
-          </button>
-
-          <button
-            onClick={() => setTab('auditoria')}
-            className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
-              tab === 'auditoria' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-            }`}
-          >
-            Audit.
-          </button>
-
-          <button
-            onClick={() => setTab('recetas')}
-            className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
-              tab === 'recetas' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-            }`}
-          >
-            Recetas
-          </button>
-
-          <button
-            onClick={() => setTab('tpv')}
-            className={`rounded-xl px-1 py-2 text-[11px] font-semibold ${
-              tab === 'tpv' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-            }`}
-          >
-            TPV
-          </button>
+        <div className="mb-3 flex gap-2 overflow-x-auto rounded-2xl bg-white p-2 shadow-sm">
+          {SUB_TABS[mainTab].map((item) => (
+            <button
+              key={item.key}
+              onClick={() => setTab(item.key)}
+              className={`whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold ${
+                tab === item.key
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
 
         {tab === 'stock' && (
