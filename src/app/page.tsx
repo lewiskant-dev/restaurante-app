@@ -220,6 +220,26 @@ function normalizeText(value: string) {
 }
 
 
+function ActionMenu({
+  children,
+  label = 'Acciones',
+}: {
+  children: any
+  label?: string
+}) {
+  return (
+    <details className="relative shrink-0">
+      <summary className="list-none cursor-pointer rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">
+        {label}
+      </summary>
+      <div className="absolute right-0 top-11 z-20 min-w-[150px] rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+        <div className="flex flex-col gap-2">{children}</div>
+      </div>
+    </details>
+  )
+}
+
+
 function tokenSet(value: string) {
   return normalizeText(value)
     .split(' ')
@@ -2684,6 +2704,10 @@ export default function HomePage() {
               ))}
             </div>
 
+            <div className="mt-3 rounded-2xl bg-slate-100 px-4 py-3 text-xs text-slate-600">
+              Toca el producto para la acción principal. Las acciones secundarias están dentro de <span className="font-semibold">Acciones</span>.
+            </div>
+
             <div className="mt-4 space-y-4">
               <div className="rounded-3xl bg-white p-4 shadow-sm">
                 <div className="mb-3 flex items-center justify-between">
@@ -2925,12 +2949,12 @@ export default function HomePage() {
                           </div>
                         </button>
 
-                        <div className="flex shrink-0 flex-col gap-2">
+                        <ActionMenu>
                           {producto.archivado ? (
                             <button
                               type="button"
                               onClick={() => reactivarProducto(producto)}
-                              className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+                              className="rounded-xl bg-emerald-50 px-3 py-2 text-left text-xs font-semibold text-emerald-700"
                             >
                               Reactivar
                             </button>
@@ -2939,27 +2963,27 @@ export default function HomePage() {
                               <button
                                 type="button"
                                 onClick={() => openEditarProducto(producto)}
-                                className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+                                className="rounded-xl bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-white"
                               >
                                 Editar
                               </button>
                               <button
                                 type="button"
                                 onClick={() => openAjusteModal(producto)}
-                                className="rounded-xl bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700"
+                                className="rounded-xl bg-blue-50 px-3 py-2 text-left text-xs font-semibold text-blue-700"
                               >
-                                Ajustar
+                                Ajustar stock
                               </button>
                               <button
                                 type="button"
                                 onClick={() => archiveProducto(producto)}
-                                className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600"
+                                className="rounded-xl bg-red-50 px-3 py-2 text-left text-xs font-semibold text-red-600"
                               >
                                 Archivar
                               </button>
                             </>
                           )}
-                        </div>
+                        </ActionMenu>
                       </div>
                     </div>
                   )
@@ -3545,6 +3569,10 @@ export default function HomePage() {
               ))}
             </div>
 
+            <div className="mt-3 rounded-2xl bg-slate-100 px-4 py-3 text-xs text-slate-600">
+              Las acciones menos frecuentes están agrupadas en <span className="font-semibold">Acciones</span> para mantener la pantalla limpia.
+            </div>
+
             <div className="mt-4 flex items-center justify-between">
               <h2 className="text-base font-semibold text-slate-900">Proveedores</h2>
               <button
@@ -3606,11 +3634,11 @@ export default function HomePage() {
                         ) : null}
                       </div>
 
-                      <div className="flex shrink-0 flex-col gap-2">
+                      <ActionMenu>
                         {prov.archivado ? (
                           <button
                             onClick={() => reactivarProveedor(prov)}
-                            className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+                            className="rounded-xl bg-emerald-50 px-3 py-2 text-left text-xs font-semibold text-emerald-700"
                           >
                             Reactivar
                           </button>
@@ -3618,19 +3646,19 @@ export default function HomePage() {
                           <>
                             <button
                               onClick={() => openEditarProveedor(prov)}
-                              className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+                              className="rounded-xl bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-white"
                             >
                               Editar
                             </button>
                             <button
                               onClick={() => archiveProveedor(prov)}
-                              className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600"
+                              className="rounded-xl bg-red-50 px-3 py-2 text-left text-xs font-semibold text-red-600"
                             >
                               Archivar
                             </button>
                           </>
                         )}
-                      </div>
+                      </ActionMenu>
                     </div>
                   </div>
                 ))}
@@ -3648,6 +3676,10 @@ export default function HomePage() {
               >
                 + Receta
               </button>
+            </div>
+
+            <div className="rounded-2xl bg-slate-100 px-4 py-3 text-xs text-slate-600">
+              Mantengo solo la acción principal visible y el resto dentro de <span className="font-semibold">Acciones</span>.
             </div>
 
             <div className="rounded-3xl bg-white p-4 shadow-sm">
@@ -3682,16 +3714,16 @@ export default function HomePage() {
                         </div>
                       </div>
 
-                      <div className="flex shrink-0 flex-col gap-2">
+                      <ActionMenu>
                         <button
                           onClick={() => openEditarReceta(receta)}
-                          className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+                          className="rounded-xl bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-white"
                         >
                           Editar
                         </button>
                         <button
                           onClick={() => toggleActivaReceta(receta)}
-                          className={`rounded-xl px-3 py-2 text-xs font-semibold ${
+                          className={`rounded-xl px-3 py-2 text-left text-xs font-semibold ${
                             receta.activo === false
                               ? 'bg-emerald-50 text-emerald-700'
                               : 'bg-red-50 text-red-600'
@@ -3699,7 +3731,7 @@ export default function HomePage() {
                         >
                           {receta.activo === false ? 'Reactivar' : 'Archivar'}
                         </button>
-                      </div>
+                      </ActionMenu>
                     </div>
                   </div>
                 ))}
@@ -4234,21 +4266,20 @@ Coca-Cola Zero;6;1/4/2026
 
               <div className="flex items-center gap-2">
                 {!detalleAlbaran.anulado && (
-                  <button
-                    onClick={() => cargarAlbaranParaEditar(detalleAlbaran)}
-                    className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
-                  >
-                    Editar
-                  </button>
-                )}
-
-                {!detalleAlbaran.anulado && (
-                  <button
-                    onClick={() => eliminarAlbaran(detalleAlbaran)}
-                    className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600"
-                  >
-                    Anular
-                  </button>
+                  <ActionMenu>
+                    <button
+                      onClick={() => cargarAlbaranParaEditar(detalleAlbaran)}
+                      className="rounded-xl bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-white"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => eliminarAlbaran(detalleAlbaran)}
+                      className="rounded-xl bg-red-50 px-3 py-2 text-left text-xs font-semibold text-red-600"
+                    >
+                      Anular
+                    </button>
+                  </ActionMenu>
                 )}
 
                 <button
