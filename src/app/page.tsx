@@ -1,6 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { supabase } from '@/lib/supabase'
+import type { Producto } from '@/types'
 
 type TabKey =
   | 'stock'
@@ -15,15 +17,13 @@ type TabKey =
 type MainTab = 'operativa' | 'gestion' | 'control'
 type OCRStatus = 'automatico' | 'aprendido' | 'manual' | 'pendiente'
 
-type Product = {
-  id: string
+type NuevoProductoForm = {
   nombre: string
   categoria: string
   unidad: string
-  stock: number
-  minimo: number
-  precio?: number
-  archivado?: boolean
+  stock_actual: string
+  stock_minimo: string
+  referencia: string
 }
 
 type Supplier = {
@@ -75,6 +75,15 @@ type OCRPreviewLine = {
   precio: number
 }
 
+const initialProductoForm: NuevoProductoForm = {
+  nombre: '',
+  categoria: '',
+  unidad: 'uds',
+  stock_actual: '',
+  stock_minimo: '',
+  referencia: '',
+}
+
 const mainTabConfig: Record<
   MainTab,
   { label: string; subtitle: string; tabs: TabKey[] }
@@ -121,9 +130,9 @@ function formatShortDate(date: string) {
   })
 }
 
-function getStockLevel(product: Product) {
-  if (product.stock <= 0) return 'critico'
-  if (product.stock <= product.minimo) return 'bajo'
+function getStockLevel(product: Producto) {
+  if (Number(product.stock_actual) <= 0) return 'critico'
+  if (Number(product.stock_actual) <= Number(product.stock_minimo || 0)) return 'bajo'
   return 'ok'
 }
 
@@ -185,15 +194,6 @@ function SectionHeader({
     </div>
   )
 }
-
-const mockProducts: Product[] = [
-  { id: '1', nombre: 'Coca-Cola 33cl', categoria: 'Bebidas', unidad: 'uds', stock: 42, minimo: 20, precio: 0.42 },
-  { id: '2', nombre: 'Cerveza Lager', categoria: 'Bebidas', unidad: 'uds', stock: 14, minimo: 18, precio: 0.71 },
-  { id: '3', nombre: 'Pan brioche', categoria: 'Panadería', unidad: 'uds', stock: 8, minimo: 12, precio: 0.29 },
-  { id: '4', nombre: 'Carne burger 180g', categoria: 'Cocina', unidad: 'uds', stock: 0, minimo: 15, precio: 1.35 },
-  { id: '5', nombre: 'Patatas congeladas', categoria: 'Cocina', unidad: 'kg', stock: 24, minimo: 8, precio: 1.92 },
-  { id: '6', nombre: 'Lechuga', categoria: 'Verduras', unidad: 'uds', stock: 10, minimo: 5, precio: 0.85 },
-]
 
 const mockSuppliers: Supplier[] = [
   { id: '1', nombre: 'Distribuciones Norte', cif: 'B12345678', telefono: '611 111 111', email: 'norte@proveedor.es', estado: 'activo' },
@@ -260,18 +260,92 @@ export default function HomePage() {
   const [supplierState, setSupplierState] = useState<'activos' | 'archivados' | 'todos'>('activos')
   const [noteState, setNoteState] = useState<'activos' | 'anulados' | 'todos'>('activos')
 
+  const [productos, setProductos] = useState<Producto[]>([])
+  const [loadingProductos, setLoadingProductos] = useState(true)
+  const [error, setError] = useState('')
+  const [toast, setToast] = useState('')
+  const [productoModalOpen, setProductoModalOpen] = useState(false)
+  const [productoSaving, setProductoSaving] = useState(false)
+  const [productoForm, setProductoForm] = useState<NuevoProductoForm>(initialProductoForm)
+
+  useEffect(() => {
+    void loadProductos()
+  }, [])
+
+  useEffect(() => {
+    if (!toast) return
+    const timer = window.setTimeout(() => setToast(''), 2500)
+    return () => window.clearTimeout(timer)
+  }, [toast])
+
+  async function loadProductos() {
+    setLoadingProductos(true)
+    setError('')
+
+    const { data, error } = await supabase
+      .from('productos')
+      .select('*')
+      .order('nombre', { ascending: true })
+
+    if (error) {
+      setError(error.message)
+      setLoadingProductos(false)
+      return
+    }
+
+    setProductos((data ?? []) as Producto[])
+    setLoadingProductos(false)
+  }
+
+  async function guardarProducto() {
+    if (!productoForm.nombre.trim()) {
+      setError('El nombre del producto es obligatorio')
+      return
+    }
+
+    setProductoSaving(true)
+    setError('')
+
+    const payload = {
+      nombre: productoForm.nombre.trim(),
+      categoria: productoForm.categoria.trim(),
+      unidad: productoForm.unidad.trim() || 'uds',
+      stock_actual: productoForm.stock_actual === '' ? 0 : Number(productoForm.stock_actual),
+      stock_minimo: productoForm.stock_minimo === '' ? 0 : Number(productoForm.stock_minimo),
+      referencia: productoForm.referencia.trim(),
+      activo: true,
+      archivado: false,
+    }
+
+    const { error } = await supabase.from('productos').insert(payload)
+
+    if (error) {
+      setError(error.message)
+      setProductoSaving(false)
+      return
+    }
+
+    setProductoModalOpen(false)
+    setProductoForm(initialProductoForm)
+    setToast('Producto creado')
+    setProductoSaving(false)
+    await loadProductos()
+  }
+
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return mockProducts.filter((item) => {
-      if (productState === 'activos' && item.archivado) return false
-      if (productState === 'archivados' && !item.archivado) return false
+    return productos.filter((item) => {
+      const archivado = Boolean(item.archivado)
+      if (productState === 'activos' && archivado) return false
+      if (productState === 'archivados' && !archivado) return false
       if (!q) return true
       return (
-        item.nombre.toLowerCase().includes(q) ||
-        item.categoria.toLowerCase().includes(q)
+        (item.nombre || '').toLowerCase().includes(q) ||
+        (item.categoria || '').toLowerCase().includes(q) ||
+        (item.referencia || '').toLowerCase().includes(q)
       )
     })
-  }, [search, productState])
+  }, [productos, search, productState])
 
   const filteredSuppliers = useMemo(() => {
     return mockSuppliers.filter((item) => {
@@ -289,8 +363,13 @@ export default function HomePage() {
     })
   }, [noteState])
 
-  const totalProducts = mockProducts.length
-  const lowStock = mockProducts.filter((item) => item.stock <= item.minimo).length
+  const totalProducts = productos.filter((item) => !item.archivado).length
+  const lowStock = productos.filter(
+    (item) =>
+      !item.archivado &&
+      Number(item.stock_minimo || 0) > 0 &&
+      Number(item.stock_actual) <= Number(item.stock_minimo || 0)
+  ).length
   const movements = 128
 
   return (
@@ -378,8 +457,11 @@ export default function HomePage() {
                 </p>
               </div>
 
-              <button className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm">
-                Ajustar stock
+              <button
+                onClick={() => setProductoModalOpen(true)}
+                className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm"
+              >
+                + Producto
               </button>
             </div>
 
@@ -437,7 +519,10 @@ export default function HomePage() {
                   Exportar
                 </button>
 
-                <button className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm">
+                <button
+                  onClick={() => setProductoModalOpen(true)}
+                  className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm"
+                >
                   + Producto
                 </button>
               </div>
@@ -464,66 +549,73 @@ export default function HomePage() {
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900">Inventario</h3>
                   <p className="mt-1 text-sm text-slate-500">
-                    Toca una fila para la acción principal y usa Acciones para el resto.
+                    Productos reales cargados desde Supabase.
                   </p>
                 </div>
                 <div className="text-xs text-slate-400">Vista principal</div>
               </div>
 
-              <div className="space-y-3">
-                {filteredProducts.map((product) => {
-                  const level = getStockLevel(product)
-                  return (
-                    <div
-                      key={product.id}
-                      className="flex items-center gap-4 rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4"
-                    >
-                      <button className="flex min-w-0 flex-1 items-center gap-4 text-left">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-lg shadow-sm">
-                          {product.categoria.slice(0, 2).toUpperCase()}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold text-slate-900">
-                            {product.nombre}
-                          </div>
-                          <div className="mt-1 truncate text-xs text-slate-500">
-                            {product.categoria} · {product.unidad}
-                          </div>
-                        </div>
-
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-slate-900">{product.stock}</div>
-                          <div className="mt-1 text-xs text-slate-500">
-                            mínimo {product.minimo}
-                          </div>
-                        </div>
-                      </button>
-
+              {loadingProductos ? (
+                <div className="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-400">
+                  Cargando stock...
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-400">
+                  No hay productos para este filtro.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredProducts.map((product) => {
+                    const level = getStockLevel(product)
+                    return (
                       <div
-                        className={`rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${stockPillClasses(level)}`}
+                        key={product.id}
+                        className="flex items-center gap-4 rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4"
                       >
-                        {level === 'critico' ? 'Crítico' : level === 'bajo' ? 'Bajo' : 'OK'}
-                      </div>
+                        <button className="flex min-w-0 flex-1 items-center gap-4 text-left">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-lg shadow-sm">
+                            {(product.categoria || 'PR').slice(0, 2).toUpperCase()}
+                          </div>
 
-                      <ActionMenu>
-                        <button className="rounded-xl bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-white">
-                          Editar
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-semibold text-slate-900">
+                              {product.nombre}
+                            </div>
+                            <div className="mt-1 truncate text-xs text-slate-500">
+                              {product.categoria || 'Sin categoría'} · {product.unidad}
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-slate-900">{product.stock_actual}</div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              mínimo {product.stock_minimo}
+                            </div>
+                          </div>
                         </button>
-                        <button className="rounded-xl bg-blue-50 px-3 py-2 text-left text-xs font-semibold text-blue-700">
-                          Ajustar stock
-                        </button>
-                        <button className="rounded-xl bg-amber-50 px-3 py-2 text-left text-xs font-semibold text-amber-700">
-                          Registrar consumo
-                        </button>
-                        <button className="rounded-xl bg-red-50 px-3 py-2 text-left text-xs font-semibold text-red-600">
-                          Archivar
-                        </button>
-                      </ActionMenu>
-                    </div>
-                  )
-                })}
-              </div>
+
+                        <div
+                          className={`rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${stockPillClasses(level)}`}
+                        >
+                          {level === 'critico' ? 'Crítico' : level === 'bajo' ? 'Bajo' : 'OK'}
+                        </div>
+
+                        <ActionMenu>
+                          <button className="rounded-xl bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-white">
+                            Editar
+                          </button>
+                          <button className="rounded-xl bg-blue-50 px-3 py-2 text-left text-xs font-semibold text-blue-700">
+                            Ajustar stock
+                          </button>
+                          <button className="rounded-xl bg-amber-50 px-3 py-2 text-left text-xs font-semibold text-amber-700">
+                            Registrar consumo
+                          </button>
+                        </ActionMenu>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </>
         )}
@@ -897,7 +989,112 @@ export default function HomePage() {
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-400"
           />
         </div>
+
+        {error && (
+          <div className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        {toast && (
+          <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-lg">
+            {toast}
+          </div>
+        )}
       </section>
+
+      {productoModalOpen && (
+        <div className="fixed inset-0 z-40 flex items-end bg-black/40">
+          <div className="w-full rounded-t-[32px] bg-white p-5 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">Nuevo producto</h3>
+              <button
+                onClick={() => {
+                  setProductoModalOpen(false)
+                  setProductoForm(initialProductoForm)
+                  setError('')
+                }}
+                className="text-sm font-medium text-slate-500"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                placeholder="Nombre"
+                value={productoForm.nombre}
+                onChange={(e) =>
+                  setProductoForm({ ...productoForm, nombre: e.target.value })
+                }
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+              />
+
+              <input
+                placeholder="Categoría"
+                value={productoForm.categoria}
+                onChange={(e) =>
+                  setProductoForm({ ...productoForm, categoria: e.target.value })
+                }
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+              />
+
+              <select
+                value={productoForm.unidad}
+                onChange={(e) =>
+                  setProductoForm({ ...productoForm, unidad: e.target.value })
+                }
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900"
+              >
+                <option value="uds">uds</option>
+                <option value="kg">kg</option>
+                <option value="g">g</option>
+                <option value="L">L</option>
+                <option value="ml">ml</option>
+                <option value="cajas">cajas</option>
+              </select>
+
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  placeholder="Stock actual"
+                  value={productoForm.stock_actual}
+                  onChange={(e) =>
+                    setProductoForm({ ...productoForm, stock_actual: e.target.value })
+                  }
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+                />
+                <input
+                  type="number"
+                  placeholder="Stock mínimo"
+                  value={productoForm.stock_minimo}
+                  onChange={(e) =>
+                    setProductoForm({ ...productoForm, stock_minimo: e.target.value })
+                  }
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+                />
+              </div>
+
+              <input
+                placeholder="Referencia"
+                value={productoForm.referencia}
+                onChange={(e) =>
+                  setProductoForm({ ...productoForm, referencia: e.target.value })
+                }
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+              />
+
+              <button
+                onClick={guardarProducto}
+                disabled={productoSaving}
+                className="mt-2 w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
+              >
+                {productoSaving ? 'Guardando...' : 'Guardar producto'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
