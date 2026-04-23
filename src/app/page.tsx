@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
+import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import type {
   MovimientoStock,
@@ -213,6 +214,37 @@ function formatCantidad(n: number) {
   })
 }
 
+function getUserDisplayName(user: User | null) {
+  if (!user) return ''
+
+  const fullName = user.user_metadata?.full_name
+  if (typeof fullName === 'string' && fullName.trim()) return fullName.trim()
+
+  const email = user.email?.trim()
+  if (email) return email.split('@')[0]
+
+  return 'Usuario'
+}
+
+function getUserRoleLabel(user: User | null) {
+  if (!user) return ''
+
+  const role = user.user_metadata?.role_label
+  if (typeof role === 'string' && role.trim()) return role.trim()
+
+  return 'Equipo'
+}
+
+function getInitials(value: string) {
+  return value
+    .split(' ')
+    .map((part) => part.trim()[0] || '')
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+}
+
 function Icon({
   path,
   className = 'h-5 w-5',
@@ -380,6 +412,15 @@ function getTabLabel(tab: TabKey) {
 export default function HomePage() {
   const [tab, setTab] = useState<TabKey>('stock')
   const [mainTab, setMainTab] = useState<MainTab>(getMainTabForTab('stock'))
+  const [session, setSession] = useState<Session | null>(null)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [authReady, setAuthReady] = useState(false)
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+  const [authName, setAuthName] = useState('')
+  const [authRole, setAuthRole] = useState('Encargado')
+  const [authEmail, setAuthEmail] = useState('')
+  const [authPassword, setAuthPassword] = useState('')
+  const [authSaving, setAuthSaving] = useState(false)
 
   const [productos, setProductos] = useState<Producto[]>([])
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
@@ -475,25 +516,57 @@ export default function HomePage() {
   const [tpvGuardandoMapeo, setTpvGuardandoMapeo] = useState('')
 
   useEffect(() => {
-    void loadInitialData()
+    let active = true
+
+    void supabase.auth.getSession().then(({ data, error }) => {
+      if (!active) return
+
+      if (error) {
+        setError(error.message)
+      }
+
+      const nextSession = data.session ?? null
+      setSession(nextSession)
+      setCurrentUser(nextSession?.user ?? null)
+      setOperarioActual(getUserDisplayName(nextSession?.user ?? null))
+      setAuthReady(true)
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!active) return
+      setSession(nextSession)
+      setCurrentUser(nextSession?.user ?? null)
+      setOperarioActual(getUserDisplayName(nextSession?.user ?? null))
+      if (!nextSession) {
+        setProductos([])
+        setProveedores([])
+        setMovimientos([])
+        setAlbaranes([])
+        setAuditoria([])
+        setRecetas([])
+        setMapeosProductos([])
+      }
+      setAuthReady(true)
+    })
+
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
   }, [])
+
+  useEffect(() => {
+    if (!authReady || !session) return
+    void loadInitialData()
+  }, [authReady, session?.user.id])
 
   useEffect(() => {
     if (!toast) return
     const timer = setTimeout(() => setToast(''), 2500)
     return () => clearTimeout(timer)
   }, [toast])
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem('operario_actual')
-    if (saved) {
-      setOperarioActual(saved)
-    }
-  }, [])
-
-  useEffect(() => {
-    window.localStorage.setItem('operario_actual', operarioActual.trim())
-  }, [operarioActual])
 
   useEffect(() => {
     const nextMainTab = getMainTabForTab(tab)
@@ -512,6 +585,67 @@ export default function HomePage() {
       loadRecetas(),
       loadMapeosProductos(),
     ])
+  }
+
+  async function handleAuthSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError('')
+    setAuthSaving(true)
+
+    try {
+      if (authMode === 'login') {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: authEmail.trim(),
+          password: authPassword,
+        })
+
+        if (error) throw error
+
+        setAuthPassword('')
+        setToast('Sesión iniciada')
+        return
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: authEmail.trim(),
+        password: authPassword,
+        options: {
+          data: {
+            full_name: authName.trim(),
+            role_label: authRole.trim() || 'Equipo',
+          },
+        },
+      })
+
+      if (error) throw error
+
+      setAuthPassword('')
+
+      if (!data.session) {
+        setToast('Cuenta creada. Revisa tu email para confirmar el acceso.')
+        setAuthMode('login')
+        return
+      }
+
+      setToast('Cuenta creada y sesión iniciada')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo completar el acceso')
+    } finally {
+      setAuthSaving(false)
+    }
+  }
+
+  async function handleSignOut() {
+    setError('')
+
+    const { error } = await supabase.auth.signOut()
+
+    if (error) {
+      setError(error.message)
+      return
+    }
+
+    setToast('Sesión cerrada')
   }
 
   async function loadProductos() {
@@ -658,8 +792,8 @@ export default function HomePage() {
       entidad,
       entidad_id: entidad_id ?? null,
       accion,
-      actor_nombre: operarioActual.trim() || 'Sin identificar',
-      actor_id: '',
+      actor_nombre: getUserDisplayName(currentUser) || operarioActual.trim() || 'Sin identificar',
+      actor_id: currentUser?.id || '',
       detalle: detalle ?? '',
       payload_antes: payload_antes ?? null,
       payload_despues: payload_despues ?? null,
@@ -2570,6 +2704,9 @@ export default function HomePage() {
         .filter(Boolean)
     )
   ).sort((a, b) => a.localeCompare(b, 'es'))
+  const userDisplayName = getUserDisplayName(currentUser)
+  const userRoleLabel = getUserRoleLabel(currentUser)
+  const userInitials = getInitials(userDisplayName || 'Usuario')
 
   const productosStockBajo = useMemo(() => {
     return productos
@@ -2680,6 +2817,189 @@ export default function HomePage() {
     )
   }
 
+  if (!authReady) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f8fbff_0%,#f3f6fb_42%,#eef3f9_100%)] px-4">
+        <div className="w-full max-w-md rounded-[32px] border border-white/80 bg-white/95 p-8 text-center shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-50 text-blue-600">
+            <Icon
+              className="h-8 w-8"
+              path={
+                <>
+                  <path d="M7 3v10" />
+                  <path d="M11 3v10" />
+                  <path d="M9 13v8" />
+                  <path d="M17 3v8" />
+                  <path d="M17 15v6" />
+                  <path d="M15 11h4" />
+                </>
+              }
+            />
+          </div>
+          <h1 className="mt-6 text-2xl font-semibold text-slate-950">Control Restaurante</h1>
+          <p className="mt-2 text-sm text-slate-500">Comprobando tu sesión...</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (!session || !currentUser) {
+    return (
+      <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#dbeafe_0%,transparent_28%),linear-gradient(180deg,#f8fbff_0%,#f3f6fb_42%,#eef3f9_100%)] px-4 py-10 text-slate-900">
+        <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <section className="rounded-[36px] border border-white/80 bg-white/80 p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur sm:p-10">
+            <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-50 text-blue-600 shadow-inner">
+              <Icon
+                className="h-8 w-8"
+                path={
+                  <>
+                    <path d="M7 3v10" />
+                    <path d="M11 3v10" />
+                    <path d="M9 13v8" />
+                    <path d="M17 3v8" />
+                    <path d="M17 15v6" />
+                    <path d="M15 11h4" />
+                  </>
+                }
+              />
+            </div>
+            <h1 className="mt-8 text-4xl font-semibold tracking-tight text-slate-950">
+              Acceso para el equipo del restaurante
+            </h1>
+            <p className="mt-4 max-w-xl text-lg leading-8 text-slate-600">
+              Cada persona entra con su propia cuenta para que el historial, las acciones y la
+              trazabilidad queden asociadas a un usuario real.
+            </p>
+
+            <div className="mt-8 grid gap-4 sm:grid-cols-3">
+              <div className="rounded-3xl bg-slate-50 p-5">
+                <div className="text-sm font-semibold text-slate-900">Identidad real</div>
+                <p className="mt-2 text-sm text-slate-500">
+                  La auditoría registra quién hizo cada cambio.
+                </p>
+              </div>
+              <div className="rounded-3xl bg-slate-50 p-5">
+                <div className="text-sm font-semibold text-slate-900">Acceso compartido</div>
+                <p className="mt-2 text-sm text-slate-500">
+                  Varias personas pueden usar la app sin mezclar sesiones.
+                </p>
+              </div>
+              <div className="rounded-3xl bg-slate-50 p-5">
+                <div className="text-sm font-semibold text-slate-900">Base segura</div>
+                <p className="mt-2 text-sm text-slate-500">
+                  Queda preparado para activar permisos por usuario en Supabase.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[36px] border border-white/80 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.1)] sm:p-10">
+            <div className="flex rounded-2xl bg-slate-100 p-1.5">
+              <button
+                type="button"
+                onClick={() => setAuthMode('login')}
+                className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                  authMode === 'login' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
+                }`}
+              >
+                Iniciar sesión
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthMode('register')}
+                className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                  authMode === 'register' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
+                }`}
+              >
+                Crear cuenta
+              </button>
+            </div>
+
+            <form onSubmit={handleAuthSubmit} className="mt-8 space-y-4">
+              {authMode === 'register' && (
+                <>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-slate-700">
+                      Nombre visible
+                    </span>
+                    <input
+                      type="text"
+                      value={authName}
+                      onChange={(e) => setAuthName(e.target.value)}
+                      placeholder="Carlos Pérez"
+                      required
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-slate-700">Cargo</span>
+                    <input
+                      type="text"
+                      value={authRole}
+                      onChange={(e) => setAuthRole(e.target.value)}
+                      placeholder="Encargado"
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                    />
+                  </label>
+                </>
+              )}
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Email</span>
+                <input
+                  type="email"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  placeholder="equipo@restaurante.com"
+                  required
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Contraseña</span>
+                <input
+                  type="password"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  placeholder="Min. 6 caracteres"
+                  required
+                  minLength={6}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                />
+              </label>
+
+              {error ? (
+                <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={authSaving}
+                className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 disabled:opacity-60"
+              >
+                {authSaving
+                  ? authMode === 'login'
+                    ? 'Entrando...'
+                    : 'Creando cuenta...'
+                  : authMode === 'login'
+                  ? 'Entrar al panel'
+                  : 'Crear cuenta y acceder'}
+              </button>
+            </form>
+
+            <p className="mt-5 text-sm text-slate-500">
+              Recomendación: activa también las políticas RLS de Supabase con el archivo
+              `supabase/auth-setup.sql` para que los datos solo estén disponibles para usuarios
+              autenticados.
+            </p>
+          </section>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#f3f6fb_42%,#eef3f9_100%)] pb-24 text-slate-900">
       <div className="mx-auto max-w-7xl px-4 pb-12 pt-4 sm:px-6 lg:px-8">
@@ -2715,33 +3035,26 @@ export default function HomePage() {
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <label className="relative flex min-w-[240px] flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm">
-                <div className="rounded-xl bg-white p-2 text-slate-500 shadow-sm">
-                  <Icon
-                    className="h-5 w-5"
-                    path={
-                      <>
-                        <circle cx="12" cy="8" r="3.2" />
-                        <path d="M5.5 19a6.5 6.5 0 0 1 13 0" />
-                      </>
-                    }
-                  />
+              <div className="relative flex min-w-[260px] flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-sm font-semibold text-blue-600 shadow-sm">
+                  {userInitials}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
-                    Responsable
+                  <div className="truncate text-base font-semibold text-slate-900">
+                    {userDisplayName}
                   </div>
-                  <input
-                    type="text"
-                    value={operarioActual}
-                    onChange={(e) => setOperarioActual(e.target.value)}
-                    placeholder="Carlos"
-                    className="mt-0.5 w-full bg-transparent text-sm font-semibold text-slate-800 outline-none placeholder:text-slate-400"
-                  />
+                  <div className="truncate text-sm text-slate-500">
+                    {userRoleLabel}
+                    {currentUser.email ? ` · ${currentUser.email}` : ''}
+                  </div>
                 </div>
-              </label>
+              </div>
 
-              <button className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-slate-500 shadow-sm">
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-slate-500 shadow-sm transition hover:bg-slate-50"
+              >
                 <Icon
                   className="h-5 w-5"
                   path={
