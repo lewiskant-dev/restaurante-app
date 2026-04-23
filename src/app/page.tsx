@@ -23,34 +23,6 @@ type TabKey =
 
 type MainTab = 'operativa' | 'gestion' | 'control'
 
-const TAB_TO_MAIN: Record<TabKey, MainTab> = {
-  stock: 'operativa',
-  albaran: 'operativa',
-  tpv: 'operativa',
-  albaranes: 'gestion',
-  proveedores: 'gestion',
-  recetas: 'gestion',
-  historial: 'control',
-  auditoria: 'control',
-}
-
-const SUB_TABS: Record<MainTab, { key: TabKey; label: string }[]> = {
-  operativa: [
-    { key: 'stock', label: 'Stock' },
-    { key: 'albaran', label: 'Nuevo alb.' },
-    { key: 'tpv', label: 'TPV' },
-  ],
-  gestion: [
-    { key: 'albaranes', label: 'Albaranes' },
-    { key: 'proveedores', label: 'Prov.' },
-    { key: 'recetas', label: 'Recetas' },
-  ],
-  control: [
-    { key: 'historial', label: 'Historial' },
-    { key: 'auditoria', label: 'Audit.' },
-  ],
-}
-
 type NuevoProductoForm = {
   nombre: string
   categoria: string
@@ -298,9 +270,54 @@ function scoreRecipeMatch(articuloTPV: string, receta: { nombre: string; nombre_
   return score
 }
 
+
+
+const mainTabConfig: Record<
+  MainTab,
+  {
+    label: string
+    subtitle: string
+    tabs: TabKey[]
+  }
+> = {
+  operativa: {
+    label: 'Operativa',
+    subtitle: 'Trabajo diario',
+    tabs: ['stock', 'albaran', 'tpv'],
+  },
+  gestion: {
+    label: 'Gestión',
+    subtitle: 'Compras y catálogo',
+    tabs: ['albaranes', 'proveedores', 'recetas'],
+  },
+  control: {
+    label: 'Control',
+    subtitle: 'Seguimiento y trazabilidad',
+    tabs: ['historial', 'auditoria'],
+  },
+}
+
+function getMainTabForTab(tab: TabKey): MainTab {
+  if (mainTabConfig.operativa.tabs.includes(tab)) return 'operativa'
+  if (mainTabConfig.gestion.tabs.includes(tab)) return 'gestion'
+  return 'control'
+}
+
+function getTabLabel(tab: TabKey) {
+  if (tab === 'stock') return 'Stock'
+  if (tab === 'albaran') return 'Nuevo albarán'
+  if (tab === 'tpv') return 'TPV'
+  if (tab === 'albaranes') return 'Albaranes'
+  if (tab === 'proveedores') return 'Proveedores'
+  if (tab === 'recetas') return 'Recetas'
+  if (tab === 'historial') return 'Historial'
+  return 'Auditoría'
+}
+
+
 export default function HomePage() {
   const [tab, setTab] = useState<TabKey>('stock')
-  const [mainTab, setMainTab] = useState<MainTab>(TAB_TO_MAIN.stock)
+  const [mainTab, setMainTab] = useState<MainTab>(getMainTabForTab('stock'))
 
   const [productos, setProductos] = useState<Producto[]>([])
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
@@ -416,8 +433,11 @@ export default function HomePage() {
   }, [operarioActual])
 
   useEffect(() => {
-    setMainTab(TAB_TO_MAIN[tab])
-  }, [tab])
+    const nextMainTab = getMainTabForTab(tab)
+    if (nextMainTab !== mainTab) {
+      setMainTab(nextMainTab)
+    }
+  }, [tab, mainTab])
 
   async function loadInitialData() {
     await Promise.all([
@@ -2620,42 +2640,67 @@ export default function HomePage() {
           />
         </div>
 
-        <div className="mb-2 grid grid-cols-3 gap-2 rounded-2xl bg-slate-200 p-1">
-          {[
-            { key: 'operativa', label: 'Operativa' },
-            { key: 'gestion', label: 'Gestión' },
-            { key: 'control', label: 'Control' },
-          ].map((item) => (
-            <button
-              key={item.key}
-              onClick={() => {
-                const nextMain = item.key as MainTab
-                setMainTab(nextMain)
-                setTab(SUB_TABS[nextMain][0].key)
-              }}
-              className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                mainTab === item.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
+        <div className="mb-3 rounded-3xl bg-white p-3 shadow-sm">
+          <div className="grid grid-cols-3 gap-2 rounded-2xl bg-slate-100 p-1.5">
+            {(['operativa', 'gestion', 'control'] as MainTab[]).map((item) => {
+              const config = mainTabConfig[item]
+              const active = mainTab === item
 
-        <div className="mb-3 flex gap-2 overflow-x-auto rounded-2xl bg-white p-2 shadow-sm">
-          {SUB_TABS[mainTab].map((item) => (
-            <button
-              key={item.key}
-              onClick={() => setTab(item.key)}
-              className={`whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold ${
-                tab === item.key
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-100 text-slate-600'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
+              return (
+                <button
+                  key={item}
+                  onClick={() => {
+                    setMainTab(item)
+                    setTab(mainTabConfig[item].tabs[0])
+                  }}
+                  className={`rounded-2xl px-3 py-3 text-left transition ${
+                    active
+                      ? 'bg-slate-900 text-white shadow-sm'
+                      : 'bg-transparent text-slate-600'
+                  }`}
+                >
+                  <div className="text-sm font-semibold">{config.label}</div>
+                  <div className={`mt-1 text-[11px] ${active ? 'text-slate-300' : 'text-slate-400'}`}>
+                    {config.subtitle}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">
+                {mainTabConfig[mainTab].label}
+              </div>
+              <div className="text-xs text-slate-500">
+                {mainTabConfig[mainTab].subtitle}
+              </div>
+            </div>
+
+            <div className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-medium text-slate-500">
+              {mainTabConfig[mainTab].tabs.length} secciones
+            </div>
+          </div>
+
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            {mainTabConfig[mainTab].tabs.map((item) => {
+              const active = tab === item
+              return (
+                <button
+                  key={item}
+                  onClick={() => setTab(item)}
+                  className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition ${
+                    active
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {getTabLabel(item)}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {tab === 'stock' && (
