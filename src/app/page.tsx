@@ -598,6 +598,8 @@ export default function HomePage() {
   const [creatingManagedUser, setCreatingManagedUser] = useState(false)
   const [deletingManagedUserId, setDeletingManagedUserId] = useState('')
   const [resettingManagedUserId, setResettingManagedUserId] = useState('')
+  const [busquedaUsuarios, setBusquedaUsuarios] = useState('')
+  const [managedUserRoleFilter, setManagedUserRoleFilter] = useState<'todos' | UserRole>('todos')
   const [newManagedUserName, setNewManagedUserName] = useState('')
   const [newManagedUserEmail, setNewManagedUserEmail] = useState('')
   const [newManagedUserPassword, setNewManagedUserPassword] = useState('')
@@ -3141,6 +3143,27 @@ export default function HomePage() {
       })
   }, [auditoria, busquedaAuditoria, auditoriaDesde, auditoriaHasta, auditoriaEntidadFiltro, auditoriaAccionFiltro])
 
+  const managedUsersFiltrados = useMemo(() => {
+    const q = busquedaUsuarios.trim().toLowerCase()
+
+    return managedUsers
+      .filter((user) => {
+        if (managedUserRoleFilter !== 'todos' && user.role !== managedUserRoleFilter) {
+          return false
+        }
+        return true
+      })
+      .filter((user) => {
+        if (!q) return true
+
+        const fullName = user.full_name?.toLowerCase() ?? ''
+        const email = user.email?.toLowerCase() ?? ''
+        const role = user.role?.toLowerCase() ?? ''
+
+        return fullName.includes(q) || email.includes(q) || role.includes(q)
+      })
+  }, [managedUsers, busquedaUsuarios, managedUserRoleFilter])
+
   const tpvPendientesMapeo = useMemo(() => {
     const recetasActivas = recetas.filter((receta) => receta.activo !== false)
     const recetasMap = new Map(
@@ -4834,21 +4857,49 @@ export default function HomePage() {
             </div>
 
             <div className="rounded-3xl bg-white p-4 shadow-sm">
+              <div className="mb-4 grid gap-3 xl:grid-cols-[1.3fr_0.8fr_auto]">
+                <input
+                  type="search"
+                  value={busquedaUsuarios}
+                  onChange={(e) => setBusquedaUsuarios(e.target.value)}
+                  placeholder="Buscar por nombre, email o rol..."
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                />
+
+                <select
+                  value={managedUserRoleFilter}
+                  onChange={(e) =>
+                    setManagedUserRoleFilter(e.target.value as 'todos' | UserRole)
+                  }
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+                >
+                  <option value="todos">Todos los roles</option>
+                  <option value="empleado">Empleado</option>
+                  <option value="encargado">Encargado</option>
+                  <option value="administrador">Administrador</option>
+                  {currentUserRole === 'master' ? <option value="master">Master</option> : null}
+                </select>
+
+                <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-600">
+                  Visibles: {managedUsersFiltrados.length}
+                </div>
+              </div>
+
               {loadingManagedUsers && (
                 <div className="py-10 text-center text-sm text-slate-400">
                   Cargando usuarios...
                 </div>
               )}
 
-              {!loadingManagedUsers && managedUsers.length === 0 && (
+              {!loadingManagedUsers && managedUsersFiltrados.length === 0 && (
                 <div className="py-10 text-center text-sm text-slate-400">
-                  No se han encontrado usuarios.
+                  No hay usuarios para este filtro.
                 </div>
               )}
 
-              {!loadingManagedUsers && managedUsers.length > 0 && (
+              {!loadingManagedUsers && managedUsersFiltrados.length > 0 && (
                 <div className="space-y-3">
-                  {managedUsers.map((managedUser) => {
+                  {managedUsersFiltrados.map((managedUser) => {
                     const isCurrentUser = managedUser.id === currentUser.id
                     const isMasterTarget = managedUser.role === 'master'
                     const canEditTarget =
