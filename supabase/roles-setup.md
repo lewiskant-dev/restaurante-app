@@ -53,6 +53,21 @@ MASTER_EMAIL=master@interno.local
 - `master` puede asignar cualquier rol, incluido `master`.
 - `administrador` puede promocionar o degradar entre `empleado`, `encargado` y `administrador`, pero no tocar cuentas `master`.
 
+## Política RLS recomendada
+
+Con el archivo `auth-setup.sql` actualizado, la política práctica queda así:
+
+- `empleado`: acceso de lectura a stock e historial.
+- `encargado`: operativa de stock y albaranes.
+- `administrador`: gestión completa del negocio y usuarios de aplicación.
+- `master`: mismo alcance que administrador, más control sobre cuentas `master`.
+
+Importante:
+
+- En esta fase, el RLS se ha endurecido para que la base de datos respete roles reales.
+- Por coherencia con esa seguridad, la operativa de escritura diaria queda en `encargado` o superior.
+- Si en el futuro quieres que `empleado` pueda descontar stock sin acceso amplio a la tabla `productos`, lo recomendable es mover esa acción a una RPC o ruta server específica.
+
 ## Migrar usuarios antiguos
 
 Si ya tenías roles guardados en `raw_user_meta_data`, puedes migrarlos así:

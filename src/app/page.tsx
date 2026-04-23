@@ -301,7 +301,7 @@ function hasPermission(role: UserRole, permission: PermissionKey) {
     )
   }
 
-  return permission === 'stock_consume'
+  return false
 }
 
 function canAccessTab(role: UserRole, tab: TabKey) {
@@ -689,15 +689,40 @@ export default function HomePage() {
   }
 
   async function loadInitialData() {
-    await Promise.all([
-      loadProductos(),
-      loadProveedores(),
-      loadMovimientos(),
-      loadAlbaranes(),
-      loadAuditoria(),
-      loadRecetas(),
-      loadMapeosProductos(),
-    ])
+    const role = getUserRole(currentUser)
+    const tasks: Promise<void>[] = [loadProductos(), loadMovimientos()]
+
+    if (hasPermission(role, 'albaran_manage') || hasPermission(role, 'proveedor_manage')) {
+      tasks.push(loadProveedores())
+    } else {
+      setProveedores([])
+    }
+
+    if (hasPermission(role, 'albaran_manage')) {
+      tasks.push(loadAlbaranes())
+    } else {
+      setAlbaranes([])
+    }
+
+    if (hasPermission(role, 'auditoria_view')) {
+      tasks.push(loadAuditoria())
+    } else {
+      setAuditoria([])
+    }
+
+    if (hasPermission(role, 'receta_manage') || hasPermission(role, 'tpv_manage')) {
+      tasks.push(loadRecetas())
+    } else {
+      setRecetas([])
+    }
+
+    if (hasPermission(role, 'tpv_manage')) {
+      tasks.push(loadMapeosProductos())
+    } else {
+      setMapeosProductos([])
+    }
+
+    await Promise.all(tasks)
   }
 
   async function handleAuthSubmit(event: React.FormEvent<HTMLFormElement>) {
