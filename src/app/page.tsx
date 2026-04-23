@@ -2835,18 +2835,6 @@ export default function HomePage() {
                   >
                     + Nuevo producto
                   </button>
-                  <button
-                    onClick={() => {
-                      if (productosFiltrados[0]) {
-                        openAjusteModal(productosFiltrados[0])
-                      }
-                    }}
-                    disabled={productosFiltrados.length === 0}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <span className="text-lg leading-none">+</span>
-                    Ajustar stock
-                  </button>
                 </div>
               </div>
 
