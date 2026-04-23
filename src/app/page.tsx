@@ -590,6 +590,12 @@ export default function HomePage() {
   const [managedUsers, setManagedUsers] = useState<ManagedUser[]>([])
   const [loadingManagedUsers, setLoadingManagedUsers] = useState(false)
   const [savingManagedUserId, setSavingManagedUserId] = useState('')
+  const [creatingManagedUser, setCreatingManagedUser] = useState(false)
+  const [deletingManagedUserId, setDeletingManagedUserId] = useState('')
+  const [newManagedUserName, setNewManagedUserName] = useState('')
+  const [newManagedUserEmail, setNewManagedUserEmail] = useState('')
+  const [newManagedUserPassword, setNewManagedUserPassword] = useState('')
+  const [newManagedUserRole, setNewManagedUserRole] = useState<UserRole>('empleado')
 
   useEffect(() => {
     let active = true
@@ -844,6 +850,82 @@ export default function HomePage() {
       setError(err instanceof Error ? err.message : 'No se pudo actualizar el rol')
     } finally {
       setSavingManagedUserId('')
+    }
+  }
+
+  async function createManagedUser() {
+    if (!session?.access_token) return
+
+    setCreatingManagedUser(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          fullName: newManagedUserName,
+          email: newManagedUserEmail,
+          password: newManagedUserPassword,
+          role: newManagedUserRole,
+        }),
+      })
+
+      const payload = (await response.json()) as { error?: string; user?: ManagedUser }
+
+      if (!response.ok || !payload.user) {
+        throw new Error(payload.error || 'No se pudo crear el usuario')
+      }
+
+      setManagedUsers((current) =>
+        [...current, payload.user!].sort((a, b) => a.full_name.localeCompare(b.full_name, 'es'))
+      )
+      setNewManagedUserName('')
+      setNewManagedUserEmail('')
+      setNewManagedUserPassword('')
+      setNewManagedUserRole('empleado')
+      setToast('Usuario creado')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo crear el usuario')
+    } finally {
+      setCreatingManagedUser(false)
+    }
+  }
+
+  async function deleteManagedUser(userId: string, label: string) {
+    if (!session?.access_token) return
+
+    const confirmed = window.confirm(`¿Eliminar el usuario "${label}"?`)
+    if (!confirmed) return
+
+    setDeletingManagedUserId(userId)
+    setError('')
+
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ userId }),
+      })
+
+      const payload = (await response.json()) as { error?: string; success?: boolean }
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error || 'No se pudo eliminar el usuario')
+      }
+
+      setManagedUsers((current) => current.filter((item) => item.id !== userId))
+      setToast('Usuario eliminado')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo eliminar el usuario')
+    } finally {
+      setDeletingManagedUserId('')
     }
   }
 
@@ -4574,6 +4656,57 @@ export default function HomePage() {
             </div>
 
             <div className="rounded-3xl bg-white p-4 shadow-sm">
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold text-slate-900">Alta de usuario</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Crea cuentas internas sin salir del panel.
+                </p>
+              </div>
+
+              <div className="grid gap-3 xl:grid-cols-[1fr_1fr_0.9fr_0.8fr_auto]">
+                <input
+                  type="text"
+                  value={newManagedUserName}
+                  onChange={(e) => setNewManagedUserName(e.target.value)}
+                  placeholder="Nombre visible"
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                />
+                <input
+                  type="email"
+                  value={newManagedUserEmail}
+                  onChange={(e) => setNewManagedUserEmail(e.target.value)}
+                  placeholder="usuario@restaurante.com"
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                />
+                <input
+                  type="password"
+                  value={newManagedUserPassword}
+                  onChange={(e) => setNewManagedUserPassword(e.target.value)}
+                  placeholder="Contraseña inicial"
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                />
+                <select
+                  value={newManagedUserRole}
+                  onChange={(e) => setNewManagedUserRole(e.target.value as UserRole)}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+                >
+                  <option value="empleado">Empleado</option>
+                  <option value="encargado">Encargado</option>
+                  <option value="administrador">Administrador</option>
+                  {currentUserRole === 'master' ? <option value="master">Master</option> : null}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => void createManagedUser()}
+                  disabled={creatingManagedUser}
+                  className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 disabled:opacity-60"
+                >
+                  {creatingManagedUser ? 'Creando...' : 'Crear usuario'}
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-3xl bg-white p-4 shadow-sm">
               {loadingManagedUsers && (
                 <div className="py-10 text-center text-sm text-slate-400">
                   Cargando usuarios...
@@ -4595,6 +4728,11 @@ export default function HomePage() {
                       currentUserRole === 'master'
                         ? true
                         : currentUserRole === 'administrador' && !isMasterTarget
+                    const canDeleteTarget =
+                      !isCurrentUser &&
+                      (currentUserRole === 'master'
+                        ? true
+                        : currentUserRole === 'administrador' && !isMasterTarget)
 
                     return (
                       <div
@@ -4642,6 +4780,22 @@ export default function HomePage() {
                             <option value="administrador">Administrador</option>
                             {currentUserRole === 'master' ? <option value="master">Master</option> : null}
                           </select>
+
+                          {canDeleteTarget ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void deleteManagedUser(
+                                  managedUser.id,
+                                  managedUser.full_name || managedUser.email
+                                )
+                              }
+                              disabled={deletingManagedUserId === managedUser.id}
+                              className="rounded-2xl bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-60"
+                            >
+                              {deletingManagedUserId === managedUser.id ? 'Eliminando...' : 'Eliminar'}
+                            </button>
+                          ) : null}
                         </div>
                       </div>
                     )

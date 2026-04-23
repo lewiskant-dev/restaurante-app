@@ -26,17 +26,43 @@ function getUserRoleFromAuthUser(user: {
   return normalizeRole(user.app_metadata?.role ?? user.user_metadata?.role)
 }
 
-async function getRequestUser(request: Request) {
-  let supabaseAdmin
+function serializeUser(user: {
+  id: string
+  email?: string | null
+  created_at: string
+  last_sign_in_at?: string | null
+  app_metadata?: Record<string, unknown>
+  user_metadata?: Record<string, unknown>
+}) {
+  return {
+    id: user.id,
+    email: user.email || '',
+    full_name: String(user.user_metadata?.full_name || user.email || 'Usuario'),
+    role: getUserRoleFromAuthUser(user),
+    created_at: user.created_at,
+    last_sign_in_at: user.last_sign_in_at || null,
+  }
+}
 
+function getAdminClientOrError() {
   try {
-    supabaseAdmin = createSupabaseAdminClient()
+    return { client: createSupabaseAdminClient() }
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Configuración server incompleta',
+    }
+  }
+}
+
+async function getRequestUser(request: Request) {
+  const adminResult = getAdminClientOrError()
+  if ('error' in adminResult) {
+    return {
+      error: adminResult.error,
       status: 500 as const,
     }
   }
+  const supabaseAdmin = adminResult.client
 
   const authHeader = request.headers.get('authorization') || ''
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
@@ -67,16 +93,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: authResult.error }, { status: authResult.status })
   }
 
-  let supabaseAdmin
-
-  try {
-    supabaseAdmin = createSupabaseAdminClient()
-  } catch (error) {
+  const adminResult = getAdminClientOrError()
+  if ('error' in adminResult) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Configuración server incompleta' },
+      { error: adminResult.error },
       { status: 500 }
     )
   }
+  const supabaseAdmin = adminResult.client
 
   const { data, error } = await supabaseAdmin.auth.admin.listUsers()
 
@@ -84,16 +108,79 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  const users = (data.users || []).map((user) => ({
-    id: user.id,
-    email: user.email || '',
-    full_name: String(user.user_metadata?.full_name || user.email || 'Usuario'),
-    role: getUserRoleFromAuthUser(user),
-    created_at: user.created_at,
-    last_sign_in_at: user.last_sign_in_at,
-  }))
+  const users = (data.users || []).map(serializeUser)
 
   return NextResponse.json({ users })
+}
+
+export async function POST(request: Request) {
+  const authResult = await getRequestUser(request)
+
+  if ('error' in authResult) {
+    return NextResponse.json({ error: authResult.error }, { status: authResult.status })
+  }
+
+  const adminResult = getAdminClientOrError()
+  if ('error' in adminResult) {
+    return NextResponse.json({ error: adminResult.error }, { status: 500 })
+  }
+  const supabaseAdmin = adminResult.client
+
+  const body = (await request.json().catch(() => null)) as
+    | {
+        email?: string
+        password?: string
+        fullName?: string
+        role?: UserRole
+      }
+    | null
+
+  const email = body?.email?.trim().toLowerCase() || ''
+  const password = body?.password || ''
+  const fullName = body?.fullName?.trim() || ''
+  const role = normalizeRole(body?.role)
+
+  if (!email || !password || !fullName) {
+    return NextResponse.json(
+      { error: 'Nombre, email y contraseña son obligatorios' },
+      { status: 400 }
+    )
+  }
+
+  if (password.length < 6) {
+    return NextResponse.json(
+      { error: 'La contraseña debe tener al menos 6 caracteres' },
+      { status: 400 }
+    )
+  }
+
+  if (authResult.role !== 'master' && role === 'master') {
+    return NextResponse.json(
+      { error: 'Solo el usuario master puede crear otra cuenta master' },
+      { status: 403 }
+    )
+  }
+
+  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      full_name: fullName,
+    },
+    app_metadata: {
+      role,
+    },
+  })
+
+  if (error || !data.user) {
+    return NextResponse.json(
+      { error: error?.message || 'No se pudo crear el usuario' },
+      { status: 500 }
+    )
+  }
+
+  return NextResponse.json({ user: serializeUser(data.user) }, { status: 201 })
 }
 
 export async function PATCH(request: Request) {
@@ -103,16 +190,14 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: authResult.error }, { status: authResult.status })
   }
 
-  let supabaseAdmin
-
-  try {
-    supabaseAdmin = createSupabaseAdminClient()
-  } catch (error) {
+  const adminResult = getAdminClientOrError()
+  if ('error' in adminResult) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Configuración server incompleta' },
+      { error: adminResult.error },
       { status: 500 }
     )
   }
+  const supabaseAdmin = adminResult.client
 
   const body = (await request.json().catch(() => null)) as
     | { userId?: string; role?: UserRole }
@@ -167,13 +252,64 @@ export async function PATCH(request: Request) {
   }
 
   return NextResponse.json({
-    user: {
-      id: data.user.id,
-      email: data.user.email || '',
-      full_name: String(data.user.user_metadata?.full_name || data.user.email || 'Usuario'),
-      role: getUserRoleFromAuthUser(data.user),
-      created_at: data.user.created_at,
-      last_sign_in_at: data.user.last_sign_in_at,
-    },
+    user: serializeUser(data.user),
   })
+}
+
+export async function DELETE(request: Request) {
+  const authResult = await getRequestUser(request)
+
+  if ('error' in authResult) {
+    return NextResponse.json({ error: authResult.error }, { status: authResult.status })
+  }
+
+  const adminResult = getAdminClientOrError()
+  if ('error' in adminResult) {
+    return NextResponse.json({ error: adminResult.error }, { status: 500 })
+  }
+  const supabaseAdmin = adminResult.client
+
+  const body = (await request.json().catch(() => null)) as { userId?: string } | null
+  const userId = body?.userId?.trim() || ''
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Falta el usuario a eliminar' }, { status: 400 })
+  }
+
+  if (userId === authResult.user.id) {
+    return NextResponse.json(
+      { error: 'No puedes eliminar tu propia cuenta desde esta pantalla' },
+      { status: 400 }
+    )
+  }
+
+  const { data: targetUserData, error: targetUserError } =
+    await supabaseAdmin.auth.admin.getUserById(userId)
+
+  if (targetUserError || !targetUserData.user) {
+    return NextResponse.json(
+      { error: targetUserError?.message || 'No se pudo encontrar el usuario' },
+      { status: 404 }
+    )
+  }
+
+  const targetRole = getUserRoleFromAuthUser(targetUserData.user)
+
+  if (targetRole === 'master' && authResult.role !== 'master') {
+    return NextResponse.json(
+      { error: 'Solo el usuario master puede eliminar otra cuenta master' },
+      { status: 403 }
+    )
+  }
+
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
+
+  if (error) {
+    return NextResponse.json(
+      { error: error.message || 'No se pudo eliminar el usuario' },
+      { status: 500 }
+    )
+  }
+
+  return NextResponse.json({ success: true })
 }
