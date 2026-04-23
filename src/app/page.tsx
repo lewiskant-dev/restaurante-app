@@ -421,6 +421,38 @@ function normalizeText(value: string) {
     .trim()
 }
 
+function sanitizeSingleLine(value: string) {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function validateDisplayName(value: string) {
+  const normalized = sanitizeSingleLine(value)
+
+  if (!normalized) return 'El nombre visible es obligatorio'
+  if (normalized.length < 2) return 'Usa al menos 2 caracteres'
+  if (normalized.length > 60) return 'Usa como maximo 60 caracteres'
+  return ''
+}
+
+function validateEmailAddress(value: string) {
+  const normalized = value.trim().toLowerCase()
+
+  if (!normalized) return 'El correo es obligatorio'
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+    return 'Introduce un correo valido'
+  }
+
+  return ''
+}
+
+function validatePasswordStrength(value: string) {
+  if (!value) return 'La contraseña es obligatoria'
+  if (value.length < 8) return 'Debe tener al menos 8 caracteres'
+  if (!/[A-Za-z]/.test(value)) return 'Incluye al menos una letra'
+  if (!/\d/.test(value)) return 'Incluye al menos un numero'
+  return ''
+}
+
 
 function ActionMenu({
   children,
@@ -872,10 +904,16 @@ export default function HomePage() {
   }
 
   async function updateOwnProfile() {
-    const nextName = profileNameDraft.trim()
+    const nextName = sanitizeSingleLine(profileNameDraft)
+    const validationError = validateDisplayName(nextName)
 
-    if (!nextName) {
-      setError('El nombre visible es obligatorio')
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
+    if (nextName === getUserDisplayName(currentUser)) {
+      setToast('No hay cambios pendientes en tu perfil')
       return
     }
 
@@ -913,8 +951,20 @@ export default function HomePage() {
       return
     }
 
-    if (newPasswordDraft.length < 6) {
-      setError('La nueva contraseña debe tener al menos 6 caracteres')
+    if (!currentPasswordDraft) {
+      setError('Indica tu contraseña actual')
+      return
+    }
+
+    const passwordValidationError = validatePasswordStrength(newPasswordDraft)
+
+    if (passwordValidationError) {
+      setError(passwordValidationError)
+      return
+    }
+
+    if (currentPasswordDraft === newPasswordDraft) {
+      setError('La nueva contraseña debe ser distinta a la actual')
       return
     }
 
@@ -985,6 +1035,26 @@ export default function HomePage() {
   async function updateManagedUserRole(userId: string, role: UserRole) {
     if (!session?.access_token) return
 
+    const targetUser = managedUsers.find((item) => item.id === userId)
+
+    if (!targetUser) {
+      setError('No se pudo localizar el usuario seleccionado')
+      return
+    }
+
+    if (targetUser.role === role) {
+      setToast('Ese usuario ya tiene ese rol')
+      return
+    }
+
+    const confirmed = window.confirm(
+      `¿Cambiar el rol de "${targetUser.full_name || targetUser.email}" de ${getRoleLabel(
+        targetUser.role
+      )} a ${getRoleLabel(role)}?`
+    )
+
+    if (!confirmed) return
+
     setSavingManagedUserId(userId)
     setError('')
 
@@ -1018,6 +1088,17 @@ export default function HomePage() {
   async function createManagedUser() {
     if (!session?.access_token) return
 
+    const nextName = sanitizeSingleLine(newManagedUserName)
+    const nextEmail = newManagedUserEmail.trim().toLowerCase()
+    const nameError = validateDisplayName(nextName)
+    const emailError = validateEmailAddress(nextEmail)
+    const passwordError = validatePasswordStrength(newManagedUserPassword)
+
+    if (nameError || emailError || passwordError) {
+      setError(nameError || emailError || passwordError)
+      return
+    }
+
     setCreatingManagedUser(true)
     setError('')
 
@@ -1029,8 +1110,8 @@ export default function HomePage() {
           Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          fullName: newManagedUserName,
-          email: newManagedUserEmail,
+          fullName: nextName,
+          email: nextEmail,
           password: newManagedUserPassword,
           role: newManagedUserRole,
         }),
@@ -1060,7 +1141,9 @@ export default function HomePage() {
   async function deleteManagedUser(userId: string, label: string) {
     if (!session?.access_token) return
 
-    const confirmed = window.confirm(`¿Eliminar el usuario "${label}"?`)
+    const confirmed = window.confirm(
+      `¿Eliminar el usuario "${label}"?\n\nEsta accion borrara su acceso al sistema y no se puede deshacer desde aqui.`
+    )
     if (!confirmed) return
 
     setDeletingManagedUserId(userId)
@@ -1095,11 +1178,18 @@ export default function HomePage() {
     if (!session?.access_token) return
 
     const nextPassword = managedUserPasswordDrafts[userId] || ''
+    const passwordError = validatePasswordStrength(nextPassword)
 
-    if (nextPassword.length < 6) {
-      setError('La nueva contraseña debe tener al menos 6 caracteres')
+    if (passwordError) {
+      setError(passwordError)
       return
     }
+
+    const confirmed = window.confirm(
+      `¿Resetear la contraseña de "${label}"?\n\nLa nueva clave se guardara de inmediato.`
+    )
+
+    if (!confirmed) return
 
     setResettingManagedUserId(userId)
     setError('')
@@ -3312,6 +3402,31 @@ export default function HomePage() {
   const userDisplayName = getUserDisplayName(currentUser)
   const userRoleLabel = getUserRoleLabel(currentUser)
   const userInitials = getInitials(userDisplayName || 'Usuario')
+  const profileNameError = validateDisplayName(profileNameDraft)
+  const ownPasswordError = newPasswordDraft ? validatePasswordStrength(newPasswordDraft) : ''
+  const ownPasswordMatchError =
+    confirmPasswordDraft && newPasswordDraft !== confirmPasswordDraft
+      ? 'La confirmacion de contraseña no coincide'
+      : ''
+  const ownPasswordReuseError =
+    currentPasswordDraft &&
+    newPasswordDraft &&
+    currentPasswordDraft === newPasswordDraft
+      ? 'La nueva contraseña debe ser distinta a la actual'
+      : ''
+  const newManagedUserNameError =
+    newManagedUserName || creatingManagedUser ? validateDisplayName(newManagedUserName) : ''
+  const newManagedUserEmailError =
+    newManagedUserEmail || creatingManagedUser ? validateEmailAddress(newManagedUserEmail) : ''
+  const newManagedUserPasswordError =
+    newManagedUserPassword || creatingManagedUser
+      ? validatePasswordStrength(newManagedUserPassword)
+      : ''
+  const canSubmitManagedUser =
+    !creatingManagedUser &&
+    !newManagedUserNameError &&
+    !newManagedUserEmailError &&
+    !newManagedUserPasswordError
 
   const productosStockBajo = useMemo(() => {
     return productos
@@ -4948,21 +5063,27 @@ export default function HomePage() {
                   value={newManagedUserName}
                   onChange={(e) => setNewManagedUserName(e.target.value)}
                   placeholder="Nombre visible"
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                  className={`rounded-2xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
+                    newManagedUserNameError ? 'border-red-200' : 'border-slate-200'
+                  }`}
                 />
                 <input
                   type="email"
                   value={newManagedUserEmail}
                   onChange={(e) => setNewManagedUserEmail(e.target.value)}
                   placeholder="usuario@restaurante.com"
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                  className={`rounded-2xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
+                    newManagedUserEmailError ? 'border-red-200' : 'border-slate-200'
+                  }`}
                 />
                 <input
                   type="password"
                   value={newManagedUserPassword}
                   onChange={(e) => setNewManagedUserPassword(e.target.value)}
                   placeholder="Contraseña inicial"
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                  className={`rounded-2xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
+                    newManagedUserPasswordError ? 'border-red-200' : 'border-slate-200'
+                  }`}
                 />
                 <select
                   value={newManagedUserRole}
@@ -4977,11 +5098,27 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => void createManagedUser()}
-                  disabled={creatingManagedUser}
+                  disabled={!canSubmitManagedUser}
                   className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 disabled:opacity-60"
                 >
                   {creatingManagedUser ? 'Creando...' : 'Crear usuario'}
                 </button>
+              </div>
+
+              <div className="mt-3 grid gap-2 text-xs xl:grid-cols-[1fr_1fr_0.9fr_0.8fr_auto]">
+                <div className={newManagedUserNameError ? 'text-red-500' : 'text-slate-500'}>
+                  {newManagedUserNameError || 'Entre 2 y 60 caracteres.'}
+                </div>
+                <div className={newManagedUserEmailError ? 'text-red-500' : 'text-slate-500'}>
+                  {newManagedUserEmailError || 'Usa un correo real del equipo.'}
+                </div>
+                <div
+                  className={newManagedUserPasswordError ? 'text-red-500' : 'text-slate-500'}
+                >
+                  {newManagedUserPasswordError || 'Min. 8 caracteres, con letra y numero.'}
+                </div>
+                <div className="text-slate-500">El rol podras cambiarlo despues.</div>
+                <div />
               </div>
             </div>
 
@@ -5107,6 +5244,7 @@ export default function HomePage() {
 
                         {canEditTarget ? (
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <div className="flex-1">
                             <input
                               type="password"
                               value={managedUserPasswordDrafts[managedUser.id] || ''}
@@ -5119,6 +5257,10 @@ export default function HomePage() {
                               placeholder="Nueva contraseña"
                               className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400"
                             />
+                              <div className="mt-1 text-[11px] text-slate-500">
+                                Min. 8 caracteres, con letra y numero.
+                              </div>
+                            </div>
                             <button
                               type="button"
                               onClick={() =>
@@ -5127,7 +5269,12 @@ export default function HomePage() {
                                   managedUser.full_name || managedUser.email
                                 )
                               }
-                              disabled={resettingManagedUserId === managedUser.id}
+                              disabled={
+                                resettingManagedUserId === managedUser.id ||
+                                !!validatePasswordStrength(
+                                  managedUserPasswordDrafts[managedUser.id] || ''
+                                )
+                              }
                               className="rounded-2xl bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 disabled:opacity-60"
                             >
                               {resettingManagedUserId === managedUser.id
@@ -5464,8 +5611,13 @@ Coca-Cola Zero;6;1/4/2026
                     value={profileNameDraft}
                     onChange={(e) => setProfileNameDraft(e.target.value)}
                     placeholder="Nombre visible"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+                    className={`w-full rounded-2xl border bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${
+                      profileNameError ? 'border-red-200' : 'border-slate-200'
+                    }`}
                   />
+                  <div className={`text-xs ${profileNameError ? 'text-red-500' : 'text-slate-500'}`}>
+                    {profileNameError || 'Este nombre es el que vera el resto del equipo.'}
+                  </div>
                   <input
                     type="text"
                     value={currentUser?.email || ''}
@@ -5481,7 +5633,7 @@ Coca-Cola Zero;6;1/4/2026
 
                   <button
                     onClick={updateOwnProfile}
-                    disabled={savingProfile}
+                    disabled={savingProfile || !!profileNameError}
                     className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
                   >
                     {savingProfile ? 'Guardando...' : 'Guardar perfil'}
@@ -5510,19 +5662,41 @@ Coca-Cola Zero;6;1/4/2026
                     value={newPasswordDraft}
                     onChange={(e) => setNewPasswordDraft(e.target.value)}
                     placeholder="Nueva contraseña"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+                    className={`w-full rounded-2xl border bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${
+                      ownPasswordError || ownPasswordReuseError ? 'border-red-200' : 'border-slate-200'
+                    }`}
                   />
                   <input
                     type="password"
                     value={confirmPasswordDraft}
                     onChange={(e) => setConfirmPasswordDraft(e.target.value)}
                     placeholder="Confirmar nueva contraseña"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+                    className={`w-full rounded-2xl border bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${
+                      ownPasswordMatchError ? 'border-red-200' : 'border-slate-200'
+                    }`}
                   />
+                  <div
+                    className={`text-xs ${
+                      ownPasswordError || ownPasswordMatchError || ownPasswordReuseError
+                        ? 'text-red-500'
+                        : 'text-slate-500'
+                    }`}
+                  >
+                    {ownPasswordError ||
+                      ownPasswordReuseError ||
+                      ownPasswordMatchError ||
+                      'Usa al menos 8 caracteres y combina letra y numero.'}
+                  </div>
 
                   <button
                     onClick={updateOwnPassword}
-                    disabled={updatingOwnPassword}
+                    disabled={
+                      updatingOwnPassword ||
+                      !currentPasswordDraft ||
+                      !!ownPasswordError ||
+                      !!ownPasswordMatchError ||
+                      !!ownPasswordReuseError
+                    }
                     className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
                   >
                     {updatingOwnPassword ? 'Actualizando...' : 'Actualizar contraseña'}
