@@ -494,7 +494,9 @@ export default function HomePage() {
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authSaving, setAuthSaving] = useState(false)
-  const [passwordModalOpen, setPasswordModalOpen] = useState(false)
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
+  const [profileNameDraft, setProfileNameDraft] = useState('')
+  const [savingProfile, setSavingProfile] = useState(false)
   const [currentPasswordDraft, setCurrentPasswordDraft] = useState('')
   const [newPasswordDraft, setNewPasswordDraft] = useState('')
   const [confirmPasswordDraft, setConfirmPasswordDraft] = useState('')
@@ -827,6 +829,51 @@ export default function HomePage() {
     setToast('Sesión cerrada')
   }
 
+  function openProfilePanel() {
+    setProfileNameDraft(getUserDisplayName(currentUser))
+    setCurrentPasswordDraft('')
+    setNewPasswordDraft('')
+    setConfirmPasswordDraft('')
+    setError('')
+    setProfileModalOpen(true)
+  }
+
+  async function updateOwnProfile() {
+    const nextName = profileNameDraft.trim()
+
+    if (!nextName) {
+      setError('El nombre visible es obligatorio')
+      return
+    }
+
+    setSavingProfile(true)
+    setError('')
+
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
+          ...currentUser?.user_metadata,
+          full_name: nextName,
+        },
+      })
+
+      if (error) {
+        throw error
+      }
+
+      if (data.user) {
+        setCurrentUser(data.user)
+        setOperarioActual(getUserDisplayName(data.user))
+      }
+
+      setToast('Perfil actualizado')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar el perfil')
+    } finally {
+      setSavingProfile(false)
+    }
+  }
+
   async function updateOwnPassword() {
     if (!currentUser?.email) {
       setError('No se pudo identificar la cuenta actual')
@@ -867,7 +914,6 @@ export default function HomePage() {
       setCurrentPasswordDraft('')
       setNewPasswordDraft('')
       setConfirmPasswordDraft('')
-      setPasswordModalOpen(false)
       setToast('Contraseña actualizada')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo actualizar la contraseña')
@@ -3551,7 +3597,11 @@ export default function HomePage() {
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="relative flex min-w-[260px] flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm">
+              <button
+                type="button"
+                onClick={openProfilePanel}
+                className="relative flex min-w-[260px] flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left shadow-sm transition hover:bg-slate-100"
+              >
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-sm font-semibold text-blue-600 shadow-sm">
                   {userInitials}
                 </div>
@@ -3564,14 +3614,6 @@ export default function HomePage() {
                     {currentUser.email ? ` · ${currentUser.email}` : ''}
                   </div>
                 </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setPasswordModalOpen(true)}
-                className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
-              >
-                Contraseña
               </button>
 
               <button
@@ -5300,14 +5342,15 @@ Coca-Cola Zero;6;1/4/2026
       </section>
       </div>
 
-      {passwordModalOpen && (
+      {profileModalOpen && (
         <div className="fixed inset-0 z-20 flex items-end bg-black/40">
           <div className="w-full rounded-t-3xl bg-white p-4 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-900">Cambiar contraseña</h3>
+              <h3 className="text-base font-semibold text-slate-900">Mi perfil</h3>
               <button
                 onClick={() => {
-                  setPasswordModalOpen(false)
+                  setProfileModalOpen(false)
+                  setProfileNameDraft('')
                   setCurrentPasswordDraft('')
                   setNewPasswordDraft('')
                   setConfirmPasswordDraft('')
@@ -5319,36 +5362,86 @@ Coca-Cola Zero;6;1/4/2026
               </button>
             </div>
 
-            <div className="space-y-3">
-              <input
-                type="password"
-                value={currentPasswordDraft}
-                onChange={(e) => setCurrentPasswordDraft(e.target.value)}
-                placeholder="Contraseña actual"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
-              />
-              <input
-                type="password"
-                value={newPasswordDraft}
-                onChange={(e) => setNewPasswordDraft(e.target.value)}
-                placeholder="Nueva contraseña"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
-              />
-              <input
-                type="password"
-                value={confirmPasswordDraft}
-                onChange={(e) => setConfirmPasswordDraft(e.target.value)}
-                placeholder="Confirmar nueva contraseña"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
-              />
+            <div className="space-y-5">
+              <div className="rounded-3xl bg-slate-50 p-4">
+                <div className="mb-3">
+                  <h4 className="text-sm font-semibold text-slate-900">Información personal</h4>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Edita tu nombre visible dentro del sistema.
+                  </p>
+                </div>
 
-              <button
-                onClick={updateOwnPassword}
-                disabled={updatingOwnPassword}
-                className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
-              >
-                {updatingOwnPassword ? 'Actualizando...' : 'Actualizar contraseña'}
-              </button>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={profileNameDraft}
+                    onChange={(e) => setProfileNameDraft(e.target.value)}
+                    placeholder="Nombre visible"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+                  />
+                  <input
+                    type="text"
+                    value={currentUser?.email || ''}
+                    readOnly
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-base text-slate-500"
+                  />
+                  <input
+                    type="text"
+                    value={userRoleLabel}
+                    readOnly
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-base text-slate-500"
+                  />
+
+                  <button
+                    onClick={updateOwnProfile}
+                    disabled={savingProfile}
+                    className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
+                  >
+                    {savingProfile ? 'Guardando...' : 'Guardar perfil'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-3xl bg-slate-50 p-4">
+                <div className="mb-3">
+                  <h4 className="text-sm font-semibold text-slate-900">Seguridad</h4>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Cambia tu contraseña para mantener la cuenta protegida.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <input
+                    type="password"
+                    value={currentPasswordDraft}
+                    onChange={(e) => setCurrentPasswordDraft(e.target.value)}
+                    placeholder="Contraseña actual"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+                  />
+                  <input
+                    type="password"
+                    value={newPasswordDraft}
+                    onChange={(e) => setNewPasswordDraft(e.target.value)}
+                    placeholder="Nueva contraseña"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+                  />
+                  <input
+                    type="password"
+                    value={confirmPasswordDraft}
+                    onChange={(e) => setConfirmPasswordDraft(e.target.value)}
+                    placeholder="Confirmar nueva contraseña"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+                  />
+
+                  <button
+                    onClick={updateOwnPassword}
+                    disabled={updatingOwnPassword}
+                    className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
+                  >
+                    {updatingOwnPassword ? 'Actualizando...' : 'Actualizar contraseña'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
