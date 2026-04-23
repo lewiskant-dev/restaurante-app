@@ -26,6 +26,16 @@ type TabKey =
 
 type MainTab = 'operativa' | 'gestion' | 'control'
 type UserRole = 'empleado' | 'encargado' | 'administrador' | 'master'
+type PermissionKey =
+  | 'stock_consume'
+  | 'stock_adjust'
+  | 'stock_manage'
+  | 'albaran_manage'
+  | 'proveedor_manage'
+  | 'receta_manage'
+  | 'tpv_manage'
+  | 'auditoria_view'
+  | 'user_manage'
 
 type NuevoProductoForm = {
   nombre: string
@@ -279,6 +289,30 @@ function getRoleLabel(role: UserRole) {
 
 function canManageUsers(role: UserRole) {
   return role === 'administrador' || role === 'master'
+}
+
+function hasPermission(role: UserRole, permission: PermissionKey) {
+  if (role === 'master' || role === 'administrador') return true
+  if (role === 'encargado') {
+    return (
+      permission === 'stock_consume' ||
+      permission === 'stock_adjust' ||
+      permission === 'albaran_manage'
+    )
+  }
+
+  return permission === 'stock_consume'
+}
+
+function canAccessTab(role: UserRole, tab: TabKey) {
+  if (tab === 'stock' || tab === 'historial') return true
+  if (tab === 'albaran' || tab === 'albaranes') return hasPermission(role, 'albaran_manage')
+  if (tab === 'proveedores') return hasPermission(role, 'proveedor_manage')
+  if (tab === 'recetas') return hasPermission(role, 'receta_manage')
+  if (tab === 'tpv') return hasPermission(role, 'tpv_manage')
+  if (tab === 'auditoria') return hasPermission(role, 'auditoria_view')
+  if (tab === 'usuarios') return hasPermission(role, 'user_manage')
+  return false
 }
 
 function Icon({
@@ -629,10 +663,24 @@ export default function HomePage() {
   }, [tab, mainTab])
 
   useEffect(() => {
-    if (tab === 'usuarios' && !canManageUsers(getUserRole(currentUser))) {
-      setTab('proveedores')
+    const role = getUserRole(currentUser)
+    if (!canAccessTab(role, tab)) {
+      const fallbackTab = (['stock', 'historial'] as TabKey[]).find((candidate) =>
+        canAccessTab(role, candidate)
+      )
+
+      if (fallbackTab && fallbackTab !== tab) {
+        setTab(fallbackTab)
+      }
     }
   }, [tab, currentUser?.id, currentUser?.app_metadata, currentUser?.user_metadata])
+
+  function requirePermission(permission: PermissionKey, message: string) {
+    const role = getUserRole(currentUser)
+    if (hasPermission(role, permission)) return true
+    setError(message)
+    return false
+  }
 
   async function loadInitialData() {
     await Promise.all([
@@ -1202,6 +1250,10 @@ export default function HomePage() {
   }
 
   async function analizarAlbaranConOCR() {
+    if (!requirePermission('albaran_manage', 'No tienes permisos para analizar albaranes')) {
+      return
+    }
+
     if (!albaranFoto) {
       setError('Selecciona primero una foto o PDF del albarán')
       return
@@ -1276,6 +1328,10 @@ export default function HomePage() {
   }
 
   function openEditarProducto(producto: Producto) {
+    if (!requirePermission('stock_manage', 'No tienes permisos para editar productos')) {
+      return
+    }
+
     setProductoEditId(producto.id)
     setProductoForm({
       nombre: producto.nombre || '',
@@ -1290,6 +1346,10 @@ export default function HomePage() {
   }
 
   async function guardarProducto() {
+    if (!requirePermission('stock_manage', 'No tienes permisos para gestionar productos')) {
+      return
+    }
+
     if (!productoForm.nombre.trim()) {
       setError('El nombre del producto es obligatorio')
       return
@@ -1372,6 +1432,10 @@ export default function HomePage() {
   }
 
   async function archiveProducto(producto: Producto) {
+    if (!requirePermission('stock_manage', 'No tienes permisos para archivar productos')) {
+      return
+    }
+
     const ok = window.confirm(`¿Archivar producto "${producto.nombre}"?`)
     if (!ok) return
 
@@ -1409,6 +1473,10 @@ export default function HomePage() {
   }
 
   async function reactivarProducto(producto: Producto) {
+    if (!requirePermission('stock_manage', 'No tienes permisos para reactivar productos')) {
+      return
+    }
+
     setError('')
     const payloadAntes = { ...producto }
 
@@ -1443,6 +1511,10 @@ export default function HomePage() {
   }
 
   function openAjusteModal(producto: Producto) {
+    if (!requirePermission('stock_adjust', 'No tienes permisos para ajustar stock')) {
+      return
+    }
+
     setError('')
     setAjusteProducto(producto)
     setAjusteStockNuevo(String(producto.stock_actual))
@@ -1451,6 +1523,10 @@ export default function HomePage() {
   }
 
   async function guardarAjusteStock() {
+    if (!requirePermission('stock_adjust', 'No tienes permisos para ajustar stock')) {
+      return
+    }
+
     if (!ajusteProducto) return
 
     const nuevoStock = Number(ajusteStockNuevo)
@@ -1522,6 +1598,10 @@ export default function HomePage() {
   }
 
   function openConsumoModal(producto: Producto) {
+    if (!requirePermission('stock_consume', 'No tienes permisos para registrar consumos')) {
+      return
+    }
+
     setError('')
     setConsumoProducto(producto)
     setConsumoCantidad('')
@@ -1530,6 +1610,10 @@ export default function HomePage() {
   }
 
   async function registrarConsumo() {
+    if (!requirePermission('stock_consume', 'No tienes permisos para registrar consumos')) {
+      return
+    }
+
     if (!consumoProducto) return
 
     const cantidad = Number(consumoCantidad)
@@ -1817,6 +1901,10 @@ export default function HomePage() {
   }
 
   async function guardarAlbaran() {
+    if (!requirePermission('albaran_manage', 'No tienes permisos para gestionar albaranes')) {
+      return
+    }
+
     setError('')
 
     if (!albaranNumero.trim()) {
@@ -2035,6 +2123,10 @@ export default function HomePage() {
   }
 
   function openCrearProveedor() {
+    if (!requirePermission('proveedor_manage', 'No tienes permisos para gestionar proveedores')) {
+      return
+    }
+
     setProveedorEditId(null)
     setProveedorForm(initialProveedorForm)
     setError('')
@@ -2042,6 +2134,10 @@ export default function HomePage() {
   }
 
   function openEditarProveedor(proveedor: Proveedor) {
+    if (!requirePermission('proveedor_manage', 'No tienes permisos para gestionar proveedores')) {
+      return
+    }
+
     setProveedorEditId(proveedor.id)
     setProveedorForm({
       nombre: proveedor.nombre || '',
@@ -2055,6 +2151,10 @@ export default function HomePage() {
   }
 
   async function guardarProveedor() {
+    if (!requirePermission('proveedor_manage', 'No tienes permisos para gestionar proveedores')) {
+      return
+    }
+
     if (!proveedorForm.nombre.trim()) {
       setError('El nombre del proveedor es obligatorio')
       return
@@ -2137,6 +2237,10 @@ export default function HomePage() {
   }
 
   async function archiveProveedor(proveedor: Proveedor) {
+    if (!requirePermission('proveedor_manage', 'No tienes permisos para archivar proveedores')) {
+      return
+    }
+
     const ok = window.confirm(`¿Archivar proveedor "${proveedor.nombre}"?`)
     if (!ok) return
 
@@ -2174,6 +2278,10 @@ export default function HomePage() {
   }
 
   async function reactivarProveedor(proveedor: Proveedor) {
+    if (!requirePermission('proveedor_manage', 'No tienes permisos para reactivar proveedores')) {
+      return
+    }
+
     setError('')
     const payloadAntes = { ...proveedor }
 
@@ -2230,12 +2338,20 @@ export default function HomePage() {
   }
 
   function openCrearReceta() {
+    if (!requirePermission('receta_manage', 'No tienes permisos para gestionar recetas')) {
+      return
+    }
+
     resetRecetaForm()
     setError('')
     setRecetaModalOpen(true)
   }
 
   async function openEditarReceta(receta: Receta) {
+    if (!requirePermission('receta_manage', 'No tienes permisos para gestionar recetas')) {
+      return
+    }
+
     setError('')
     setRecetaEditId(receta.id)
     setRecetaNombre(receta.nombre || '')
@@ -2267,6 +2383,10 @@ export default function HomePage() {
   }
 
   async function guardarReceta() {
+    if (!requirePermission('receta_manage', 'No tienes permisos para gestionar recetas')) {
+      return
+    }
+
     if (!recetaNombre.trim()) {
       setError('El nombre de la receta es obligatorio')
       return
@@ -2389,6 +2509,10 @@ export default function HomePage() {
   }
 
   async function toggleActivaReceta(receta: Receta) {
+    if (!requirePermission('receta_manage', 'No tienes permisos para gestionar recetas')) {
+      return
+    }
+
     setError('')
 
     const nuevoEstado = receta.activo === false ? true : false
@@ -2417,6 +2541,10 @@ export default function HomePage() {
   }
 
   async function guardarMapeoTPV(productoExterno: string, recetaId: string) {
+    if (!requirePermission('tpv_manage', 'No tienes permisos para gestionar el TPV')) {
+      return
+    }
+
     if (!recetaId) {
       setError('Selecciona una receta para guardar el mapeo')
       return
@@ -2509,6 +2637,10 @@ export default function HomePage() {
   }
 
   async function importarCSVTPV() {
+    if (!requirePermission('tpv_manage', 'No tienes permisos para importar TPV')) {
+      return
+    }
+
     if (!tpvFile) {
       setError('Selecciona un archivo CSV del TPV')
       return
@@ -2531,6 +2663,10 @@ export default function HomePage() {
   }
 
   async function aplicarImportacionTPV() {
+    if (!requirePermission('tpv_manage', 'No tienes permisos para aplicar importaciones TPV')) {
+      return
+    }
+
     if (!tpvFile || tpvVentasCrudas.length === 0) {
       setError('Primero importa y revisa un CSV válido')
       return
@@ -2856,9 +2992,19 @@ export default function HomePage() {
     )
   ).sort((a, b) => a.localeCompare(b, 'es'))
   const currentUserRole = getUserRole(currentUser)
-  const userCanManageUsers = canManageUsers(currentUserRole)
-  const visibleMainTabs = mainTabConfig[mainTab].tabs.filter(
-    (item) => item !== 'usuarios' || userCanManageUsers
+  const canManageStock = hasPermission(currentUserRole, 'stock_manage')
+  const canAdjustStock = hasPermission(currentUserRole, 'stock_adjust')
+  const canManageAlbaranes = hasPermission(currentUserRole, 'albaran_manage')
+  const canManageProveedores = hasPermission(currentUserRole, 'proveedor_manage')
+  const canManageRecetas = hasPermission(currentUserRole, 'receta_manage')
+  const canManageTpv = hasPermission(currentUserRole, 'tpv_manage')
+  const canViewAuditoria = hasPermission(currentUserRole, 'auditoria_view')
+  const userCanManageUsers = hasPermission(currentUserRole, 'user_manage')
+  const visibleMainTabs = mainTabConfig[mainTab].tabs.filter((item) =>
+    canAccessTab(currentUserRole, item)
+  )
+  const visibleMainGroups = (['operativa', 'gestion', 'control'] as MainTab[]).filter((group) =>
+    mainTabConfig[group].tabs.some((item) => canAccessTab(currentUserRole, item))
   )
   const userDisplayName = getUserDisplayName(currentUser)
   const userRoleLabel = getUserRoleLabel(currentUser)
@@ -3218,7 +3364,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid border-b border-slate-200/80 md:grid-cols-3">
-            {(['operativa', 'gestion', 'control'] as MainTab[]).map((item) => {
+            {visibleMainGroups.map((item) => {
               const config = mainTabConfig[item]
               const active = mainTab === item
 
@@ -3227,7 +3373,12 @@ export default function HomePage() {
                   key={item}
                   onClick={() => {
                     setMainTab(item)
-                    setTab(mainTabConfig[item].tabs[0])
+                    const firstAccessibleTab = mainTabConfig[item].tabs.find((candidate) =>
+                      canAccessTab(currentUserRole, candidate)
+                    )
+                    if (firstAccessibleTab) {
+                      setTab(firstAccessibleTab)
+                    }
                   }}
                   className={`relative flex flex-col items-center justify-center gap-2 border-b px-5 py-7 text-center transition md:border-b-0 md:border-r last:md:border-r-0 ${
                     active
@@ -3282,19 +3433,21 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    onClick={() => {
-                      setProductoEditId(null)
-                      setProductoForm(initialProductoForm)
-                      setError('')
-                      setProductoModalOpen(true)
-                    }}
-                    className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-                  >
-                    + Nuevo producto
-                  </button>
-                </div>
+                {canManageStock ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={() => {
+                        setProductoEditId(null)
+                        setProductoForm(initialProductoForm)
+                        setError('')
+                        setProductoModalOpen(true)
+                      }}
+                      className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                    >
+                      + Nuevo producto
+                    </button>
+                  </div>
+                ) : null}
               </div>
 
               <div className="grid gap-4 lg:grid-cols-3">
@@ -3497,41 +3650,52 @@ export default function HomePage() {
                                 </td>
                                 <td className="px-6 py-4">
                                   <div className="flex justify-end">
-                                    <ActionMenu label="•••">
-                                      {producto.archivado ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => reactivarProducto(producto)}
-                                          className="rounded-xl bg-emerald-50 px-3 py-2 text-left text-xs font-semibold text-emerald-700"
-                                        >
-                                          Reactivar
-                                        </button>
-                                      ) : (
-                                        <>
-                                          <button
-                                            type="button"
-                                            onClick={() => openEditarProducto(producto)}
-                                            className="rounded-xl bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-white"
-                                          >
-                                            Editar
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => openAjusteModal(producto)}
-                                            className="rounded-xl bg-blue-50 px-3 py-2 text-left text-xs font-semibold text-blue-700"
-                                          >
-                                            Ajustar stock
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => archiveProducto(producto)}
-                                            className="rounded-xl bg-red-50 px-3 py-2 text-left text-xs font-semibold text-red-600"
-                                          >
-                                            Archivar
-                                          </button>
-                                        </>
-                                      )}
-                                    </ActionMenu>
+                                    {((producto.archivado && canManageStock) ||
+                                      (!producto.archivado && (canManageStock || canAdjustStock))) ? (
+                                      <ActionMenu label="•••">
+                                        {producto.archivado ? (
+                                          canManageStock ? (
+                                            <button
+                                              type="button"
+                                              onClick={() => reactivarProducto(producto)}
+                                              className="rounded-xl bg-emerald-50 px-3 py-2 text-left text-xs font-semibold text-emerald-700"
+                                            >
+                                              Reactivar
+                                            </button>
+                                          ) : null
+                                        ) : (
+                                          <>
+                                            {canManageStock ? (
+                                              <button
+                                                type="button"
+                                                onClick={() => openEditarProducto(producto)}
+                                                className="rounded-xl bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-white"
+                                              >
+                                                Editar
+                                              </button>
+                                            ) : null}
+                                            {canAdjustStock ? (
+                                              <button
+                                                type="button"
+                                                onClick={() => openAjusteModal(producto)}
+                                                className="rounded-xl bg-blue-50 px-3 py-2 text-left text-xs font-semibold text-blue-700"
+                                              >
+                                                Ajustar stock
+                                              </button>
+                                            ) : null}
+                                            {canManageStock ? (
+                                              <button
+                                                type="button"
+                                                onClick={() => archiveProducto(producto)}
+                                                className="rounded-xl bg-red-50 px-3 py-2 text-left text-xs font-semibold text-red-600"
+                                              >
+                                                Archivar
+                                              </button>
+                                            ) : null}
+                                          </>
+                                        )}
+                                      </ActionMenu>
+                                    ) : null}
                                   </div>
                                 </td>
                               </tr>
@@ -3581,41 +3745,52 @@ export default function HomePage() {
                                 </div>
                               </button>
 
-                              <ActionMenu label="•••">
-                                {producto.archivado ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => reactivarProducto(producto)}
-                                    className="rounded-xl bg-emerald-50 px-3 py-2 text-left text-xs font-semibold text-emerald-700"
-                                  >
-                                    Reactivar
-                                  </button>
-                                ) : (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={() => openEditarProducto(producto)}
-                                      className="rounded-xl bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-white"
-                                    >
-                                      Editar
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => openAjusteModal(producto)}
-                                      className="rounded-xl bg-blue-50 px-3 py-2 text-left text-xs font-semibold text-blue-700"
-                                    >
-                                      Ajustar stock
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => archiveProducto(producto)}
-                                      className="rounded-xl bg-red-50 px-3 py-2 text-left text-xs font-semibold text-red-600"
-                                    >
-                                      Archivar
-                                    </button>
-                                  </>
-                                )}
-                              </ActionMenu>
+                              {((producto.archivado && canManageStock) ||
+                                (!producto.archivado && (canManageStock || canAdjustStock))) ? (
+                                <ActionMenu label="•••">
+                                  {producto.archivado ? (
+                                    canManageStock ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => reactivarProducto(producto)}
+                                        className="rounded-xl bg-emerald-50 px-3 py-2 text-left text-xs font-semibold text-emerald-700"
+                                      >
+                                        Reactivar
+                                      </button>
+                                    ) : null
+                                  ) : (
+                                    <>
+                                      {canManageStock ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => openEditarProducto(producto)}
+                                          className="rounded-xl bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-white"
+                                        >
+                                          Editar
+                                        </button>
+                                      ) : null}
+                                      {canAdjustStock ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => openAjusteModal(producto)}
+                                          className="rounded-xl bg-blue-50 px-3 py-2 text-left text-xs font-semibold text-blue-700"
+                                        >
+                                          Ajustar stock
+                                        </button>
+                                      ) : null}
+                                      {canManageStock ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => archiveProducto(producto)}
+                                          className="rounded-xl bg-red-50 px-3 py-2 text-left text-xs font-semibold text-red-600"
+                                        >
+                                          Archivar
+                                        </button>
+                                      ) : null}
+                                    </>
+                                  )}
+                                </ActionMenu>
+                              ) : null}
                             </div>
                           </div>
                         )
@@ -3792,13 +3967,15 @@ export default function HomePage() {
                     <label className="text-sm font-medium text-slate-600">
                       Proveedor
                     </label>
-                    <button
-                      type="button"
-                      onClick={openCrearProveedor}
-                      className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
-                    >
-                      + Proveedor
-                    </button>
+                    {canManageProveedores ? (
+                      <button
+                        type="button"
+                        onClick={openCrearProveedor}
+                        className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+                      >
+                        + Proveedor
+                      </button>
+                    ) : null}
                   </div>
 
                   <select
