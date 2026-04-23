@@ -26,6 +26,15 @@ function getUserRoleFromAuthUser(user: {
   return normalizeRole(user.app_metadata?.role ?? user.user_metadata?.role)
 }
 
+function getUserDisplayName(user: {
+  email?: string | null
+  user_metadata?: Record<string, unknown>
+}) {
+  const fullName = user.user_metadata?.full_name
+  if (typeof fullName === 'string' && fullName.trim()) return fullName.trim()
+  return user.email || 'Sin identificar'
+}
+
 function serializeUser(user: {
   id: string
   email?: string | null
@@ -52,6 +61,35 @@ function getAdminClientOrError() {
       error: error instanceof Error ? error.message : 'Configuración server incompleta',
     }
   }
+}
+
+async function logAdminAudit(
+  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
+  params: {
+    actor: {
+      id: string
+      email?: string | null
+      user_metadata?: Record<string, unknown>
+    }
+    entidadId: string
+    accion: string
+    detalle: string
+    payloadAntes?: unknown
+    payloadDespues?: unknown
+  }
+) {
+  const { actor, entidadId, accion, detalle, payloadAntes, payloadDespues } = params
+
+  await supabaseAdmin.from('auditoria').insert({
+    entidad: 'usuario',
+    entidad_id: entidadId,
+    accion,
+    actor_nombre: getUserDisplayName(actor),
+    actor_id: actor.id,
+    detalle,
+    payload_antes: payloadAntes ?? null,
+    payload_despues: payloadDespues ?? null,
+  })
 }
 
 async function getRequestUser(request: Request) {
@@ -180,6 +218,18 @@ export async function POST(request: Request) {
     )
   }
 
+  await logAdminAudit(supabaseAdmin, {
+    actor: authResult.user,
+    entidadId: data.user.id,
+    accion: 'crear',
+    detalle: `Usuario creado: ${fullName} · Rol: ${role}`,
+    payloadDespues: {
+      email,
+      full_name: fullName,
+      role,
+    },
+  })
+
   return NextResponse.json({ user: serializeUser(data.user) }, { status: 201 })
 }
 
@@ -229,6 +279,11 @@ export async function PATCH(request: Request) {
 
   const targetUser = targetUserData.user
   const targetRole = getUserRoleFromAuthUser(targetUser)
+  const targetSnapshotBefore = {
+    email: targetUser.email || '',
+    full_name: getUserDisplayName(targetUser),
+    role: targetRole,
+  }
 
   if (targetRole === 'master' && authResult.role !== 'master') {
     return NextResponse.json(
@@ -250,6 +305,19 @@ export async function PATCH(request: Request) {
       { status: 500 }
     )
   }
+
+  await logAdminAudit(supabaseAdmin, {
+    actor: authResult.user,
+    entidadId: data.user.id,
+    accion: 'editar',
+    detalle: `Rol actualizado: ${getUserDisplayName(data.user)} · ${targetRole} -> ${nextRole}`,
+    payloadAntes: targetSnapshotBefore,
+    payloadDespues: {
+      email: data.user.email || '',
+      full_name: getUserDisplayName(data.user),
+      role: getUserRoleFromAuthUser(data.user),
+    },
+  })
 
   return NextResponse.json({
     user: serializeUser(data.user),
@@ -294,6 +362,11 @@ export async function DELETE(request: Request) {
   }
 
   const targetRole = getUserRoleFromAuthUser(targetUserData.user)
+  const targetSnapshot = {
+    email: targetUserData.user.email || '',
+    full_name: getUserDisplayName(targetUserData.user),
+    role: targetRole,
+  }
 
   if (targetRole === 'master' && authResult.role !== 'master') {
     return NextResponse.json(
@@ -310,6 +383,14 @@ export async function DELETE(request: Request) {
       { status: 500 }
     )
   }
+
+  await logAdminAudit(supabaseAdmin, {
+    actor: authResult.user,
+    entidadId: userId,
+    accion: 'eliminar',
+    detalle: `Usuario eliminado: ${targetSnapshot.full_name}`,
+    payloadAntes: targetSnapshot,
+  })
 
   return NextResponse.json({ success: true })
 }

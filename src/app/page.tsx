@@ -511,7 +511,7 @@ export default function HomePage() {
   const [busquedaAlbaran, setBusquedaAlbaran] = useState('')
   const [busquedaProveedor, setBusquedaProveedor] = useState('')
   const [busquedaAuditoria, setBusquedaAuditoria] = useState('')
-  const [auditoriaEntidadFiltro, setAuditoriaEntidadFiltro] = useState<'todas' | 'producto' | 'proveedor' | 'albaran' | 'receta' | 'tpv'>('todas')
+  const [auditoriaEntidadFiltro, setAuditoriaEntidadFiltro] = useState<'todas' | 'producto' | 'proveedor' | 'albaran' | 'receta' | 'tpv' | 'usuario'>('todas')
   const [auditoriaAccionFiltro, setAuditoriaAccionFiltro] = useState<string>('todas')
 
   const [productoEstado, setProductoEstado] = useState<'activos' | 'archivados' | 'todos'>('activos')
@@ -4431,7 +4431,7 @@ export default function HomePage() {
             </div>
 
             <div className="mt-2 flex flex-wrap gap-2">
-              {(['todas', 'producto', 'proveedor', 'albaran', 'receta', 'tpv'] as const).map((entidad) => (
+              {(['todas', 'producto', 'proveedor', 'albaran', 'receta', 'tpv', 'usuario'] as const).map((entidad) => (
                 <button
                   key={entidad}
                   onClick={() => setAuditoriaEntidadFiltro(entidad)}
@@ -4447,7 +4447,7 @@ export default function HomePage() {
             </div>
 
             <div className="mt-2 flex flex-wrap gap-2">
-              {['todas', 'crear', 'editar', 'archivar', 'reactivar', 'consumo', 'ajuste_stock', 'anular', 'deshacer_archivar', 'importar_csv'].map((accion) => (
+              {['todas', 'crear', 'editar', 'eliminar', 'archivar', 'reactivar', 'consumo', 'ajuste_stock', 'anular', 'deshacer_archivar', 'importar_csv'].map((accion) => (
                 <button
                   key={accion}
                   onClick={() => setAuditoriaAccionFiltro(accion)}
