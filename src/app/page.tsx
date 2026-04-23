@@ -494,6 +494,11 @@ export default function HomePage() {
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authSaving, setAuthSaving] = useState(false)
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false)
+  const [currentPasswordDraft, setCurrentPasswordDraft] = useState('')
+  const [newPasswordDraft, setNewPasswordDraft] = useState('')
+  const [confirmPasswordDraft, setConfirmPasswordDraft] = useState('')
+  const [updatingOwnPassword, setUpdatingOwnPassword] = useState(false)
 
   const [productos, setProductos] = useState<Producto[]>([])
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
@@ -592,10 +597,12 @@ export default function HomePage() {
   const [savingManagedUserId, setSavingManagedUserId] = useState('')
   const [creatingManagedUser, setCreatingManagedUser] = useState(false)
   const [deletingManagedUserId, setDeletingManagedUserId] = useState('')
+  const [resettingManagedUserId, setResettingManagedUserId] = useState('')
   const [newManagedUserName, setNewManagedUserName] = useState('')
   const [newManagedUserEmail, setNewManagedUserEmail] = useState('')
   const [newManagedUserPassword, setNewManagedUserPassword] = useState('')
   const [newManagedUserRole, setNewManagedUserRole] = useState<UserRole>('empleado')
+  const [managedUserPasswordDrafts, setManagedUserPasswordDrafts] = useState<Record<string, string>>({})
 
   useEffect(() => {
     let active = true
@@ -818,6 +825,55 @@ export default function HomePage() {
     setToast('Sesión cerrada')
   }
 
+  async function updateOwnPassword() {
+    if (!currentUser?.email) {
+      setError('No se pudo identificar la cuenta actual')
+      return
+    }
+
+    if (newPasswordDraft.length < 6) {
+      setError('La nueva contraseña debe tener al menos 6 caracteres')
+      return
+    }
+
+    if (newPasswordDraft !== confirmPasswordDraft) {
+      setError('La confirmación de contraseña no coincide')
+      return
+    }
+
+    setUpdatingOwnPassword(true)
+    setError('')
+
+    try {
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email: currentUser.email,
+        password: currentPasswordDraft,
+      })
+
+      if (loginError) {
+        throw new Error('La contraseña actual no es correcta')
+      }
+
+      const { error } = await supabase.auth.updateUser({
+        password: newPasswordDraft,
+      })
+
+      if (error) {
+        throw error
+      }
+
+      setCurrentPasswordDraft('')
+      setNewPasswordDraft('')
+      setConfirmPasswordDraft('')
+      setPasswordModalOpen(false)
+      setToast('Contraseña actualizada')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar la contraseña')
+    } finally {
+      setUpdatingOwnPassword(false)
+    }
+  }
+
   async function loadManagedUsers() {
     if (!session?.access_token) return
 
@@ -951,6 +1007,44 @@ export default function HomePage() {
       setError(err instanceof Error ? err.message : 'No se pudo eliminar el usuario')
     } finally {
       setDeletingManagedUserId('')
+    }
+  }
+
+  async function resetManagedUserPassword(userId: string, label: string) {
+    if (!session?.access_token) return
+
+    const nextPassword = managedUserPasswordDrafts[userId] || ''
+
+    if (nextPassword.length < 6) {
+      setError('La nueva contraseña debe tener al menos 6 caracteres')
+      return
+    }
+
+    setResettingManagedUserId(userId)
+    setError('')
+
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ userId, password: nextPassword }),
+      })
+
+      const payload = (await response.json()) as { error?: string }
+
+      if (!response.ok) {
+        throw new Error(payload.error || 'No se pudo resetear la contraseña')
+      }
+
+      setManagedUserPasswordDrafts((current) => ({ ...current, [userId]: '' }))
+      setToast(`Contraseña reseteada para ${label}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo resetear la contraseña')
+    } finally {
+      setResettingManagedUserId('')
     }
   }
 
@@ -3451,6 +3545,14 @@ export default function HomePage() {
 
               <button
                 type="button"
+                onClick={() => setPasswordModalOpen(true)}
+                className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+              >
+                Contraseña
+              </button>
+
+              <button
+                type="button"
                 onClick={handleSignOut}
                 className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-slate-500 shadow-sm transition hover:bg-slate-50"
               >
@@ -4822,6 +4924,38 @@ export default function HomePage() {
                             </button>
                           ) : null}
                         </div>
+
+                        {canEditTarget ? (
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <input
+                              type="password"
+                              value={managedUserPasswordDrafts[managedUser.id] || ''}
+                              onChange={(e) =>
+                                setManagedUserPasswordDrafts((current) => ({
+                                  ...current,
+                                  [managedUser.id]: e.target.value,
+                                }))
+                              }
+                              placeholder="Nueva contraseña"
+                              className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void resetManagedUserPassword(
+                                  managedUser.id,
+                                  managedUser.full_name || managedUser.email
+                                )
+                              }
+                              disabled={resettingManagedUserId === managedUser.id}
+                              className="rounded-2xl bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 disabled:opacity-60"
+                            >
+                              {resettingManagedUserId === managedUser.id
+                                ? 'Guardando...'
+                                : 'Resetear contraseña'}
+                            </button>
+                          </div>
+                        ) : null}
                       </div>
                     )
                   })}
@@ -5114,6 +5248,60 @@ Coca-Cola Zero;6;1/4/2026
         )}
       </section>
       </div>
+
+      {passwordModalOpen && (
+        <div className="fixed inset-0 z-20 flex items-end bg-black/40">
+          <div className="w-full rounded-t-3xl bg-white p-4 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-slate-900">Cambiar contraseña</h3>
+              <button
+                onClick={() => {
+                  setPasswordModalOpen(false)
+                  setCurrentPasswordDraft('')
+                  setNewPasswordDraft('')
+                  setConfirmPasswordDraft('')
+                  setError('')
+                }}
+                className="text-sm font-medium text-slate-500"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                type="password"
+                value={currentPasswordDraft}
+                onChange={(e) => setCurrentPasswordDraft(e.target.value)}
+                placeholder="Contraseña actual"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+              />
+              <input
+                type="password"
+                value={newPasswordDraft}
+                onChange={(e) => setNewPasswordDraft(e.target.value)}
+                placeholder="Nueva contraseña"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+              />
+              <input
+                type="password"
+                value={confirmPasswordDraft}
+                onChange={(e) => setConfirmPasswordDraft(e.target.value)}
+                placeholder="Confirmar nueva contraseña"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+              />
+
+              <button
+                onClick={updateOwnPassword}
+                disabled={updatingOwnPassword}
+                className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
+              >
+                {updatingOwnPassword ? 'Actualizando...' : 'Actualizar contraseña'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {productoModalOpen && (
         <div className="fixed inset-0 z-20 flex items-end bg-black/40">

@@ -250,17 +250,32 @@ export async function PATCH(request: Request) {
   const supabaseAdmin = adminResult.client
 
   const body = (await request.json().catch(() => null)) as
-    | { userId?: string; role?: UserRole }
+    | { userId?: string; role?: UserRole; password?: string }
     | null
 
   const userId = body?.userId?.trim() || ''
-  const nextRole = normalizeRole(body?.role)
+  const nextRole = body?.role ? normalizeRole(body.role) : null
+  const nextPassword = body?.password || ''
 
   if (!userId) {
     return NextResponse.json({ error: 'Falta el usuario a actualizar' }, { status: 400 })
   }
 
-  if (authResult.role !== 'master' && nextRole === 'master') {
+  if (!nextRole && !nextPassword) {
+    return NextResponse.json(
+      { error: 'Debes indicar un rol o una nueva contraseña' },
+      { status: 400 }
+    )
+  }
+
+  if (nextPassword && nextPassword.length < 6) {
+    return NextResponse.json(
+      { error: 'La nueva contraseña debe tener al menos 6 caracteres' },
+      { status: 400 }
+    )
+  }
+
+  if (nextRole === 'master' && authResult.role !== 'master') {
     return NextResponse.json(
       { error: 'Solo el usuario master puede asignar el rol master' },
       { status: 403 }
@@ -292,12 +307,23 @@ export async function PATCH(request: Request) {
     )
   }
 
-  const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-    app_metadata: {
+  const updatePayload: {
+    app_metadata?: Record<string, unknown>
+    password?: string
+  } = {}
+
+  if (nextRole) {
+    updatePayload.app_metadata = {
       ...targetUser.app_metadata,
       role: nextRole,
-    },
-  })
+    }
+  }
+
+  if (nextPassword) {
+    updatePayload.password = nextPassword
+  }
+
+  const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, updatePayload)
 
   if (error || !data.user) {
     return NextResponse.json(
@@ -306,18 +332,33 @@ export async function PATCH(request: Request) {
     )
   }
 
-  await logAdminAudit(supabaseAdmin, {
-    actor: authResult.user,
-    entidadId: data.user.id,
-    accion: 'editar',
-    detalle: `Rol actualizado: ${getUserDisplayName(data.user)} · ${targetRole} -> ${nextRole}`,
-    payloadAntes: targetSnapshotBefore,
-    payloadDespues: {
-      email: data.user.email || '',
-      full_name: getUserDisplayName(data.user),
-      role: getUserRoleFromAuthUser(data.user),
-    },
-  })
+  if (nextRole) {
+    await logAdminAudit(supabaseAdmin, {
+      actor: authResult.user,
+      entidadId: data.user.id,
+      accion: 'editar',
+      detalle: `Rol actualizado: ${getUserDisplayName(data.user)} · ${targetRole} -> ${nextRole}`,
+      payloadAntes: targetSnapshotBefore,
+      payloadDespues: {
+        email: data.user.email || '',
+        full_name: getUserDisplayName(data.user),
+        role: getUserRoleFromAuthUser(data.user),
+      },
+    })
+  }
+
+  if (nextPassword) {
+    await logAdminAudit(supabaseAdmin, {
+      actor: authResult.user,
+      entidadId: data.user.id,
+      accion: 'reset_password',
+      detalle: `Contraseña reseteada para: ${getUserDisplayName(data.user)}`,
+      payloadDespues: {
+        email: data.user.email || '',
+        full_name: getUserDisplayName(data.user),
+      },
+    })
+  }
 
   return NextResponse.json({
     user: serializeUser(data.user),
