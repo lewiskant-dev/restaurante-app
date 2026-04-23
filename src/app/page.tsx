@@ -19,11 +19,13 @@ type TabKey =
   | 'albaran'
   | 'albaranes'
   | 'proveedores'
+  | 'usuarios'
   | 'auditoria'
   | 'tpv'
   | 'recetas'
 
 type MainTab = 'operativa' | 'gestion' | 'control'
+type UserRole = 'empleado' | 'encargado' | 'administrador' | 'master'
 
 type NuevoProductoForm = {
   nombre: string
@@ -105,6 +107,15 @@ type RecetaLinea = {
 type RecetaLineaForm = {
   producto_id: string
   cantidad: string
+}
+
+type ManagedUser = {
+  id: string
+  email: string
+  full_name: string
+  role: UserRole
+  created_at: string
+  last_sign_in_at: string | null
 }
 
 
@@ -229,10 +240,7 @@ function getUserDisplayName(user: User | null) {
 function getUserRoleLabel(user: User | null) {
   if (!user) return ''
 
-  const role = user.user_metadata?.role_label
-  if (typeof role === 'string' && role.trim()) return role.trim()
-
-  return 'Equipo'
+  return getRoleLabel(normalizeUserRole(user.user_metadata?.role))
 }
 
 function getInitials(value: string) {
@@ -243,6 +251,29 @@ function getInitials(value: string) {
     .slice(0, 2)
     .join('')
     .toUpperCase()
+}
+
+function normalizeUserRole(value: unknown): UserRole {
+  const normalized =
+    typeof value === 'string'
+      ? normalizeText(value)
+      : ''
+
+  if (normalized === 'master') return 'master'
+  if (normalized === 'administrador' || normalized === 'admin') return 'administrador'
+  if (normalized === 'encargado') return 'encargado'
+  return 'empleado'
+}
+
+function getRoleLabel(role: UserRole) {
+  if (role === 'master') return 'Master'
+  if (role === 'administrador') return 'Administrador'
+  if (role === 'encargado') return 'Encargado'
+  return 'Empleado'
+}
+
+function canManageUsers(role: UserRole) {
+  return role === 'administrador' || role === 'master'
 }
 
 function Icon({
@@ -295,6 +326,9 @@ function getTabIcon(tab: TabKey) {
   }
   if (tab === 'proveedores') {
     return <Icon path={<><path d="M4 19h16" /><path d="M6 19V8l6-4 6 4v11" /><path d="M9 11h.01" /><path d="M15 11h.01" /></>} className="h-[18px] w-[18px]" />
+  }
+  if (tab === 'usuarios') {
+    return <Icon path={<><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" /><circle cx="9.5" cy="7" r="3" /><path d="M17 11a3 3 0 1 0 0-6" /><path d="M21 21v-2a4 4 0 0 0-3-3.87" /></>} className="h-[18px] w-[18px]" />
   }
   if (tab === 'recetas') {
     return <Icon path={<><path d="M8 4h8" /><path d="M8 8h8" /><path d="M8 12h5" /><path d="M6 4v16" /></>} className="h-[18px] w-[18px]" />
@@ -382,7 +416,7 @@ const mainTabConfig: Record<
   gestion: {
     label: 'Gestión',
     subtitle: 'Compras y catálogo',
-    tabs: ['albaranes', 'proveedores', 'recetas'],
+    tabs: ['albaranes', 'proveedores', 'recetas', 'usuarios'],
   },
   control: {
     label: 'Control',
@@ -404,6 +438,7 @@ function getTabLabel(tab: TabKey) {
   if (tab === 'albaranes') return 'Albaranes'
   if (tab === 'proveedores') return 'Proveedores'
   if (tab === 'recetas') return 'Recetas'
+  if (tab === 'usuarios') return 'Usuarios'
   if (tab === 'historial') return 'Historial'
   return 'Auditoría'
 }
@@ -417,7 +452,6 @@ export default function HomePage() {
   const [authReady, setAuthReady] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const [authName, setAuthName] = useState('')
-  const [authRole, setAuthRole] = useState('Encargado')
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authSaving, setAuthSaving] = useState(false)
@@ -514,6 +548,9 @@ export default function HomePage() {
   const [tpvImportacionId, setTpvImportacionId] = useState<string | null>(null)
   const [tpvMapeosSeleccionados, setTpvMapeosSeleccionados] = useState<Record<string, string>>({})
   const [tpvGuardandoMapeo, setTpvGuardandoMapeo] = useState('')
+  const [managedUsers, setManagedUsers] = useState<ManagedUser[]>([])
+  const [loadingManagedUsers, setLoadingManagedUsers] = useState(false)
+  const [savingManagedUserId, setSavingManagedUserId] = useState('')
 
   useEffect(() => {
     let active = true
@@ -563,6 +600,17 @@ export default function HomePage() {
   }, [authReady, session?.user.id])
 
   useEffect(() => {
+    if (!session || !canManageUsers(normalizeUserRole(currentUser?.user_metadata?.role))) {
+      setManagedUsers([])
+      return
+    }
+
+    if (tab === 'usuarios') {
+      void loadManagedUsers()
+    }
+  }, [tab, session?.access_token, currentUser?.id])
+
+  useEffect(() => {
     if (!toast) return
     const timer = setTimeout(() => setToast(''), 2500)
     return () => clearTimeout(timer)
@@ -574,6 +622,12 @@ export default function HomePage() {
       setMainTab(nextMainTab)
     }
   }, [tab, mainTab])
+
+  useEffect(() => {
+    if (tab === 'usuarios' && !canManageUsers(normalizeUserRole(currentUser?.user_metadata?.role))) {
+      setTab('proveedores')
+    }
+  }, [tab, currentUser?.id, currentUser?.user_metadata])
 
   async function loadInitialData() {
     await Promise.all([
@@ -594,12 +648,44 @@ export default function HomePage() {
 
     try {
       if (authMode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: authEmail.trim(),
-          password: authPassword,
-        })
+        const identifier = authEmail.trim()
 
-        if (error) throw error
+        if (!identifier.includes('@')) {
+          const response = await fetch('/api/auth/master-login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              login: identifier,
+              password: authPassword,
+            }),
+          })
+
+          const payload = (await response.json()) as
+            | {
+                error?: string
+                session?: {
+                  access_token: string
+                  refresh_token: string
+                }
+              }
+            | undefined
+
+          if (!response.ok || !payload?.session) {
+            throw new Error(payload?.error || 'No se pudo iniciar sesión como master')
+          }
+
+          const { error } = await supabase.auth.setSession(payload.session)
+          if (error) throw error
+        } else {
+          const { error } = await supabase.auth.signInWithPassword({
+            email: identifier,
+            password: authPassword,
+          })
+
+          if (error) throw error
+        }
 
         setAuthPassword('')
         setToast('Sesión iniciada')
@@ -612,7 +698,7 @@ export default function HomePage() {
         options: {
           data: {
             full_name: authName.trim(),
-            role_label: authRole.trim() || 'Equipo',
+            role: 'empleado',
           },
         },
       })
@@ -646,6 +732,66 @@ export default function HomePage() {
     }
 
     setToast('Sesión cerrada')
+  }
+
+  async function loadManagedUsers() {
+    if (!session?.access_token) return
+
+    setLoadingManagedUsers(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/admin/users', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+
+      const payload = (await response.json()) as { error?: string; users?: ManagedUser[] }
+
+      if (!response.ok) {
+        throw new Error(payload.error || 'No se pudieron cargar los usuarios')
+      }
+
+      setManagedUsers(payload.users ?? [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar los usuarios')
+    } finally {
+      setLoadingManagedUsers(false)
+    }
+  }
+
+  async function updateManagedUserRole(userId: string, role: UserRole) {
+    if (!session?.access_token) return
+
+    setSavingManagedUserId(userId)
+    setError('')
+
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ userId, role }),
+      })
+
+      const payload = (await response.json()) as { error?: string; user?: ManagedUser }
+
+      if (!response.ok || !payload.user) {
+        throw new Error(payload.error || 'No se pudo actualizar el rol')
+      }
+
+      setManagedUsers((current) =>
+        current.map((item) => (item.id === userId ? payload.user ?? item : item))
+      )
+      setToast(`Rol actualizado a ${getRoleLabel(role)}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar el rol')
+    } finally {
+      setSavingManagedUserId('')
+    }
   }
 
   async function loadProductos() {
@@ -2704,6 +2850,11 @@ export default function HomePage() {
         .filter(Boolean)
     )
   ).sort((a, b) => a.localeCompare(b, 'es'))
+  const currentUserRole = normalizeUserRole(currentUser?.user_metadata?.role)
+  const userCanManageUsers = canManageUsers(currentUserRole)
+  const visibleMainTabs = mainTabConfig[mainTab].tabs.filter(
+    (item) => item !== 'usuarios' || userCanManageUsers
+  )
   const userDisplayName = getUserDisplayName(currentUser)
   const userRoleLabel = getUserRoleLabel(currentUser)
   const userInitials = getInitials(userDisplayName || 'Usuario')
@@ -2917,41 +3068,32 @@ export default function HomePage() {
 
             <form onSubmit={handleAuthSubmit} className="mt-8 space-y-4">
               {authMode === 'register' && (
-                <>
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-slate-700">
-                      Nombre visible
-                    </span>
-                    <input
-                      type="text"
-                      value={authName}
-                      onChange={(e) => setAuthName(e.target.value)}
-                      placeholder="Carlos Pérez"
-                      required
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-slate-700">Cargo</span>
-                    <input
-                      type="text"
-                      value={authRole}
-                      onChange={(e) => setAuthRole(e.target.value)}
-                      placeholder="Encargado"
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                    />
-                  </label>
-                </>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700">
+                    Nombre visible
+                  </span>
+                  <input
+                    type="text"
+                    value={authName}
+                    onChange={(e) => setAuthName(e.target.value)}
+                    placeholder="Carlos Pérez"
+                    required
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                  />
+                </label>
               )}
 
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700">Email</span>
+                <span className="mb-2 block text-sm font-medium text-slate-700">
+                  {authMode === 'login' ? 'Email o usuario master' : 'Email'}
+                </span>
                 <input
-                  type="email"
+                  type={authMode === 'login' ? 'text' : 'email'}
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
-                  placeholder="equipo@restaurante.com"
+                  placeholder={
+                    authMode === 'login' ? 'equipo@restaurante.com o master' : 'equipo@restaurante.com'
+                  }
                   required
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
                 />
@@ -2990,9 +3132,8 @@ export default function HomePage() {
             </form>
 
             <p className="mt-5 text-sm text-slate-500">
-              Recomendación: activa también las políticas RLS de Supabase con el archivo
-              `supabase/auth-setup.sql` para que los datos solo estén disponibles para usuarios
-              autenticados.
+              Las cuentas nuevas nacen como <span className="font-semibold">Empleado</span>. Un
+              administrador o el usuario master podrá elevar permisos desde dentro de la app.
             </p>
           </section>
         </div>
@@ -3101,7 +3242,7 @@ export default function HomePage() {
           <div className="px-5 py-6 sm:px-6">
             <div className="rounded-[28px] border border-slate-200 bg-slate-50/80 p-2 shadow-inner">
               <div className="grid gap-2 md:grid-cols-3">
-                {mainTabConfig[mainTab].tabs.map((item) => {
+                {visibleMainTabs.map((item) => {
                   const active = tab === item
                   return (
                     <button
@@ -4221,6 +4362,112 @@ export default function HomePage() {
                 ))}
             </div>
           </>
+        )}
+
+        {tab === 'usuarios' && userCanManageUsers && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">Usuarios y permisos</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Gestiona quién entra y qué nivel de acceso tiene cada persona.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void loadManagedUsers()}
+                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200"
+              >
+                Actualizar
+              </button>
+            </div>
+
+            <div className="rounded-2xl bg-slate-100 px-4 py-3 text-xs text-slate-600">
+              Roles disponibles: <span className="font-semibold">Empleado</span>,{' '}
+              <span className="font-semibold">Encargado</span> y{' '}
+              <span className="font-semibold">Administrador</span>. El rol{' '}
+              <span className="font-semibold">Master</span> es interno y no se puede degradar desde
+              un usuario normal.
+            </div>
+
+            <div className="rounded-3xl bg-white p-4 shadow-sm">
+              {loadingManagedUsers && (
+                <div className="py-10 text-center text-sm text-slate-400">
+                  Cargando usuarios...
+                </div>
+              )}
+
+              {!loadingManagedUsers && managedUsers.length === 0 && (
+                <div className="py-10 text-center text-sm text-slate-400">
+                  No se han encontrado usuarios.
+                </div>
+              )}
+
+              {!loadingManagedUsers && managedUsers.length > 0 && (
+                <div className="space-y-3">
+                  {managedUsers.map((managedUser) => {
+                    const isCurrentUser = managedUser.id === currentUser.id
+                    const isMasterTarget = managedUser.role === 'master'
+                    const canEditTarget =
+                      currentUserRole === 'master'
+                        ? true
+                        : currentUserRole === 'administrador' && !isMasterTarget
+
+                    return (
+                      <div
+                        key={managedUser.id}
+                        className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 lg:flex-row lg:items-center lg:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="truncate text-sm font-semibold text-slate-900">
+                              {managedUser.full_name || managedUser.email}
+                            </h3>
+                            {isCurrentUser ? (
+                              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-600">
+                                Tú
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="mt-1 text-sm text-slate-500">{managedUser.email}</div>
+                          <div className="mt-1 text-xs text-slate-400">
+                            Alta: {formatFechaHora(managedUser.created_at)}
+                            {managedUser.last_sign_in_at
+                              ? ` · Último acceso: ${formatFechaHora(managedUser.last_sign_in_at)}`
+                              : ' · Aún no ha iniciado sesión'}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <div className="rounded-2xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm">
+                            {getRoleLabel(managedUser.role)}
+                          </div>
+
+                          <select
+                            value={managedUser.role}
+                            disabled={!canEditTarget || savingManagedUserId === managedUser.id}
+                            onChange={(e) =>
+                              void updateManagedUserRole(
+                                managedUser.id,
+                                e.target.value as UserRole
+                              )
+                            }
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            <option value="empleado">Empleado</option>
+                            <option value="encargado">Encargado</option>
+                            <option value="administrador">Administrador</option>
+                            {currentUserRole === 'master' ? <option value="master">Master</option> : null}
+                          </select>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {tab === 'recetas' && (

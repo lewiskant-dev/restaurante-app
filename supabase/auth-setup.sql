@@ -5,6 +5,12 @@
 -- 1. Activa RLS en las tablas usadas por la app.
 -- 2. Permite acceso completo solo a usuarios autenticados.
 -- 3. Restringe el bucket "albaranes" a usuarios autenticados.
+--
+-- Roles de aplicación esperados en auth.users.user_metadata.role:
+-- - empleado
+-- - encargado
+-- - administrador
+-- - master
 
 alter table if exists public.productos enable row level security;
 alter table if exists public.proveedores enable row level security;
