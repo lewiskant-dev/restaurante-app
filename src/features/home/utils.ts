@@ -2,6 +2,18 @@ import type { User } from '@supabase/supabase-js'
 import type { Auditoria, Producto } from '@/types'
 import type { MainTab, PermissionKey, TabKey, UserRole } from './types'
 
+export const tabKeys: TabKey[] = [
+  'stock',
+  'historial',
+  'albaran',
+  'albaranes',
+  'proveedores',
+  'usuarios',
+  'auditoria',
+  'tpv',
+  'recetas',
+]
+
 export const mainTabConfig: Record<
   MainTab,
   {
@@ -287,6 +299,11 @@ export function getMainTabForTab(tab: TabKey): MainTab {
   if (mainTabConfig.operativa.tabs.includes(tab)) return 'operativa'
   if (mainTabConfig.gestion.tabs.includes(tab)) return 'gestion'
   return 'control'
+}
+
+export function parseTabKey(value: string | null | undefined): TabKey | null {
+  if (!value) return null
+  return tabKeys.includes(value as TabKey) ? (value as TabKey) : null
 }
 
 export function getTabLabel(tab: TabKey) {

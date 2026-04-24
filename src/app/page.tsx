@@ -40,6 +40,7 @@ import {
   canAccessTab,
   getInitials,
   getMainTabForTab,
+  parseTabKey,
   getUserDisplayName,
   getUserRole,
   getUserRoleLabel,
@@ -223,6 +224,14 @@ export default function HomePage() {
   }, [tab, mainTab])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const requestedTab = parseTabKey(new URLSearchParams(window.location.search).get('tab'))
+    if (!requestedTab || requestedTab === tab) return
+    setTab(requestedTab)
+  }, [tab])
+
+  useEffect(() => {
     const role = getUserRole(currentUser)
     if (!canAccessTab(role, tab)) {
       const fallbackTab = (['stock', 'historial'] as TabKey[]).find((candidate) =>
@@ -234,6 +243,17 @@ export default function HomePage() {
       }
     }
   }, [tab, currentUser?.id, currentUser?.app_metadata, currentUser?.user_metadata])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const currentUrl = new URL(window.location.href)
+    const currentParam = parseTabKey(currentUrl.searchParams.get('tab'))
+    if (currentParam === tab) return
+
+    currentUrl.searchParams.set('tab', tab)
+    window.history.replaceState({}, '', currentUrl)
+  }, [tab])
 
   function requirePermission(permission: PermissionKey, message: string) {
     const role = getUserRole(currentUser)
