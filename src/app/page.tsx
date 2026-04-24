@@ -226,10 +226,19 @@ export default function HomePage() {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const requestedTab = parseTabKey(new URLSearchParams(window.location.search).get('tab'))
-    if (!requestedTab || requestedTab === tab) return
-    setTab(requestedTab)
-  }, [tab])
+    const syncTabFromLocation = () => {
+      const requestedTab = parseTabKey(new URLSearchParams(window.location.search).get('tab'))
+      if (!requestedTab) return
+      setTab((currentTab) => (currentTab === requestedTab ? currentTab : requestedTab))
+    }
+
+    syncTabFromLocation()
+    window.addEventListener('popstate', syncTabFromLocation)
+
+    return () => {
+      window.removeEventListener('popstate', syncTabFromLocation)
+    }
+  }, [])
 
   useEffect(() => {
     const role = getUserRole(currentUser)
