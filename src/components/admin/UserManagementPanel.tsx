@@ -49,6 +49,7 @@ type UserManagementPanelProps = {
   onSearchChange: (value: string) => void
   onRoleFilterChange: (value: 'todos' | UserRole) => void
   onAccessFilterChange: (value: ManagedUserAccessFilter) => void
+  onResetFilters: () => void
   onNewNameChange: (value: string) => void
   onNewEmailChange: (value: string) => void
   onNewPasswordChange: (value: string) => void
@@ -87,6 +88,7 @@ export function UserManagementPanel({
   onSearchChange,
   onRoleFilterChange,
   onAccessFilterChange,
+  onResetFilters,
   onNewNameChange,
   onNewEmailChange,
   onNewPasswordChange,
@@ -121,7 +123,11 @@ export function UserManagementPanel({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-3xl bg-white p-4 shadow-sm">
+        <button
+          type="button"
+          onClick={onResetFilters}
+          className="rounded-3xl bg-white p-4 text-left shadow-sm transition hover:bg-slate-50"
+        >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Equipo total
           </div>
@@ -129,9 +135,13 @@ export function UserManagementPanel({
           <div className="mt-2 text-sm text-slate-500">
             {managedUsersSummary.empleados} empleados · {managedUsersSummary.encargados} encargados
           </div>
-        </div>
+        </button>
 
-        <div className="rounded-3xl bg-white p-4 shadow-sm">
+        <button
+          type="button"
+          onClick={() => onRoleFilterChange('administrador')}
+          className="rounded-3xl bg-white p-4 text-left shadow-sm transition hover:bg-slate-50"
+        >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Gestión avanzada
           </div>
@@ -141,9 +151,13 @@ export function UserManagementPanel({
           <div className="mt-2 text-sm text-slate-500">
             {managedUsersSummary.administradores} admin · {managedUsersSummary.masters} master
           </div>
-        </div>
+        </button>
 
-        <div className="rounded-3xl bg-white p-4 shadow-sm">
+        <button
+          type="button"
+          onClick={() => onAccessFilterChange('sin_acceso')}
+          className="rounded-3xl bg-white p-4 text-left shadow-sm transition hover:bg-slate-50"
+        >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Sin acceso aún
           </div>
@@ -151,9 +165,13 @@ export function UserManagementPanel({
           <div className="mt-2 text-sm text-slate-500">
             Usuarios creados que todavía no han iniciado sesión.
           </div>
-        </div>
+        </button>
 
-        <div className="rounded-3xl bg-white p-4 shadow-sm">
+        <button
+          type="button"
+          onClick={() => onAccessFilterChange('requiere_revision')}
+          className="rounded-3xl bg-white p-4 text-left shadow-sm transition hover:bg-slate-50"
+        >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Requieren revisión
           </div>
@@ -161,11 +179,15 @@ export function UserManagementPanel({
           <div className="mt-2 text-sm text-slate-500">
             Sin acceso o con actividad demasiado antigua.
           </div>
-        </div>
+        </button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <div className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-4">
+        <button
+          type="button"
+          onClick={() => onAccessFilterChange('acceso_reciente')}
+          className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-4 text-left transition hover:bg-emerald-50"
+        >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-emerald-700">
             Acceso reciente
           </div>
@@ -175,9 +197,13 @@ export function UserManagementPanel({
           <div className="mt-2 text-sm text-emerald-700">
             Han entrado en los últimos 14 días.
           </div>
-        </div>
+        </button>
 
-        <div className="rounded-3xl border border-rose-100 bg-rose-50/60 p-4">
+        <button
+          type="button"
+          onClick={() => onAccessFilterChange('requiere_revision')}
+          className="rounded-3xl border border-rose-100 bg-rose-50/60 p-4 text-left transition hover:bg-rose-50"
+        >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-rose-700">
             Acceso antiguo
           </div>
@@ -187,9 +213,13 @@ export function UserManagementPanel({
           <div className="mt-2 text-sm text-rose-700">
             Última actividad hace más de 30 días.
           </div>
-        </div>
+        </button>
 
-        <div className="rounded-3xl border border-amber-100 bg-amber-50/60 p-4">
+        <button
+          type="button"
+          onClick={() => onAccessFilterChange('sin_acceso')}
+          className="rounded-3xl border border-amber-100 bg-amber-50/60 p-4 text-left transition hover:bg-amber-50"
+        >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-amber-700">
             Sin acceso aún
           </div>
@@ -199,7 +229,7 @@ export function UserManagementPanel({
           <div className="mt-2 text-sm text-amber-700">
             Cuentas creadas que todavía no se han usado.
           </div>
-        </div>
+        </button>
       </div>
 
       <div className="rounded-3xl bg-white p-4 shadow-sm">
@@ -308,6 +338,16 @@ export function UserManagementPanel({
           <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-600">
             Visibles: {managedUsersFiltrados.length} de {managedUsers.length}
           </div>
+        </div>
+
+        <div className="mb-4 flex justify-end">
+          <button
+            type="button"
+            onClick={onResetFilters}
+            className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+          >
+            Limpiar filtros
+          </button>
         </div>
 
         {loadingManagedUsers && (

@@ -35,6 +35,7 @@ export function useAuthProfile({
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authSaving, setAuthSaving] = useState(false)
+  const [recoveringPassword, setRecoveringPassword] = useState(false)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [profileNameDraft, setProfileNameDraft] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
@@ -227,6 +228,37 @@ export function useAuthProfile({
     onToast('Sesión cerrada')
   }
 
+  async function sendPasswordRecovery() {
+    const email = authEmail.trim().toLowerCase()
+
+    if (!email || !email.includes('@')) {
+      onError('Indica un email válido para recuperar la contraseña')
+      return
+    }
+
+    setRecoveringPassword(true)
+    onError('')
+
+    try {
+      const redirectTo =
+        typeof window !== 'undefined' ? `${window.location.origin}/` : undefined
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo,
+      })
+
+      if (error) {
+        throw error
+      }
+
+      onToast('Te hemos enviado un correo para restablecer la contraseña')
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'No se pudo enviar el correo de recuperación')
+    } finally {
+      setRecoveringPassword(false)
+    }
+  }
+
   function openProfilePanel() {
     setProfileNameDraft(getUserDisplayName(currentUser))
     setCurrentPasswordDraft('')
@@ -376,6 +408,7 @@ export function useAuthProfile({
     authEmail,
     authPassword,
     authSaving,
+    recoveringPassword,
     profileModalOpen,
     profileNameDraft,
     savingProfile,
@@ -397,6 +430,7 @@ export function useAuthProfile({
     setConfirmPasswordDraft,
     handleAuthSubmit,
     handleSignOut,
+    sendPasswordRecovery,
     openProfilePanel,
     closeProfilePanel,
     updateOwnProfile,

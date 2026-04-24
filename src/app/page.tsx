@@ -74,6 +74,7 @@ export default function HomePage() {
     authEmail,
     authPassword,
     authSaving,
+    recoveringPassword,
     profileModalOpen,
     profileNameDraft,
     savingProfile,
@@ -95,6 +96,7 @@ export default function HomePage() {
     setConfirmPasswordDraft,
     handleAuthSubmit,
     handleSignOut,
+    sendPasswordRecovery,
     openProfilePanel,
     closeProfilePanel,
     updateOwnProfile,
@@ -823,6 +825,20 @@ export default function HomePage() {
     )
   }
 
+  function resetAuditoriaFilters() {
+    setBusquedaAuditoria('')
+    setAuditoriaDesde('')
+    setAuditoriaHasta('')
+    setAuditoriaEntidadFiltro('todas')
+    setAuditoriaAccionFiltro('todas')
+  }
+
+  function resetManagedUserFilters() {
+    setBusquedaUsuarios('')
+    setManagedUserRoleFilter('todos')
+    setManagedUserAccessFilter('todos')
+  }
+
   if (!authReady || !session || !currentUser) {
     return (
       <AuthScreen
@@ -833,12 +849,14 @@ export default function HomePage() {
         authEmail={authEmail}
         authPassword={authPassword}
         authSaving={authSaving}
+        recoveringPassword={recoveringPassword}
         error={error}
         onModeChange={setAuthMode}
         onNameChange={setAuthName}
         onEmailChange={setAuthEmail}
         onPasswordChange={setAuthPassword}
         onSubmit={handleAuthSubmit}
+        onRecoverPassword={() => void sendPasswordRecovery()}
       />
     )
   }
@@ -981,6 +999,7 @@ export default function HomePage() {
             onHastaChange={setAuditoriaHasta}
             onEntidadFiltroChange={setAuditoriaEntidadFiltro}
             onAccionFiltroChange={setAuditoriaAccionFiltro}
+            onResetFilters={resetAuditoriaFilters}
             onExportar={exportarAuditoriaCSV}
             onDeshacer={(item) => void deshacerAccionAuditoria(item)}
             puedeDeshacerAuditoria={puedeDeshacerAuditoria}
@@ -1034,6 +1053,7 @@ export default function HomePage() {
             onSearchChange={setBusquedaUsuarios}
             onRoleFilterChange={setManagedUserRoleFilter}
             onAccessFilterChange={setManagedUserAccessFilter}
+            onResetFilters={resetManagedUserFilters}
             onNewNameChange={setNewManagedUserName}
             onNewEmailChange={setNewManagedUserEmail}
             onNewPasswordChange={setNewManagedUserPassword}

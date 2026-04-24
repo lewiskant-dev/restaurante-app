@@ -45,6 +45,7 @@ type AuditoriaTabProps = {
       | 'perfil'
   ) => void
   onAccionFiltroChange: (value: string) => void
+  onResetFilters: () => void
   onExportar: () => void
   onDeshacer: (item: Auditoria) => void
   puedeDeshacerAuditoria: (item: Auditoria) => boolean
@@ -64,6 +65,7 @@ export function AuditoriaTab({
   onHastaChange,
   onEntidadFiltroChange,
   onAccionFiltroChange,
+  onResetFilters,
   onExportar,
   onDeshacer,
   puedeDeshacerAuditoria,
@@ -75,37 +77,53 @@ export function AuditoriaTab({
   return (
     <>
       <div className="mb-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-3xl bg-white p-4 shadow-sm">
+        <button
+          type="button"
+          onClick={onResetFilters}
+          className="rounded-3xl bg-white p-4 text-left shadow-sm transition hover:bg-slate-50"
+        >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Registros visibles
           </div>
           <div className="mt-2 text-3xl font-semibold text-slate-950">{auditoriaFiltrada.length}</div>
           <div className="mt-2 text-sm text-slate-500">Sobre un total de {auditoria.length} eventos.</div>
-        </div>
+        </button>
 
-        <div className="rounded-3xl bg-white p-4 shadow-sm">
+        <button
+          type="button"
+          onClick={() => onEntidadFiltroChange('sesion')}
+          className="rounded-3xl bg-white p-4 text-left shadow-sm transition hover:bg-slate-50"
+        >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Sesión
           </div>
           <div className="mt-2 text-3xl font-semibold text-slate-950">{sessionEvents}</div>
           <div className="mt-2 text-sm text-slate-500">Logins y cierres de sesión filtrados.</div>
-        </div>
+        </button>
 
-        <div className="rounded-3xl bg-white p-4 shadow-sm">
+        <button
+          type="button"
+          onClick={() => onEntidadFiltroChange('perfil')}
+          className="rounded-3xl bg-white p-4 text-left shadow-sm transition hover:bg-slate-50"
+        >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Perfil
           </div>
           <div className="mt-2 text-3xl font-semibold text-slate-950">{profileEvents}</div>
           <div className="mt-2 text-sm text-slate-500">Cambios de perfil y contraseña.</div>
-        </div>
+        </button>
 
-        <div className="rounded-3xl bg-white p-4 shadow-sm">
+        <button
+          type="button"
+          onClick={() => onEntidadFiltroChange('usuario')}
+          className="rounded-3xl bg-white p-4 text-left shadow-sm transition hover:bg-slate-50"
+        >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Usuarios
           </div>
           <div className="mt-2 text-3xl font-semibold text-slate-950">{userEvents}</div>
           <div className="mt-2 text-sm text-slate-500">Altas, roles, bajas y resets.</div>
-        </div>
+        </button>
       </div>
 
       <div className="mt-1">
@@ -189,12 +207,22 @@ export function AuditoriaTab({
           Registros visibles: {auditoriaFiltrada.length} · Totales: {auditoria.length}
         </div>
 
-        <button
-          onClick={onExportar}
-          className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
-        >
-          Exportar CSV
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onResetFilters}
+            className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+          >
+            Limpiar filtros
+          </button>
+
+          <button
+            onClick={onExportar}
+            className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+          >
+            Exportar CSV
+          </button>
+        </div>
       </div>
 
       <div className="rounded-3xl bg-white p-3 shadow-sm">

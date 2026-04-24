@@ -10,12 +10,14 @@ type AuthScreenProps = {
   authEmail: string
   authPassword: string
   authSaving: boolean
+  recoveringPassword: boolean
   error: string
   onModeChange: (mode: 'login' | 'register') => void
   onNameChange: (value: string) => void
   onEmailChange: (value: string) => void
   onPasswordChange: (value: string) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  onRecoverPassword: () => void
 }
 
 function Icon({
@@ -49,12 +51,14 @@ export function AuthScreen({
   authEmail,
   authPassword,
   authSaving,
+  recoveringPassword,
   error,
   onModeChange,
   onNameChange,
   onEmailChange,
   onPasswordChange,
   onSubmit,
+  onRecoverPassword,
 }: AuthScreenProps) {
   const brandIcon = (
     <>
@@ -176,7 +180,19 @@ export function AuthScreen({
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-slate-700">Contraseña</span>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="block text-sm font-medium text-slate-700">Contraseña</span>
+                {authMode === 'login' ? (
+                  <button
+                    type="button"
+                    onClick={onRecoverPassword}
+                    disabled={recoveringPassword}
+                    className="text-xs font-semibold text-blue-600 transition hover:text-blue-700 disabled:opacity-60"
+                  >
+                    {recoveringPassword ? 'Enviando...' : 'He olvidado mi contraseña'}
+                  </button>
+                ) : null}
+              </div>
               <input
                 type="password"
                 value={authPassword}

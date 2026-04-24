@@ -29,11 +29,6 @@ export function RecetasTab({
           + Receta
         </button>
       </div>
-
-      <div className="rounded-2xl bg-slate-100 px-4 py-3 text-xs text-slate-600">
-        Mantengo solo la acción principal visible y el resto dentro de <span className="font-semibold">Acciones</span>.
-      </div>
-
       <div className="rounded-3xl bg-white p-4 shadow-sm">
         {loadingRecetas && (
           <div className="py-10 text-center text-sm text-slate-400">Cargando recetas...</div>
