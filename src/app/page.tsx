@@ -75,6 +75,9 @@ export default function HomePage() {
     authPassword,
     authSaving,
     recoveringPassword,
+    recoveryPasswordDraft,
+    recoveryConfirmDraft,
+    completingRecoveryPassword,
     profileModalOpen,
     profileNameDraft,
     savingProfile,
@@ -86,17 +89,24 @@ export default function HomePage() {
     ownPasswordError,
     ownPasswordMatchError,
     ownPasswordReuseError,
+    recoveryPasswordError,
+    recoveryPasswordMatchError,
     setAuthMode,
     setAuthName,
     setAuthEmail,
     setAuthPassword,
+    setRecoveryPasswordDraft,
+    setRecoveryConfirmDraft,
     setProfileNameDraft,
     setCurrentPasswordDraft,
     setNewPasswordDraft,
     setConfirmPasswordDraft,
     handleAuthSubmit,
     handleSignOut,
+    openRecoveryMode,
+    closeRecoveryMode,
     sendPasswordRecovery,
+    completePasswordRecovery,
     openProfilePanel,
     closeProfilePanel,
     updateOwnProfile,
@@ -173,6 +183,10 @@ export default function HomePage() {
     resetManagedUsersState()
   })
 
+  const openRecoveryModeEvent = useEffectEvent(() => {
+    openRecoveryMode()
+  })
+
   useEffect(() => {
     let active = true
 
@@ -187,6 +201,16 @@ export default function HomePage() {
       setSession(nextSession)
       setCurrentUser(nextSession?.user ?? null)
       setOperarioActual(getUserDisplayName(nextSession?.user ?? null))
+      if (typeof window !== 'undefined') {
+        const currentUrl = new URL(window.location.href)
+        const recoveryType =
+          currentUrl.searchParams.get('type') ||
+          new URLSearchParams(currentUrl.hash.replace(/^#/, '')).get('type')
+
+        if (recoveryType === 'recovery' && nextSession?.user) {
+          openRecoveryModeEvent()
+        }
+      }
       setAuthReady(true)
     })
 
@@ -197,6 +221,9 @@ export default function HomePage() {
       setSession(nextSession)
       setCurrentUser(nextSession?.user ?? null)
       setOperarioActual(getUserDisplayName(nextSession?.user ?? null))
+      if (_event === 'PASSWORD_RECOVERY' && nextSession?.user) {
+        openRecoveryModeEvent()
+      }
       if (!nextSession) {
         resetClientDomainState()
       }
@@ -839,7 +866,7 @@ export default function HomePage() {
     setManagedUserAccessFilter('todos')
   }
 
-  if (!authReady || !session || !currentUser) {
+  if (!authReady || authMode === 'recovery' || !session || !currentUser) {
     return (
       <AuthScreen
         authReady={authReady}
@@ -850,13 +877,22 @@ export default function HomePage() {
         authPassword={authPassword}
         authSaving={authSaving}
         recoveringPassword={recoveringPassword}
+        recoveryPasswordDraft={recoveryPasswordDraft}
+        recoveryConfirmDraft={recoveryConfirmDraft}
+        completingRecoveryPassword={completingRecoveryPassword}
+        recoveryPasswordError={recoveryPasswordError}
+        recoveryPasswordMatchError={recoveryPasswordMatchError}
         error={error}
         onModeChange={setAuthMode}
         onNameChange={setAuthName}
         onEmailChange={setAuthEmail}
         onPasswordChange={setAuthPassword}
+        onRecoveryPasswordChange={setRecoveryPasswordDraft}
+        onRecoveryConfirmChange={setRecoveryConfirmDraft}
         onSubmit={handleAuthSubmit}
         onRecoverPassword={() => void sendPasswordRecovery()}
+        onCompleteRecovery={() => void completePasswordRecovery()}
+        onCancelRecovery={closeRecoveryMode}
       />
     )
   }

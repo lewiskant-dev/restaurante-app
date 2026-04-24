@@ -5,19 +5,28 @@ import type { FormEvent, ReactNode } from 'react'
 type AuthScreenProps = {
   authReady: boolean
   allowSelfRegister: boolean
-  authMode: 'login' | 'register'
+  authMode: 'login' | 'register' | 'recovery'
   authName: string
   authEmail: string
   authPassword: string
   authSaving: boolean
   recoveringPassword: boolean
+  recoveryPasswordDraft: string
+  recoveryConfirmDraft: string
+  completingRecoveryPassword: boolean
+  recoveryPasswordError: string
+  recoveryPasswordMatchError: string
   error: string
   onModeChange: (mode: 'login' | 'register') => void
   onNameChange: (value: string) => void
   onEmailChange: (value: string) => void
   onPasswordChange: (value: string) => void
+  onRecoveryPasswordChange: (value: string) => void
+  onRecoveryConfirmChange: (value: string) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   onRecoverPassword: () => void
+  onCompleteRecovery: () => void
+  onCancelRecovery: () => void
 }
 
 function Icon({
@@ -52,13 +61,22 @@ export function AuthScreen({
   authPassword,
   authSaving,
   recoveringPassword,
+  recoveryPasswordDraft,
+  recoveryConfirmDraft,
+  completingRecoveryPassword,
+  recoveryPasswordError,
+  recoveryPasswordMatchError,
   error,
   onModeChange,
   onNameChange,
   onEmailChange,
   onPasswordChange,
+  onRecoveryPasswordChange,
+  onRecoveryConfirmChange,
   onSubmit,
   onRecoverPassword,
+  onCompleteRecovery,
+  onCancelRecovery,
 }: AuthScreenProps) {
   const brandIcon = (
     <>
@@ -123,108 +141,181 @@ export function AuthScreen({
         </section>
 
         <section className="rounded-[36px] border border-white/80 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.1)] sm:p-10">
-          <div className="flex rounded-2xl bg-slate-100 p-1.5">
-            <button
-              type="button"
-              onClick={() => onModeChange('login')}
-              className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                authMode === 'login' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
-              }`}
-            >
-              Iniciar sesión
-            </button>
-            {allowSelfRegister ? (
+          {authMode !== 'recovery' ? (
+            <div className="flex rounded-2xl bg-slate-100 p-1.5">
               <button
                 type="button"
-                onClick={() => onModeChange('register')}
+                onClick={() => onModeChange('login')}
                 className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                  authMode === 'register' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
+                  authMode === 'login' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
                 }`}
               >
-                Crear cuenta
+                Iniciar sesión
               </button>
-            ) : null}
-          </div>
+              {allowSelfRegister ? (
+                <button
+                  type="button"
+                  onClick={() => onModeChange('register')}
+                  className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                    authMode === 'register' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
+                  }`}
+                >
+                  Crear cuenta
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-blue-50 px-4 py-3 text-sm text-blue-700">
+              Estás en modo seguro de recuperación. Define una contraseña nueva para tu cuenta.
+            </div>
+          )}
 
-          <form onSubmit={onSubmit} className="mt-8 space-y-4">
-            {authMode === 'register' && (
+          {authMode !== 'recovery' ? (
+            <form onSubmit={onSubmit} className="mt-8 space-y-4">
+              {authMode === 'register' && (
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700">Nombre visible</span>
+                  <input
+                    type="text"
+                    value={authName}
+                    onChange={(e) => onNameChange(e.target.value)}
+                    placeholder="Carlos Pérez"
+                    required
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                  />
+                </label>
+              )}
+
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700">Nombre visible</span>
+                <span className="mb-2 block text-sm font-medium text-slate-700">
+                  {authMode === 'login' ? 'Email o usuario master' : 'Email'}
+                </span>
                 <input
-                  type="text"
-                  value={authName}
-                  onChange={(e) => onNameChange(e.target.value)}
-                  placeholder="Carlos Pérez"
+                  type={authMode === 'login' ? 'text' : 'email'}
+                  value={authEmail}
+                  onChange={(e) => onEmailChange(e.target.value)}
+                  placeholder={
+                    authMode === 'login'
+                      ? 'equipo@restaurante.com o master'
+                      : 'equipo@restaurante.com'
+                  }
                   required
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
                 />
               </label>
-            )}
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-slate-700">
-                {authMode === 'login' ? 'Email o usuario master' : 'Email'}
-              </span>
-              <input
-                type={authMode === 'login' ? 'text' : 'email'}
-                value={authEmail}
-                onChange={(e) => onEmailChange(e.target.value)}
-                placeholder={
-                  authMode === 'login'
-                    ? 'equipo@restaurante.com o master'
-                    : 'equipo@restaurante.com'
-                }
-                required
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-              />
-            </label>
+              <label className="block">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <span className="block text-sm font-medium text-slate-700">Contraseña</span>
+                  {authMode === 'login' ? (
+                    <button
+                      type="button"
+                      onClick={onRecoverPassword}
+                      disabled={recoveringPassword}
+                      className="text-xs font-semibold text-blue-600 transition hover:text-blue-700 disabled:opacity-60"
+                    >
+                      {recoveringPassword ? 'Enviando...' : 'He olvidado mi contraseña'}
+                    </button>
+                  ) : null}
+                </div>
+                <input
+                  type="password"
+                  value={authPassword}
+                  onChange={(e) => onPasswordChange(e.target.value)}
+                  placeholder="Min. 6 caracteres"
+                  required
+                  minLength={6}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                />
+              </label>
 
-            <label className="block">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <span className="block text-sm font-medium text-slate-700">Contraseña</span>
-                {authMode === 'login' ? (
-                  <button
-                    type="button"
-                    onClick={onRecoverPassword}
-                    disabled={recoveringPassword}
-                    className="text-xs font-semibold text-blue-600 transition hover:text-blue-700 disabled:opacity-60"
-                  >
-                    {recoveringPassword ? 'Enviando...' : 'He olvidado mi contraseña'}
-                  </button>
-                ) : null}
+              {error ? (
+                <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={authSaving}
+                className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 disabled:opacity-60"
+              >
+                {authSaving
+                  ? authMode === 'login'
+                    ? 'Entrando...'
+                    : 'Creando cuenta...'
+                  : authMode === 'login'
+                  ? 'Entrar al panel'
+                  : 'Crear cuenta y acceder'}
+              </button>
+            </form>
+          ) : (
+            <div className="mt-8 space-y-4">
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Nueva contraseña</span>
+                <input
+                  type="password"
+                  value={recoveryPasswordDraft}
+                  onChange={(e) => onRecoveryPasswordChange(e.target.value)}
+                  placeholder="Mínimo 8 caracteres"
+                  className={`w-full rounded-2xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
+                    recoveryPasswordDraft && recoveryPasswordError ? 'border-red-200' : 'border-slate-200'
+                  }`}
+                />
+                <div className={`mt-2 text-xs ${recoveryPasswordDraft && recoveryPasswordError ? 'text-red-500' : 'text-slate-500'}`}>
+                  {recoveryPasswordDraft && recoveryPasswordError
+                    ? recoveryPasswordError
+                    : 'Usa al menos 8 caracteres, con letra y número.'}
+                </div>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Confirmar contraseña</span>
+                <input
+                  type="password"
+                  value={recoveryConfirmDraft}
+                  onChange={(e) => onRecoveryConfirmChange(e.target.value)}
+                  placeholder="Repite la nueva contraseña"
+                  className={`w-full rounded-2xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
+                    recoveryConfirmDraft && recoveryPasswordMatchError ? 'border-red-200' : 'border-slate-200'
+                  }`}
+                />
+                <div className={`mt-2 text-xs ${recoveryConfirmDraft && recoveryPasswordMatchError ? 'text-red-500' : 'text-slate-500'}`}>
+                  {recoveryConfirmDraft && recoveryPasswordMatchError
+                    ? recoveryPasswordMatchError
+                    : 'Confirma exactamente la misma contraseña.'}
+                </div>
+              </label>
+
+              {error ? (
+                <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
+              ) : null}
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={onCompleteRecovery}
+                  disabled={completingRecoveryPassword}
+                  className="flex-1 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 disabled:opacity-60"
+                >
+                  {completingRecoveryPassword ? 'Guardando...' : 'Guardar nueva contraseña'}
+                </button>
+                <button
+                  type="button"
+                  onClick={onCancelRecovery}
+                  className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+                >
+                  Cancelar
+                </button>
               </div>
-              <input
-                type="password"
-                value={authPassword}
-                onChange={(e) => onPasswordChange(e.target.value)}
-                placeholder="Min. 6 caracteres"
-                required
-                minLength={6}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-              />
-            </label>
-
-            {error ? (
-              <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
-            ) : null}
-
-            <button
-              type="submit"
-              disabled={authSaving}
-              className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 disabled:opacity-60"
-            >
-              {authSaving
-                ? authMode === 'login'
-                  ? 'Entrando...'
-                  : 'Creando cuenta...'
-                : authMode === 'login'
-                ? 'Entrar al panel'
-                : 'Crear cuenta y acceder'}
-            </button>
-          </form>
+            </div>
+          )}
 
           <p className="mt-5 text-sm text-slate-500">
-            {allowSelfRegister ? (
+            {authMode === 'recovery' ? (
+              <>
+                Si has llegado desde el correo de recuperación, guarda aquí tu nueva contraseña y
+                después podrás acceder normalmente.
+              </>
+            ) : allowSelfRegister ? (
               <>
                 Las cuentas nuevas nacen como <span className="font-semibold">Empleado</span>. Un
                 administrador o el usuario master podrá elevar permisos desde dentro de la app.

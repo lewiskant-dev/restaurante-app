@@ -30,12 +30,15 @@ export function useAuthProfile({
   onError,
   onToast,
 }: UseAuthProfileOptions) {
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'recovery'>('login')
   const [authName, setAuthName] = useState('')
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authSaving, setAuthSaving] = useState(false)
   const [recoveringPassword, setRecoveringPassword] = useState(false)
+  const [recoveryPasswordDraft, setRecoveryPasswordDraft] = useState('')
+  const [recoveryConfirmDraft, setRecoveryConfirmDraft] = useState('')
+  const [completingRecoveryPassword, setCompletingRecoveryPassword] = useState(false)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [profileNameDraft, setProfileNameDraft] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
@@ -55,6 +58,13 @@ export function useAuthProfile({
     newPasswordDraft &&
     currentPasswordDraft === newPasswordDraft
       ? 'La nueva contraseña debe ser distinta a la actual'
+      : ''
+  const recoveryPasswordError = recoveryPasswordDraft
+    ? validatePasswordStrength(recoveryPasswordDraft)
+    : ''
+  const recoveryPasswordMatchError =
+    recoveryConfirmDraft && recoveryPasswordDraft !== recoveryConfirmDraft
+      ? 'La confirmacion de contraseña no coincide'
       : ''
 
   function resetProfileDrafts() {
@@ -228,6 +238,21 @@ export function useAuthProfile({
     onToast('Sesión cerrada')
   }
 
+  function openRecoveryMode() {
+    setAuthMode('recovery')
+    setAuthPassword('')
+    setRecoveryPasswordDraft('')
+    setRecoveryConfirmDraft('')
+    onError('')
+  }
+
+  function closeRecoveryMode() {
+    setAuthMode('login')
+    setRecoveryPasswordDraft('')
+    setRecoveryConfirmDraft('')
+    onError('')
+  }
+
   async function sendPasswordRecovery() {
     const email = authEmail.trim().toLowerCase()
 
@@ -256,6 +281,51 @@ export function useAuthProfile({
       onError(err instanceof Error ? err.message : 'No se pudo enviar el correo de recuperación')
     } finally {
       setRecoveringPassword(false)
+    }
+  }
+
+  async function completePasswordRecovery() {
+    const passwordValidationError = validatePasswordStrength(recoveryPasswordDraft)
+
+    if (passwordValidationError) {
+      onError(passwordValidationError)
+      return
+    }
+
+    if (recoveryPasswordDraft !== recoveryConfirmDraft) {
+      onError('La confirmación de contraseña no coincide')
+      return
+    }
+
+    setCompletingRecoveryPassword(true)
+    onError('')
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: recoveryPasswordDraft,
+      })
+
+      if (error) {
+        throw error
+      }
+
+      await writeSecurityAudit({
+        entidad: 'perfil',
+        accion: 'cambiar_password',
+        detalle: 'Contraseña restablecida desde el flujo de recuperación',
+        payloadDespues: {
+          email: currentUser?.email || authEmail.trim().toLowerCase(),
+        },
+      })
+
+      setRecoveryPasswordDraft('')
+      setRecoveryConfirmDraft('')
+      setAuthMode('login')
+      onToast('Contraseña actualizada. Ya puedes entrar con la nueva clave.')
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'No se pudo actualizar la contraseña')
+    } finally {
+      setCompletingRecoveryPassword(false)
     }
   }
 
@@ -409,6 +479,9 @@ export function useAuthProfile({
     authPassword,
     authSaving,
     recoveringPassword,
+    recoveryPasswordDraft,
+    recoveryConfirmDraft,
+    completingRecoveryPassword,
     profileModalOpen,
     profileNameDraft,
     savingProfile,
@@ -420,17 +493,24 @@ export function useAuthProfile({
     ownPasswordError,
     ownPasswordMatchError,
     ownPasswordReuseError,
+    recoveryPasswordError,
+    recoveryPasswordMatchError,
     setAuthMode,
     setAuthName,
     setAuthEmail,
     setAuthPassword,
+    setRecoveryPasswordDraft,
+    setRecoveryConfirmDraft,
     setProfileNameDraft,
     setCurrentPasswordDraft,
     setNewPasswordDraft,
     setConfirmPasswordDraft,
     handleAuthSubmit,
     handleSignOut,
+    openRecoveryMode,
+    closeRecoveryMode,
     sendPasswordRecovery,
+    completePasswordRecovery,
     openProfilePanel,
     closeProfilePanel,
     updateOwnProfile,
