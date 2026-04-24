@@ -79,14 +79,6 @@ export function RecetasTab({
             </div>
           ))}
       </div>
-
-      <div className="rounded-3xl bg-amber-50 p-4 text-sm text-slate-700 shadow-sm">
-        <div className="font-semibold text-slate-900">Qué viene después</div>
-        <div className="mt-1">
-          En el siguiente bloque conectaremos estas recetas con el TPV para restar stock automáticamente
-          a partir de las ventas importadas.
-        </div>
-      </div>
     </div>
   )
 }

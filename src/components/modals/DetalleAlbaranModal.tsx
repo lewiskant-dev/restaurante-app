@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { ActionMenu } from '@/components/ui/ActionMenu'
 import type { Albaran, AlbaranLinea } from '@/types'
 import { formatEuro, formatFecha } from '@/features/home/utils'
@@ -86,10 +87,13 @@ export function DetalleAlbaranModal({
             <div className="rounded-2xl border border-slate-200 p-3">
               <div className="mb-2 text-sm font-semibold text-slate-900">Foto del albarán</div>
               <a href={detalleAlbaran.foto_url} target="_blank" rel="noreferrer">
-                <img
+                <Image
                   src={detalleAlbaran.foto_url}
                   alt="Foto del albarán"
-                  className="w-full rounded-2xl border border-slate-200 object-cover"
+                  width={1600}
+                  height={1200}
+                  unoptimized
+                  className="h-auto w-full rounded-2xl border border-slate-200 object-cover"
                 />
               </a>
             </div>

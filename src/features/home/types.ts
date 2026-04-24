@@ -123,6 +123,13 @@ export type ManagedUser = {
   last_sign_in_at: string | null
 }
 
+export type ManagedUserAccessFilter =
+  | 'todos'
+  | 'sin_acceso'
+  | 'con_acceso'
+  | 'acceso_reciente'
+  | 'requiere_revision'
+
 export type HomeDataEntities = {
   albaran: Albaran
   albaranLinea: AlbaranLinea

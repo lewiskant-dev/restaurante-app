@@ -140,13 +140,29 @@ export async function GET(request: Request) {
   }
   const supabaseAdmin = adminResult.client
 
-  const { data, error } = await supabaseAdmin.auth.admin.listUsers()
+  const users: ReturnType<typeof serializeUser>[] = []
+  const perPage = 200
+  let page = 1
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  while (true) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      page,
+      perPage,
+    })
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    const batch = data.users || []
+    users.push(...batch.map(serializeUser))
+
+    if (batch.length < perPage) {
+      break
+    }
+
+    page += 1
   }
-
-  const users = (data.users || []).map(serializeUser)
 
   return NextResponse.json({ users })
 }

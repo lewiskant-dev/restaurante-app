@@ -6,14 +6,25 @@ import { supabase } from '@/lib/supabase'
 
 type UseAuthProfileOptions = {
   currentUser: User | null
+  allowSelfRegister: boolean
   onCurrentUserChange: (user: User | null) => void
   onOperarioActualChange: (value: string) => void
   onError: (message: string) => void
   onToast: (message: string) => void
 }
 
+type SecurityAuditParams = {
+  entidad: 'sesion' | 'perfil'
+  accion: 'login' | 'logout' | 'editar_perfil' | 'cambiar_password'
+  detalle: string
+  payloadAntes?: unknown
+  payloadDespues?: unknown
+  accessToken?: string | null
+}
+
 export function useAuthProfile({
   currentUser,
+  allowSelfRegister,
   onCurrentUserChange,
   onOperarioActualChange,
   onError,
@@ -50,6 +61,41 @@ export function useAuthProfile({
     setCurrentPasswordDraft('')
     setNewPasswordDraft('')
     setConfirmPasswordDraft('')
+  }
+
+  async function writeSecurityAudit({
+    entidad,
+    accion,
+    detalle,
+    payloadAntes,
+    payloadDespues,
+    accessToken,
+  }: SecurityAuditParams) {
+    const token =
+      accessToken ||
+      (await supabase.auth.getSession()).data.session?.access_token ||
+      ''
+
+    if (!token) return
+
+    try {
+      await fetch('/api/audit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          entidad,
+          accion,
+          detalle,
+          payloadAntes: payloadAntes ?? null,
+          payloadDespues: payloadDespues ?? null,
+        }),
+      })
+    } catch (error) {
+      console.warn('No se pudo registrar la auditoría de seguridad', error)
+    }
   }
 
   async function handleAuthSubmit(event: FormEvent<HTMLFormElement>) {
@@ -89,18 +135,44 @@ export function useAuthProfile({
 
           const { error } = await supabase.auth.setSession(payload.session)
           if (error) throw error
+
+          await writeSecurityAudit({
+            entidad: 'sesion',
+            accion: 'login',
+            detalle: 'Inicio de sesión con acceso master',
+            payloadDespues: {
+              metodo: 'master',
+              login: identifier,
+            },
+            accessToken: payload.session.access_token,
+          })
         } else {
-          const { error } = await supabase.auth.signInWithPassword({
+          const { data, error } = await supabase.auth.signInWithPassword({
             email: identifier,
             password: authPassword,
           })
 
           if (error) throw error
+
+          await writeSecurityAudit({
+            entidad: 'sesion',
+            accion: 'login',
+            detalle: 'Inicio de sesión con email y contraseña',
+            payloadDespues: {
+              metodo: 'email',
+              email: identifier,
+            },
+            accessToken: data.session?.access_token,
+          })
         }
 
         setAuthPassword('')
         onToast('Sesión iniciada')
         return
+      }
+
+      if (!allowSelfRegister) {
+        throw new Error('El alta de cuentas está desactivada. Pide acceso a un administrador.')
       }
 
       const { data, error } = await supabase.auth.signUp({
@@ -134,6 +206,16 @@ export function useAuthProfile({
 
   async function handleSignOut() {
     onError('')
+
+    await writeSecurityAudit({
+      entidad: 'sesion',
+      accion: 'logout',
+      detalle: 'Cierre manual de sesión',
+      payloadAntes: {
+        email: currentUser?.email || '',
+        full_name: getUserDisplayName(currentUser),
+      },
+    })
 
     const { error } = await supabase.auth.signOut()
 
@@ -178,6 +260,7 @@ export function useAuthProfile({
     onError('')
 
     try {
+      const previousName = getUserDisplayName(currentUser)
       const { data, error } = await supabase.auth.updateUser({
         data: {
           ...currentUser?.user_metadata,
@@ -193,6 +276,18 @@ export function useAuthProfile({
         onCurrentUserChange(data.user)
         onOperarioActualChange(getUserDisplayName(data.user))
       }
+
+      await writeSecurityAudit({
+        entidad: 'perfil',
+        accion: 'editar_perfil',
+        detalle: 'Actualización del nombre visible del perfil',
+        payloadAntes: {
+          full_name: previousName,
+        },
+        payloadDespues: {
+          full_name: nextName,
+        },
+      })
 
       onToast('Perfil actualizado')
     } catch (err) {
@@ -254,6 +349,19 @@ export function useAuthProfile({
       setCurrentPasswordDraft('')
       setNewPasswordDraft('')
       setConfirmPasswordDraft('')
+
+      await writeSecurityAudit({
+        entidad: 'perfil',
+        accion: 'cambiar_password',
+        detalle: 'Cambio de contraseña del usuario autenticado',
+        payloadAntes: {
+          email: currentUser.email,
+        },
+        payloadDespues: {
+          email: currentUser.email,
+        },
+      })
+
       onToast('Contraseña actualizada')
     } catch (err) {
       onError(err instanceof Error ? err.message : 'No se pudo actualizar la contraseña')

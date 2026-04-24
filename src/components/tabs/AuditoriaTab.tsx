@@ -1,7 +1,15 @@
 'use client'
 
 import type { Auditoria } from '@/types'
-import { formatAuditValue, formatFechaHora, getAuditEntries } from '@/features/home/utils'
+import {
+  formatAuditValue,
+  formatFechaHora,
+  getAuditActionBadgeClasses,
+  getAuditActionLabel,
+  getAuditEntityBadgeClasses,
+  getAuditEntityLabel,
+  getAuditEntries,
+} from '@/features/home/utils'
 
 type AuditoriaTabProps = {
   auditoria: Auditoria[]
@@ -18,12 +26,23 @@ type AuditoriaTabProps = {
     | 'receta'
     | 'tpv'
     | 'usuario'
+    | 'sesion'
+    | 'perfil'
   auditoriaAccionFiltro: string
   onBusquedaChange: (value: string) => void
   onDesdeChange: (value: string) => void
   onHastaChange: (value: string) => void
   onEntidadFiltroChange: (
-    value: 'todas' | 'producto' | 'proveedor' | 'albaran' | 'receta' | 'tpv' | 'usuario'
+    value:
+      | 'todas'
+      | 'producto'
+      | 'proveedor'
+      | 'albaran'
+      | 'receta'
+      | 'tpv'
+      | 'usuario'
+      | 'sesion'
+      | 'perfil'
   ) => void
   onAccionFiltroChange: (value: string) => void
   onExportar: () => void
@@ -49,8 +68,46 @@ export function AuditoriaTab({
   onDeshacer,
   puedeDeshacerAuditoria,
 }: AuditoriaTabProps) {
+  const sessionEvents = auditoriaFiltrada.filter((item) => item.entidad === 'sesion').length
+  const profileEvents = auditoriaFiltrada.filter((item) => item.entidad === 'perfil').length
+  const userEvents = auditoriaFiltrada.filter((item) => item.entidad === 'usuario').length
+
   return (
     <>
+      <div className="mb-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-3xl bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+            Registros visibles
+          </div>
+          <div className="mt-2 text-3xl font-semibold text-slate-950">{auditoriaFiltrada.length}</div>
+          <div className="mt-2 text-sm text-slate-500">Sobre un total de {auditoria.length} eventos.</div>
+        </div>
+
+        <div className="rounded-3xl bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+            Sesión
+          </div>
+          <div className="mt-2 text-3xl font-semibold text-slate-950">{sessionEvents}</div>
+          <div className="mt-2 text-sm text-slate-500">Logins y cierres de sesión filtrados.</div>
+        </div>
+
+        <div className="rounded-3xl bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+            Perfil
+          </div>
+          <div className="mt-2 text-3xl font-semibold text-slate-950">{profileEvents}</div>
+          <div className="mt-2 text-sm text-slate-500">Cambios de perfil y contraseña.</div>
+        </div>
+
+        <div className="rounded-3xl bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+            Usuarios
+          </div>
+          <div className="mt-2 text-3xl font-semibold text-slate-950">{userEvents}</div>
+          <div className="mt-2 text-sm text-slate-500">Altas, roles, bajas y resets.</div>
+        </div>
+      </div>
+
       <div className="mt-1">
         <input
           type="search"
@@ -77,7 +134,9 @@ export function AuditoriaTab({
       </div>
 
       <div className="mt-2 flex flex-wrap gap-2">
-        {(['todas', 'producto', 'proveedor', 'albaran', 'receta', 'tpv', 'usuario'] as const).map(
+        {(
+          ['todas', 'producto', 'proveedor', 'albaran', 'receta', 'tpv', 'usuario', 'sesion', 'perfil'] as const
+        ).map(
           (entidad) => (
             <button
               key={entidad}
@@ -107,6 +166,11 @@ export function AuditoriaTab({
           'anular',
           'deshacer_archivar',
           'importar_csv',
+          'login',
+          'logout',
+          'editar_perfil',
+          'cambiar_password',
+          'reset_password',
         ].map((accion) => (
           <button
             key={accion}
@@ -150,8 +214,17 @@ export function AuditoriaTab({
               <summary className="cursor-pointer list-none">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold text-slate-900">
-                      {item.entidad} · {item.accion}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getAuditEntityBadgeClasses(item.entidad)}`}
+                      >
+                        {getAuditEntityLabel(item.entidad)}
+                      </span>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getAuditActionBadgeClasses(item.accion)}`}
+                      >
+                        {getAuditActionLabel(item.accion)}
+                      </span>
                     </div>
                     <div className="mt-1 text-xs text-slate-500">
                       {item.detalle || 'Sin detalle'}

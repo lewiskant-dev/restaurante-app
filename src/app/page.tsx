@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useEffectEvent, useMemo, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { UserManagementPanel } from '@/components/admin/UserManagementPanel'
 import { AuthScreen } from '@/components/auth/AuthScreen'
@@ -40,6 +40,7 @@ import {
   canAccessTab,
   getInitials,
   getMainTabForTab,
+  getTabLabel,
   parseTabKey,
   getUserDisplayName,
   getUserRole,
@@ -51,6 +52,7 @@ import {
 import { supabase } from '@/lib/supabase'
 
 export default function HomePage() {
+  const allowSelfRegister = process.env.NEXT_PUBLIC_ALLOW_SELF_REGISTER === 'true'
   const [tab, setTab] = useState<TabKey>('stock')
   const [mainTab, setMainTab] = useState<MainTab>(getMainTabForTab('stock'))
   const [session, setSession] = useState<Session | null>(null)
@@ -98,6 +100,7 @@ export default function HomePage() {
     updateOwnPassword,
   } = useAuthProfile({
     currentUser,
+    allowSelfRegister,
     onCurrentUserChange: setCurrentUser,
     onOperarioActualChange: setOperarioActual,
     onError: setError,
@@ -105,7 +108,9 @@ export default function HomePage() {
   })
 
   const [busquedaAuditoria, setBusquedaAuditoria] = useState('')
-  const [auditoriaEntidadFiltro, setAuditoriaEntidadFiltro] = useState<'todas' | 'producto' | 'proveedor' | 'albaran' | 'receta' | 'tpv' | 'usuario'>('todas')
+  const [auditoriaEntidadFiltro, setAuditoriaEntidadFiltro] = useState<
+    'todas' | 'producto' | 'proveedor' | 'albaran' | 'receta' | 'tpv' | 'usuario' | 'sesion' | 'perfil'
+  >('todas')
   const [auditoriaAccionFiltro, setAuditoriaAccionFiltro] = useState<string>('todas')
 
   const [auditoriaDesde, setAuditoriaDesde] = useState('')
@@ -123,6 +128,8 @@ export default function HomePage() {
     resettingManagedUserId,
     busquedaUsuarios,
     managedUserRoleFilter,
+    managedUserAccessFilter,
+    managedUsersSummary,
     newManagedUserName,
     newManagedUserEmail,
     newManagedUserPassword,
@@ -134,6 +141,7 @@ export default function HomePage() {
     managedUserPasswordDrafts,
     setBusquedaUsuarios,
     setManagedUserRoleFilter,
+    setManagedUserAccessFilter,
     setNewManagedUserName,
     setNewManagedUserEmail,
     setNewManagedUserPassword,
@@ -149,6 +157,17 @@ export default function HomePage() {
     accessToken: session?.access_token,
     onError: setError,
     onToast: setToast,
+  })
+
+  const resetClientDomainState = useEffectEvent(() => {
+    setAuditoria([])
+    setMapeosProductos([])
+    setProveedorRecienCreadoId('')
+    resetStockState()
+    resetProveedorState()
+    resetAlbaranState()
+    resetRecetaTpvState()
+    resetManagedUsersState()
   })
 
   useEffect(() => {
@@ -176,14 +195,7 @@ export default function HomePage() {
       setCurrentUser(nextSession?.user ?? null)
       setOperarioActual(getUserDisplayName(nextSession?.user ?? null))
       if (!nextSession) {
-        setAuditoria([])
-        setMapeosProductos([])
-        setProveedorRecienCreadoId('')
-        resetStockState()
-        resetProveedorState()
-        resetAlbaranState()
-        resetRecetaTpvState()
-        resetManagedUsersState()
+        resetClientDomainState()
       }
       setAuthReady(true)
     })
@@ -194,21 +206,62 @@ export default function HomePage() {
     }
   }, [])
 
-  useEffect(() => {
-    if (!authReady || !session) return
-    void loadInitialData()
-  }, [authReady, session?.user.id])
+  const loadInitialDataEvent = useEffectEvent(async () => {
+    const role = getUserRole(currentUser)
+    const tasks: Promise<void>[] = [loadProductos(), loadMovimientos()]
+
+    if (hasPermission(role, 'albaran_manage') || hasPermission(role, 'proveedor_manage')) {
+      tasks.push(loadProveedores())
+    } else {
+      resetProveedorState()
+    }
+
+    if (hasPermission(role, 'albaran_manage')) {
+      tasks.push(loadAlbaranes())
+    } else {
+      resetAlbaranState()
+    }
+
+    if (hasPermission(role, 'auditoria_view')) {
+      tasks.push(loadAuditoria())
+    } else {
+      setAuditoria([])
+    }
+
+    if (hasPermission(role, 'receta_manage') || hasPermission(role, 'tpv_manage')) {
+      tasks.push(loadRecetas())
+    } else {
+      resetRecetaTpvState()
+    }
+
+    if (hasPermission(role, 'tpv_manage')) {
+      tasks.push(loadMapeosProductos())
+    } else {
+      setMapeosProductos([])
+    }
+
+    await Promise.all(tasks)
+  })
 
   useEffect(() => {
+    if (!authReady || !session) return
+    void loadInitialDataEvent()
+  }, [authReady, session])
+
+  const syncManagedUsersForActiveTab = useEffectEvent(async () => {
     if (!session || !canManageUsers(getUserRole(currentUser))) {
       resetManagedUsersState()
       return
     }
 
     if (tab === 'usuarios') {
-      void loadManagedUsers()
+      await loadManagedUsers()
     }
-  }, [tab, session?.access_token, currentUser?.id])
+  })
+
+  useEffect(() => {
+    void syncManagedUsersForActiveTab()
+  }, [tab, session, currentUser])
 
   useEffect(() => {
     if (!toast) return
@@ -248,10 +301,11 @@ export default function HomePage() {
       )
 
       if (fallbackTab && fallbackTab !== tab) {
+        setToast(`Tu usuario no puede acceder a ${getTabLabel(tab)}. Te he llevado a ${getTabLabel(fallbackTab)}.`)
         setTab(fallbackTab)
       }
     }
-  }, [tab, currentUser?.id, currentUser?.app_metadata, currentUser?.user_metadata])
+  }, [tab, currentUser])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -473,43 +527,6 @@ export default function HomePage() {
     setAlbaranProveedorId(proveedorRecienCreadoId)
     setProveedorRecienCreadoId('')
   }, [proveedorRecienCreadoId, setAlbaranProveedorId])
-
-  async function loadInitialData() {
-    const role = getUserRole(currentUser)
-    const tasks: Promise<void>[] = [loadProductos(), loadMovimientos()]
-
-    if (hasPermission(role, 'albaran_manage') || hasPermission(role, 'proveedor_manage')) {
-      tasks.push(loadProveedores())
-    } else {
-      resetProveedorState()
-    }
-
-    if (hasPermission(role, 'albaran_manage')) {
-      tasks.push(loadAlbaranes())
-    } else {
-      resetAlbaranState()
-    }
-
-    if (hasPermission(role, 'auditoria_view')) {
-      tasks.push(loadAuditoria())
-    } else {
-      setAuditoria([])
-    }
-
-    if (hasPermission(role, 'receta_manage') || hasPermission(role, 'tpv_manage')) {
-      tasks.push(loadRecetas())
-    } else {
-      resetRecetaTpvState()
-    }
-
-    if (hasPermission(role, 'tpv_manage')) {
-      tasks.push(loadMapeosProductos())
-    } else {
-      setMapeosProductos([])
-    }
-
-    await Promise.all(tasks)
-  }
 
   async function loadAuditoria() {
     setLoadingAuditoria(true)
@@ -805,6 +822,7 @@ export default function HomePage() {
     return (
       <AuthScreen
         authReady={authReady}
+        allowSelfRegister={allowSelfRegister}
         authMode={authMode}
         authName={authName}
         authEmail={authEmail}
@@ -992,6 +1010,8 @@ export default function HomePage() {
             resettingManagedUserId={resettingManagedUserId}
             busquedaUsuarios={busquedaUsuarios}
             managedUserRoleFilter={managedUserRoleFilter}
+            managedUserAccessFilter={managedUserAccessFilter}
+            managedUsersSummary={managedUsersSummary}
             newManagedUserName={newManagedUserName}
             newManagedUserEmail={newManagedUserEmail}
             newManagedUserPassword={newManagedUserPassword}
@@ -1008,6 +1028,7 @@ export default function HomePage() {
             onResetPassword={(userId, label) => void resetManagedUserPassword(userId, label)}
             onSearchChange={setBusquedaUsuarios}
             onRoleFilterChange={setManagedUserRoleFilter}
+            onAccessFilterChange={setManagedUserAccessFilter}
             onNewNameChange={setNewManagedUserName}
             onNewEmailChange={setNewManagedUserEmail}
             onNewPasswordChange={setNewManagedUserPassword}

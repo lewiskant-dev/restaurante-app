@@ -1,7 +1,12 @@
 'use client'
 
-import type { ManagedUser, UserRole } from '@/features/home/types'
-import { formatFechaHora, getRoleLabel, validatePasswordStrength } from '@/features/home/utils'
+import type { ManagedUser, ManagedUserAccessFilter, UserRole } from '@/features/home/types'
+import {
+  formatFechaHora,
+  getManagedUserAccessStatus,
+  getRoleLabel,
+  validatePasswordStrength,
+} from '@/features/home/utils'
 
 type UserManagementPanelProps = {
   currentUserId: string
@@ -15,6 +20,18 @@ type UserManagementPanelProps = {
   resettingManagedUserId: string
   busquedaUsuarios: string
   managedUserRoleFilter: 'todos' | UserRole
+  managedUserAccessFilter: ManagedUserAccessFilter
+  managedUsersSummary: {
+    total: number
+    empleados: number
+    encargados: number
+    administradores: number
+    masters: number
+    sinAcceso: number
+    accesoReciente: number
+    accesoAntiguo: number
+    requierenRevision: number
+  }
   newManagedUserName: string
   newManagedUserEmail: string
   newManagedUserPassword: string
@@ -31,6 +48,7 @@ type UserManagementPanelProps = {
   onResetPassword: (userId: string, label: string) => void
   onSearchChange: (value: string) => void
   onRoleFilterChange: (value: 'todos' | UserRole) => void
+  onAccessFilterChange: (value: ManagedUserAccessFilter) => void
   onNewNameChange: (value: string) => void
   onNewEmailChange: (value: string) => void
   onNewPasswordChange: (value: string) => void
@@ -50,6 +68,8 @@ export function UserManagementPanel({
   resettingManagedUserId,
   busquedaUsuarios,
   managedUserRoleFilter,
+  managedUserAccessFilter,
+  managedUsersSummary,
   newManagedUserName,
   newManagedUserEmail,
   newManagedUserPassword,
@@ -66,6 +86,7 @@ export function UserManagementPanel({
   onResetPassword,
   onSearchChange,
   onRoleFilterChange,
+  onAccessFilterChange,
   onNewNameChange,
   onNewEmailChange,
   onNewPasswordChange,
@@ -97,6 +118,88 @@ export function UserManagementPanel({
         <span className="font-semibold">Administrador</span>. El rol{' '}
         <span className="font-semibold">Master</span> es interno y no se puede degradar desde un
         usuario normal.
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-3xl bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+            Equipo total
+          </div>
+          <div className="mt-2 text-3xl font-semibold text-slate-950">{managedUsersSummary.total}</div>
+          <div className="mt-2 text-sm text-slate-500">
+            {managedUsersSummary.empleados} empleados · {managedUsersSummary.encargados} encargados
+          </div>
+        </div>
+
+        <div className="rounded-3xl bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+            Gestión avanzada
+          </div>
+          <div className="mt-2 text-3xl font-semibold text-slate-950">
+            {managedUsersSummary.administradores + managedUsersSummary.masters}
+          </div>
+          <div className="mt-2 text-sm text-slate-500">
+            {managedUsersSummary.administradores} admin · {managedUsersSummary.masters} master
+          </div>
+        </div>
+
+        <div className="rounded-3xl bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+            Sin acceso aún
+          </div>
+          <div className="mt-2 text-3xl font-semibold text-slate-950">{managedUsersSummary.sinAcceso}</div>
+          <div className="mt-2 text-sm text-slate-500">
+            Usuarios creados que todavía no han iniciado sesión.
+          </div>
+        </div>
+
+        <div className="rounded-3xl bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+            Requieren revisión
+          </div>
+          <div className="mt-2 text-3xl font-semibold text-slate-950">{managedUsersSummary.requierenRevision}</div>
+          <div className="mt-2 text-sm text-slate-500">
+            Sin acceso o con actividad demasiado antigua.
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-emerald-700">
+            Acceso reciente
+          </div>
+          <div className="mt-2 text-2xl font-semibold text-emerald-900">
+            {managedUsersSummary.accesoReciente}
+          </div>
+          <div className="mt-2 text-sm text-emerald-700">
+            Han entrado en los últimos 14 días.
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-rose-100 bg-rose-50/60 p-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-rose-700">
+            Acceso antiguo
+          </div>
+          <div className="mt-2 text-2xl font-semibold text-rose-900">
+            {managedUsersSummary.accesoAntiguo}
+          </div>
+          <div className="mt-2 text-sm text-rose-700">
+            Última actividad hace más de 30 días.
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-amber-100 bg-amber-50/60 p-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-amber-700">
+            Sin acceso aún
+          </div>
+          <div className="mt-2 text-2xl font-semibold text-amber-900">
+            {managedUsersSummary.sinAcceso}
+          </div>
+          <div className="mt-2 text-sm text-amber-700">
+            Cuentas creadas que todavía no se han usado.
+          </div>
+        </div>
       </div>
 
       <div className="rounded-3xl bg-white p-4 shadow-sm">
@@ -169,7 +272,7 @@ export function UserManagementPanel({
       </div>
 
       <div className="rounded-3xl bg-white p-4 shadow-sm">
-        <div className="mb-4 grid gap-3 xl:grid-cols-[1.3fr_0.8fr_auto]">
+        <div className="mb-4 grid gap-3 xl:grid-cols-[1.3fr_0.8fr_0.8fr_auto]">
           <input
             type="search"
             value={busquedaUsuarios}
@@ -188,6 +291,18 @@ export function UserManagementPanel({
             <option value="encargado">Encargado</option>
             <option value="administrador">Administrador</option>
             {currentUserRole === 'master' ? <option value="master">Master</option> : null}
+          </select>
+
+          <select
+            value={managedUserAccessFilter}
+            onChange={(e) => onAccessFilterChange(e.target.value as ManagedUserAccessFilter)}
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+          >
+            <option value="todos">Todos los accesos</option>
+            <option value="sin_acceso">Sin acceso todavía</option>
+            <option value="con_acceso">Con acceso registrado</option>
+            <option value="acceso_reciente">Acceso reciente</option>
+            <option value="requiere_revision">Requieren revisión</option>
           </select>
 
           <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-600">
@@ -210,6 +325,7 @@ export function UserManagementPanel({
             {managedUsersFiltrados.map((managedUser) => {
               const isCurrentUser = managedUser.id === currentUserId
               const isMasterTarget = managedUser.role === 'master'
+              const accessStatus = getManagedUserAccessStatus(managedUser.last_sign_in_at)
               const canEditTarget =
                 currentUserRole === 'master'
                   ? true
@@ -234,6 +350,11 @@ export function UserManagementPanel({
                       <h3 className="truncate text-sm font-semibold text-slate-900">
                         {managedUser.full_name || managedUser.email}
                       </h3>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${accessStatus.className}`}
+                      >
+                        {accessStatus.label}
+                      </span>
                       {isCurrentUser ? (
                         <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-600">
                           Tu
@@ -247,6 +368,7 @@ export function UserManagementPanel({
                         ? ` · Último acceso: ${formatFechaHora(managedUser.last_sign_in_at)}`
                         : ' · Aun no ha iniciado sesion'}
                     </div>
+                    <div className="mt-1 text-xs text-slate-500">{accessStatus.detail}</div>
                   </div>
 
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

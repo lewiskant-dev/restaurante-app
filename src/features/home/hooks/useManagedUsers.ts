@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import type { ManagedUser, UserRole } from '@/features/home/types'
+import type { ManagedUser, ManagedUserAccessFilter, UserRole } from '@/features/home/types'
 import {
+  getManagedUserAccessStatus,
   getRoleLabel,
   sanitizeSingleLine,
   validateDisplayName,
@@ -14,6 +15,14 @@ type UseManagedUsersOptions = {
   onToast: (message: string) => void
 }
 
+const RECENT_ACCESS_WINDOW_MS = 1000 * 60 * 60 * 24 * 14
+
+function hasRecentManagedUserAccess(lastSignInAt: string | null) {
+  if (!lastSignInAt) return false
+  const timestamp = new Date(lastSignInAt).getTime()
+  return Number.isFinite(timestamp) && timestamp >= Date.now() - RECENT_ACCESS_WINDOW_MS
+}
+
 export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUsersOptions) {
   const [managedUsers, setManagedUsers] = useState<ManagedUser[]>([])
   const [loadingManagedUsers, setLoadingManagedUsers] = useState(false)
@@ -23,6 +32,8 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
   const [resettingManagedUserId, setResettingManagedUserId] = useState('')
   const [busquedaUsuarios, setBusquedaUsuarios] = useState('')
   const [managedUserRoleFilter, setManagedUserRoleFilter] = useState<'todos' | UserRole>('todos')
+  const [managedUserAccessFilter, setManagedUserAccessFilter] =
+    useState<ManagedUserAccessFilter>('todos')
   const [newManagedUserName, setNewManagedUserName] = useState('')
   const [newManagedUserEmail, setNewManagedUserEmail] = useState('')
   const [newManagedUserPassword, setNewManagedUserPassword] = useState('')
@@ -45,6 +56,17 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
     !newManagedUserEmailError &&
     !newManagedUserPasswordError
 
+  function sortManagedUsers(list: ManagedUser[]) {
+    return [...list].sort((a, b) => {
+      const aLast = a.last_sign_in_at ? new Date(a.last_sign_in_at).getTime() : 0
+      const bLast = b.last_sign_in_at ? new Date(b.last_sign_in_at).getTime() : 0
+
+      if (aLast !== bLast) return bLast - aLast
+
+      return (a.full_name || a.email).localeCompare(b.full_name || b.email, 'es')
+    })
+  }
+
   const managedUsersFiltrados = useMemo(() => {
     const query = busquedaUsuarios.trim().toLowerCase()
 
@@ -53,6 +75,20 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
         managedUserRoleFilter === 'todos' ? true : item.role === managedUserRoleFilter
 
       if (!matchesRole) return false
+      if (managedUserAccessFilter === 'sin_acceso' && item.last_sign_in_at) return false
+      if (managedUserAccessFilter === 'con_acceso' && !item.last_sign_in_at) return false
+      if (
+        managedUserAccessFilter === 'acceso_reciente' &&
+        !hasRecentManagedUserAccess(item.last_sign_in_at)
+      ) {
+        return false
+      }
+      if (
+        managedUserAccessFilter === 'requiere_revision' &&
+        !getManagedUserAccessStatus(item.last_sign_in_at).needsReview
+      ) {
+        return false
+      }
       if (!query) return true
 
       return [item.full_name, item.email, getRoleLabel(item.role)]
@@ -60,7 +96,25 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
         .toLowerCase()
         .includes(query)
     })
-  }, [busquedaUsuarios, managedUserRoleFilter, managedUsers])
+  }, [busquedaUsuarios, managedUserRoleFilter, managedUserAccessFilter, managedUsers])
+
+  const managedUsersSummary = useMemo(() => {
+    return {
+      total: managedUsers.length,
+      empleados: managedUsers.filter((item) => item.role === 'empleado').length,
+      encargados: managedUsers.filter((item) => item.role === 'encargado').length,
+      administradores: managedUsers.filter((item) => item.role === 'administrador').length,
+      masters: managedUsers.filter((item) => item.role === 'master').length,
+      sinAcceso: managedUsers.filter((item) => !item.last_sign_in_at).length,
+      accesoReciente: managedUsers.filter((item) => hasRecentManagedUserAccess(item.last_sign_in_at)).length,
+      accesoAntiguo: managedUsers.filter(
+        (item) => getManagedUserAccessStatus(item.last_sign_in_at).label === 'Antiguo'
+      ).length,
+      requierenRevision: managedUsers.filter(
+        (item) => getManagedUserAccessStatus(item.last_sign_in_at).needsReview
+      ).length,
+    }
+  }, [managedUsers])
 
   async function loadManagedUsers() {
     if (!accessToken) return
@@ -81,7 +135,7 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
         throw new Error(payload.error || 'No se pudieron cargar los usuarios')
       }
 
-      setManagedUsers(payload.users ?? [])
+      setManagedUsers(sortManagedUsers(payload.users ?? []))
     } catch (err) {
       onError(err instanceof Error ? err.message : 'No se pudieron cargar los usuarios')
     } finally {
@@ -132,7 +186,7 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
       }
 
       setManagedUsers((current) =>
-        current.map((item) => (item.id === userId ? payload.user ?? item : item))
+        sortManagedUsers(current.map((item) => (item.id === userId ? payload.user ?? item : item)))
       )
       onToast(`Rol actualizado a ${getRoleLabel(role)}`)
     } catch (err) {
@@ -180,9 +234,7 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
         throw new Error(payload.error || 'No se pudo crear el usuario')
       }
 
-      setManagedUsers((current) =>
-        [...current, payload.user!].sort((a, b) => a.full_name.localeCompare(b.full_name, 'es'))
-      )
+      setManagedUsers((current) => sortManagedUsers([...current, payload.user!]))
       setNewManagedUserName('')
       setNewManagedUserEmail('')
       setNewManagedUserPassword('')
@@ -302,6 +354,8 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
     resettingManagedUserId,
     busquedaUsuarios,
     managedUserRoleFilter,
+    managedUserAccessFilter,
+    managedUsersSummary,
     newManagedUserName,
     newManagedUserEmail,
     newManagedUserPassword,
@@ -313,6 +367,7 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
     managedUserPasswordDrafts,
     setBusquedaUsuarios,
     setManagedUserRoleFilter,
+    setManagedUserAccessFilter,
     setNewManagedUserName,
     setNewManagedUserEmail,
     setNewManagedUserPassword,

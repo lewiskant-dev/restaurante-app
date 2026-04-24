@@ -4,6 +4,7 @@ import type { FormEvent, ReactNode } from 'react'
 
 type AuthScreenProps = {
   authReady: boolean
+  allowSelfRegister: boolean
   authMode: 'login' | 'register'
   authName: string
   authEmail: string
@@ -42,6 +43,7 @@ function Icon({
 
 export function AuthScreen({
   authReady,
+  allowSelfRegister,
   authMode,
   authName,
   authEmail,
@@ -127,15 +129,17 @@ export function AuthScreen({
             >
               Iniciar sesión
             </button>
-            <button
-              type="button"
-              onClick={() => onModeChange('register')}
-              className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                authMode === 'register' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
-              }`}
-            >
-              Crear cuenta
-            </button>
+            {allowSelfRegister ? (
+              <button
+                type="button"
+                onClick={() => onModeChange('register')}
+                className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                  authMode === 'register' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
+                }`}
+              >
+                Crear cuenta
+              </button>
+            ) : null}
           </div>
 
           <form onSubmit={onSubmit} className="mt-8 space-y-4">
@@ -204,8 +208,17 @@ export function AuthScreen({
           </form>
 
           <p className="mt-5 text-sm text-slate-500">
-            Las cuentas nuevas nacen como <span className="font-semibold">Empleado</span>. Un
-            administrador o el usuario master podrá elevar permisos desde dentro de la app.
+            {allowSelfRegister ? (
+              <>
+                Las cuentas nuevas nacen como <span className="font-semibold">Empleado</span>. Un
+                administrador o el usuario master podrá elevar permisos desde dentro de la app.
+              </>
+            ) : (
+              <>
+                El alta de cuentas está controlada desde el panel de <span className="font-semibold">Usuarios</span>.
+                Si necesitas acceso, pídeselo a un administrador o al usuario master.
+              </>
+            )}
           </p>
         </section>
       </div>
