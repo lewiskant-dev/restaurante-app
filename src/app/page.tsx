@@ -3,131 +3,65 @@
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { UserManagementPanel } from '@/components/admin/UserManagementPanel'
+import { AuthScreen } from '@/components/auth/AuthScreen'
+import { AppShellHeader } from '@/components/layout/AppShellHeader'
+import { ProfilePanel } from '@/components/profile/ProfilePanel'
+import { AuditoriaTab } from '@/components/tabs/AuditoriaTab'
+import HistorialTab from '@/components/tabs/HistorialTab'
+import StockTab from '@/components/tabs/StockTab'
 import type {
-  MovimientoStock,
-  Producto,
-  Proveedor,
   Albaran,
   AlbaranLinea,
   Auditoria,
+  MovimientoStock,
+  Producto,
+  Proveedor,
 } from '@/types'
-
-type TabKey =
-  | 'stock'
-  | 'historial'
-  | 'albaran'
-  | 'albaranes'
-  | 'proveedores'
-  | 'usuarios'
-  | 'auditoria'
-  | 'tpv'
-  | 'recetas'
-
-type MainTab = 'operativa' | 'gestion' | 'control'
-type UserRole = 'empleado' | 'encargado' | 'administrador' | 'master'
-type PermissionKey =
-  | 'stock_consume'
-  | 'stock_adjust'
-  | 'stock_manage'
-  | 'albaran_manage'
-  | 'proveedor_manage'
-  | 'receta_manage'
-  | 'tpv_manage'
-  | 'auditoria_view'
-  | 'user_manage'
-
-type NuevoProductoForm = {
-  nombre: string
-  categoria: string
-  unidad: string
-  stock_actual: string
-  stock_minimo: string
-  referencia: string
-}
-
-type AlbaranLineaForm = {
-  producto_id: string
-  cantidad: string
-  precio_unitario: string
-  nombre_detectado?: string
-  mapeo_estado?: 'automatico' | 'aprendido' | 'manual' | 'pendiente'
-}
-
-type ProveedorForm = {
-  nombre: string
-  cif: string
-  telefono: string
-  email: string
-  notas: string
-}
-
-type MovimientoConProducto = MovimientoStock & {
-  productos?: {
-    nombre: string
-    unidad: string
-  } | null
-}
-
-type VentaTPVCruda = {
-  producto_externo: string
-  cantidad: number
-  fecha: string
-  raw: string
-}
-
-type OCRAlbaranLinea = {
-  nombre: string
-  cantidad: number
-  precio_unitario: number
-}
-
-type OCRAlbaranResult = {
-  proveedor: string
-  numero: string
-  fecha: string
-  lineas: OCRAlbaranLinea[]
-  resumen?: string
-}
-
-type MapeoProducto = {
-  id: string
-  nombre_externo: string
-  producto_id: string | null
-  created_at: string
-}
-
-
-type Receta = {
-  id: string
-  nombre: string
-  nombre_tpv: string | null
-  activo: boolean | null
-  created_at: string
-}
-
-type RecetaLinea = {
-  id: string
-  receta_id: string
-  producto_id: string
-  cantidad: number
-  created_at: string
-}
-
-type RecetaLineaForm = {
-  producto_id: string
-  cantidad: string
-}
-
-type ManagedUser = {
-  id: string
-  email: string
-  full_name: string
-  role: UserRole
-  created_at: string
-  last_sign_in_at: string | null
-}
-
+import type {
+  AlbaranLineaForm,
+  MainTab,
+  ManagedUser,
+  MapeoProducto,
+  MovimientoConProducto,
+  NuevoProductoForm,
+  OCRAlbaranResult,
+  PermissionKey,
+  ProveedorForm,
+  Receta,
+  RecetaLinea,
+  RecetaLineaForm,
+  TabKey,
+  UserRole,
+  VentaTPVCruda,
+} from '@/features/home/types'
+import {
+  canManageUsers,
+  canAccessTab,
+  formatCantidad,
+  formatEuro,
+  formatFecha,
+  formatFechaHora,
+  formatOCRDateToInput,
+  getInitials,
+  getMainTabForTab,
+  getNivel,
+  getRoleLabel,
+  getTabLabel,
+  getUserDisplayName,
+  getUserRole,
+  getUserRoleLabel,
+  hasPermission,
+  mainTabConfig,
+  normalizeText,
+  sanitizeSingleLine,
+  scoreRecipeMatch,
+  todayLocalInputDate,
+  validateDisplayName,
+  validateEmailAddress,
+  validatePasswordStrength,
+} from '@/features/home/utils'
+import { supabase } from '@/lib/supabase'
 
 const initialProductoForm: NuevoProductoForm = {
   nombre: '',
@@ -157,195 +91,6 @@ const initialProveedorForm: ProveedorForm = {
 const initialRecetaLinea: RecetaLineaForm = {
   producto_id: '',
   cantidad: '',
-}
-
-function todayLocalInputDate() {
-  const now = new Date()
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-  return local.toISOString().slice(0, 10)
-}
-
-function formatFecha(fecha: string) {
-  try {
-    return new Date(fecha).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })
-  } catch {
-    return fecha
-  }
-}
-
-function formatFechaHora(fecha: string) {
-  try {
-    return new Date(fecha).toLocaleString('es-ES', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return fecha
-  }
-}
-
-function formatOCRDateToInput(value: string) {
-  if (!value) return todayLocalInputDate()
-
-  const clean = value.trim()
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
-    return clean
-  }
-
-  const match = clean.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/)
-  if (match) {
-    const day = match[1].padStart(2, '0')
-    const month = match[2].padStart(2, '0')
-    const year = match[3].length === 2 ? `20${match[3]}` : match[3]
-    return `${year}-${month}-${day}`
-  }
-
-  const parsed = new Date(clean)
-  if (!Number.isNaN(parsed.getTime())) {
-    return parsed.toISOString().slice(0, 10)
-  }
-
-  return todayLocalInputDate()
-}
-
-function getNivel(producto: Producto) {
-  if (producto.stock_minimo > 0 && producto.stock_actual <= 0) return 'critico'
-  if (producto.stock_minimo > 0 && producto.stock_actual <= producto.stock_minimo) return 'bajo'
-  return 'ok'
-}
-
-function formatEuro(n: number) {
-  return n.toLocaleString('es-ES', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }) + ' €'
-}
-
-function formatCantidad(n: number) {
-  return n.toLocaleString('es-ES', {
-    minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
-    maximumFractionDigits: 2,
-  })
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function formatAuditValue(value: unknown) {
-  if (value === null || value === undefined || value === '') return '—'
-  if (typeof value === 'number') return Number.isFinite(value) ? formatCantidad(value) : String(value)
-  if (typeof value === 'boolean') return value ? 'Sí' : 'No'
-  if (typeof value === 'string') return value
-
-  try {
-    return JSON.stringify(value, null, 2)
-  } catch {
-    return String(value)
-  }
-}
-
-function getAuditEntries(payload: unknown) {
-  if (Array.isArray(payload)) {
-    return payload.map((value, index) => [`[${index}]`, value] as const)
-  }
-
-  if (isPlainObject(payload)) {
-    return Object.entries(payload)
-  }
-
-  if (payload === null || payload === undefined) {
-    return []
-  }
-
-  return [['valor', payload] as const]
-}
-
-function getUserDisplayName(user: User | null) {
-  if (!user) return ''
-
-  const fullName = user.user_metadata?.full_name
-  if (typeof fullName === 'string' && fullName.trim()) return fullName.trim()
-
-  const email = user.email?.trim()
-  if (email) return email.split('@')[0]
-
-  return 'Usuario'
-}
-
-function getUserRoleLabel(user: User | null) {
-  if (!user) return ''
-
-  return getRoleLabel(getUserRole(user))
-}
-
-function getInitials(value: string) {
-  return value
-    .split(' ')
-    .map((part) => part.trim()[0] || '')
-    .filter(Boolean)
-    .slice(0, 2)
-    .join('')
-    .toUpperCase()
-}
-
-function normalizeUserRole(value: unknown): UserRole {
-  const normalized =
-    typeof value === 'string'
-      ? normalizeText(value)
-      : ''
-
-  if (normalized === 'master') return 'master'
-  if (normalized === 'administrador' || normalized === 'admin') return 'administrador'
-  if (normalized === 'encargado') return 'encargado'
-  return 'empleado'
-}
-
-function getUserRole(user: User | null): UserRole {
-  if (!user) return 'empleado'
-  return normalizeUserRole(user.app_metadata?.role ?? user.user_metadata?.role)
-}
-
-function getRoleLabel(role: UserRole) {
-  if (role === 'master') return 'Master'
-  if (role === 'administrador') return 'Administrador'
-  if (role === 'encargado') return 'Encargado'
-  return 'Empleado'
-}
-
-function canManageUsers(role: UserRole) {
-  return role === 'administrador' || role === 'master'
-}
-
-function hasPermission(role: UserRole, permission: PermissionKey) {
-  if (role === 'master' || role === 'administrador') return true
-  if (role === 'encargado') {
-    return (
-      permission === 'stock_consume' ||
-      permission === 'stock_adjust' ||
-      permission === 'albaran_manage'
-    )
-  }
-
-  return false
-}
-
-function canAccessTab(role: UserRole, tab: TabKey) {
-  if (tab === 'stock' || tab === 'historial') return true
-  if (tab === 'albaran' || tab === 'albaranes') return hasPermission(role, 'albaran_manage')
-  if (tab === 'proveedores') return hasPermission(role, 'proveedor_manage')
-  if (tab === 'recetas') return hasPermission(role, 'receta_manage')
-  if (tab === 'tpv') return hasPermission(role, 'tpv_manage')
-  if (tab === 'auditoria') return hasPermission(role, 'auditoria_view')
-  if (tab === 'usuarios') return hasPermission(role, 'user_manage')
-  return false
 }
 
 function Icon({
@@ -412,48 +157,6 @@ function getTabIcon(tab: TabKey) {
 }
 
 
-function normalizeText(value: string) {
-  return (value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function sanitizeSingleLine(value: string) {
-  return value.replace(/\s+/g, ' ').trim()
-}
-
-function validateDisplayName(value: string) {
-  const normalized = sanitizeSingleLine(value)
-
-  if (!normalized) return 'El nombre visible es obligatorio'
-  if (normalized.length < 2) return 'Usa al menos 2 caracteres'
-  if (normalized.length > 60) return 'Usa como maximo 60 caracteres'
-  return ''
-}
-
-function validateEmailAddress(value: string) {
-  const normalized = value.trim().toLowerCase()
-
-  if (!normalized) return 'El correo es obligatorio'
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
-    return 'Introduce un correo valido'
-  }
-
-  return ''
-}
-
-function validatePasswordStrength(value: string) {
-  if (!value) return 'La contraseña es obligatoria'
-  if (value.length < 8) return 'Debe tener al menos 8 caracteres'
-  if (!/[A-Za-z]/.test(value)) return 'Incluye al menos una letra'
-  if (!/\d/.test(value)) return 'Incluye al menos un numero'
-  return ''
-}
-
-
 function ActionMenu({
   children,
   label = 'Acciones',
@@ -472,81 +175,6 @@ function ActionMenu({
     </details>
   )
 }
-
-
-function tokenSet(value: string) {
-  return normalizeText(value)
-    .split(' ')
-    .map((token) => token.trim())
-    .filter(Boolean)
-}
-
-function scoreRecipeMatch(articuloTPV: string, receta: { nombre: string; nombre_tpv: string | null }) {
-  const articulo = normalizeText(articuloTPV)
-  const nombreReceta = normalizeText(receta.nombre || '')
-  const nombreTPV = normalizeText(receta.nombre_tpv || '')
-
-  let score = 0
-
-  if (articulo && nombreTPV && articulo === nombreTPV) score += 100
-  if (articulo && nombreReceta && articulo === nombreReceta) score += 90
-  if (articulo && nombreReceta && articulo.includes(nombreReceta)) score += 55
-  if (articulo && nombreReceta && nombreReceta.includes(articulo)) score += 45
-  if (articulo && nombreTPV && articulo.includes(nombreTPV)) score += 40
-
-  const articuloTokens = tokenSet(articulo)
-  const recetaTokens = new Set([...tokenSet(nombreReceta), ...tokenSet(nombreTPV)])
-  const shared = articuloTokens.filter((token) => recetaTokens.has(token)).length
-  score += shared * 10
-
-  return score
-}
-
-
-
-const mainTabConfig: Record<
-  MainTab,
-  {
-    label: string
-    subtitle: string
-    tabs: TabKey[]
-  }
-> = {
-  operativa: {
-    label: 'Operativa',
-    subtitle: 'Trabajo diario',
-    tabs: ['stock', 'albaran', 'tpv'],
-  },
-  gestion: {
-    label: 'Gestión',
-    subtitle: 'Compras y catálogo',
-    tabs: ['albaranes', 'proveedores', 'recetas', 'usuarios'],
-  },
-  control: {
-    label: 'Control',
-    subtitle: 'Seguimiento y trazabilidad',
-    tabs: ['historial', 'auditoria'],
-  },
-}
-
-function getMainTabForTab(tab: TabKey): MainTab {
-  if (mainTabConfig.operativa.tabs.includes(tab)) return 'operativa'
-  if (mainTabConfig.gestion.tabs.includes(tab)) return 'gestion'
-  return 'control'
-}
-
-function getTabLabel(tab: TabKey) {
-  if (tab === 'stock') return 'Stock'
-  if (tab === 'albaran') return 'Nuevo albarán'
-  if (tab === 'tpv') return 'TPV'
-  if (tab === 'albaranes') return 'Albaranes'
-  if (tab === 'proveedores') return 'Proveedores'
-  if (tab === 'recetas') return 'Recetas'
-  if (tab === 'usuarios') return 'Usuarios'
-  if (tab === 'historial') return 'Historial'
-  return 'Auditoría'
-}
-
 
 export default function HomePage() {
   const [tab, setTab] = useState<TabKey>('stock')
@@ -3539,834 +3167,110 @@ export default function HomePage() {
 
   if (!authReady) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f8fbff_0%,#f3f6fb_42%,#eef3f9_100%)] px-4">
-        <div className="w-full max-w-md rounded-[32px] border border-white/80 bg-white/95 p-8 text-center shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-50 text-blue-600">
-            <Icon
-              className="h-8 w-8"
-              path={
-                <>
-                  <path d="M7 3v10" />
-                  <path d="M11 3v10" />
-                  <path d="M9 13v8" />
-                  <path d="M17 3v8" />
-                  <path d="M17 15v6" />
-                  <path d="M15 11h4" />
-                </>
-              }
-            />
-          </div>
-          <h1 className="mt-6 text-2xl font-semibold text-slate-950">Control Restaurante</h1>
-          <p className="mt-2 text-sm text-slate-500">Comprobando tu sesión...</p>
-        </div>
-      </main>
+      <AuthScreen
+        authReady={authReady}
+        authMode={authMode}
+        authName={authName}
+        authEmail={authEmail}
+        authPassword={authPassword}
+        authSaving={authSaving}
+        error={error}
+        onModeChange={setAuthMode}
+        onNameChange={setAuthName}
+        onEmailChange={setAuthEmail}
+        onPasswordChange={setAuthPassword}
+        onSubmit={handleAuthSubmit}
+      />
     )
   }
 
   if (!session || !currentUser) {
     return (
-      <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#dbeafe_0%,transparent_28%),linear-gradient(180deg,#f8fbff_0%,#f3f6fb_42%,#eef3f9_100%)] px-4 py-10 text-slate-900">
-        <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-          <section className="rounded-[36px] border border-white/80 bg-white/80 p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur sm:p-10">
-            <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-50 text-blue-600 shadow-inner">
-              <Icon
-                className="h-8 w-8"
-                path={
-                  <>
-                    <path d="M7 3v10" />
-                    <path d="M11 3v10" />
-                    <path d="M9 13v8" />
-                    <path d="M17 3v8" />
-                    <path d="M17 15v6" />
-                    <path d="M15 11h4" />
-                  </>
-                }
-              />
-            </div>
-            <h1 className="mt-8 text-4xl font-semibold tracking-tight text-slate-950">
-              Acceso para el equipo del restaurante
-            </h1>
-            <p className="mt-4 max-w-xl text-lg leading-8 text-slate-600">
-              Cada persona entra con su propia cuenta para que el historial, las acciones y la
-              trazabilidad queden asociadas a un usuario real.
-            </p>
-
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
-              <div className="rounded-3xl bg-slate-50 p-5">
-                <div className="text-sm font-semibold text-slate-900">Identidad real</div>
-                <p className="mt-2 text-sm text-slate-500">
-                  La auditoría registra quién hizo cada cambio.
-                </p>
-              </div>
-              <div className="rounded-3xl bg-slate-50 p-5">
-                <div className="text-sm font-semibold text-slate-900">Acceso compartido</div>
-                <p className="mt-2 text-sm text-slate-500">
-                  Varias personas pueden usar la app sin mezclar sesiones.
-                </p>
-              </div>
-              <div className="rounded-3xl bg-slate-50 p-5">
-                <div className="text-sm font-semibold text-slate-900">Base segura</div>
-                <p className="mt-2 text-sm text-slate-500">
-                  Queda preparado para activar permisos por usuario en Supabase.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-[36px] border border-white/80 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.1)] sm:p-10">
-            <div className="flex rounded-2xl bg-slate-100 p-1.5">
-              <button
-                type="button"
-                onClick={() => setAuthMode('login')}
-                className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                  authMode === 'login' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
-                }`}
-              >
-                Iniciar sesión
-              </button>
-              <button
-                type="button"
-                onClick={() => setAuthMode('register')}
-                className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                  authMode === 'register' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
-                }`}
-              >
-                Crear cuenta
-              </button>
-            </div>
-
-            <form onSubmit={handleAuthSubmit} className="mt-8 space-y-4">
-              {authMode === 'register' && (
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-700">
-                    Nombre visible
-                  </span>
-                  <input
-                    type="text"
-                    value={authName}
-                    onChange={(e) => setAuthName(e.target.value)}
-                    placeholder="Carlos Pérez"
-                    required
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                  />
-                </label>
-              )}
-
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700">
-                  {authMode === 'login' ? 'Email o usuario master' : 'Email'}
-                </span>
-                <input
-                  type={authMode === 'login' ? 'text' : 'email'}
-                  value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                  placeholder={
-                    authMode === 'login' ? 'equipo@restaurante.com o master' : 'equipo@restaurante.com'
-                  }
-                  required
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700">Contraseña</span>
-                <input
-                  type="password"
-                  value={authPassword}
-                  onChange={(e) => setAuthPassword(e.target.value)}
-                  placeholder="Min. 6 caracteres"
-                  required
-                  minLength={6}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                />
-              </label>
-
-              {error ? (
-                <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
-              ) : null}
-
-              <button
-                type="submit"
-                disabled={authSaving}
-                className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 disabled:opacity-60"
-              >
-                {authSaving
-                  ? authMode === 'login'
-                    ? 'Entrando...'
-                    : 'Creando cuenta...'
-                  : authMode === 'login'
-                  ? 'Entrar al panel'
-                  : 'Crear cuenta y acceder'}
-              </button>
-            </form>
-
-            <p className="mt-5 text-sm text-slate-500">
-              Las cuentas nuevas nacen como <span className="font-semibold">Empleado</span>. Un
-              administrador o el usuario master podrá elevar permisos desde dentro de la app.
-            </p>
-          </section>
-        </div>
-      </main>
+      <AuthScreen
+        authReady={authReady}
+        authMode={authMode}
+        authName={authName}
+        authEmail={authEmail}
+        authPassword={authPassword}
+        authSaving={authSaving}
+        error={error}
+        onModeChange={setAuthMode}
+        onNameChange={setAuthName}
+        onEmailChange={setAuthEmail}
+        onPasswordChange={setAuthPassword}
+        onSubmit={handleAuthSubmit}
+      />
     )
   }
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#f3f6fb_42%,#eef3f9_100%)] pb-24 text-slate-900">
       <div className="mx-auto max-w-7xl px-4 pb-12 pt-4 sm:px-6 lg:px-8">
-        <header className="overflow-hidden rounded-[30px] border border-white/70 bg-white/95 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur">
-          <div className="flex flex-col gap-4 border-b border-slate-200/80 px-5 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-inner">
-                <Icon
-                  className="h-7 w-7"
-                  path={
-                    <>
-                      <path d="M7 3v10" />
-                      <path d="M11 3v10" />
-                      <path d="M9 13v8" />
-                      <path d="M17 3v8" />
-                      <path d="M17 15v6" />
-                      <path d="M15 11h4" />
-                    </>
-                  }
-                />
-              </div>
-
-              <div>
-                <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
-                  Control Restaurante
-                </h1>
-                <p className="mt-1 text-sm text-slate-500">
-                  {stockBajo > 0
-                    ? `${stockBajo} producto(s) necesitan revisión`
-                    : 'Inventario en orden'}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <button
-                type="button"
-                onClick={openProfilePanel}
-                className="relative flex min-w-[260px] flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left shadow-sm transition hover:bg-slate-100"
-              >
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-sm font-semibold text-blue-600 shadow-sm">
-                  {userInitials}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-base font-semibold text-slate-900">
-                    {userDisplayName}
-                  </div>
-                  <div className="truncate text-sm text-slate-500">
-                    {userRoleLabel}
-                    {currentUser.email ? ` · ${currentUser.email}` : ''}
-                  </div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-slate-500 shadow-sm transition hover:bg-slate-50"
-              >
-                <Icon
-                  className="h-5 w-5"
-                  path={
-                    <>
-                      <path d="M14 7h4v10h-4" />
-                      <path d="M10 12h8" />
-                      <path d="M10 12l3-3" />
-                      <path d="M10 12l3 3" />
-                      <path d="M6 5H4v14h2" />
-                    </>
-                  }
-                />
-              </button>
-            </div>
-          </div>
-
-          <div className="grid border-b border-slate-200/80 md:grid-cols-3">
-            {visibleMainGroups.map((item) => {
-              const config = mainTabConfig[item]
-              const active = mainTab === item
-
-              return (
-                <button
-                  key={item}
-                  onClick={() => {
-                    setMainTab(item)
-                    const firstAccessibleTab = mainTabConfig[item].tabs.find((candidate) =>
-                      canAccessTab(currentUserRole, candidate)
-                    )
-                    if (firstAccessibleTab) {
-                      setTab(firstAccessibleTab)
-                    }
-                  }}
-                  className={`relative flex flex-col items-center justify-center gap-2 border-b px-5 py-7 text-center transition md:border-b-0 md:border-r last:md:border-r-0 ${
-                    active
-                      ? 'border-blue-500 bg-gradient-to-b from-blue-50 to-white text-blue-600'
-                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  {active ? <div className="absolute inset-x-0 top-0 h-1 bg-blue-500" /> : null}
-                  <div className={active ? 'text-blue-600' : 'text-slate-500'}>{getMainTabIcon(item)}</div>
-                  <div className="text-[15px] font-semibold">{config.label}</div>
-                  <div className="text-sm text-slate-500">{config.subtitle}</div>
-                </button>
-              )
-            })}
-          </div>
-
-          <div className="px-5 py-6 sm:px-6">
-            <div className="rounded-[28px] border border-slate-200 bg-slate-50/80 p-2 shadow-inner">
-              <div className="grid gap-2 md:grid-cols-3">
-                {visibleMainTabs.map((item) => {
-                  const active = tab === item
-                  return (
-                    <button
-                      key={item}
-                      onClick={() => setTab(item)}
-                      className={`flex items-center justify-center gap-3 rounded-[20px] px-4 py-4 text-sm font-semibold transition ${
-                        active
-                          ? 'bg-white text-blue-600 shadow-[0_8px_24px_rgba(59,130,246,0.12)] ring-1 ring-blue-100'
-                          : 'text-slate-600 hover:bg-white/80'
-                      }`}
-                    >
-                      {getTabIcon(item)}
-                      <span>{getTabLabel(item)}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </header>
+        <AppShellHeader
+          stockBajo={stockBajo}
+          userInitials={userInitials}
+          userDisplayName={userDisplayName}
+          userRoleLabel={userRoleLabel}
+          userEmail={currentUser.email || ''}
+          currentMainTab={mainTab}
+          currentTab={tab}
+          visibleMainGroups={visibleMainGroups}
+          visibleMainTabs={visibleMainTabs}
+          onOpenProfile={openProfilePanel}
+          onSignOut={() => void handleSignOut()}
+          onMainTabChange={(item) => {
+            setMainTab(item)
+            const firstAccessibleTab = mainTabConfig[item].tabs.find((candidate) =>
+              canAccessTab(currentUserRole, candidate)
+            )
+            if (firstAccessibleTab) {
+              setTab(firstAccessibleTab)
+            }
+          }}
+          onTabChange={setTab}
+        />
 
         <section className="pt-8">
           {tab === 'stock' && (
-            <>
-              <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                  <h2 className="text-4xl font-semibold tracking-tight text-slate-950">
-                    Stock actual
-                  </h2>
-                  <p className="mt-2 text-lg text-slate-500">
-                    Resumen general de tu inventario
-                  </p>
-                </div>
-
-                {canManageStock ? (
-                  <div className="flex flex-wrap items-center gap-3">
-                    <button
-                      onClick={() => {
-                        setProductoEditId(null)
-                        setProductoForm(initialProductoForm)
-                        setError('')
-                        setProductoModalOpen(true)
-                      }}
-                      className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-                    >
-                      + Nuevo producto
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="grid gap-4 lg:grid-cols-3">
-                <div className="rounded-[28px] border border-white/80 bg-white p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                      <Icon path={<><path d="m12 3 7 4v10l-7 4-7-4V7z" /><path d="m5 7 7 4 7-4" /><path d="M12 11v10" /></>} className="h-8 w-8" />
-                    </div>
-                    <div>
-                      <div className="text-5xl font-semibold tracking-tight text-emerald-600">
-                        {totalProductos}
-                      </div>
-                      <div className="mt-1 text-xl font-semibold text-slate-800">
-                        Productos totales
-                      </div>
-                      <div className="text-sm text-slate-500">Creados en el sistema</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-[28px] border border-white/80 bg-white p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-rose-50 text-rose-600">
-                      <Icon path={<><path d="M12 4 3.5 19h17L12 4Z" /><path d="M12 10v4" /><path d="M12 17h.01" /></>} className="h-8 w-8" />
-                    </div>
-                    <div>
-                      <div className="text-5xl font-semibold tracking-tight text-rose-600">
-                        {stockBajo}
-                      </div>
-                      <div className="mt-1 text-xl font-semibold text-slate-800">Stock bajo</div>
-                      <div className="text-sm text-slate-500">Por debajo del mínimo</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-[28px] border border-white/80 bg-white p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                      <Icon path={<><path d="M5 16l5-5 4 4 5-7" /><path d="M19 8v4h-4" /></>} className="h-8 w-8" />
-                    </div>
-                    <div>
-                      <div className="text-5xl font-semibold tracking-tight text-blue-600">
-                        {movimientosHoy}
-                      </div>
-                      <div className="mt-1 text-xl font-semibold text-slate-800">
-                        Movimientos hoy
-                      </div>
-                      <div className="text-sm text-slate-500">Entradas y salidas</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 rounded-[30px] border border-white/80 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.07)]">
-                <div className="border-b border-slate-100 px-5 py-5 sm:px-6">
-                  <div className="grid gap-3 xl:grid-cols-[1.45fr_0.9fr_0.9fr_auto]">
-                    <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                      <Icon
-                        className="h-5 w-5 text-slate-400"
-                        path={
-                          <>
-                            <circle cx="11" cy="11" r="6.5" />
-                            <path d="m16 16 4 4" />
-                          </>
-                        }
-                      />
-                      <input
-                        type="search"
-                        value={busqueda}
-                        onChange={(e) => setBusqueda(e.target.value)}
-                        placeholder="Buscar producto..."
-                        className="w-full bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
-                      />
-                    </label>
-
-                    <label className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                      <div className="text-xs font-medium text-slate-400">Categoría</div>
-                      <select
-                        value={categoriaFiltro}
-                        onChange={(e) => setCategoriaFiltro(e.target.value)}
-                        className="mt-1 w-full bg-transparent text-sm font-medium text-slate-800 outline-none"
-                      >
-                        <option value="todas">Todas</option>
-                        {categoriasProducto.map((categoria) => (
-                          <option key={categoria} value={categoria}>
-                            {categoria}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                      <div className="text-xs font-medium text-slate-400">Estado</div>
-                      <select
-                        value={productoEstado}
-                        onChange={(e) =>
-                          setProductoEstado(e.target.value as 'activos' | 'archivados' | 'todos')
-                        }
-                        className="mt-1 w-full bg-transparent text-sm font-medium capitalize text-slate-800 outline-none"
-                      >
-                        <option value="activos">Activos</option>
-                        <option value="archivados">Archivados</option>
-                        <option value="todos">Todos</option>
-                      </select>
-                    </label>
-
-                    <div className="flex gap-3">
-                      <button
-                        onClick={exportarProductosCSV}
-                        className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-                      >
-                        Exportar
-                      </button>
-                      <button className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm">
-                        <Icon
-                          className="h-4 w-4"
-                          path={
-                            <>
-                              <path d="M4 6h16" />
-                              <path d="M7 12h10" />
-                              <path d="M10 18h4" />
-                            </>
-                          }
-                        />
-                        Filtros
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {loadingProductos && (
-                  <div className="px-6 py-16 text-center text-sm text-slate-400">
-                    Cargando stock...
-                  </div>
-                )}
-
-                {!loadingProductos && productosFiltrados.length === 0 && (
-                  <div className="px-6 py-16 text-center text-sm text-slate-400">
-                    No hay productos o no coinciden con la búsqueda.
-                  </div>
-                )}
-
-                {!loadingProductos && productosFiltrados.length > 0 && (
-                  <>
-                    <div className="hidden overflow-x-auto lg:block">
-                      <table className="min-w-full text-left">
-                        <thead>
-                          <tr className="border-b border-slate-100 text-sm text-slate-500">
-                            <th className="px-6 py-4 font-semibold">Producto</th>
-                            <th className="px-6 py-4 font-semibold">Categoría</th>
-                            <th className="px-6 py-4 font-semibold">Stock actual</th>
-                            <th className="px-6 py-4 font-semibold">Stock min.</th>
-                            <th className="px-6 py-4 font-semibold">U. medida</th>
-                            <th className="px-6 py-4 text-right font-semibold">Acciones</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {productosFiltrados.map((producto) => {
-                            const nivel = getNivel(producto)
-                            const stockClass =
-                              nivel === 'critico'
-                                ? 'text-rose-600'
-                                : nivel === 'bajo'
-                                ? 'text-amber-500'
-                                : 'text-emerald-600'
-
-                            return (
-                              <tr key={producto.id} className="border-b border-slate-100 last:border-b-0">
-                                <td className="px-6 py-4">
-                                  <button
-                                    type="button"
-                                    onClick={() => !producto.archivado && openConsumoModal(producto)}
-                                    className="flex items-center gap-4 text-left"
-                                  >
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-xs font-bold text-slate-600">
-                                      {producto.categoria?.slice(0, 2).toUpperCase() || 'PR'}
-                                    </div>
-                                    <div className="min-w-0">
-                                      <div className="truncate text-[1.05rem] font-semibold text-slate-900">
-                                        {producto.nombre}
-                                      </div>
-                                      <div className="truncate text-sm text-slate-500">
-                                        {producto.referencia || 'Sin referencia'}
-                                        {producto.archivado ? ' · Archivado' : ''}
-                                      </div>
-                                    </div>
-                                  </button>
-                                </td>
-                                <td className="px-6 py-4 text-base text-slate-700">
-                                  {producto.categoria || 'Sin categoría'}
-                                </td>
-                                <td className={`px-6 py-4 text-2xl font-semibold ${stockClass}`}>
-                                  {formatCantidad(producto.stock_actual)}
-                                </td>
-                                <td className="px-6 py-4 text-base text-slate-700">
-                                  {formatCantidad(producto.stock_minimo)}
-                                </td>
-                                <td className="px-6 py-4 text-base text-slate-700">
-                                  {producto.unidad}
-                                </td>
-                                <td className="px-6 py-4">
-                                  <div className="flex justify-end">
-                                    {((producto.archivado && canManageStock) ||
-                                      (!producto.archivado && (canManageStock || canAdjustStock))) ? (
-                                      <ActionMenu label="•••">
-                                        {producto.archivado ? (
-                                          canManageStock ? (
-                                            <button
-                                              type="button"
-                                              onClick={() => reactivarProducto(producto)}
-                                              className="rounded-xl bg-emerald-50 px-3 py-2 text-left text-xs font-semibold text-emerald-700"
-                                            >
-                                              Reactivar
-                                            </button>
-                                          ) : null
-                                        ) : (
-                                          <>
-                                            {canManageStock ? (
-                                              <button
-                                                type="button"
-                                                onClick={() => openEditarProducto(producto)}
-                                                className="rounded-xl bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-white"
-                                              >
-                                                Editar
-                                              </button>
-                                            ) : null}
-                                            {canAdjustStock ? (
-                                              <button
-                                                type="button"
-                                                onClick={() => openAjusteModal(producto)}
-                                                className="rounded-xl bg-blue-50 px-3 py-2 text-left text-xs font-semibold text-blue-700"
-                                              >
-                                                Ajustar stock
-                                              </button>
-                                            ) : null}
-                                            {canManageStock ? (
-                                              <button
-                                                type="button"
-                                                onClick={() => archiveProducto(producto)}
-                                                className="rounded-xl bg-red-50 px-3 py-2 text-left text-xs font-semibold text-red-600"
-                                              >
-                                                Archivar
-                                              </button>
-                                            ) : null}
-                                          </>
-                                        )}
-                                      </ActionMenu>
-                                    ) : null}
-                                  </div>
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <div className="space-y-3 p-4 lg:hidden">
-                      {productosFiltrados.map((producto) => {
-                        const nivel = getNivel(producto)
-                        const stockClass =
-                          nivel === 'critico'
-                            ? 'text-rose-600'
-                            : nivel === 'bajo'
-                            ? 'text-amber-500'
-                            : 'text-emerald-600'
-
-                        return (
-                          <div
-                            key={producto.id}
-                            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-                          >
-                            <div className="flex items-start gap-3">
-                              <button
-                                type="button"
-                                onClick={() => !producto.archivado && openConsumoModal(producto)}
-                                className="flex min-w-0 flex-1 items-start gap-3 text-left"
-                              >
-                                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-xs font-bold text-slate-600">
-                                  {producto.categoria?.slice(0, 2).toUpperCase() || 'PR'}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate text-sm font-semibold text-slate-900">
-                                    {producto.nombre}
-                                  </div>
-                                  <div className="truncate text-xs text-slate-500">
-                                    {producto.categoria || 'Sin categoría'}
-                                  </div>
-                                  <div className={`mt-2 text-2xl font-semibold ${stockClass}`}>
-                                    {formatCantidad(producto.stock_actual)} {producto.unidad}
-                                  </div>
-                                  <div className="mt-1 text-xs text-slate-400">
-                                    Mínimo: {formatCantidad(producto.stock_minimo)}
-                                  </div>
-                                </div>
-                              </button>
-
-                              {((producto.archivado && canManageStock) ||
-                                (!producto.archivado && (canManageStock || canAdjustStock))) ? (
-                                <ActionMenu label="•••">
-                                  {producto.archivado ? (
-                                    canManageStock ? (
-                                      <button
-                                        type="button"
-                                        onClick={() => reactivarProducto(producto)}
-                                        className="rounded-xl bg-emerald-50 px-3 py-2 text-left text-xs font-semibold text-emerald-700"
-                                      >
-                                        Reactivar
-                                      </button>
-                                    ) : null
-                                  ) : (
-                                    <>
-                                      {canManageStock ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => openEditarProducto(producto)}
-                                          className="rounded-xl bg-slate-900 px-3 py-2 text-left text-xs font-semibold text-white"
-                                        >
-                                          Editar
-                                        </button>
-                                      ) : null}
-                                      {canAdjustStock ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => openAjusteModal(producto)}
-                                          className="rounded-xl bg-blue-50 px-3 py-2 text-left text-xs font-semibold text-blue-700"
-                                        >
-                                          Ajustar stock
-                                        </button>
-                                      ) : null}
-                                      {canManageStock ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => archiveProducto(producto)}
-                                          className="rounded-xl bg-red-50 px-3 py-2 text-left text-xs font-semibold text-red-600"
-                                        >
-                                          Archivar
-                                        </button>
-                                      ) : null}
-                                    </>
-                                  )}
-                                </ActionMenu>
-                              ) : null}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    <div className="flex flex-col gap-4 border-t border-slate-100 px-5 py-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                      <div>
-                        Mostrando 1 a {productosFiltrados.length} de {productosFiltrados.length}{' '}
-                        productos
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <button className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm">
-                          ‹
-                        </button>
-                        <button className="flex h-11 min-w-11 items-center justify-center rounded-xl border border-blue-500 bg-white px-4 font-semibold text-blue-600 shadow-sm">
-                          1
-                        </button>
-                        <button className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm">
-                          ›
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="mt-6 rounded-[28px] border border-blue-100 bg-[linear-gradient(135deg,#eef4ff_0%,#f5f8ff_100%)] px-5 py-5 shadow-sm sm:px-6">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-blue-600 shadow-sm">
-                      <Icon path={<><circle cx="12" cy="12" r="8" /><path d="M12 10v5" /><path d="M12 7h.01" /></>} className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <div className="text-2xl font-semibold text-slate-900">Consejo</div>
-                      <p className="mt-1 text-base text-slate-600">
-                        Mantén tu stock actualizado para tener un mejor control de tu negocio.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3 lg:min-w-[320px]">
-                    <div className="rounded-2xl bg-white/90 p-4 shadow-sm">
-                      <div className="mb-2 flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-slate-900">Alertas de stock</h3>
-                        <span className="text-xs text-slate-400">{productosStockBajo.length}</span>
-                      </div>
-                      {productosStockBajo.length === 0 ? (
-                        <div className="text-sm text-slate-500">No hay alertas ahora mismo.</div>
-                      ) : (
-                        <div className="space-y-2">
-                          {productosStockBajo.slice(0, 3).map((producto) => (
-                            <button
-                              key={producto.id}
-                              type="button"
-                              onClick={() => openConsumoModal(producto)}
-                              className="flex w-full items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-3 text-left"
-                            >
-                              <div className="min-w-0">
-                                <div className="truncate text-sm font-semibold text-slate-800">
-                                  {producto.nombre}
-                                </div>
-                                <div className="text-xs text-slate-500">
-                                  Mínimo {formatCantidad(producto.stock_minimo)} · Actual{' '}
-                                  {formatCantidad(producto.stock_actual)}
-                                </div>
-                              </div>
-                              <span className="text-xs font-semibold text-amber-600">Revisar</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </>
+            <StockTab
+              totalProductos={totalProductos}
+              stockBajo={stockBajo}
+              movimientosHoy={movimientosHoy}
+              canManageStock={canManageStock}
+              canAdjustStock={canAdjustStock}
+              busqueda={busqueda}
+              categoriaFiltro={categoriaFiltro}
+              categoriasProducto={categoriasProducto}
+              productoEstado={productoEstado}
+              loadingProductos={loadingProductos}
+              productosFiltrados={productosFiltrados}
+              productosStockBajo={productosStockBajo}
+              onBusquedaChange={setBusqueda}
+              onCategoriaFiltroChange={setCategoriaFiltro}
+              onProductoEstadoChange={setProductoEstado}
+              onNuevoProducto={() => {
+                setProductoEditId(null)
+                setProductoForm(initialProductoForm)
+                setError('')
+                setProductoModalOpen(true)
+              }}
+              onExportar={exportarProductosCSV}
+              onOpenConsumo={openConsumoModal}
+              onOpenEditarProducto={openEditarProducto}
+              onOpenAjuste={openAjusteModal}
+              onArchivar={(producto) => void archiveProducto(producto)}
+              onReactivar={(producto) => void reactivarProducto(producto)}
+            />
           )}
 
         {tab === 'historial' && (
-          <>
-            <div className="mt-1">
-              <input
-                type="search"
-                value={busquedaMov}
-                onChange={(e) => setBusquedaMov(e.target.value)}
-                placeholder="Buscar por producto o motivo..."
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-400"
-              />
-            </div>
-
-            <div className="mt-3 flex justify-end">
-              <button
-                onClick={exportarMovimientosCSV}
-                className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
-              >
-                Exportar CSV
-              </button>
-            </div>
-
-            <div className="mt-4 rounded-3xl bg-white p-3 shadow-sm">
-              {loadingMovimientos && (
-                <div className="py-10 text-center text-sm text-slate-400">
-                  Cargando historial...
-                </div>
-              )}
-
-              {!loadingMovimientos && movimientosFiltrados.length === 0 && (
-                <div className="py-10 text-center text-sm text-slate-400">
-                  No hay movimientos todavía.
-                </div>
-              )}
-
-              {!loadingMovimientos &&
-                movimientosFiltrados.map((mov) => (
-                  <div
-                    key={mov.id}
-                    className="border-b border-slate-100 py-3 last:border-b-0"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-semibold text-slate-900">
-                          {mov.productos?.nombre || 'Producto'}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {mov.motivo || 'Sin motivo'}
-                        </div>
-                        <div className="mt-1 text-[11px] text-slate-400">
-                          {formatFechaHora(mov.created_at)}
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <div
-                          className={`text-sm font-bold ${
-                            mov.tipo === 'consumo'
-                              ? 'text-red-600'
-                              : mov.tipo === 'entrada'
-                              ? 'text-emerald-600'
-                              : 'text-blue-600'
-                          }`}
-                        >
-                          {mov.tipo === 'consumo' ? '-' : '+'}
-                          {mov.cantidad}
-                        </div>
-                        <div className="text-[11px] text-slate-500">
-                          {mov.productos?.unidad || ''}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </>
+          <HistorialTab
+            movimientosFiltrados={movimientosFiltrados}
+            busquedaMov={busquedaMov}
+            loadingMovimientos={loadingMovimientos}
+            onBusquedaChange={setBusquedaMov}
+            onExportar={exportarMovimientosCSV}
+          />
         )}
 
         {tab === 'albaran' && (
@@ -4719,182 +3623,24 @@ export default function HomePage() {
         )}
 
         {tab === 'auditoria' && (
-          <>
-            <div className="mt-1">
-              <input
-                type="search"
-                value={busquedaAuditoria}
-                onChange={(e) => setBusquedaAuditoria(e.target.value)}
-                placeholder="Buscar por entidad, acción, operario..."
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-400"
-              />
-            </div>
-
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <input
-                type="date"
-                value={auditoriaDesde}
-                onChange={(e) => setAuditoriaDesde(e.target.value)}
-                className="rounded-2xl border border-slate-200 px-3 py-2 text-sm"
-              />
-              <input
-                type="date"
-                value={auditoriaHasta}
-                onChange={(e) => setAuditoriaHasta(e.target.value)}
-                className="rounded-2xl border border-slate-200 px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div className="mt-2 flex flex-wrap gap-2">
-              {(['todas', 'producto', 'proveedor', 'albaran', 'receta', 'tpv', 'usuario'] as const).map((entidad) => (
-                <button
-                  key={entidad}
-                  onClick={() => setAuditoriaEntidadFiltro(entidad)}
-                  className={`rounded-xl px-3 py-1 text-xs font-semibold ${
-                    auditoriaEntidadFiltro === entidad
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  {entidad}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-2 flex flex-wrap gap-2">
-              {['todas', 'crear', 'editar', 'eliminar', 'archivar', 'reactivar', 'consumo', 'ajuste_stock', 'anular', 'deshacer_archivar', 'importar_csv'].map((accion) => (
-                <button
-                  key={accion}
-                  onClick={() => setAuditoriaAccionFiltro(accion)}
-                  className={`rounded-xl px-3 py-1 text-xs font-semibold ${
-                    auditoriaAccionFiltro === accion
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-blue-50 text-blue-700'
-                  }`}
-                >
-                  {accion}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-3 flex items-center justify-between gap-2">
-              <div className="rounded-2xl bg-yellow-50 px-4 py-3 text-sm text-slate-700">
-                Registros visibles: {auditoriaFiltrada.length} · Totales: {auditoria.length}
-              </div>
-
-              <button
-                onClick={exportarAuditoriaCSV}
-                className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
-              >
-                Exportar CSV
-              </button>
-            </div>
-
-            <div className="rounded-3xl bg-white p-3 shadow-sm">
-              {loadingAuditoria && (
-                <div className="py-10 text-center text-sm text-slate-400">
-                  Cargando auditoría...
-                </div>
-              )}
-
-              {!loadingAuditoria && auditoriaFiltrada.length === 0 && (
-                <div className="py-10 text-center text-sm text-slate-400">
-                  No hay registros para este filtro.
-                </div>
-              )}
-
-              {!loadingAuditoria &&
-                auditoriaFiltrada.map((item) => (
-                  <details
-                    key={item.id}
-                    className="group border-b border-slate-100 py-3 last:border-b-0"
-                  >
-                    <summary className="cursor-pointer list-none">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold text-slate-900">
-                            {item.entidad} · {item.accion}
-                          </div>
-                          <div className="mt-1 text-xs text-slate-500">
-                            {item.detalle || 'Sin detalle'}
-                          </div>
-                          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
-                            <span>Operario: {item.actor_nombre || 'Sin identificar'}</span>
-                            {item.entidad_id ? <span>ID: {item.entidad_id}</span> : null}
-                          </div>
-                        </div>
-
-                        <div className="flex shrink-0 flex-col items-end gap-2">
-                          <div className="text-[11px] text-slate-500">
-                            {formatFechaHora(item.created_at)}
-                          </div>
-
-                          <div className="text-[11px] font-semibold text-blue-600 group-open:hidden">
-                            Ver detalle
-                          </div>
-                          <div className="hidden text-[11px] font-semibold text-blue-600 group-open:block">
-                            Ocultar detalle
-                          </div>
-                        </div>
-                      </div>
-                    </summary>
-
-                    <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                      <div className="rounded-2xl bg-slate-50 p-4">
-                        <div className="mb-3 text-sm font-semibold text-slate-900">Antes</div>
-                        {getAuditEntries(item.payload_antes).length === 0 ? (
-                          <div className="text-sm text-slate-400">Sin datos previos</div>
-                        ) : (
-                          <div className="space-y-3">
-                            {getAuditEntries(item.payload_antes).map(([key, value]) => (
-                              <div key={key} className="rounded-2xl bg-white p-3 shadow-sm">
-                                <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                                  {key}
-                                </div>
-                                <pre className="whitespace-pre-wrap break-words text-xs text-slate-700">
-                                  {formatAuditValue(value)}
-                                </pre>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="rounded-2xl bg-blue-50/60 p-4">
-                        <div className="mb-3 text-sm font-semibold text-slate-900">Después</div>
-                        {getAuditEntries(item.payload_despues).length === 0 ? (
-                          <div className="text-sm text-slate-400">Sin datos posteriores</div>
-                        ) : (
-                          <div className="space-y-3">
-                            {getAuditEntries(item.payload_despues).map(([key, value]) => (
-                              <div key={key} className="rounded-2xl bg-white p-3 shadow-sm">
-                                <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                                  {key}
-                                </div>
-                                <pre className="whitespace-pre-wrap break-words text-xs text-slate-700">
-                                  {formatAuditValue(value)}
-                                </pre>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {puedeDeshacerAuditoria(item) && (
-                      <div className="mt-3 flex justify-end">
-                        <button
-                          onClick={() => deshacerAccionAuditoria(item)}
-                          className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
-                        >
-                          Deshacer
-                        </button>
-                      </div>
-                    )}
-                  </details>
-                ))}
-            </div>
-          </>
+          <AuditoriaTab
+            auditoria={auditoria}
+            auditoriaFiltrada={auditoriaFiltrada}
+            loadingAuditoria={loadingAuditoria}
+            busquedaAuditoria={busquedaAuditoria}
+            auditoriaDesde={auditoriaDesde}
+            auditoriaHasta={auditoriaHasta}
+            auditoriaEntidadFiltro={auditoriaEntidadFiltro}
+            auditoriaAccionFiltro={auditoriaAccionFiltro}
+            onBusquedaChange={setBusquedaAuditoria}
+            onDesdeChange={setAuditoriaDesde}
+            onHastaChange={setAuditoriaHasta}
+            onEntidadFiltroChange={setAuditoriaEntidadFiltro}
+            onAccionFiltroChange={setAuditoriaAccionFiltro}
+            onExportar={exportarAuditoriaCSV}
+            onDeshacer={(item) => void deshacerAccionAuditoria(item)}
+            puedeDeshacerAuditoria={puedeDeshacerAuditoria}
+          />
         )}
 
         {tab === 'proveedores' && (
@@ -5023,273 +3769,45 @@ export default function HomePage() {
         )}
 
         {tab === 'usuarios' && userCanManageUsers && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-base font-semibold text-slate-900">Usuarios y permisos</h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Gestiona quién entra y qué nivel de acceso tiene cada persona.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => void loadManagedUsers()}
-                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200"
-              >
-                Actualizar
-              </button>
-            </div>
-
-            <div className="rounded-2xl bg-slate-100 px-4 py-3 text-xs text-slate-600">
-              Roles disponibles: <span className="font-semibold">Empleado</span>,{' '}
-              <span className="font-semibold">Encargado</span> y{' '}
-              <span className="font-semibold">Administrador</span>. El rol{' '}
-              <span className="font-semibold">Master</span> es interno y no se puede degradar desde
-              un usuario normal.
-            </div>
-
-            <div className="rounded-3xl bg-white p-4 shadow-sm">
-              <div className="mb-4">
-                <h3 className="text-sm font-semibold text-slate-900">Alta de usuario</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Crea cuentas internas sin salir del panel.
-                </p>
-              </div>
-
-              <div className="grid gap-3 xl:grid-cols-[1fr_1fr_0.9fr_0.8fr_auto]">
-                <input
-                  type="text"
-                  value={newManagedUserName}
-                  onChange={(e) => setNewManagedUserName(e.target.value)}
-                  placeholder="Nombre visible"
-                  className={`rounded-2xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
-                    newManagedUserNameError ? 'border-red-200' : 'border-slate-200'
-                  }`}
-                />
-                <input
-                  type="email"
-                  value={newManagedUserEmail}
-                  onChange={(e) => setNewManagedUserEmail(e.target.value)}
-                  placeholder="usuario@restaurante.com"
-                  className={`rounded-2xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
-                    newManagedUserEmailError ? 'border-red-200' : 'border-slate-200'
-                  }`}
-                />
-                <input
-                  type="password"
-                  value={newManagedUserPassword}
-                  onChange={(e) => setNewManagedUserPassword(e.target.value)}
-                  placeholder="Contraseña inicial"
-                  className={`rounded-2xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
-                    newManagedUserPasswordError ? 'border-red-200' : 'border-slate-200'
-                  }`}
-                />
-                <select
-                  value={newManagedUserRole}
-                  onChange={(e) => setNewManagedUserRole(e.target.value as UserRole)}
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
-                >
-                  <option value="empleado">Empleado</option>
-                  <option value="encargado">Encargado</option>
-                  <option value="administrador">Administrador</option>
-                  {currentUserRole === 'master' ? <option value="master">Master</option> : null}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => void createManagedUser()}
-                  disabled={!canSubmitManagedUser}
-                  className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 disabled:opacity-60"
-                >
-                  {creatingManagedUser ? 'Creando...' : 'Crear usuario'}
-                </button>
-              </div>
-
-              <div className="mt-3 grid gap-2 text-xs xl:grid-cols-[1fr_1fr_0.9fr_0.8fr_auto]">
-                <div className={newManagedUserNameError ? 'text-red-500' : 'text-slate-500'}>
-                  {newManagedUserNameError || 'Entre 2 y 60 caracteres.'}
-                </div>
-                <div className={newManagedUserEmailError ? 'text-red-500' : 'text-slate-500'}>
-                  {newManagedUserEmailError || 'Usa un correo real del equipo.'}
-                </div>
-                <div
-                  className={newManagedUserPasswordError ? 'text-red-500' : 'text-slate-500'}
-                >
-                  {newManagedUserPasswordError || 'Min. 8 caracteres, con letra y numero.'}
-                </div>
-                <div className="text-slate-500">El rol podras cambiarlo despues.</div>
-                <div />
-              </div>
-            </div>
-
-            <div className="rounded-3xl bg-white p-4 shadow-sm">
-              <div className="mb-4 grid gap-3 xl:grid-cols-[1.3fr_0.8fr_auto]">
-                <input
-                  type="search"
-                  value={busquedaUsuarios}
-                  onChange={(e) => setBusquedaUsuarios(e.target.value)}
-                  placeholder="Buscar por nombre, email o rol..."
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                />
-
-                <select
-                  value={managedUserRoleFilter}
-                  onChange={(e) =>
-                    setManagedUserRoleFilter(e.target.value as 'todos' | UserRole)
-                  }
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
-                >
-                  <option value="todos">Todos los roles</option>
-                  <option value="empleado">Empleado</option>
-                  <option value="encargado">Encargado</option>
-                  <option value="administrador">Administrador</option>
-                  {currentUserRole === 'master' ? <option value="master">Master</option> : null}
-                </select>
-
-                <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-600">
-                  Visibles: {managedUsersFiltrados.length}
-                </div>
-              </div>
-
-              {loadingManagedUsers && (
-                <div className="py-10 text-center text-sm text-slate-400">
-                  Cargando usuarios...
-                </div>
-              )}
-
-              {!loadingManagedUsers && managedUsersFiltrados.length === 0 && (
-                <div className="py-10 text-center text-sm text-slate-400">
-                  No hay usuarios para este filtro.
-                </div>
-              )}
-
-              {!loadingManagedUsers && managedUsersFiltrados.length > 0 && (
-                <div className="space-y-3">
-                  {managedUsersFiltrados.map((managedUser) => {
-                    const isCurrentUser = managedUser.id === currentUser.id
-                    const isMasterTarget = managedUser.role === 'master'
-                    const canEditTarget =
-                      currentUserRole === 'master'
-                        ? true
-                        : currentUserRole === 'administrador' && !isMasterTarget
-                    const canDeleteTarget =
-                      !isCurrentUser &&
-                      (currentUserRole === 'master'
-                        ? true
-                        : currentUserRole === 'administrador' && !isMasterTarget)
-
-                    return (
-                      <div
-                        key={managedUser.id}
-                        className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 lg:flex-row lg:items-center lg:justify-between"
-                      >
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="truncate text-sm font-semibold text-slate-900">
-                              {managedUser.full_name || managedUser.email}
-                            </h3>
-                            {isCurrentUser ? (
-                              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-600">
-                                Tú
-                              </span>
-                            ) : null}
-                          </div>
-                          <div className="mt-1 text-sm text-slate-500">{managedUser.email}</div>
-                          <div className="mt-1 text-xs text-slate-400">
-                            Alta: {formatFechaHora(managedUser.created_at)}
-                            {managedUser.last_sign_in_at
-                              ? ` · Último acceso: ${formatFechaHora(managedUser.last_sign_in_at)}`
-                              : ' · Aún no ha iniciado sesión'}
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                          <div className="rounded-2xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm">
-                            {getRoleLabel(managedUser.role)}
-                          </div>
-
-                          <select
-                            value={managedUser.role}
-                            disabled={!canEditTarget || savingManagedUserId === managedUser.id}
-                            onChange={(e) =>
-                              void updateManagedUserRole(
-                                managedUser.id,
-                                e.target.value as UserRole
-                              )
-                            }
-                            className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            <option value="empleado">Empleado</option>
-                            <option value="encargado">Encargado</option>
-                            <option value="administrador">Administrador</option>
-                            {currentUserRole === 'master' ? <option value="master">Master</option> : null}
-                          </select>
-
-                          {canDeleteTarget ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void deleteManagedUser(
-                                  managedUser.id,
-                                  managedUser.full_name || managedUser.email
-                                )
-                              }
-                              disabled={deletingManagedUserId === managedUser.id}
-                              className="rounded-2xl bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-60"
-                            >
-                              {deletingManagedUserId === managedUser.id ? 'Eliminando...' : 'Eliminar'}
-                            </button>
-                          ) : null}
-                        </div>
-
-                        {canEditTarget ? (
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                            <div className="flex-1">
-                            <input
-                              type="password"
-                              value={managedUserPasswordDrafts[managedUser.id] || ''}
-                              onChange={(e) =>
-                                setManagedUserPasswordDrafts((current) => ({
-                                  ...current,
-                                  [managedUser.id]: e.target.value,
-                                }))
-                              }
-                              placeholder="Nueva contraseña"
-                              className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                            />
-                              <div className="mt-1 text-[11px] text-slate-500">
-                                Min. 8 caracteres, con letra y numero.
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void resetManagedUserPassword(
-                                  managedUser.id,
-                                  managedUser.full_name || managedUser.email
-                                )
-                              }
-                              disabled={
-                                resettingManagedUserId === managedUser.id ||
-                                !!validatePasswordStrength(
-                                  managedUserPasswordDrafts[managedUser.id] || ''
-                                )
-                              }
-                              className="rounded-2xl bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 disabled:opacity-60"
-                            >
-                              {resettingManagedUserId === managedUser.id
-                                ? 'Guardando...'
-                                : 'Resetear contraseña'}
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
+          <UserManagementPanel
+            currentUserId={currentUser?.id || ''}
+            currentUserRole={currentUserRole}
+            managedUsers={managedUsers}
+            managedUsersFiltrados={managedUsersFiltrados}
+            loadingManagedUsers={loadingManagedUsers}
+            savingManagedUserId={savingManagedUserId}
+            creatingManagedUser={creatingManagedUser}
+            deletingManagedUserId={deletingManagedUserId}
+            resettingManagedUserId={resettingManagedUserId}
+            busquedaUsuarios={busquedaUsuarios}
+            managedUserRoleFilter={managedUserRoleFilter}
+            newManagedUserName={newManagedUserName}
+            newManagedUserEmail={newManagedUserEmail}
+            newManagedUserPassword={newManagedUserPassword}
+            newManagedUserRole={newManagedUserRole}
+            newManagedUserNameError={newManagedUserNameError}
+            newManagedUserEmailError={newManagedUserEmailError}
+            newManagedUserPasswordError={newManagedUserPasswordError}
+            canSubmitManagedUser={canSubmitManagedUser}
+            managedUserPasswordDrafts={managedUserPasswordDrafts}
+            onReload={() => void loadManagedUsers()}
+            onCreate={() => void createManagedUser()}
+            onUpdateRole={(userId, role) => void updateManagedUserRole(userId, role)}
+            onDelete={(userId, label) => void deleteManagedUser(userId, label)}
+            onResetPassword={(userId, label) => void resetManagedUserPassword(userId, label)}
+            onSearchChange={setBusquedaUsuarios}
+            onRoleFilterChange={setManagedUserRoleFilter}
+            onNewNameChange={setNewManagedUserName}
+            onNewEmailChange={setNewManagedUserEmail}
+            onNewPasswordChange={setNewManagedUserPassword}
+            onNewRoleChange={setNewManagedUserRole}
+            onManagedPasswordDraftChange={(userId, value) =>
+              setManagedUserPasswordDrafts((current) => ({
+                ...current,
+                [userId]: value,
+              }))
+            }
+          />
         )}
 
         {tab === 'recetas' && (
@@ -5576,137 +4094,35 @@ Coca-Cola Zero;6;1/4/2026
       </section>
       </div>
 
-      {profileModalOpen && (
-        <div className="fixed inset-0 z-20 flex items-end bg-black/40">
-          <div className="w-full rounded-t-3xl bg-white p-4 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-900">Mi perfil</h3>
-              <button
-                onClick={() => {
-                  setProfileModalOpen(false)
-                  setProfileNameDraft('')
-                  setCurrentPasswordDraft('')
-                  setNewPasswordDraft('')
-                  setConfirmPasswordDraft('')
-                  setError('')
-                }}
-                className="text-sm font-medium text-slate-500"
-              >
-                Cerrar
-              </button>
-            </div>
-
-            <div className="space-y-5">
-              <div className="rounded-3xl bg-slate-50 p-4">
-                <div className="mb-3">
-                  <h4 className="text-sm font-semibold text-slate-900">Información personal</h4>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Edita tu nombre visible dentro del sistema.
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    value={profileNameDraft}
-                    onChange={(e) => setProfileNameDraft(e.target.value)}
-                    placeholder="Nombre visible"
-                    className={`w-full rounded-2xl border bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${
-                      profileNameError ? 'border-red-200' : 'border-slate-200'
-                    }`}
-                  />
-                  <div className={`text-xs ${profileNameError ? 'text-red-500' : 'text-slate-500'}`}>
-                    {profileNameError || 'Este nombre es el que vera el resto del equipo.'}
-                  </div>
-                  <input
-                    type="text"
-                    value={currentUser?.email || ''}
-                    readOnly
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-base text-slate-500"
-                  />
-                  <input
-                    type="text"
-                    value={userRoleLabel}
-                    readOnly
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-base text-slate-500"
-                  />
-
-                  <button
-                    onClick={updateOwnProfile}
-                    disabled={savingProfile || !!profileNameError}
-                    className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
-                  >
-                    {savingProfile ? 'Guardando...' : 'Guardar perfil'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="rounded-3xl bg-slate-50 p-4">
-                <div className="mb-3">
-                  <h4 className="text-sm font-semibold text-slate-900">Seguridad</h4>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Cambia tu contraseña para mantener la cuenta protegida.
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  <input
-                    type="password"
-                    value={currentPasswordDraft}
-                    onChange={(e) => setCurrentPasswordDraft(e.target.value)}
-                    placeholder="Contraseña actual"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
-                  />
-                  <input
-                    type="password"
-                    value={newPasswordDraft}
-                    onChange={(e) => setNewPasswordDraft(e.target.value)}
-                    placeholder="Nueva contraseña"
-                    className={`w-full rounded-2xl border bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${
-                      ownPasswordError || ownPasswordReuseError ? 'border-red-200' : 'border-slate-200'
-                    }`}
-                  />
-                  <input
-                    type="password"
-                    value={confirmPasswordDraft}
-                    onChange={(e) => setConfirmPasswordDraft(e.target.value)}
-                    placeholder="Confirmar nueva contraseña"
-                    className={`w-full rounded-2xl border bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${
-                      ownPasswordMatchError ? 'border-red-200' : 'border-slate-200'
-                    }`}
-                  />
-                  <div
-                    className={`text-xs ${
-                      ownPasswordError || ownPasswordMatchError || ownPasswordReuseError
-                        ? 'text-red-500'
-                        : 'text-slate-500'
-                    }`}
-                  >
-                    {ownPasswordError ||
-                      ownPasswordReuseError ||
-                      ownPasswordMatchError ||
-                      'Usa al menos 8 caracteres y combina letra y numero.'}
-                  </div>
-
-                  <button
-                    onClick={updateOwnPassword}
-                    disabled={
-                      updatingOwnPassword ||
-                      !currentPasswordDraft ||
-                      !!ownPasswordError ||
-                      !!ownPasswordMatchError ||
-                      !!ownPasswordReuseError
-                    }
-                    className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
-                  >
-                    {updatingOwnPassword ? 'Actualizando...' : 'Actualizar contraseña'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ProfilePanel
+        open={profileModalOpen}
+        profileNameDraft={profileNameDraft}
+        currentUserEmail={currentUser?.email || ''}
+        userRoleLabel={userRoleLabel}
+        savingProfile={savingProfile}
+        currentPasswordDraft={currentPasswordDraft}
+        newPasswordDraft={newPasswordDraft}
+        confirmPasswordDraft={confirmPasswordDraft}
+        updatingOwnPassword={updatingOwnPassword}
+        profileNameError={profileNameError}
+        ownPasswordError={ownPasswordError}
+        ownPasswordMatchError={ownPasswordMatchError}
+        ownPasswordReuseError={ownPasswordReuseError}
+        onClose={() => {
+          setProfileModalOpen(false)
+          setProfileNameDraft('')
+          setCurrentPasswordDraft('')
+          setNewPasswordDraft('')
+          setConfirmPasswordDraft('')
+          setError('')
+        }}
+        onProfileNameChange={setProfileNameDraft}
+        onCurrentPasswordChange={setCurrentPasswordDraft}
+        onNewPasswordChange={setNewPasswordDraft}
+        onConfirmPasswordChange={setConfirmPasswordDraft}
+        onSaveProfile={() => void updateOwnProfile()}
+        onUpdatePassword={() => void updateOwnPassword()}
+      />
 
       {productoModalOpen && (
         <div className="fixed inset-0 z-20 flex items-end bg-black/40">
