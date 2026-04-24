@@ -55,6 +55,7 @@ export default function HomePage() {
   const allowSelfRegister = process.env.NEXT_PUBLIC_ALLOW_SELF_REGISTER === 'true'
   const [tab, setTab] = useState<TabKey>('stock')
   const [mainTab, setMainTab] = useState<MainTab>(getMainTabForTab('stock'))
+  const [tabHydrated, setTabHydrated] = useState(false)
   const [session, setSession] = useState<Session | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [authReady, setAuthReady] = useState(false)
@@ -281,8 +282,10 @@ export default function HomePage() {
 
     const syncTabFromLocation = () => {
       const requestedTab = parseTabKey(new URLSearchParams(window.location.search).get('tab'))
-      if (!requestedTab) return
-      setTab((currentTab) => (currentTab === requestedTab ? currentTab : requestedTab))
+      if (requestedTab) {
+        setTab((currentTab) => (currentTab === requestedTab ? currentTab : requestedTab))
+      }
+      setTabHydrated(true)
     }
 
     syncTabFromLocation()
@@ -294,6 +297,8 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
+    if (!tabHydrated || !authReady || !currentUser) return
+
     const role = getUserRole(currentUser)
     if (!canAccessTab(role, tab)) {
       const fallbackTab = (['stock', 'historial'] as TabKey[]).find((candidate) =>
@@ -305,10 +310,10 @@ export default function HomePage() {
         setTab(fallbackTab)
       }
     }
-  }, [tab, currentUser])
+  }, [tab, currentUser, authReady, tabHydrated])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined' || !tabHydrated) return
 
     const currentUrl = new URL(window.location.href)
     const currentParam = parseTabKey(currentUrl.searchParams.get('tab'))
@@ -316,7 +321,7 @@ export default function HomePage() {
 
     currentUrl.searchParams.set('tab', tab)
     window.history.replaceState({}, '', currentUrl)
-  }, [tab])
+  }, [tab, tabHydrated])
 
   function requirePermission(permission: PermissionKey, message: string) {
     const role = getUserRole(currentUser)
