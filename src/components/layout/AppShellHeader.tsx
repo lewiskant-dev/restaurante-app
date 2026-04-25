@@ -186,6 +186,22 @@ function getSectionSubtitle(group: MainTab) {
   return 'Seguimiento'
 }
 
+function BrandMark({ className = 'h-5 w-5' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M6 17V7.5c0-.9.73-1.5 1.56-1.5.46 0 .9.2 1.2.56L12 10.35l3.24-3.8A1.57 1.57 0 0 1 16.44 6c.83 0 1.56.6 1.56 1.5V17"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M9.5 17V11.2" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+      <path d="M14.5 17V11.2" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function NavGroup({
   label,
   subtitle,
@@ -271,23 +287,11 @@ export function AppShellHeader({
           onClick={() => handleGroupTabChange('operativa', 'stock')}
           className="flex items-center gap-4 text-left"
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#2f7bff_0%,#7a3cff_58%,#9b5cff_100%)] text-white shadow-[0_18px_30px_rgba(89,88,255,0.24)]">
-            <Icon
-              className="h-5 w-5"
-              path={
-                <>
-                  <path d="M7 3v10" />
-                  <path d="M11 3v10" />
-                  <path d="M9 13v8" />
-                  <path d="M17 3v8" />
-                  <path d="M17 15v6" />
-                  <path d="M15 11h4" />
-                </>
-              }
-            />
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#1b86ff_0%,#4956ff_50%,#812dff_100%)] text-white shadow-[0_18px_30px_rgba(89,88,255,0.24)]">
+            <BrandMark className="h-5 w-5" />
           </div>
           <div>
-            <div className="text-lg font-semibold tracking-tight text-slate-950">Control Restaurante</div>
+            <div className="text-[1.35rem] font-semibold tracking-tight text-slate-950">Nexo</div>
             <div className="mt-1 text-sm text-slate-500">
               {stockBajo > 0 ? `${stockBajo} alertas de stock` : 'Inventario en orden'}
             </div>
@@ -315,25 +319,6 @@ export function AppShellHeader({
             onTabChange={(nextTab) => handleGroupTabChange('gestion', nextTab)}
           />
         ) : null}
-
-        <div className="rounded-[28px] bg-[linear-gradient(135deg,#2f7bff_0%,#5145ff_45%,#8a2eff_100%)] p-[1px] shadow-[0_22px_45px_rgba(88,88,255,0.22)]">
-          <div className="rounded-[27px] bg-[linear-gradient(135deg,rgba(255,255,255,0.16)_0%,rgba(255,255,255,0.08)_100%)] px-4 py-4 text-white backdrop-blur">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-white/70">
-              Plan profesional
-            </div>
-            <div className="mt-2 text-base font-semibold">Tu panel está activo</div>
-            <div className="mt-1 text-sm text-white/75">
-              Controla compras, stock y usuarios desde un solo sitio.
-            </div>
-            <button
-              type="button"
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/18 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/24"
-            >
-              Ver detalles
-              <span aria-hidden="true">→</span>
-            </button>
-          </div>
-        </div>
       </div>
 
       <div className="border-t border-slate-200/80 p-4">
@@ -391,8 +376,8 @@ export function AppShellHeader({
               onClick={() => handleGroupTabChange('operativa', 'stock')}
               className="min-w-0 flex-1 text-left"
             >
-              <div className="text-[2rem] font-semibold tracking-tight text-slate-950">Control Restaurante</div>
-              <div className="text-sm text-slate-500">
+              <div className="text-[1.9rem] font-semibold tracking-tight text-slate-950">Nexo</div>
+              <div className="mt-0.5 text-sm text-slate-500">
                 {stockBajo > 0 ? `${stockBajo} alertas de stock` : 'Inventario en orden'}
               </div>
             </button>
@@ -423,7 +408,7 @@ export function AppShellHeader({
           </div>
         </div>
 
-        <div className="mt-4 rounded-[28px] border border-white/80 bg-white/92 p-2 shadow-[0_18px_55px_rgba(15,23,42,0.06)]">
+        <div className="mt-4 rounded-[28px] border border-slate-200 bg-white/96 p-2 shadow-[0_18px_55px_rgba(15,23,42,0.06)]">
           <div className="grid grid-cols-3 gap-2">
             {mobileTabs.slice(0, 3).map((item) => {
               const active = currentTab === item
@@ -434,7 +419,7 @@ export function AppShellHeader({
                   onClick={() => onTabChange(item)}
                   className={`flex items-center justify-center gap-2 rounded-[22px] px-3 py-4 text-sm font-semibold transition ${
                     active
-                      ? 'bg-blue-50 text-blue-600 shadow-[0_8px_20px_rgba(59,130,246,0.12)] ring-1 ring-blue-100'
+                      ? 'border border-blue-200 bg-white text-blue-600 shadow-[0_8px_20px_rgba(59,130,246,0.12)]'
                       : 'text-slate-600'
                   }`}
                 >

@@ -90,21 +90,83 @@ function getMetricTone(tone: 'emerald' | 'blue' | 'amber' | 'violet') {
 function getProductVisual(producto: Producto) {
   const text = `${producto.categoria} ${producto.nombre}`.toLowerCase()
   if (text.includes('vino') || text.includes('aceite')) {
-    return { emoji: '🍾', hue: 'from-amber-100 to-amber-50' }
+    return {
+      hue: 'from-amber-100 to-amber-50',
+      art: (
+        <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
+          <rect x="20" y="5" width="8" height="7" rx="2" fill="#5B4636" />
+          <rect x="18" y="11" width="12" height="9" rx="3" fill="#6B5644" />
+          <rect x="16" y="18" width="16" height="23" rx="6" fill="#3E2F28" />
+          <rect x="18" y="21" width="12" height="13" rx="2" fill="#F0E4B6" />
+          <rect x="19" y="22" width="10" height="4" rx="1.5" fill="#D9C37A" />
+        </svg>
+      ),
+    }
   }
   if (text.includes('ajo')) {
-    return { emoji: '🧄', hue: 'from-stone-100 to-slate-50' }
+    return {
+      hue: 'from-stone-100 to-slate-50',
+      art: (
+        <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
+          <ellipse cx="18" cy="28" rx="8" ry="10" fill="#F4F1EC" />
+          <ellipse cx="24" cy="26" rx="8" ry="11" fill="#FCFAF7" />
+          <ellipse cx="30" cy="28" rx="8" ry="10" fill="#F0ECE6" />
+          <path d="M23 12c2-4 5-6 8-7-1 4-4 8-8 10" fill="#A2B273" />
+          <path d="M16 29c4-2 12-2 16 0" stroke="#D5CEC3" strokeWidth="1.2" />
+        </svg>
+      ),
+    }
   }
   if (text.includes('coca') || text.includes('bebida') || text.includes('cola')) {
-    return { emoji: '🥤', hue: 'from-red-100 to-rose-50' }
+    return {
+      hue: 'from-red-100 to-rose-50',
+      art: (
+        <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
+          <rect x="16" y="6" width="16" height="36" rx="5" fill="#D92128" />
+          <rect x="18" y="9" width="12" height="30" rx="4" fill="#EF4047" />
+          <path d="M20 16c4-1 8 1 12 0" stroke="#F9D6D9" strokeWidth="1.5" />
+          <path d="M20 24c4-1 8 1 12 0" stroke="#F9D6D9" strokeWidth="1.5" />
+          <path d="M20 32c4-1 8 1 12 0" stroke="#F9D6D9" strokeWidth="1.5" />
+        </svg>
+      ),
+    }
   }
   if (text.includes('queso') || text.includes('mozza') || text.includes('lácteo')) {
-    return { emoji: '🧀', hue: 'from-yellow-100 to-amber-50' }
+    return {
+      hue: 'from-yellow-100 to-amber-50',
+      art: (
+        <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
+          <ellipse cx="17" cy="28" rx="8" ry="6" fill="#FBF8F0" />
+          <ellipse cx="24" cy="24" rx="9" ry="7" fill="#FFFDF8" />
+          <ellipse cx="31" cy="28" rx="8" ry="6" fill="#F4EFE3" />
+          <ellipse cx="24" cy="34" rx="11" ry="6" fill="#EEE5D4" />
+        </svg>
+      ),
+    }
   }
   if (text.includes('pan')) {
-    return { emoji: '🥖', hue: 'from-orange-100 to-amber-50' }
+    return {
+      hue: 'from-orange-100 to-amber-50',
+      art: (
+        <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
+          <path d="M10 28c0-7 7-13 16-13s12 6 12 10-3 11-14 11S10 34 10 28Z" fill="#D4873F" />
+          <path d="M18 19c-1 3-1 6 0 9" stroke="#F2C27B" strokeWidth="1.5" />
+          <path d="M25 18c-1 3-1 7 0 10" stroke="#F2C27B" strokeWidth="1.5" />
+          <path d="M31 20c-1 3-1 5 0 8" stroke="#F2C27B" strokeWidth="1.5" />
+        </svg>
+      ),
+    }
   }
-  return { emoji: '📦', hue: 'from-slate-100 to-white' }
+  return {
+    hue: 'from-slate-100 to-white',
+    art: (
+      <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
+        <path d="m24 7 14 8v18l-14 8-14-8V15Z" fill="#E2E8F0" />
+        <path d="m10 15 14 8 14-8" stroke="#94A3B8" strokeWidth="1.5" />
+        <path d="M24 23v18" stroke="#94A3B8" strokeWidth="1.5" />
+      </svg>
+    ),
+  }
 }
 
 function getProductStatus(producto: Producto) {
@@ -320,26 +382,30 @@ export default function StockTab({
         ) : null}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
+      <div className="grid grid-cols-4 gap-3 lg:gap-4">
         {metricCards.map((metric) => {
           const tone = getMetricTone(metric.tone)
           return (
             <div
               key={metric.key}
-              className="relative overflow-hidden rounded-[30px] border border-white/80 bg-white px-5 py-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]"
+              className="relative overflow-hidden rounded-[26px] border border-white/80 bg-white px-3 py-4 shadow-[0_18px_45px_rgba(15,23,42,0.06)] sm:px-4 lg:rounded-[30px] lg:px-5 lg:py-5"
             >
-              <div className="flex items-start gap-4">
-                <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full ${tone.badge}`}>
-                  <Icon path={metric.icon} className="h-8 w-8" />
+              <div className="flex flex-col items-center text-center lg:flex-row lg:items-start lg:gap-4 lg:text-left">
+                <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full ${tone.badge} lg:h-16 lg:w-16`}>
+                  <Icon path={metric.icon} className="h-7 w-7 lg:h-8 lg:w-8" />
                 </div>
-                <div className="min-w-0">
-                  <div className={`text-5xl font-semibold tracking-tight ${tone.value}`}>{metric.value}</div>
-                  <div className="mt-1 text-[1.35rem] font-semibold text-slate-900">{metric.label}</div>
-                  <div className="text-sm text-slate-500">{metric.subtitle}</div>
+                <div className="mt-3 min-w-0 lg:mt-0">
+                  <div className={`text-[2.4rem] font-semibold leading-none tracking-tight ${tone.value} lg:text-5xl`}>
+                    {metric.value}
+                  </div>
+                  <div className="mt-2 text-[0.95rem] font-semibold leading-tight text-slate-900 lg:text-[1.35rem]">
+                    {metric.label}
+                  </div>
+                  <div className="mt-1 text-xs text-slate-500 lg:text-sm">{metric.subtitle}</div>
                 </div>
               </div>
 
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16">
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-16 lg:block">
                 <div className={`absolute inset-x-0 bottom-0 h-10 bg-gradient-to-r ${tone.wave}`} />
                 <div className={`absolute inset-x-3 bottom-2 h-7 rounded-[999px] border-t ${tone.stroke}`} />
               </div>
@@ -349,8 +415,8 @@ export default function StockTab({
       </div>
 
       <div className="mt-6 rounded-[32px] border border-white/80 bg-white/96 shadow-[0_18px_50px_rgba(15,23,42,0.07)]">
-        <div className="border-b border-slate-100 px-5 py-5 sm:px-6">
-          <div className="grid gap-3 xl:grid-cols-[1.45fr_0.9fr_0.9fr_0.9fr_auto]">
+        <div className="border-b border-slate-100 px-4 py-4 sm:px-5 lg:px-6 lg:py-5">
+          <div className="hidden gap-3 xl:grid xl:grid-cols-[1.45fr_0.9fr_0.9fr_0.9fr_auto]">
             <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
               <Icon
                 className="h-5 w-5 text-slate-400"
@@ -435,6 +501,77 @@ export default function StockTab({
               </button>
             </div>
           </div>
+
+          <div className="space-y-3 xl:hidden">
+            <div className="flex gap-3">
+              <label className="flex flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                <Icon
+                  className="h-5 w-5 text-slate-400"
+                  path={
+                    <>
+                      <circle cx="11" cy="11" r="6.5" />
+                      <path d="m16 16 4 4" />
+                    </>
+                  }
+                />
+                <input
+                  type="search"
+                  value={busqueda}
+                  onChange={(e) => onBusquedaChange(e.target.value)}
+                  placeholder="Buscar producto..."
+                  className="w-full bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
+                />
+              </label>
+              <button className="flex h-[52px] w-[52px] items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm">
+                <Icon
+                  className="h-5 w-5"
+                  path={
+                    <>
+                      <path d="M4 6h16" />
+                      <path d="M7 12h10" />
+                      <path d="M10 18h4" />
+                    </>
+                  }
+                />
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-600">
+                Todas
+              </button>
+              <label className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm">
+                <select
+                  value={categoriaFiltro}
+                  onChange={(e) => onCategoriaFiltroChange(e.target.value)}
+                  className="bg-transparent outline-none"
+                >
+                  <option value="todas">Categoría</option>
+                  {categoriasProducto.map((categoria) => (
+                    <option key={categoria} value={categoria}>
+                      {categoria}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm">
+                <select
+                  value={productoEstado}
+                  onChange={(e) =>
+                    onProductoEstadoChange(e.target.value as 'activos' | 'archivados' | 'todos')
+                  }
+                  className="bg-transparent outline-none"
+                >
+                  <option value="todos">Estado</option>
+                  <option value="activos">Activos</option>
+                  <option value="archivados">Archivados</option>
+                </select>
+              </label>
+              <button className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm">
+                Unidad
+              </button>
+            </div>
+          </div>
         </div>
 
         {loadingProductos && (
@@ -485,7 +622,7 @@ export default function StockTab({
                             <div
                               className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${visual.hue} text-2xl shadow-inner ring-1 ring-slate-100`}
                             >
-                              <span aria-hidden="true">{visual.emoji}</span>
+                              {visual.art}
                             </div>
                             <div className="min-w-0">
                               <div className="truncate text-[1.05rem] font-semibold text-slate-900">
@@ -549,10 +686,7 @@ export default function StockTab({
                       : 'text-emerald-600'
 
                 return (
-                  <div
-                    key={producto.id}
-                    className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm"
-                  >
+                  <div key={producto.id} className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
                     <div className="flex items-start gap-3">
                       <button
                         type="button"
@@ -562,7 +696,7 @@ export default function StockTab({
                         <div
                           className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] bg-gradient-to-br ${visual.hue} text-3xl shadow-inner ring-1 ring-slate-100`}
                         >
-                          <span aria-hidden="true">{visual.emoji}</span>
+                          {visual.art}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-[1.05rem] font-semibold text-slate-900">
@@ -578,7 +712,7 @@ export default function StockTab({
                       </button>
 
                       <div className="flex flex-col items-end gap-2">
-                        <div className={`text-[2rem] font-semibold leading-none ${stockClass}`}>
+                        <div className={`text-[2.2rem] font-semibold leading-none ${stockClass}`}>
                           {formatCantidad(producto.stock_actual)}
                         </div>
                         <div className="text-sm text-slate-500">{producto.unidad}</div>
@@ -703,6 +837,16 @@ export default function StockTab({
           </div>
         </div>
       </div>
+
+      {canManageStock ? (
+        <button
+          type="button"
+          onClick={onNuevoProducto}
+          className="fixed bottom-24 right-5 z-30 flex h-20 w-20 items-center justify-center rounded-full bg-[linear-gradient(135deg,#1482ff_0%,#4d54ff_48%,#8c2eff_100%)] text-4xl text-white shadow-[0_22px_44px_rgba(92,88,255,0.3)] lg:hidden"
+        >
+          +
+        </button>
+      ) : null}
     </>
   )
 }
