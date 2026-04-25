@@ -24,13 +24,19 @@ export function ProveedorModal({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end bg-black/40">
-      <div className="w-full rounded-t-3xl bg-white p-4 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
+    <div
+      className="fixed inset-0 z-40 flex items-end bg-slate-950/40 lg:items-center lg:justify-center lg:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="w-full rounded-t-3xl bg-white p-4 shadow-xl lg:max-w-[640px] lg:rounded-[28px] lg:border lg:border-white/80 lg:p-5 lg:shadow-[0_30px_90px_rgba(15,23,42,0.18)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 lg:pb-4">
           <h3 className="text-base font-semibold text-slate-900">
             {proveedorEditId ? 'Editar proveedor' : 'Nuevo proveedor'}
           </h3>
-          <button onClick={onClose} className="text-sm font-medium text-slate-500">
+          <button type="button" onClick={onClose} className="text-sm font-medium text-slate-500">
             Cerrar
           </button>
         </div>
