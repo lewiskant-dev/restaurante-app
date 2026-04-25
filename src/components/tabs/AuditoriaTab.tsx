@@ -77,8 +77,10 @@ export function AuditoriaTab({
   return (
     <>
       <div className="mb-5">
-        <h2 className="text-[1.9rem] font-semibold tracking-tight text-slate-950">Auditoría</h2>
-        <p className="mt-1.5 text-[15px] text-slate-500">
+        <h2 className="text-[1.85rem] font-semibold tracking-tight text-slate-950 sm:text-[1.9rem]">
+          Auditoría
+        </h2>
+        <p className="mt-1 text-[14px] text-slate-500 sm:mt-1.5 sm:text-[15px]">
           Revisa cambios, accesos y acciones sensibles del equipo.
         </p>
       </div>
@@ -87,7 +89,7 @@ export function AuditoriaTab({
         <button
           type="button"
           onClick={onResetFilters}
-          className="rounded-[20px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
+          className="rounded-[24px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Registros visibles
@@ -99,7 +101,7 @@ export function AuditoriaTab({
         <button
           type="button"
           onClick={() => onEntidadFiltroChange('sesion')}
-          className="rounded-[20px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
+          className="rounded-[24px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Sesión
@@ -111,7 +113,7 @@ export function AuditoriaTab({
         <button
           type="button"
           onClick={() => onEntidadFiltroChange('perfil')}
-          className="rounded-[20px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
+          className="rounded-[24px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Perfil
@@ -123,7 +125,7 @@ export function AuditoriaTab({
         <button
           type="button"
           onClick={() => onEntidadFiltroChange('usuario')}
-          className="rounded-[20px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
+          className="rounded-[24px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Usuarios
@@ -133,41 +135,40 @@ export function AuditoriaTab({
         </button>
       </div>
 
-      <div className="rounded-[24px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:p-5">
-      <div className="mt-1">
-        <input
-          type="search"
-          value={busquedaAuditoria}
-          onChange={(e) => onBusquedaChange(e.target.value)}
-          placeholder="Buscar por entidad, acción, operario..."
-          className="w-full rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900 outline-none placeholder:text-slate-400"
-        />
-      </div>
+      <div className="rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:rounded-[24px] sm:p-5">
+        <div className="mt-1">
+          <input
+            type="search"
+            value={busquedaAuditoria}
+            onChange={(e) => onBusquedaChange(e.target.value)}
+            placeholder="Buscar por entidad, acción, operario..."
+            className="w-full rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+          />
+        </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <input
-          type="date"
-          value={auditoriaDesde}
-          onChange={(e) => onDesdeChange(e.target.value)}
-          className="rounded-[16px] border border-slate-200 px-3 py-2 text-[13px]"
-        />
-        <input
-          type="date"
-          value={auditoriaHasta}
-          onChange={(e) => onHastaChange(e.target.value)}
-          className="rounded-[16px] border border-slate-200 px-3 py-2 text-[13px]"
-        />
-      </div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <input
+            type="date"
+            value={auditoriaDesde}
+            onChange={(e) => onDesdeChange(e.target.value)}
+            className="rounded-[20px] border border-slate-200 px-4 py-3 text-[15px] sm:rounded-[16px] sm:px-3 sm:py-2 sm:text-[13px]"
+          />
+          <input
+            type="date"
+            value={auditoriaHasta}
+            onChange={(e) => onHastaChange(e.target.value)}
+            className="rounded-[20px] border border-slate-200 px-4 py-3 text-[15px] sm:rounded-[16px] sm:px-3 sm:py-2 sm:text-[13px]"
+          />
+        </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        {(
-          ['todas', 'producto', 'proveedor', 'albaran', 'receta', 'tpv', 'usuario', 'sesion', 'perfil'] as const
-        ).map(
-          (entidad) => (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(
+            ['todas', 'producto', 'proveedor', 'albaran', 'receta', 'tpv', 'usuario', 'sesion', 'perfil'] as const
+          ).map((entidad) => (
             <button
               key={entidad}
               onClick={() => onEntidadFiltroChange(entidad)}
-              className={`rounded-[14px] px-3 py-1.5 text-[12px] font-semibold ${
+              className={`rounded-[18px] px-4 py-2.5 text-[14px] font-semibold capitalize sm:rounded-[14px] sm:px-3 sm:py-1.5 sm:text-[12px] ${
                 auditoriaEntidadFiltro === entidad
                   ? 'bg-slate-900 text-white'
                   : 'bg-slate-100 text-slate-600'
@@ -175,67 +176,68 @@ export function AuditoriaTab({
             >
               {entidad}
             </button>
-          )
-        )}
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        {[
-          'todas',
-          'crear',
-          'editar',
-          'eliminar',
-          'bloquear',
-          'desbloquear',
-          'archivar',
-          'reactivar',
-          'consumo',
-          'ajuste_stock',
-          'anular',
-          'deshacer_archivar',
-          'importar_csv',
-          'login',
-          'logout',
-          'editar_perfil',
-          'cambiar_password',
-          'reset_password',
-        ].map((accion) => (
-          <button
-            key={accion}
-            onClick={() => onAccionFiltroChange(accion)}
-            className={`rounded-[14px] px-3 py-1.5 text-[12px] font-semibold ${
-              auditoriaAccionFiltro === accion ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700'
-            }`}
-          >
-            {accion}
-          </button>
-        ))}
-      </div>
-
-        <div className="mt-4 flex items-center justify-between gap-2">
-        <div className="rounded-[16px] bg-yellow-50 px-4 py-2.5 text-[13px] text-slate-700">
-          Registros visibles: {auditoriaFiltrada.length} · Totales: {auditoria.length}
+          ))}
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onResetFilters}
-            className="rounded-[14px] bg-slate-100 px-3 py-2 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-200"
-          >
-            Limpiar filtros
-          </button>
-
-          <button
-            onClick={onExportar}
-            className="rounded-[14px] bg-emerald-50 px-3 py-2 text-[12px] font-semibold text-emerald-700"
-          >
-            Exportar CSV
-          </button>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {[
+            'todas',
+            'crear',
+            'editar',
+            'eliminar',
+            'bloquear',
+            'desbloquear',
+            'archivar',
+            'reactivar',
+            'consumo',
+            'ajuste_stock',
+            'anular',
+            'deshacer_archivar',
+            'importar_csv',
+            'login',
+            'logout',
+            'editar_perfil',
+            'cambiar_password',
+            'reset_password',
+          ].map((accion) => (
+            <button
+              key={accion}
+              onClick={() => onAccionFiltroChange(accion)}
+              className={`rounded-[18px] px-4 py-2.5 text-[14px] font-semibold sm:rounded-[14px] sm:px-3 sm:py-1.5 sm:text-[12px] ${
+                auditoriaAccionFiltro === accion
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-blue-50 text-blue-700'
+              }`}
+            >
+              {accion}
+            </button>
+          ))}
         </div>
-      </div>
 
-      <div className="mt-4 rounded-[20px] bg-slate-50/80 p-3">
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="rounded-[20px] bg-yellow-50 px-4 py-3 text-[14px] text-slate-700 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]">
+            Registros visibles: {auditoriaFiltrada.length} · Totales: {auditoria.length}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onResetFilters}
+              className="rounded-[16px] bg-slate-100 px-3 py-2.5 text-[13px] font-semibold text-slate-700 transition hover:bg-slate-200 sm:rounded-[14px] sm:py-2 sm:text-[12px]"
+            >
+              Limpiar filtros
+            </button>
+
+            <button
+              onClick={onExportar}
+              className="rounded-[16px] bg-emerald-50 px-3 py-2.5 text-[13px] font-semibold text-emerald-700 sm:rounded-[14px] sm:py-2 sm:text-[12px]"
+            >
+              Exportar CSV
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-[24px] bg-slate-50/80 p-3 sm:rounded-[20px]">
         {loadingAuditoria && (
           <div className="py-10 text-center text-sm text-slate-400">Cargando auditoría...</div>
         )}
@@ -254,17 +256,17 @@ export function AuditoriaTab({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
-                        className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getAuditEntityBadgeClasses(item.entidad)}`}
+                        className={`rounded-full px-2.5 py-1 text-[12px] font-semibold sm:text-[11px] ${getAuditEntityBadgeClasses(item.entidad)}`}
                       >
                         {getAuditEntityLabel(item.entidad)}
                       </span>
                       <span
-                        className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getAuditActionBadgeClasses(item.accion)}`}
+                        className={`rounded-full px-2.5 py-1 text-[12px] font-semibold sm:text-[11px] ${getAuditActionBadgeClasses(item.accion)}`}
                       >
                         {getAuditActionLabel(item.accion)}
                       </span>
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">
+                    <div className="mt-1 text-[13px] text-slate-500 sm:text-xs">
                       {item.detalle || 'Sin detalle'}
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
@@ -274,7 +276,9 @@ export function AuditoriaTab({
                   </div>
 
                   <div className="flex shrink-0 flex-col items-end gap-2">
-                    <div className="text-[11px] text-slate-500">{formatFechaHora(item.created_at)}</div>
+                    <div className="text-[12px] text-slate-500 sm:text-[11px]">
+                      {formatFechaHora(item.created_at)}
+                    </div>
 
                     <div className="text-[11px] font-semibold text-blue-600 group-open:hidden">
                       Ver detalle
@@ -340,7 +344,7 @@ export function AuditoriaTab({
               )}
             </details>
           ))}
-      </div>
+        </div>
       </div>
     </>
   )

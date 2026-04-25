@@ -103,8 +103,10 @@ export function UserManagementPanel({
     <div className="space-y-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="text-[1.9rem] font-semibold tracking-tight text-slate-950">Usuarios y permisos</h2>
-          <p className="mt-1.5 text-[15px] text-slate-500">
+          <h2 className="text-[1.85rem] font-semibold tracking-tight text-slate-950 sm:text-[1.9rem]">
+            Usuarios y permisos
+          </h2>
+          <p className="mt-1 text-[14px] text-slate-500 sm:mt-1.5 sm:text-[15px]">
             Gestiona quien entra y que nivel de acceso tiene cada persona.
           </p>
         </div>
@@ -112,13 +114,13 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={onReload}
-          className="rounded-[15px] bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200"
+          className="rounded-[18px] bg-white px-4 py-3 text-[14px] font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 sm:rounded-[15px] sm:py-2 sm:text-[13px]"
         >
           Actualizar
         </button>
       </div>
 
-      <div className="rounded-[22px] border border-white/80 bg-white/92 px-4 py-3 text-[13px] text-slate-600 shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
+      <div className="rounded-[24px] border border-white/80 bg-white/92 px-4 py-4 text-[14px] text-slate-600 shadow-[0_14px_36px_rgba(15,23,42,0.06)] sm:rounded-[22px] sm:py-3 sm:text-[13px]">
         Roles disponibles: <span className="font-semibold">Empleado</span>,{' '}
         <span className="font-semibold">Encargado</span> y{' '}
         <span className="font-semibold">Administrador</span>. El rol{' '}
@@ -130,7 +132,7 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={onResetFilters}
-          className="rounded-[20px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
+          className="rounded-[24px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Equipo total
@@ -144,7 +146,7 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={() => onRoleFilterChange('administrador')}
-          className="rounded-[20px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
+          className="rounded-[24px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Gestión avanzada
@@ -160,7 +162,7 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={() => onAccessFilterChange('sin_acceso')}
-          className="rounded-[20px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
+          className="rounded-[24px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Sin acceso aún
@@ -174,7 +176,7 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={() => onAccessFilterChange('requiere_revision')}
-          className="rounded-[20px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
+          className="rounded-[24px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Requieren revisión
@@ -190,7 +192,7 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={() => onAccessFilterChange('acceso_reciente')}
-          className="rounded-[20px] border border-emerald-100 bg-emerald-50/60 p-4 text-left transition hover:bg-emerald-50"
+          className="rounded-[24px] border border-emerald-100 bg-emerald-50/60 p-4 text-left transition hover:bg-emerald-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-emerald-700">
             Acceso reciente
@@ -206,7 +208,7 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={() => onAccessFilterChange('requiere_revision')}
-          className="rounded-[20px] border border-rose-100 bg-rose-50/60 p-4 text-left transition hover:bg-rose-50"
+          className="rounded-[24px] border border-rose-100 bg-rose-50/60 p-4 text-left transition hover:bg-rose-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-rose-700">
             Acceso antiguo
@@ -222,7 +224,7 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={() => onAccessFilterChange('sin_acceso')}
-          className="rounded-[20px] border border-amber-100 bg-amber-50/60 p-4 text-left transition hover:bg-amber-50"
+          className="rounded-[24px] border border-amber-100 bg-amber-50/60 p-4 text-left transition hover:bg-amber-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-amber-700">
             Sin acceso aún
@@ -236,10 +238,12 @@ export function UserManagementPanel({
         </button>
       </div>
 
-      <div className="rounded-[24px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:p-5">
+      <div className="rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:rounded-[24px] sm:p-5">
         <div className="mb-4">
-          <h3 className="text-sm font-semibold text-slate-900">Alta de usuario</h3>
-          <p className="mt-1 text-sm text-slate-500">Crea cuentas internas sin salir del panel.</p>
+          <h3 className="text-[17px] font-semibold text-slate-900 sm:text-sm">Alta de usuario</h3>
+          <p className="mt-1 text-[14px] text-slate-500 sm:text-sm">
+            Crea cuentas internas sin salir del panel.
+          </p>
         </div>
 
         <div className="grid gap-3 xl:grid-cols-[1fr_1fr_0.9fr_0.8fr_auto]">
@@ -248,7 +252,7 @@ export function UserManagementPanel({
             value={newManagedUserName}
             onChange={(e) => onNewNameChange(e.target.value)}
             placeholder="Nombre visible"
-            className={`rounded-[16px] border bg-white px-4 py-2.5 text-[13px] text-slate-900 outline-none placeholder:text-slate-400 ${
+            className={`rounded-[20px] border bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px] ${
               newManagedUserNameError ? 'border-red-200' : 'border-slate-200'
             }`}
           />
@@ -257,7 +261,7 @@ export function UserManagementPanel({
             value={newManagedUserEmail}
             onChange={(e) => onNewEmailChange(e.target.value)}
             placeholder="usuario@restaurante.com"
-            className={`rounded-[16px] border bg-white px-4 py-2.5 text-[13px] text-slate-900 outline-none placeholder:text-slate-400 ${
+            className={`rounded-[20px] border bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px] ${
               newManagedUserEmailError ? 'border-red-200' : 'border-slate-200'
             }`}
           />
@@ -266,14 +270,14 @@ export function UserManagementPanel({
             value={newManagedUserPassword}
             onChange={(e) => onNewPasswordChange(e.target.value)}
             placeholder="Contraseña inicial"
-            className={`rounded-[16px] border bg-white px-4 py-2.5 text-[13px] text-slate-900 outline-none placeholder:text-slate-400 ${
+            className={`rounded-[20px] border bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px] ${
               newManagedUserPasswordError ? 'border-red-200' : 'border-slate-200'
             }`}
           />
           <select
             value={newManagedUserRole}
             onChange={(e) => onNewRoleChange(e.target.value as UserRole)}
-            className="rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900 outline-none"
+            className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
           >
             <option value="empleado">Empleado</option>
             <option value="encargado">Encargado</option>
@@ -284,13 +288,13 @@ export function UserManagementPanel({
             type="button"
             onClick={onCreate}
             disabled={!canSubmitManagedUser}
-            className="rounded-[16px] bg-blue-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 disabled:opacity-60"
+            className="rounded-[20px] bg-blue-600 px-5 py-3 text-[15px] font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 disabled:opacity-60 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
           >
             {creatingManagedUser ? 'Creando...' : 'Crear usuario'}
           </button>
         </div>
 
-        <div className="mt-3 grid gap-2 text-xs xl:grid-cols-[1fr_1fr_0.9fr_0.8fr_auto]">
+        <div className="mt-3 grid gap-2 text-[12px] xl:grid-cols-[1fr_1fr_0.9fr_0.8fr_auto]">
           <div className={newManagedUserNameError ? 'text-red-500' : 'text-slate-500'}>
             {newManagedUserNameError || 'Entre 2 y 60 caracteres.'}
           </div>
@@ -305,20 +309,20 @@ export function UserManagementPanel({
         </div>
       </div>
 
-      <div className="rounded-[24px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:p-5">
+      <div className="rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:rounded-[24px] sm:p-5">
         <div className="mb-4 grid gap-3 xl:grid-cols-[1.3fr_0.8fr_0.8fr_auto]">
           <input
             type="search"
             value={busquedaUsuarios}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Buscar por nombre, email o rol..."
-            className="rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900 outline-none placeholder:text-slate-400"
+            className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
           />
 
           <select
             value={managedUserRoleFilter}
             onChange={(e) => onRoleFilterChange(e.target.value as 'todos' | UserRole)}
-            className="rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900 outline-none"
+            className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
           >
             <option value="todos">Todos los roles</option>
             <option value="empleado">Empleado</option>
@@ -330,7 +334,7 @@ export function UserManagementPanel({
           <select
             value={managedUserAccessFilter}
             onChange={(e) => onAccessFilterChange(e.target.value as ManagedUserAccessFilter)}
-            className="rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900 outline-none"
+            className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
           >
             <option value="todos">Todos los accesos</option>
             <option value="sin_acceso">Sin acceso todavía</option>
@@ -339,7 +343,7 @@ export function UserManagementPanel({
             <option value="requiere_revision">Requieren revisión</option>
           </select>
 
-          <div className="rounded-[16px] bg-slate-100 px-4 py-2.5 text-[13px] text-slate-600">
+          <div className="rounded-[20px] bg-slate-100 px-4 py-3 text-[14px] text-slate-600 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]">
             Visibles: {managedUsersFiltrados.length} de {managedUsers.length}
           </div>
         </div>
@@ -348,7 +352,7 @@ export function UserManagementPanel({
           <button
             type="button"
             onClick={onResetFilters}
-            className="rounded-[14px] bg-slate-100 px-3 py-2 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-200"
+            className="rounded-[16px] bg-slate-100 px-3 py-2.5 text-[13px] font-semibold text-slate-700 transition hover:bg-slate-200 sm:rounded-[14px] sm:py-2 sm:text-[12px]"
           >
             Limpiar filtros
           </button>
@@ -388,15 +392,15 @@ export function UserManagementPanel({
               return (
                 <div
                   key={managedUser.id}
-                  className="flex flex-col gap-4 rounded-[28px] border border-slate-100 bg-slate-50/80 p-4 lg:flex-row lg:items-center lg:justify-between"
+                  className="flex flex-col gap-4 rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.05)] lg:flex-row lg:items-center lg:justify-between lg:bg-slate-50/80 lg:shadow-none"
                 >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="truncate text-sm font-semibold text-slate-900">
+                      <h3 className="truncate text-[17px] font-semibold text-slate-900 sm:text-sm">
                         {managedUser.full_name || managedUser.email}
                       </h3>
                       <span
-                        className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${accessStatus.className}`}
+                        className={`rounded-full px-2.5 py-1 text-[12px] font-semibold sm:text-[11px] ${accessStatus.className}`}
                       >
                         {accessStatus.label}
                       </span>
@@ -411,8 +415,8 @@ export function UserManagementPanel({
                         </span>
                       ) : null}
                     </div>
-                    <div className="mt-1 text-sm text-slate-500">{managedUser.email}</div>
-                    <div className="mt-1 text-xs text-slate-400">
+                    <div className="mt-1 text-[14px] text-slate-500 sm:text-sm">{managedUser.email}</div>
+                    <div className="mt-1 text-[12px] text-slate-400">
                       Alta: {formatFechaHora(managedUser.created_at)}
                       {managedUser.last_sign_in_at
                         ? ` · Último acceso: ${formatFechaHora(managedUser.last_sign_in_at)}`
@@ -421,11 +425,11 @@ export function UserManagementPanel({
                         ? ` · Bloqueado hasta: ${formatFechaHora(managedUser.banned_until)}`
                         : ''}
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">{accessStatus.detail}</div>
+                    <div className="mt-1 text-[12px] text-slate-500">{accessStatus.detail}</div>
                   </div>
 
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <div className="rounded-2xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm">
+                    <div className="rounded-[18px] bg-slate-100 px-3 py-2.5 text-[14px] font-semibold text-slate-700 shadow-sm sm:rounded-2xl sm:bg-white sm:py-2 sm:text-sm">
                       {getRoleLabel(managedUser.role)}
                     </div>
 
@@ -433,7 +437,7 @@ export function UserManagementPanel({
                       value={managedUser.role}
                       disabled={!canEditTarget || savingManagedUserId === managedUser.id}
                       onChange={(e) => onUpdateRole(managedUser.id, e.target.value as UserRole)}
-                      className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-[14px] text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-2xl sm:py-2 sm:text-sm"
                     >
                       <option value="empleado">Empleado</option>
                       <option value="encargado">Encargado</option>
@@ -453,7 +457,7 @@ export function UserManagementPanel({
                             )
                           }
                           disabled={blockingManagedUserId === managedUser.id}
-                          className={`rounded-2xl px-4 py-2 text-sm font-semibold disabled:opacity-60 ${
+                          className={`rounded-[18px] px-4 py-3 text-[14px] font-semibold disabled:opacity-60 sm:rounded-2xl sm:py-2 sm:text-sm ${
                             isBlocked
                               ? 'bg-emerald-50 text-emerald-700'
                               : 'bg-slate-100 text-slate-700'
@@ -473,7 +477,7 @@ export function UserManagementPanel({
                             onDelete(managedUser.id, managedUser.full_name || managedUser.email)
                           }
                           disabled={deletingManagedUserId === managedUser.id}
-                          className="rounded-2xl bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-60"
+                          className="rounded-[18px] bg-red-50 px-4 py-3 text-[14px] font-semibold text-red-600 disabled:opacity-60 sm:rounded-2xl sm:py-2 sm:text-sm"
                         >
                           {deletingManagedUserId === managedUser.id ? 'Eliminando...' : 'Eliminar'}
                         </button>
@@ -489,7 +493,7 @@ export function UserManagementPanel({
                           value={draftPassword}
                           onChange={(e) => onManagedPasswordDraftChange(managedUser.id, e.target.value)}
                           placeholder="Nueva contraseña"
-                          className={`rounded-2xl border bg-white px-4 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
+                          className={`w-full rounded-[18px] border bg-white px-4 py-3 text-[14px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-2xl sm:py-2 sm:text-sm ${
                             draftPassword && draftPasswordError ? 'border-red-200' : 'border-slate-200'
                           }`}
                         />
@@ -507,7 +511,7 @@ export function UserManagementPanel({
                         type="button"
                         onClick={() => onResetPassword(managedUser.id, managedUser.full_name || managedUser.email)}
                         disabled={resettingManagedUserId === managedUser.id || !!draftPasswordError}
-                        className="rounded-2xl bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 disabled:opacity-60"
+                        className="rounded-[18px] bg-amber-50 px-4 py-3 text-[14px] font-semibold text-amber-700 disabled:opacity-60 sm:rounded-2xl sm:py-2 sm:text-sm"
                       >
                         {resettingManagedUserId === managedUser.id ? 'Guardando...' : 'Resetear contraseña'}
                       </button>
