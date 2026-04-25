@@ -100,11 +100,11 @@ export function UserManagementPanel({
   onManagedPasswordDraftChange,
 }: UserManagementPanelProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="text-[2rem] font-semibold tracking-tight text-slate-950">Usuarios y permisos</h2>
-          <p className="mt-2 text-base text-slate-500">
+          <h2 className="text-[1.9rem] font-semibold tracking-tight text-slate-950">Usuarios y permisos</h2>
+          <p className="mt-1.5 text-[15px] text-slate-500">
             Gestiona quien entra y que nivel de acceso tiene cada persona.
           </p>
         </div>
@@ -112,13 +112,13 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={onReload}
-          className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200"
+          className="rounded-[15px] bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200"
         >
           Actualizar
         </button>
       </div>
 
-      <div className="rounded-[28px] border border-white/80 bg-white/92 px-5 py-4 text-sm text-slate-600 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
+      <div className="rounded-[22px] border border-white/80 bg-white/92 px-4 py-3 text-[13px] text-slate-600 shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
         Roles disponibles: <span className="font-semibold">Empleado</span>,{' '}
         <span className="font-semibold">Encargado</span> y{' '}
         <span className="font-semibold">Administrador</span>. El rol{' '}
@@ -130,13 +130,13 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={onResetFilters}
-          className="rounded-[28px] bg-white p-5 text-left shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
+          className="rounded-[20px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Equipo total
           </div>
-          <div className="mt-2 text-3xl font-semibold text-slate-950">{managedUsersSummary.total}</div>
-          <div className="mt-2 text-sm text-slate-500">
+          <div className="mt-2 text-[2rem] font-semibold text-slate-950">{managedUsersSummary.total}</div>
+          <div className="mt-2 text-[13px] text-slate-500">
             {managedUsersSummary.empleados} empleados · {managedUsersSummary.encargados} encargados
           </div>
         </button>
@@ -144,15 +144,15 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={() => onRoleFilterChange('administrador')}
-          className="rounded-[28px] bg-white p-5 text-left shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
+          className="rounded-[20px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Gestión avanzada
           </div>
-          <div className="mt-2 text-3xl font-semibold text-slate-950">
+          <div className="mt-2 text-[2rem] font-semibold text-slate-950">
             {managedUsersSummary.administradores + managedUsersSummary.masters}
           </div>
-          <div className="mt-2 text-sm text-slate-500">
+          <div className="mt-2 text-[13px] text-slate-500">
             {managedUsersSummary.administradores} admin · {managedUsersSummary.masters} master
           </div>
         </button>
@@ -160,13 +160,13 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={() => onAccessFilterChange('sin_acceso')}
-          className="rounded-[28px] bg-white p-5 text-left shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
+          className="rounded-[20px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Sin acceso aún
           </div>
-          <div className="mt-2 text-3xl font-semibold text-slate-950">{managedUsersSummary.sinAcceso}</div>
-          <div className="mt-2 text-sm text-slate-500">
+          <div className="mt-2 text-[2rem] font-semibold text-slate-950">{managedUsersSummary.sinAcceso}</div>
+          <div className="mt-2 text-[13px] text-slate-500">
             Usuarios creados que todavía no han iniciado sesión.
           </div>
         </button>
@@ -174,13 +174,13 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={() => onAccessFilterChange('requiere_revision')}
-          className="rounded-[28px] bg-white p-5 text-left shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
+          className="rounded-[20px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Requieren revisión
           </div>
-          <div className="mt-2 text-3xl font-semibold text-slate-950">{managedUsersSummary.requierenRevision}</div>
-          <div className="mt-2 text-sm text-slate-500">
+          <div className="mt-2 text-[2rem] font-semibold text-slate-950">{managedUsersSummary.requierenRevision}</div>
+          <div className="mt-2 text-[13px] text-slate-500">
             Sin acceso o con actividad demasiado antigua.
           </div>
         </button>
@@ -190,7 +190,7 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={() => onAccessFilterChange('acceso_reciente')}
-          className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-4 text-left transition hover:bg-emerald-50"
+          className="rounded-[20px] border border-emerald-100 bg-emerald-50/60 p-4 text-left transition hover:bg-emerald-50"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-emerald-700">
             Acceso reciente
@@ -198,7 +198,7 @@ export function UserManagementPanel({
           <div className="mt-2 text-2xl font-semibold text-emerald-900">
             {managedUsersSummary.accesoReciente}
           </div>
-          <div className="mt-2 text-sm text-emerald-700">
+          <div className="mt-2 text-[13px] text-emerald-700">
             Han entrado en los últimos 14 días.
           </div>
         </button>
@@ -206,7 +206,7 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={() => onAccessFilterChange('requiere_revision')}
-          className="rounded-3xl border border-rose-100 bg-rose-50/60 p-4 text-left transition hover:bg-rose-50"
+          className="rounded-[20px] border border-rose-100 bg-rose-50/60 p-4 text-left transition hover:bg-rose-50"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-rose-700">
             Acceso antiguo
@@ -214,7 +214,7 @@ export function UserManagementPanel({
           <div className="mt-2 text-2xl font-semibold text-rose-900">
             {managedUsersSummary.accesoAntiguo}
           </div>
-          <div className="mt-2 text-sm text-rose-700">
+          <div className="mt-2 text-[13px] text-rose-700">
             Última actividad hace más de 30 días.
           </div>
         </button>
@@ -222,7 +222,7 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={() => onAccessFilterChange('sin_acceso')}
-          className="rounded-3xl border border-amber-100 bg-amber-50/60 p-4 text-left transition hover:bg-amber-50"
+          className="rounded-[20px] border border-amber-100 bg-amber-50/60 p-4 text-left transition hover:bg-amber-50"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-amber-700">
             Sin acceso aún
@@ -230,13 +230,13 @@ export function UserManagementPanel({
           <div className="mt-2 text-2xl font-semibold text-amber-900">
             {managedUsersSummary.sinAcceso}
           </div>
-          <div className="mt-2 text-sm text-amber-700">
+          <div className="mt-2 text-[13px] text-amber-700">
             Cuentas creadas que todavía no se han usado.
           </div>
         </button>
       </div>
 
-      <div className="rounded-[32px] border border-white/80 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.07)] sm:p-5">
+      <div className="rounded-[24px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:p-5">
         <div className="mb-4">
           <h3 className="text-sm font-semibold text-slate-900">Alta de usuario</h3>
           <p className="mt-1 text-sm text-slate-500">Crea cuentas internas sin salir del panel.</p>
@@ -248,7 +248,7 @@ export function UserManagementPanel({
             value={newManagedUserName}
             onChange={(e) => onNewNameChange(e.target.value)}
             placeholder="Nombre visible"
-            className={`rounded-2xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
+            className={`rounded-[16px] border bg-white px-4 py-2.5 text-[13px] text-slate-900 outline-none placeholder:text-slate-400 ${
               newManagedUserNameError ? 'border-red-200' : 'border-slate-200'
             }`}
           />
@@ -257,7 +257,7 @@ export function UserManagementPanel({
             value={newManagedUserEmail}
             onChange={(e) => onNewEmailChange(e.target.value)}
             placeholder="usuario@restaurante.com"
-            className={`rounded-2xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
+            className={`rounded-[16px] border bg-white px-4 py-2.5 text-[13px] text-slate-900 outline-none placeholder:text-slate-400 ${
               newManagedUserEmailError ? 'border-red-200' : 'border-slate-200'
             }`}
           />
@@ -266,14 +266,14 @@ export function UserManagementPanel({
             value={newManagedUserPassword}
             onChange={(e) => onNewPasswordChange(e.target.value)}
             placeholder="Contraseña inicial"
-            className={`rounded-2xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
+            className={`rounded-[16px] border bg-white px-4 py-2.5 text-[13px] text-slate-900 outline-none placeholder:text-slate-400 ${
               newManagedUserPasswordError ? 'border-red-200' : 'border-slate-200'
             }`}
           />
           <select
             value={newManagedUserRole}
             onChange={(e) => onNewRoleChange(e.target.value as UserRole)}
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+            className="rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900 outline-none"
           >
             <option value="empleado">Empleado</option>
             <option value="encargado">Encargado</option>
@@ -284,7 +284,7 @@ export function UserManagementPanel({
             type="button"
             onClick={onCreate}
             disabled={!canSubmitManagedUser}
-            className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 disabled:opacity-60"
+            className="rounded-[16px] bg-blue-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 disabled:opacity-60"
           >
             {creatingManagedUser ? 'Creando...' : 'Crear usuario'}
           </button>
@@ -305,20 +305,20 @@ export function UserManagementPanel({
         </div>
       </div>
 
-      <div className="rounded-[32px] border border-white/80 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.07)] sm:p-5">
+      <div className="rounded-[24px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:p-5">
         <div className="mb-4 grid gap-3 xl:grid-cols-[1.3fr_0.8fr_0.8fr_auto]">
           <input
             type="search"
             value={busquedaUsuarios}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Buscar por nombre, email o rol..."
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+            className="rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900 outline-none placeholder:text-slate-400"
           />
 
           <select
             value={managedUserRoleFilter}
             onChange={(e) => onRoleFilterChange(e.target.value as 'todos' | UserRole)}
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+            className="rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900 outline-none"
           >
             <option value="todos">Todos los roles</option>
             <option value="empleado">Empleado</option>
@@ -330,7 +330,7 @@ export function UserManagementPanel({
           <select
             value={managedUserAccessFilter}
             onChange={(e) => onAccessFilterChange(e.target.value as ManagedUserAccessFilter)}
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+            className="rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900 outline-none"
           >
             <option value="todos">Todos los accesos</option>
             <option value="sin_acceso">Sin acceso todavía</option>
@@ -339,7 +339,7 @@ export function UserManagementPanel({
             <option value="requiere_revision">Requieren revisión</option>
           </select>
 
-          <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-600">
+          <div className="rounded-[16px] bg-slate-100 px-4 py-2.5 text-[13px] text-slate-600">
             Visibles: {managedUsersFiltrados.length} de {managedUsers.length}
           </div>
         </div>
@@ -348,7 +348,7 @@ export function UserManagementPanel({
           <button
             type="button"
             onClick={onResetFilters}
-            className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+            className="rounded-[14px] bg-slate-100 px-3 py-2 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-200"
           >
             Limpiar filtros
           </button>

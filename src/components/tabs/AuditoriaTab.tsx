@@ -76,9 +76,9 @@ export function AuditoriaTab({
 
   return (
     <>
-      <div className="mb-6">
-        <h2 className="text-[2rem] font-semibold tracking-tight text-slate-950">Auditoría</h2>
-        <p className="mt-2 text-base text-slate-500">
+      <div className="mb-5">
+        <h2 className="text-[1.9rem] font-semibold tracking-tight text-slate-950">Auditoría</h2>
+        <p className="mt-1.5 text-[15px] text-slate-500">
           Revisa cambios, accesos y acciones sensibles del equipo.
         </p>
       </div>
@@ -87,60 +87,60 @@ export function AuditoriaTab({
         <button
           type="button"
           onClick={onResetFilters}
-          className="rounded-[28px] bg-white p-5 text-left shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
+          className="rounded-[20px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Registros visibles
           </div>
-          <div className="mt-2 text-3xl font-semibold text-slate-950">{auditoriaFiltrada.length}</div>
-          <div className="mt-2 text-sm text-slate-500">Sobre un total de {auditoria.length} eventos.</div>
+          <div className="mt-2 text-[2rem] font-semibold text-slate-950">{auditoriaFiltrada.length}</div>
+          <div className="mt-2 text-[13px] text-slate-500">Sobre un total de {auditoria.length} eventos.</div>
         </button>
 
         <button
           type="button"
           onClick={() => onEntidadFiltroChange('sesion')}
-          className="rounded-[28px] bg-white p-5 text-left shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
+          className="rounded-[20px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Sesión
           </div>
-          <div className="mt-2 text-3xl font-semibold text-slate-950">{sessionEvents}</div>
-          <div className="mt-2 text-sm text-slate-500">Logins y cierres de sesión filtrados.</div>
+          <div className="mt-2 text-[2rem] font-semibold text-slate-950">{sessionEvents}</div>
+          <div className="mt-2 text-[13px] text-slate-500">Logins y cierres de sesión filtrados.</div>
         </button>
 
         <button
           type="button"
           onClick={() => onEntidadFiltroChange('perfil')}
-          className="rounded-[28px] bg-white p-5 text-left shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
+          className="rounded-[20px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Perfil
           </div>
-          <div className="mt-2 text-3xl font-semibold text-slate-950">{profileEvents}</div>
-          <div className="mt-2 text-sm text-slate-500">Cambios de perfil y contraseña.</div>
+          <div className="mt-2 text-[2rem] font-semibold text-slate-950">{profileEvents}</div>
+          <div className="mt-2 text-[13px] text-slate-500">Cambios de perfil y contraseña.</div>
         </button>
 
         <button
           type="button"
           onClick={() => onEntidadFiltroChange('usuario')}
-          className="rounded-[28px] bg-white p-5 text-left shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
+          className="rounded-[20px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Usuarios
           </div>
-          <div className="mt-2 text-3xl font-semibold text-slate-950">{userEvents}</div>
-          <div className="mt-2 text-sm text-slate-500">Altas, roles, bajas y resets.</div>
+          <div className="mt-2 text-[2rem] font-semibold text-slate-950">{userEvents}</div>
+          <div className="mt-2 text-[13px] text-slate-500">Altas, roles, bajas y resets.</div>
         </button>
       </div>
 
-      <div className="rounded-[32px] border border-white/80 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.07)] sm:p-5">
+      <div className="rounded-[24px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:p-5">
       <div className="mt-1">
         <input
           type="search"
           value={busquedaAuditoria}
           onChange={(e) => onBusquedaChange(e.target.value)}
           placeholder="Buscar por entidad, acción, operario..."
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-400"
+          className="w-full rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900 outline-none placeholder:text-slate-400"
         />
       </div>
 
@@ -149,13 +149,13 @@ export function AuditoriaTab({
           type="date"
           value={auditoriaDesde}
           onChange={(e) => onDesdeChange(e.target.value)}
-          className="rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+          className="rounded-[16px] border border-slate-200 px-3 py-2 text-[13px]"
         />
         <input
           type="date"
           value={auditoriaHasta}
           onChange={(e) => onHastaChange(e.target.value)}
-          className="rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+          className="rounded-[16px] border border-slate-200 px-3 py-2 text-[13px]"
         />
       </div>
 
@@ -167,7 +167,7 @@ export function AuditoriaTab({
             <button
               key={entidad}
               onClick={() => onEntidadFiltroChange(entidad)}
-              className={`rounded-xl px-3 py-1 text-xs font-semibold ${
+              className={`rounded-[14px] px-3 py-1.5 text-[12px] font-semibold ${
                 auditoriaEntidadFiltro === entidad
                   ? 'bg-slate-900 text-white'
                   : 'bg-slate-100 text-slate-600'
@@ -203,7 +203,7 @@ export function AuditoriaTab({
           <button
             key={accion}
             onClick={() => onAccionFiltroChange(accion)}
-            className={`rounded-xl px-3 py-1 text-xs font-semibold ${
+            className={`rounded-[14px] px-3 py-1.5 text-[12px] font-semibold ${
               auditoriaAccionFiltro === accion ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700'
             }`}
           >
@@ -212,8 +212,8 @@ export function AuditoriaTab({
         ))}
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-2">
-        <div className="rounded-2xl bg-yellow-50 px-4 py-3 text-sm text-slate-700">
+        <div className="mt-4 flex items-center justify-between gap-2">
+        <div className="rounded-[16px] bg-yellow-50 px-4 py-2.5 text-[13px] text-slate-700">
           Registros visibles: {auditoriaFiltrada.length} · Totales: {auditoria.length}
         </div>
 
@@ -221,21 +221,21 @@ export function AuditoriaTab({
           <button
             type="button"
             onClick={onResetFilters}
-            className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+            className="rounded-[14px] bg-slate-100 px-3 py-2 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-200"
           >
             Limpiar filtros
           </button>
 
           <button
             onClick={onExportar}
-            className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+            className="rounded-[14px] bg-emerald-50 px-3 py-2 text-[12px] font-semibold text-emerald-700"
           >
             Exportar CSV
           </button>
         </div>
       </div>
 
-      <div className="mt-4 rounded-[28px] bg-slate-50/80 p-3">
+      <div className="mt-4 rounded-[20px] bg-slate-50/80 p-3">
         {loadingAuditoria && (
           <div className="py-10 text-center text-sm text-slate-400">Cargando auditoría...</div>
         )}

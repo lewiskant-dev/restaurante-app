@@ -41,29 +41,36 @@ export function TpvTab({
   onGuardarMapeo,
 }: TpvTabProps) {
   return (
-    <div className="space-y-4">
-      <div className="rounded-3xl bg-white p-4 shadow-sm">
-        <h2 className="text-base font-semibold text-slate-900">Importar ventas del TPV</h2>
-        <p className="mt-1 text-sm text-slate-500">
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-[1.9rem] font-semibold tracking-tight text-slate-950">TPV</h2>
+        <p className="mt-1.5 text-[15px] text-slate-500">
+          Importa ventas, mapea artículos y descuenta stock de forma controlada.
+        </p>
+      </div>
+
+      <div className="rounded-[24px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:p-5">
+        <h3 className="text-[15px] font-semibold text-slate-900">Importar ventas del TPV</h3>
+        <p className="mt-1 text-[13px] text-slate-500">
           Primero carga el CSV y revisa las líneas. Después pulsa aplicar para descontar stock.
         </p>
 
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-600">Archivo CSV</label>
+            <label className="mb-1 block text-[13px] font-medium text-slate-600">Archivo CSV</label>
             <input
               type="file"
               accept=".csv,text/csv"
               onChange={(e) => onFileChange(e.target.files?.[0] || null)}
-              className="w-full text-sm text-slate-700"
+              className="w-full text-[13px] text-slate-700"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-600">
+            <label className="mb-1 block text-[13px] font-medium text-slate-600">
               Separador detectado
             </label>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <div className="rounded-[16px] border border-slate-200 bg-slate-50 px-4 py-2.5 text-[13px] text-slate-700">
               Punto y coma (;)
             </div>
           </div>
@@ -73,7 +80,7 @@ export function TpvTab({
           <button
             onClick={onImportarCsv}
             disabled={tpvImportando}
-            className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
+            className="w-full rounded-[16px] bg-blue-600 px-4 py-2.5 text-[13px] font-semibold text-white disabled:opacity-60"
           >
             {tpvImportando ? 'Cargando CSV...' : 'Cargar y revisar CSV'}
           </button>
@@ -81,16 +88,16 @@ export function TpvTab({
           <button
             onClick={onAplicarImportacion}
             disabled={tpvAplicando || tpvVentasCrudas.length === 0}
-            className="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
+            className="w-full rounded-[16px] bg-emerald-600 px-4 py-2.5 text-[13px] font-semibold text-white disabled:opacity-60"
           >
             {tpvAplicando ? 'Aplicando importación...' : 'Aplicar importación'}
           </button>
         </div>
 
-        <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
+        <div className="mt-4 rounded-[18px] bg-slate-50 p-3 text-[13px] text-slate-600">
           <div className="font-semibold text-slate-900">Formato esperado</div>
           <div className="mt-1">Columnas que usamos del CSV real:</div>
-          <div className="mt-2 whitespace-pre-wrap rounded-xl bg-white p-3 font-mono text-xs text-slate-700">
+          <div className="mt-2 whitespace-pre-wrap rounded-[14px] bg-white p-3 font-mono text-[12px] text-slate-700">
             Articulo;Cantidad;Fecha
             {'\n'}Coca-Cola;9;1/4/2026
             {'\n'}Coca-Cola Zero;6;1/4/2026
@@ -98,10 +105,10 @@ export function TpvTab({
         </div>
       </div>
 
-      <div className="rounded-3xl bg-white p-4 shadow-sm">
+      <div className="rounded-[24px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-slate-900">Vista previa de ventas crudas</h3>
-          <div className="text-xs text-slate-500">
+          <h3 className="text-[15px] font-semibold text-slate-900">Vista previa de ventas crudas</h3>
+          <div className="text-[12px] text-slate-500">
             {tpvImportacionId ? `Importación: ${tpvImportacionId}` : 'Sin importar'}
           </div>
         </div>
@@ -115,20 +122,20 @@ export function TpvTab({
             {tpvVentasCrudas.map((venta, index) => (
               <div
                 key={`${venta.producto_externo}-${index}`}
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                className="rounded-[18px] border border-slate-200 bg-slate-50 p-3"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-slate-900">
+                    <div className="truncate text-[14px] font-semibold text-slate-900">
                       {venta.producto_externo}
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">
+                    <div className="mt-1 text-[12px] text-slate-500">
                       Fecha: {formatFechaHora(venta.fecha)}
                     </div>
                   </div>
 
                   <div className="text-right">
-                    <div className="text-sm font-bold text-blue-600">{venta.cantidad}</div>
+                    <div className="text-[14px] font-bold text-blue-600">{venta.cantidad}</div>
                     <div className="text-[11px] text-slate-500">unidades vendidas</div>
                   </div>
                 </div>
@@ -140,10 +147,10 @@ export function TpvTab({
         )}
       </div>
 
-      <div className="rounded-3xl bg-white p-4 shadow-sm">
+      <div className="rounded-[24px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-slate-900">Pendientes de mapear</h3>
-          <div className="text-xs text-slate-500">{tpvPendientesMapeo.length} artículo(s)</div>
+          <h3 className="text-[15px] font-semibold text-slate-900">Pendientes de mapear</h3>
+          <div className="text-[12px] text-slate-500">{tpvPendientesMapeo.length} artículo(s)</div>
         </div>
 
         {tpvVentasCrudas.length === 0 ? (
@@ -159,14 +166,14 @@ export function TpvTab({
             {tpvPendientesMapeo.map((item) => (
               <div
                 key={item.producto_externo}
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                className="rounded-[18px] border border-slate-200 bg-slate-50 p-3"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-slate-900">
+                    <div className="truncate text-[14px] font-semibold text-slate-900">
                       {item.producto_externo}
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">Total en CSV: {item.total}</div>
+                    <div className="mt-1 text-[12px] text-slate-500">Total en CSV: {item.total}</div>
                   </div>
                 </div>
 
@@ -178,7 +185,7 @@ export function TpvTab({
                     onChange={(e) =>
                       onMapeoSeleccionadoChange(item.producto_externo, e.target.value)
                     }
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+                    className="w-full rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900"
                   >
                     <option value="">Selecciona receta sugerida</option>
                     {item.sugerencias.map((receta) => (
@@ -204,7 +211,7 @@ export function TpvTab({
                       )
                     }
                     disabled={tpvGuardandoMapeo === item.producto_externo}
-                    className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                    className="rounded-[16px] bg-slate-900 px-4 py-2.5 text-[13px] font-semibold text-white disabled:opacity-60"
                   >
                     {tpvGuardandoMapeo === item.producto_externo ? 'Guardando...' : 'Guardar mapeo'}
                   </button>
@@ -215,7 +222,7 @@ export function TpvTab({
         )}
       </div>
 
-      <div className="rounded-3xl bg-amber-50 p-4 text-sm text-slate-700 shadow-sm">
+      <div className="rounded-[20px] bg-amber-50 p-4 text-[13px] text-slate-700 shadow-sm">
         <div className="font-semibold text-slate-900">Flujo recomendado</div>
         <div className="mt-1">
           1) Carga el CSV para revisar líneas. 2) Comprueba que todo está bien. 3) Pulsa{' '}
