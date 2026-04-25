@@ -131,14 +131,14 @@ export function MobileBottomNav({
   ]
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/98 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 shadow-[0_-18px_40px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden">
-      <div className="grid grid-cols-5 gap-1">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/98 px-2 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-2 shadow-[0_-14px_30px_rgba(15,23,42,0.06)] backdrop-blur lg:hidden">
+      <div className="grid grid-cols-5 gap-0.5">
         {items.map((item) => (
           <button
             key={item.key}
             type="button"
             onClick={item.onClick}
-            className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold transition ${
+            className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-1 text-[11px] font-semibold transition ${
               item.active ? 'text-blue-600' : 'text-slate-500'
             }`}
           >

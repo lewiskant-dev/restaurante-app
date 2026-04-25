@@ -347,12 +347,12 @@ export function AppShellHeader({
       </aside>
 
       <div className="lg:hidden">
-        <div className="border-b border-slate-200/70 bg-white/92 px-4 pb-4 pt-3 shadow-[0_10px_24px_rgba(15,23,42,0.04)] backdrop-blur">
-          <div className="flex items-center gap-3">
+        <div className="border-b border-slate-200/60 bg-white px-5 pb-4 pt-4 shadow-[0_10px_24px_rgba(15,23,42,0.03)] backdrop-blur">
+          <div className="flex items-center gap-3.5">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="flex h-14 w-14 items-center justify-center rounded-[22px] border border-slate-200 bg-white text-slate-600 shadow-sm"
+              className="flex h-[58px] w-[58px] items-center justify-center rounded-[22px] border border-slate-200 bg-white text-slate-600 shadow-[0_10px_24px_rgba(15,23,42,0.06)]"
             >
               <Icon
                 className="h-6 w-6"
@@ -371,15 +371,15 @@ export function AppShellHeader({
               onClick={() => handleGroupTabChange('operativa', 'stock')}
               className="min-w-0 flex-1 text-left"
             >
-              <div className="text-[2rem] font-semibold tracking-tight text-slate-950">Nexo</div>
+              <div className="text-[1.95rem] font-semibold tracking-tight text-slate-950">Nexo</div>
               <div className="mt-0.5 text-[15px] text-slate-500">
-                {stockBajo > 0 ? `${stockBajo} alertas de stock` : 'Inventario en orden'}
+                Inventario en orden
               </div>
             </button>
 
             <button
               type="button"
-              className="relative flex h-14 w-14 items-center justify-center rounded-[22px] border border-slate-200 bg-white text-slate-600 shadow-sm"
+              className="relative flex h-[56px] w-[56px] items-center justify-center rounded-[21px] border border-slate-200 bg-white text-slate-600 shadow-[0_8px_20px_rgba(15,23,42,0.05)]"
             >
               <Icon
                 className="h-5 w-5"
@@ -396,34 +396,34 @@ export function AppShellHeader({
             <button
               type="button"
               onClick={onOpenProfile}
-              className="flex h-14 w-14 items-center justify-center rounded-full bg-[linear-gradient(135deg,#2f7bff_0%,#7a3cff_58%,#9b5cff_100%)] text-lg font-semibold text-white shadow-[0_18px_30px_rgba(89,88,255,0.22)]"
+              className="flex h-[56px] w-[56px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#2f7bff_0%,#7a3cff_58%,#9b5cff_100%)] text-lg font-semibold text-white shadow-[0_16px_28px_rgba(89,88,255,0.2)]"
             >
               {userInitials}
             </button>
           </div>
 
-          <div className="mt-4 rounded-[26px] border border-slate-200 bg-white/96 p-2 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
-          <div className="grid grid-cols-3 gap-2">
-            {mobileTabs.slice(0, 3).map((item) => {
-              const active = currentTab === item
-              return (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => onTabChange(item)}
-                  className={`flex items-center justify-center gap-2 rounded-[20px] px-3 py-3.5 text-[15px] font-semibold transition ${
-                    active
-                      ? 'border border-blue-200 bg-white text-blue-600 shadow-[0_8px_20px_rgba(59,130,246,0.12)]'
-                      : 'text-slate-600'
-                  }`}
-                >
-                  {getTabIcon(item)}
-                  <span>{getTabLabel(item)}</span>
-                </button>
-              )
-            })}
+          <div className="mt-5 rounded-[24px] border border-slate-200 bg-white p-1.5 shadow-[0_12px_28px_rgba(15,23,42,0.045)]">
+            <div className="grid grid-cols-3 gap-1.5">
+              {mobileTabs.slice(0, 3).map((item) => {
+                const active = currentTab === item
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => onTabChange(item)}
+                    className={`flex items-center justify-center gap-2 rounded-[18px] px-3 py-3 text-[14px] font-semibold transition ${
+                      active
+                        ? 'border border-blue-300 bg-white text-blue-600 shadow-[0_8px_18px_rgba(59,130,246,0.12)]'
+                        : 'text-slate-600'
+                    }`}
+                  >
+                    {getTabIcon(item)}
+                    <span>{getTabLabel(item)}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
-        </div>
         </div>
 
         {mobileMenuOpen ? (
