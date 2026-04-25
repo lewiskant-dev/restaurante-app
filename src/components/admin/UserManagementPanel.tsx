@@ -18,6 +18,7 @@ type UserManagementPanelProps = {
   creatingManagedUser: boolean
   deletingManagedUserId: string
   resettingManagedUserId: string
+  blockingManagedUserId: string
   busquedaUsuarios: string
   managedUserRoleFilter: 'todos' | UserRole
   managedUserAccessFilter: ManagedUserAccessFilter
@@ -46,6 +47,7 @@ type UserManagementPanelProps = {
   onUpdateRole: (userId: string, role: UserRole) => void
   onDelete: (userId: string, label: string) => void
   onResetPassword: (userId: string, label: string) => void
+  onToggleBlocked: (userId: string, blocked: boolean, label: string) => void
   onSearchChange: (value: string) => void
   onRoleFilterChange: (value: 'todos' | UserRole) => void
   onAccessFilterChange: (value: ManagedUserAccessFilter) => void
@@ -67,6 +69,7 @@ export function UserManagementPanel({
   creatingManagedUser,
   deletingManagedUserId,
   resettingManagedUserId,
+  blockingManagedUserId,
   busquedaUsuarios,
   managedUserRoleFilter,
   managedUserAccessFilter,
@@ -85,6 +88,7 @@ export function UserManagementPanel({
   onUpdateRole,
   onDelete,
   onResetPassword,
+  onToggleBlocked,
   onSearchChange,
   onRoleFilterChange,
   onAccessFilterChange,
@@ -366,6 +370,7 @@ export function UserManagementPanel({
               const isCurrentUser = managedUser.id === currentUserId
               const isMasterTarget = managedUser.role === 'master'
               const accessStatus = getManagedUserAccessStatus(managedUser.last_sign_in_at)
+              const isBlocked = !!managedUser.banned_until
               const canEditTarget =
                 currentUserRole === 'master'
                   ? true
@@ -395,6 +400,11 @@ export function UserManagementPanel({
                       >
                         {accessStatus.label}
                       </span>
+                      {isBlocked ? (
+                        <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600">
+                          Bloqueado
+                        </span>
+                      ) : null}
                       {isCurrentUser ? (
                         <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-600">
                           Tu
@@ -407,6 +417,9 @@ export function UserManagementPanel({
                       {managedUser.last_sign_in_at
                         ? ` · Último acceso: ${formatFechaHora(managedUser.last_sign_in_at)}`
                         : ' · Aun no ha iniciado sesion'}
+                      {isBlocked && managedUser.banned_until
+                        ? ` · Bloqueado hasta: ${formatFechaHora(managedUser.banned_until)}`
+                        : ''}
                     </div>
                     <div className="mt-1 text-xs text-slate-500">{accessStatus.detail}</div>
                   </div>
@@ -429,14 +442,42 @@ export function UserManagementPanel({
                     </select>
 
                     {canDeleteTarget ? (
-                      <button
-                        type="button"
-                        onClick={() => onDelete(managedUser.id, managedUser.full_name || managedUser.email)}
-                        disabled={deletingManagedUserId === managedUser.id}
-                        className="rounded-2xl bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-60"
-                      >
-                        {deletingManagedUserId === managedUser.id ? 'Eliminando...' : 'Eliminar'}
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onToggleBlocked(
+                              managedUser.id,
+                              !isBlocked,
+                              managedUser.full_name || managedUser.email
+                            )
+                          }
+                          disabled={blockingManagedUserId === managedUser.id}
+                          className={`rounded-2xl px-4 py-2 text-sm font-semibold disabled:opacity-60 ${
+                            isBlocked
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {blockingManagedUserId === managedUser.id
+                            ? isBlocked
+                              ? 'Desbloqueando...'
+                              : 'Bloqueando...'
+                            : isBlocked
+                              ? 'Desbloquear'
+                              : 'Bloquear'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onDelete(managedUser.id, managedUser.full_name || managedUser.email)
+                          }
+                          disabled={deletingManagedUserId === managedUser.id}
+                          className="rounded-2xl bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-60"
+                        >
+                          {deletingManagedUserId === managedUser.id ? 'Eliminando...' : 'Eliminar'}
+                        </button>
+                      </>
                     ) : null}
                   </div>
 

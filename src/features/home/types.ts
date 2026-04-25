@@ -121,6 +121,7 @@ export type ManagedUser = {
   role: UserRole
   created_at: string
   last_sign_in_at: string | null
+  banned_until: string | null
 }
 
 export type ManagedUserAccessFilter =

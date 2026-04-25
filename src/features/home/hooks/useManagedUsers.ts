@@ -30,6 +30,7 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
   const [creatingManagedUser, setCreatingManagedUser] = useState(false)
   const [deletingManagedUserId, setDeletingManagedUserId] = useState('')
   const [resettingManagedUserId, setResettingManagedUserId] = useState('')
+  const [blockingManagedUserId, setBlockingManagedUserId] = useState('')
   const [busquedaUsuarios, setBusquedaUsuarios] = useState('')
   const [managedUserRoleFilter, setManagedUserRoleFilter] = useState<'todos' | UserRole>('todos')
   const [managedUserAccessFilter, setManagedUserAccessFilter] =
@@ -328,6 +329,47 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
     }
   }
 
+  async function toggleManagedUserBlocked(userId: string, blocked: boolean, label: string) {
+    if (!accessToken) return
+
+    const confirmed = window.confirm(
+      blocked
+        ? `¿Bloquear el acceso de "${label}"?\n\nNo podrá volver a entrar hasta que lo desbloquees.`
+        : `¿Desbloquear el acceso de "${label}"?\n\nRecuperará el acceso normal a la aplicación.`
+    )
+
+    if (!confirmed) return
+
+    setBlockingManagedUserId(userId)
+    onError('')
+
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ userId, blocked }),
+      })
+
+      const payload = (await response.json()) as { error?: string; user?: ManagedUser }
+
+      if (!response.ok || !payload.user) {
+        throw new Error(payload.error || 'No se pudo actualizar el acceso del usuario')
+      }
+
+      setManagedUsers((current) =>
+        sortManagedUsers(current.map((item) => (item.id === userId ? payload.user ?? item : item)))
+      )
+      onToast(blocked ? `Acceso bloqueado para ${label}` : `Acceso desbloqueado para ${label}`)
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'No se pudo actualizar el acceso del usuario')
+    } finally {
+      setBlockingManagedUserId('')
+    }
+  }
+
   function resetManagedUsersState() {
     setManagedUsers([])
     setLoadingManagedUsers(false)
@@ -335,6 +377,7 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
     setCreatingManagedUser(false)
     setDeletingManagedUserId('')
     setResettingManagedUserId('')
+    setBlockingManagedUserId('')
     setBusquedaUsuarios('')
     setManagedUserRoleFilter('todos')
     setNewManagedUserName('')
@@ -352,6 +395,7 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
     creatingManagedUser,
     deletingManagedUserId,
     resettingManagedUserId,
+    blockingManagedUserId,
     busquedaUsuarios,
     managedUserRoleFilter,
     managedUserAccessFilter,
@@ -378,6 +422,7 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
     createManagedUser,
     deleteManagedUser,
     resetManagedUserPassword,
+    toggleManagedUserBlocked,
     resetManagedUsersState,
   }
 }

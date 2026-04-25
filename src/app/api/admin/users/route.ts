@@ -40,6 +40,7 @@ function serializeUser(user: {
   email?: string | null
   created_at: string
   last_sign_in_at?: string | null
+  banned_until?: string | null
   app_metadata?: Record<string, unknown>
   user_metadata?: Record<string, unknown>
 }) {
@@ -50,6 +51,7 @@ function serializeUser(user: {
     role: getUserRoleFromAuthUser(user),
     created_at: user.created_at,
     last_sign_in_at: user.last_sign_in_at || null,
+    banned_until: user.banned_until || null,
   }
 }
 
@@ -266,20 +268,21 @@ export async function PATCH(request: Request) {
   const supabaseAdmin = adminResult.client
 
   const body = (await request.json().catch(() => null)) as
-    | { userId?: string; role?: UserRole; password?: string }
+    | { userId?: string; role?: UserRole; password?: string; blocked?: boolean }
     | null
 
   const userId = body?.userId?.trim() || ''
   const nextRole = body?.role ? normalizeRole(body.role) : null
   const nextPassword = body?.password || ''
+  const nextBlocked = typeof body?.blocked === 'boolean' ? body.blocked : null
 
   if (!userId) {
     return NextResponse.json({ error: 'Falta el usuario a actualizar' }, { status: 400 })
   }
 
-  if (!nextRole && !nextPassword) {
+  if (!nextRole && !nextPassword && nextBlocked === null) {
     return NextResponse.json(
-      { error: 'Debes indicar un rol o una nueva contraseña' },
+      { error: 'Debes indicar un rol, un bloqueo o una nueva contraseña' },
       { status: 400 }
     )
   }
@@ -326,6 +329,7 @@ export async function PATCH(request: Request) {
   const updatePayload: {
     app_metadata?: Record<string, unknown>
     password?: string
+    ban_duration?: string | 'none'
   } = {}
 
   if (nextRole) {
@@ -337,6 +341,10 @@ export async function PATCH(request: Request) {
 
   if (nextPassword) {
     updatePayload.password = nextPassword
+  }
+
+  if (nextBlocked !== null) {
+    updatePayload.ban_duration = nextBlocked ? '876000h' : 'none'
   }
 
   const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, updatePayload)
@@ -372,6 +380,25 @@ export async function PATCH(request: Request) {
       payloadDespues: {
         email: data.user.email || '',
         full_name: getUserDisplayName(data.user),
+      },
+    })
+  }
+
+  if (nextBlocked !== null) {
+    await logAdminAudit(supabaseAdmin, {
+      actor: authResult.user,
+      entidadId: data.user.id,
+      accion: nextBlocked ? 'bloquear' : 'desbloquear',
+      detalle: `${nextBlocked ? 'Acceso bloqueado' : 'Acceso desbloqueado'} para: ${getUserDisplayName(data.user)}`,
+      payloadAntes: {
+        ...targetSnapshotBefore,
+        banned_until: targetUser.banned_until || null,
+      },
+      payloadDespues: {
+        email: data.user.email || '',
+        full_name: getUserDisplayName(data.user),
+        role: getUserRoleFromAuthUser(data.user),
+        banned_until: data.user.banned_until || null,
       },
     })
   }

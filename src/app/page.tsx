@@ -139,6 +139,7 @@ export default function HomePage() {
     creatingManagedUser,
     deletingManagedUserId,
     resettingManagedUserId,
+    blockingManagedUserId,
     busquedaUsuarios,
     managedUserRoleFilter,
     managedUserAccessFilter,
@@ -165,6 +166,7 @@ export default function HomePage() {
     createManagedUser,
     deleteManagedUser,
     resetManagedUserPassword,
+    toggleManagedUserBlocked,
     resetManagedUsersState,
   } = useManagedUsers({
     accessToken: session?.access_token,
@@ -1068,6 +1070,7 @@ export default function HomePage() {
             creatingManagedUser={creatingManagedUser}
             deletingManagedUserId={deletingManagedUserId}
             resettingManagedUserId={resettingManagedUserId}
+            blockingManagedUserId={blockingManagedUserId}
             busquedaUsuarios={busquedaUsuarios}
             managedUserRoleFilter={managedUserRoleFilter}
             managedUserAccessFilter={managedUserAccessFilter}
@@ -1086,6 +1089,9 @@ export default function HomePage() {
             onUpdateRole={(userId, role) => void updateManagedUserRole(userId, role)}
             onDelete={(userId, label) => void deleteManagedUser(userId, label)}
             onResetPassword={(userId, label) => void resetManagedUserPassword(userId, label)}
+            onToggleBlocked={(userId, blocked, label) =>
+              void toggleManagedUserBlocked(userId, blocked, label)
+            }
             onSearchChange={setBusquedaUsuarios}
             onRoleFilterChange={setManagedUserRoleFilter}
             onAccessFilterChange={setManagedUserAccessFilter}

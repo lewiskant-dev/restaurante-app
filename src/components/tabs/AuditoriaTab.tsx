@@ -177,6 +177,8 @@ export function AuditoriaTab({
           'crear',
           'editar',
           'eliminar',
+          'bloquear',
+          'desbloquear',
           'archivar',
           'reactivar',
           'consumo',

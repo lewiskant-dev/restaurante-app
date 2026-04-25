@@ -201,6 +201,8 @@ export function getAuditActionLabel(action: string) {
   if (action === 'editar_perfil') return 'Editar perfil'
   if (action === 'cambiar_password') return 'Cambiar contraseña'
   if (action === 'reset_password') return 'Resetear contraseña'
+  if (action === 'bloquear') return 'Bloquear acceso'
+  if (action === 'desbloquear') return 'Desbloquear acceso'
   return action || 'Sin acción'
 }
 
@@ -217,10 +219,16 @@ export function getAuditEntityBadgeClasses(entity: string) {
 }
 
 export function getAuditActionBadgeClasses(action: string) {
-  if (action === 'eliminar' || action === 'anular') return 'bg-red-50 text-red-700'
+  if (action === 'eliminar' || action === 'anular' || action === 'bloquear') return 'bg-red-50 text-red-700'
   if (action === 'archivar') return 'bg-orange-50 text-orange-700'
   if (action === 'crear' || action === 'reactivar' || action === 'login') return 'bg-emerald-50 text-emerald-700'
-  if (action === 'editar' || action === 'editar_perfil' || action === 'cambiar_password' || action === 'reset_password') {
+  if (
+    action === 'editar' ||
+    action === 'editar_perfil' ||
+    action === 'cambiar_password' ||
+    action === 'reset_password' ||
+    action === 'desbloquear'
+  ) {
     return 'bg-blue-50 text-blue-700'
   }
   if (action === 'logout') return 'bg-slate-100 text-slate-700'
