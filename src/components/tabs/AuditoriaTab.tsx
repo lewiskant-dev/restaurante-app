@@ -76,11 +76,18 @@ export function AuditoriaTab({
 
   return (
     <>
-      <div className="mb-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6">
+        <h2 className="text-[2rem] font-semibold tracking-tight text-slate-950">Auditoría</h2>
+        <p className="mt-2 text-base text-slate-500">
+          Revisa cambios, accesos y acciones sensibles del equipo.
+        </p>
+      </div>
+
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <button
           type="button"
           onClick={onResetFilters}
-          className="rounded-3xl bg-white p-4 text-left shadow-sm transition hover:bg-slate-50"
+          className="rounded-[28px] bg-white p-5 text-left shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Registros visibles
@@ -92,7 +99,7 @@ export function AuditoriaTab({
         <button
           type="button"
           onClick={() => onEntidadFiltroChange('sesion')}
-          className="rounded-3xl bg-white p-4 text-left shadow-sm transition hover:bg-slate-50"
+          className="rounded-[28px] bg-white p-5 text-left shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Sesión
@@ -104,7 +111,7 @@ export function AuditoriaTab({
         <button
           type="button"
           onClick={() => onEntidadFiltroChange('perfil')}
-          className="rounded-3xl bg-white p-4 text-left shadow-sm transition hover:bg-slate-50"
+          className="rounded-[28px] bg-white p-5 text-left shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Perfil
@@ -116,7 +123,7 @@ export function AuditoriaTab({
         <button
           type="button"
           onClick={() => onEntidadFiltroChange('usuario')}
-          className="rounded-3xl bg-white p-4 text-left shadow-sm transition hover:bg-slate-50"
+          className="rounded-[28px] bg-white p-5 text-left shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Usuarios
@@ -126,6 +133,7 @@ export function AuditoriaTab({
         </button>
       </div>
 
+      <div className="rounded-[32px] border border-white/80 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.07)] sm:p-5">
       <div className="mt-1">
         <input
           type="search"
@@ -136,7 +144,7 @@ export function AuditoriaTab({
         />
       </div>
 
-      <div className="mt-2 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <input
           type="date"
           value={auditoriaDesde}
@@ -151,7 +159,7 @@ export function AuditoriaTab({
         />
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-2">
         {(
           ['todas', 'producto', 'proveedor', 'albaran', 'receta', 'tpv', 'usuario', 'sesion', 'perfil'] as const
         ).map(
@@ -171,7 +179,7 @@ export function AuditoriaTab({
         )}
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-2">
         {[
           'todas',
           'crear',
@@ -204,7 +212,7 @@ export function AuditoriaTab({
         ))}
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-2">
+      <div className="mt-4 flex items-center justify-between gap-2">
         <div className="rounded-2xl bg-yellow-50 px-4 py-3 text-sm text-slate-700">
           Registros visibles: {auditoriaFiltrada.length} · Totales: {auditoria.length}
         </div>
@@ -227,7 +235,7 @@ export function AuditoriaTab({
         </div>
       </div>
 
-      <div className="rounded-3xl bg-white p-3 shadow-sm">
+      <div className="mt-4 rounded-[28px] bg-slate-50/80 p-3">
         {loadingAuditoria && (
           <div className="py-10 text-center text-sm text-slate-400">Cargando auditoría...</div>
         )}
@@ -332,6 +340,7 @@ export function AuditoriaTab({
               )}
             </details>
           ))}
+      </div>
       </div>
     </>
   )

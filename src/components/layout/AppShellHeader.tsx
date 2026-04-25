@@ -1,7 +1,8 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import type { MainTab, TabKey } from '@/features/home/types'
-import { getTabLabel, mainTabConfig } from '@/features/home/utils'
+import { getTabLabel } from '@/features/home/utils'
 
 type AppShellHeaderProps = {
   stockBajo: number
@@ -12,7 +13,7 @@ type AppShellHeaderProps = {
   currentMainTab: MainTab
   currentTab: TabKey
   visibleMainGroups: MainTab[]
-  visibleMainTabs: TabKey[]
+  visibleTabsByGroup: Record<MainTab, TabKey[]>
   onOpenProfile: () => void
   onSignOut: () => void
   onMainTabChange: (mainTab: MainTab) => void
@@ -44,63 +45,32 @@ function Icon({
   )
 }
 
-function getMainTabIcon(tab: MainTab) {
-  if (tab === 'operativa') {
-    return (
-      <Icon
-        path={
-          <>
-            <path d="M4 7h16" />
-            <path d="M6 7l1.2 10h9.6L18 7" />
-            <path d="M9 7V4" />
-            <path d="M15 7V4" />
-          </>
-        }
-      />
-    )
-  }
-  if (tab === 'gestion') {
-    return (
-      <Icon
-        path={
-          <>
-            <rect x="6" y="4" width="12" height="16" rx="2" />
-            <path d="M9 4.5h6" />
-            <path d="M9 9h6" />
-          </>
-        }
-      />
-    )
-  }
-  return <Icon path={<><path d="M5 19V9" /><path d="M12 19V5" /><path d="M19 19v-8" /></>} />
-}
-
-function getTabIcon(tab: TabKey) {
+function getTabIcon(tab: TabKey, className = 'h-[18px] w-[18px]') {
   if (tab === 'stock') {
     return (
       <Icon
         path={
           <>
-            <rect x="5" y="4" width="14" height="16" rx="2" />
-            <path d="M9 8h6" />
-            <path d="M9 12h6" />
+            <path d="m12 3 7 4v10l-7 4-7-4V7z" />
+            <path d="m5 7 7 4 7-4" />
+            <path d="M12 11v10" />
           </>
         }
-        className="h-[18px] w-[18px]"
+        className={className}
       />
     )
   }
-  if (tab === 'albaran') {
+  if (tab === 'albaran' || tab === 'albaranes') {
     return (
       <Icon
         path={
           <>
-            <path d="M8 3h6l4 4v14H8z" />
-            <path d="M14 3v4h4" />
-            <path d="M10 13h6" />
+            <path d="M8 3h7l4 4v14H8z" />
+            <path d="M15 3v4h4" />
+            <path d="M11 13h5" />
           </>
         }
-        className="h-[18px] w-[18px]"
+        className={className}
       />
     )
   }
@@ -115,20 +85,7 @@ function getTabIcon(tab: TabKey) {
             <path d="M17 17v2" />
           </>
         }
-        className="h-[18px] w-[18px]"
-      />
-    )
-  }
-  if (tab === 'albaranes') {
-    return (
-      <Icon
-        path={
-          <>
-            <path d="M7 4h8l4 4v12H7z" />
-            <path d="M15 4v4h4" />
-          </>
-        }
-        className="h-[18px] w-[18px]"
+        className={className}
       />
     )
   }
@@ -143,22 +100,7 @@ function getTabIcon(tab: TabKey) {
             <path d="M15 11h.01" />
           </>
         }
-        className="h-[18px] w-[18px]"
-      />
-    )
-  }
-  if (tab === 'usuarios') {
-    return (
-      <Icon
-        path={
-          <>
-            <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
-            <circle cx="9.5" cy="7" r="3" />
-            <path d="M17 11a3 3 0 1 0 0-6" />
-            <path d="M21 21v-2a4 4 0 0 0-3-3.87" />
-          </>
-        }
-        className="h-[18px] w-[18px]"
+        className={className}
       />
     )
   }
@@ -173,7 +115,7 @@ function getTabIcon(tab: TabKey) {
             <path d="M6 4v16" />
           </>
         }
-        className="h-[18px] w-[18px]"
+        className={className}
       />
     )
   }
@@ -186,10 +128,39 @@ function getTabIcon(tab: TabKey) {
             <circle cx="12" cy="12" r="8" />
           </>
         }
-        className="h-[18px] w-[18px]"
+        className={className}
       />
     )
   }
+  if (tab === 'auditoria') {
+    return (
+      <Icon
+        path={
+          <>
+            <path d="M12 22s8-4 8-10V6l-8-3-8 3v6c0 6 8 10 8 10Z" />
+            <path d="M9.5 12.5 11 14l3.5-4" />
+          </>
+        }
+        className={className}
+      />
+    )
+  }
+  if (tab === 'usuarios') {
+    return (
+      <Icon
+        path={
+          <>
+            <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
+            <circle cx="9.5" cy="7" r="3" />
+            <path d="M17 11a3 3 0 1 0 0-6" />
+            <path d="M21 21v-2a4 4 0 0 0-3-3.87" />
+          </>
+        }
+        className={className}
+      />
+    )
+  }
+
   return (
     <Icon
       path={
@@ -198,8 +169,68 @@ function getTabIcon(tab: TabKey) {
           <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 1-2 0 1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 1 0-2 1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 1 2 0 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 .6 1 1.7 1.7 0 0 1 0 2 1.7 1.7 0 0 0-.6 1Z" />
         </>
       }
-      className="h-[18px] w-[18px]"
+      className={className}
     />
+  )
+}
+
+function getSectionLabel(group: MainTab) {
+  if (group === 'operativa') return 'Operativa'
+  if (group === 'gestion') return 'Gestión'
+  return 'Control'
+}
+
+function getSectionSubtitle(group: MainTab) {
+  if (group === 'operativa') return 'Trabajo diario'
+  if (group === 'gestion') return 'Compras y catálogo'
+  return 'Seguimiento'
+}
+
+function NavGroup({
+  label,
+  subtitle,
+  tabs,
+  currentTab,
+  onTabChange,
+}: {
+  label: string
+  subtitle?: string
+  tabs: TabKey[]
+  currentTab: TabKey
+  onTabChange: (tab: TabKey) => void
+}) {
+  if (!tabs.length) return null
+
+  return (
+    <div className="space-y-2">
+      <div className="px-2">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+          {label}
+        </div>
+        {subtitle ? <div className="mt-1 text-xs text-slate-400">{subtitle}</div> : null}
+      </div>
+
+      <div className="space-y-1.5">
+        {tabs.map((item) => {
+          const active = currentTab === item
+          return (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onTabChange(item)}
+              className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium transition ${
+                active
+                  ? 'bg-blue-50 text-blue-600 shadow-[0_10px_30px_rgba(59,130,246,0.12)] ring-1 ring-blue-100'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <span className={active ? 'text-blue-600' : 'text-slate-400'}>{getTabIcon(item)}</span>
+              <span>{getTabLabel(item)}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
@@ -212,19 +243,37 @@ export function AppShellHeader({
   currentMainTab,
   currentTab,
   visibleMainGroups,
-  visibleMainTabs,
+  visibleTabsByGroup,
   onOpenProfile,
   onSignOut,
   onMainTabChange,
   onTabChange,
 }: AppShellHeaderProps) {
-  return (
-    <header className="overflow-hidden rounded-[30px] border border-white/70 bg-white/95 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur">
-      <div className="flex flex-col gap-4 border-b border-slate-200/80 px-5 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-inner">
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const mobileTabs = useMemo(
+    () => visibleTabsByGroup[currentMainTab] ?? [],
+    [currentMainTab, visibleTabsByGroup]
+  )
+  const configTabs = visibleTabsByGroup.gestion.filter((tab) => tab === 'usuarios')
+
+  const handleGroupTabChange = (group: MainTab, tab: TabKey) => {
+    onMainTabChange(group)
+    onTabChange(tab)
+    setMobileMenuOpen(false)
+  }
+
+  const desktopNav = (
+    <div className="flex h-full flex-col">
+      <div className="border-b border-slate-200/80 px-5 py-5">
+        <button
+          type="button"
+          onClick={() => handleGroupTabChange('operativa', 'stock')}
+          className="flex items-center gap-4 text-left"
+        >
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#2f7bff_0%,#7a3cff_58%,#9b5cff_100%)] text-white shadow-[0_18px_30px_rgba(89,88,255,0.24)]">
             <Icon
-              className="h-7 w-7"
+              className="h-5 w-5"
               path={
                 <>
                   <path d="M7 3v10" />
@@ -237,91 +286,156 @@ export function AppShellHeader({
               }
             />
           </div>
-
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Control Restaurante</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              {stockBajo > 0 ? `${stockBajo} producto(s) necesitan revisión` : 'Inventario en orden'}
-            </p>
+            <div className="text-lg font-semibold tracking-tight text-slate-950">Control Restaurante</div>
+            <div className="mt-1 text-sm text-slate-500">
+              {stockBajo > 0 ? `${stockBajo} alertas de stock` : 'Inventario en orden'}
+            </div>
+          </div>
+        </button>
+      </div>
+
+      <div className="flex-1 space-y-7 overflow-y-auto px-4 py-5">
+        {visibleMainGroups.map((group) => (
+          <NavGroup
+            key={group}
+            label={getSectionLabel(group)}
+            subtitle={getSectionSubtitle(group)}
+            tabs={visibleTabsByGroup[group]}
+            currentTab={currentTab}
+            onTabChange={(nextTab) => handleGroupTabChange(group, nextTab)}
+          />
+        ))}
+
+        {configTabs.length > 0 ? (
+          <NavGroup
+            label="Configuración"
+            tabs={configTabs}
+            currentTab={currentTab}
+            onTabChange={(nextTab) => handleGroupTabChange('gestion', nextTab)}
+          />
+        ) : null}
+
+        <div className="rounded-[28px] bg-[linear-gradient(135deg,#2f7bff_0%,#5145ff_45%,#8a2eff_100%)] p-[1px] shadow-[0_22px_45px_rgba(88,88,255,0.22)]">
+          <div className="rounded-[27px] bg-[linear-gradient(135deg,rgba(255,255,255,0.16)_0%,rgba(255,255,255,0.08)_100%)] px-4 py-4 text-white backdrop-blur">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-white/70">
+              Plan profesional
+            </div>
+            <div className="mt-2 text-base font-semibold">Tu panel está activo</div>
+            <div className="mt-1 text-sm text-white/75">
+              Controla compras, stock y usuarios desde un solo sitio.
+            </div>
+            <button
+              type="button"
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/18 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/24"
+            >
+              Ver detalles
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-slate-200/80 p-4">
+        <button
+          type="button"
+          onClick={onSignOut}
+          className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+        >
+          <Icon
+            className="h-[18px] w-[18px] text-slate-400"
+            path={
+              <>
+                <path d="M14 7h4v10h-4" />
+                <path d="M10 12h8" />
+                <path d="M10 12l3-3" />
+                <path d="M10 12l3 3" />
+                <path d="M6 5H4v14h2" />
+              </>
+            }
+          />
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </div>
+  )
+
+  return (
+    <>
+      <aside className="hidden lg:sticky lg:top-4 lg:flex lg:h-[calc(100vh-2rem)] lg:w-[286px] lg:flex-col lg:overflow-hidden lg:rounded-[32px] lg:border lg:border-white/80 lg:bg-white/92 lg:shadow-[0_24px_70px_rgba(15,23,42,0.08)] lg:backdrop-blur">
+        {desktopNav}
+      </aside>
+
+      <div className="lg:hidden">
+        <div className="rounded-[30px] border border-white/80 bg-white/92 px-4 py-4 shadow-[0_18px_55px_rgba(15,23,42,0.08)] backdrop-blur">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm"
+            >
+              <Icon
+                className="h-6 w-6"
+                path={
+                  <>
+                    <path d="M4 7h16" />
+                    <path d="M4 12h16" />
+                    <path d="M4 17h16" />
+                  </>
+                }
+              />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleGroupTabChange('operativa', 'stock')}
+              className="min-w-0 flex-1 text-left"
+            >
+              <div className="text-[2rem] font-semibold tracking-tight text-slate-950">Control Restaurante</div>
+              <div className="text-sm text-slate-500">
+                {stockBajo > 0 ? `${stockBajo} alertas de stock` : 'Inventario en orden'}
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm"
+            >
+              <Icon
+                className="h-5 w-5"
+                path={
+                  <>
+                    <path d="M15 17h5l-1.5-1.5A2 2 0 0 1 18 14.1V11a6 6 0 1 0-12 0v3.1a2 2 0 0 1-.5 1.4L4 17h5" />
+                    <path d="M10 19a2 2 0 0 0 4 0" />
+                  </>
+                }
+              />
+              <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-blue-500" />
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-[linear-gradient(135deg,#2f7bff_0%,#7a3cff_58%,#9b5cff_100%)] text-lg font-semibold text-white shadow-[0_18px_30px_rgba(89,88,255,0.24)]"
+            >
+              {userInitials}
+            </button>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            onClick={onOpenProfile}
-            className="relative flex min-w-[260px] flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left shadow-sm transition hover:bg-slate-100"
-          >
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-sm font-semibold text-blue-600 shadow-sm">
-              {userInitials}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-base font-semibold text-slate-900">{userDisplayName}</div>
-              <div className="truncate text-sm text-slate-500">
-                {userRoleLabel}
-                {userEmail ? ` · ${userEmail}` : ''}
-              </div>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={onSignOut}
-            className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-slate-500 shadow-sm transition hover:bg-slate-50"
-          >
-            <Icon
-              className="h-5 w-5"
-              path={
-                <>
-                  <path d="M14 7h4v10h-4" />
-                  <path d="M10 12h8" />
-                  <path d="M10 12l3-3" />
-                  <path d="M10 12l3 3" />
-                  <path d="M6 5H4v14h2" />
-                </>
-              }
-            />
-          </button>
-        </div>
-      </div>
-
-      <div className="grid border-b border-slate-200/80 md:grid-cols-3">
-        {visibleMainGroups.map((item) => {
-          const config = mainTabConfig[item]
-          const active = currentMainTab === item
-
-          return (
-            <button
-              key={item}
-              onClick={() => onMainTabChange(item)}
-              className={`relative flex flex-col items-center justify-center gap-2 border-b px-5 py-7 text-center transition md:border-b-0 md:border-r last:md:border-r-0 ${
-                active
-                  ? 'border-blue-500 bg-gradient-to-b from-blue-50 to-white text-blue-600'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              {active ? <div className="absolute inset-x-0 top-0 h-1 bg-blue-500" /> : null}
-              <div className={active ? 'text-blue-600' : 'text-slate-500'}>{getMainTabIcon(item)}</div>
-              <div className="text-[15px] font-semibold">{config.label}</div>
-              <div className="text-sm text-slate-500">{config.subtitle}</div>
-            </button>
-          )
-        })}
-      </div>
-
-      <div className="px-5 py-6 sm:px-6">
-        <div className="rounded-[28px] border border-slate-200 bg-slate-50/80 p-2 shadow-inner">
-          <div className="grid gap-2 md:grid-cols-3">
-            {visibleMainTabs.map((item) => {
+        <div className="mt-4 rounded-[28px] border border-white/80 bg-white/92 p-2 shadow-[0_18px_55px_rgba(15,23,42,0.06)]">
+          <div className="grid grid-cols-3 gap-2">
+            {mobileTabs.slice(0, 3).map((item) => {
               const active = currentTab === item
               return (
                 <button
                   key={item}
+                  type="button"
                   onClick={() => onTabChange(item)}
-                  className={`flex items-center justify-center gap-3 rounded-[20px] px-4 py-4 text-sm font-semibold transition ${
+                  className={`flex items-center justify-center gap-2 rounded-[22px] px-3 py-4 text-sm font-semibold transition ${
                     active
-                      ? 'bg-white text-blue-600 shadow-[0_8px_24px_rgba(59,130,246,0.12)] ring-1 ring-blue-100'
-                      : 'text-slate-600 hover:bg-white/80'
+                      ? 'bg-blue-50 text-blue-600 shadow-[0_8px_20px_rgba(59,130,246,0.12)] ring-1 ring-blue-100'
+                      : 'text-slate-600'
                   }`}
                 >
                   {getTabIcon(item)}
@@ -331,7 +445,40 @@ export function AppShellHeader({
             })}
           </div>
         </div>
+
+        {mobileMenuOpen ? (
+          <div className="fixed inset-0 z-50 bg-slate-950/28 p-4 backdrop-blur-sm">
+            <div className="mx-auto flex h-full max-w-sm flex-col overflow-hidden rounded-[32px] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.16)]">
+              <div className="flex items-center justify-between border-b border-slate-200/80 px-5 py-5">
+                <div>
+                  <div className="text-lg font-semibold text-slate-950">{userDisplayName}</div>
+                  <div className="text-sm text-slate-500">
+                    {userRoleLabel}
+                    {userEmail ? ` · ${userEmail}` : ''}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 text-slate-500"
+                >
+                  <Icon
+                    className="h-5 w-5"
+                    path={
+                      <>
+                        <path d="M6 6l12 12" />
+                        <path d="M18 6 6 18" />
+                      </>
+                    }
+                  />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4">{desktopNav}</div>
+            </div>
+          </div>
+        ) : null}
       </div>
-    </header>
+    </>
   )
 }

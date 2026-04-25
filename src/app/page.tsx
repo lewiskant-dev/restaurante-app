@@ -5,6 +5,7 @@ import type { Session, User } from '@supabase/supabase-js'
 import { UserManagementPanel } from '@/components/admin/UserManagementPanel'
 import { AuthScreen } from '@/components/auth/AuthScreen'
 import { AppShellHeader } from '@/components/layout/AppShellHeader'
+import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 import { AjusteStockModal } from '@/components/modals/AjusteStockModal'
 import { ConsumoModal } from '@/components/modals/ConsumoModal'
 import { DetalleAlbaranModal } from '@/components/modals/DetalleAlbaranModal'
@@ -749,15 +750,18 @@ export default function HomePage() {
   const canAdjustStock = hasPermission(currentUserRole, 'stock_adjust')
   const canManageProveedores = hasPermission(currentUserRole, 'proveedor_manage')
   const userCanManageUsers = hasPermission(currentUserRole, 'user_manage')
-  const visibleMainTabs = mainTabConfig[mainTab].tabs.filter((item) =>
-    canAccessTab(currentUserRole, item)
-  )
+  const visibleTabsByGroup: Record<MainTab, TabKey[]> = {
+    operativa: mainTabConfig.operativa.tabs.filter((item) => canAccessTab(currentUserRole, item)),
+    gestion: mainTabConfig.gestion.tabs.filter((item) => canAccessTab(currentUserRole, item)),
+    control: mainTabConfig.control.tabs.filter((item) => canAccessTab(currentUserRole, item)),
+  }
   const visibleMainGroups = (['operativa', 'gestion', 'control'] as MainTab[]).filter((group) =>
     mainTabConfig[group].tabs.some((item) => canAccessTab(currentUserRole, item))
   )
   const userDisplayName = getUserDisplayName(currentUser)
   const userRoleLabel = getUserRoleLabel(currentUser)
   const userInitials = getInitials(userDisplayName || 'Usuario')
+  const totalCategorias = categoriasProducto.length
 
   function descargarCSV(nombreArchivo: string, filas: Record<string, unknown>[]) {
     if (!filas.length) {
@@ -900,8 +904,15 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#f3f6fb_42%,#eef3f9_100%)] pb-24 text-slate-900">
-      <div className="mx-auto max-w-7xl px-4 pb-12 pt-4 sm:px-6 lg:px-8">
+    <main className="relative min-h-screen overflow-x-hidden bg-[#f6f8fc] pb-28 text-slate-900 lg:pb-16">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute left-[-10rem] top-[-6rem] h-[24rem] w-[24rem] rounded-full bg-blue-200/30 blur-3xl" />
+        <div className="absolute right-[-6rem] top-[4rem] h-[22rem] w-[22rem] rounded-full bg-violet-200/30 blur-3xl" />
+        <div className="absolute bottom-[-8rem] left-[20%] h-[20rem] w-[20rem] rounded-full bg-sky-200/20 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto max-w-[1600px] px-3 pb-12 pt-3 sm:px-4 lg:px-5">
+        <div className="lg:flex lg:items-start lg:gap-6">
         <AppShellHeader
           stockBajo={stockBajo}
           userInitials={userInitials}
@@ -911,7 +922,7 @@ export default function HomePage() {
           currentMainTab={mainTab}
           currentTab={tab}
           visibleMainGroups={visibleMainGroups}
-          visibleMainTabs={visibleMainTabs}
+          visibleTabsByGroup={visibleTabsByGroup}
           onOpenProfile={openProfilePanel}
           onSignOut={() => void handleSignOut()}
           onMainTabChange={(item) => {
@@ -926,12 +937,77 @@ export default function HomePage() {
           onTabChange={setTab}
         />
 
-        <section className="pt-8">
+        <div className="min-w-0 flex-1">
+        <div className="mb-6 hidden items-center justify-between gap-4 rounded-[32px] border border-white/80 bg-white/88 px-6 py-4 shadow-[0_18px_55px_rgba(15,23,42,0.06)] backdrop-blur lg:flex">
+          <label className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5 text-slate-400"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="6.5" />
+              <path d="m16 16 4 4" />
+            </svg>
+            <input
+              type="search"
+              placeholder="Buscar producto..."
+              className="w-full bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
+            />
+            <span className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-400">
+              ⌘ K
+            </span>
+          </label>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5"
+                aria-hidden="true"
+              >
+                <path d="M15 17h5l-1.5-1.5A2 2 0 0 1 18 14.1V11a6 6 0 1 0-12 0v3.1a2 2 0 0 1-.5 1.4L4 17h5" />
+                <path d="M10 19a2 2 0 0 0 4 0" />
+              </svg>
+              <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-blue-500" />
+            </button>
+
+            <button
+              type="button"
+              onClick={openProfilePanel}
+              className="flex items-center gap-3 rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:bg-slate-50"
+            >
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#2f7bff_0%,#7a3cff_58%,#9b5cff_100%)] text-sm font-semibold text-white">
+                {userInitials}
+              </div>
+              <div className="min-w-0">
+                <div className="truncate text-base font-semibold text-slate-900">{userDisplayName}</div>
+                <div className="truncate text-sm text-slate-500">{userRoleLabel}</div>
+              </div>
+              <span className="text-slate-400">⌄</span>
+            </button>
+          </div>
+        </div>
+
+        <section className="space-y-6 pt-5 lg:pt-0">
           {tab === 'stock' && (
             <StockTab
               totalProductos={totalProductos}
               stockBajo={stockBajo}
               movimientosHoy={movimientosHoy}
+              totalCategorias={totalCategorias}
               canManageStock={canManageStock}
               canAdjustStock={canAdjustStock}
               busqueda={busqueda}
@@ -1150,6 +1226,8 @@ export default function HomePage() {
           </div>
         )}
       </section>
+        </div>
+      </div>
       </div>
 
       <ProfilePanel
@@ -1253,6 +1331,13 @@ export default function HomePage() {
           {toast}
         </div>
       )}
+
+      <MobileBottomNav
+        currentTab={tab}
+        visibleTabsByGroup={visibleTabsByGroup}
+        onMainTabChange={setMainTab}
+        onTabChange={setTab}
+      />
     </main>
   )
 }
