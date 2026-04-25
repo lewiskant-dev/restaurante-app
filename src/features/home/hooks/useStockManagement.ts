@@ -180,7 +180,7 @@ export function useStockManagement({
       stock_minimo: String(producto.stock_minimo ?? ''),
       referencia: producto.referencia || '',
       imagen_url: producto.imagen_url || '',
-      icono: producto.icono || '',
+      icono: '',
     })
     onError('')
     setProductoModalOpen(true)
@@ -214,12 +214,6 @@ export function useStockManagement({
       payload.imagen_url = productoForm.imagen_url.trim()
     } else if (productoAntes?.imagen_url) {
       payload.imagen_url = null
-    }
-
-    if (productoForm.icono.trim()) {
-      payload.icono = productoForm.icono.trim()
-    } else if (productoAntes?.icono) {
-      payload.icono = null
     }
 
     try {

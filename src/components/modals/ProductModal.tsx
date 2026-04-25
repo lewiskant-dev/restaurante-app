@@ -3,8 +3,6 @@
 import Image from 'next/image'
 import type { NuevoProductoForm } from '@/features/home/types'
 
-const PRODUCT_EMOJIS = ['🍅', '🥬', '🧄', '🧀', '🍞', '🥩', '🐟', '🍷', '🥤', '🫒', '🥫', '📦']
-
 type ProductModalProps = {
   open: boolean
   productoEditId: string | null
@@ -142,9 +140,9 @@ export function ProductModal({
 
           <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
             <div className="mb-3">
-              <h4 className="text-sm font-semibold text-slate-900">Imagen o icono</h4>
+              <h4 className="text-sm font-semibold text-slate-900">Imagen del producto</h4>
               <p className="mt-1 text-sm text-slate-500">
-                Puedes subir una imagen o asignar un emoticono al producto.
+                Puedes subir una imagen para personalizar el producto.
               </p>
             </div>
 
@@ -159,8 +157,6 @@ export function ProductModal({
                     unoptimized
                     className="h-full w-full object-cover"
                   />
-                ) : productoForm.icono ? (
-                  <span className="text-4xl leading-none">{productoForm.icono}</span>
                 ) : (
                   <span className="text-xs font-medium text-slate-400">Sin visual</span>
                 )}
@@ -190,51 +186,13 @@ export function ProductModal({
                   </button>
                   <button
                     type="button"
-                    onClick={() => onFormChange({ ...productoForm, imagen_url: '', icono: '' })}
+                    onClick={() => onFormChange({ ...productoForm, imagen_url: '' })}
                     className="flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600"
                   >
                     Limpiar
                   </button>
                 </div>
               </div>
-            </div>
-
-            <div className="mt-4">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Emoticono
-              </div>
-              <div className="grid grid-cols-6 gap-2">
-                {PRODUCT_EMOJIS.map((emoji) => {
-                  const active = productoForm.icono === emoji
-                  return (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() =>
-                        onFormChange({
-                          ...productoForm,
-                          icono: emoji,
-                          imagen_url: productoForm.imagen_url,
-                        })
-                      }
-                      className={`flex h-11 items-center justify-center rounded-2xl border text-xl transition ${
-                        active
-                          ? 'border-blue-200 bg-blue-50 shadow-sm'
-                          : 'border-slate-200 bg-white hover:bg-slate-50'
-                      }`}
-                    >
-                      {emoji}
-                    </button>
-                  )
-                })}
-              </div>
-
-              <input
-                placeholder="O escribe un emoji"
-                value={productoForm.icono}
-                onChange={(e) => onFormChange({ ...productoForm, icono: e.target.value.slice(0, 2) })}
-                className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
-              />
             </div>
           </div>
 

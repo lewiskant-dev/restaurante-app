@@ -97,13 +97,6 @@ function getProductVisual(producto: Producto) {
     }
   }
 
-  if (producto.icono) {
-    return {
-      hue: 'from-slate-100 to-white',
-      art: <span className="text-[28px] leading-none">{producto.icono}</span>,
-    }
-  }
-
   const text = `${producto.categoria} ${producto.nombre}`.toLowerCase()
   if (text.includes('vino') || text.includes('aceite')) {
     return {
