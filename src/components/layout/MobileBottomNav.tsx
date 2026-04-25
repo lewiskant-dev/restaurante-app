@@ -38,21 +38,37 @@ export function MobileBottomNav({
   onMainTabChange,
   onTabChange,
 }: MobileBottomNavProps) {
-  const moreTarget =
+  const operativaRoot: TabKey = 'stock'
+  const albaranesTarget: TabKey = visibleTabsByGroup.gestion.includes('albaranes')
+    ? 'albaranes'
+    : 'albaran'
+  const moreTarget: TabKey =
     visibleTabsByGroup.gestion.find((tab) => tab === 'usuarios') ||
-    visibleTabsByGroup.control[0] ||
+    visibleTabsByGroup.control.find((tab) => tab === 'auditoria') ||
+    visibleTabsByGroup.control.find((tab) => tab === 'historial') ||
+    visibleTabsByGroup.gestion.find((tab) => tab === 'proveedores') ||
+    visibleTabsByGroup.gestion.find((tab) => tab === 'recetas') ||
     visibleTabsByGroup.gestion[0] ||
     'stock'
+
+  const primaryTabs: TabKey[] = ['stock', 'albaran', 'albaranes', 'tpv']
+  const moreTabs = new Set<TabKey>([
+    'usuarios',
+    'historial',
+    'auditoria',
+    'proveedores',
+    'recetas',
+  ])
+
 
   const items = [
     {
       key: 'inicio',
       label: 'Inicio',
-      active: currentTab === 'historial' || currentTab === 'auditoria',
+      active: currentTab === operativaRoot,
       onClick: () => {
-        const nextTab = visibleTabsByGroup.control[0] || 'stock'
-        onMainTabChange(nextTab === 'stock' ? 'operativa' : 'control')
-        onTabChange(nextTab)
+        onMainTabChange('operativa')
+        onTabChange(operativaRoot)
       },
       icon: (
         <>
@@ -82,9 +98,8 @@ export function MobileBottomNav({
       label: 'Albaranes',
       active: currentTab === 'albaran' || currentTab === 'albaranes',
       onClick: () => {
-        const nextTab = visibleTabsByGroup.gestion.includes('albaranes') ? 'albaranes' : 'albaran'
-        onMainTabChange(nextTab === 'albaranes' ? 'gestion' : 'operativa')
-        onTabChange(nextTab)
+        onMainTabChange(albaranesTarget === 'albaranes' ? 'gestion' : 'operativa')
+        onTabChange(albaranesTarget)
       },
       icon: (
         <>
@@ -114,7 +129,7 @@ export function MobileBottomNav({
     {
       key: 'mas',
       label: 'Más',
-      active: currentTab === moreTarget || currentTab === 'usuarios' || currentTab === 'historial',
+      active: moreTabs.has(currentTab) && !primaryTabs.includes(currentTab),
       onClick: () => {
         const group = visibleTabsByGroup.gestion.includes(moreTarget as TabKey) ? 'gestion' : 'control'
         onMainTabChange(group)
@@ -131,25 +146,25 @@ export function MobileBottomNav({
   ]
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/98 px-2 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-2 shadow-[0_-14px_30px_rgba(15,23,42,0.06)] backdrop-blur lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/98 px-2 pb-[calc(env(safe-area-inset-bottom)+0.3rem)] pt-1.5 shadow-[0_-10px_22px_rgba(15,23,42,0.05)] backdrop-blur lg:hidden">
       <div className="grid grid-cols-5 gap-0.5">
         {items.map((item) => (
           <button
             key={item.key}
             type="button"
             onClick={item.onClick}
-            className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-1 text-[11px] font-semibold transition ${
+            className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-0.5 text-[10px] font-medium transition ${
               item.active ? 'text-blue-600' : 'text-slate-500'
             }`}
           >
             <span
-              className={`flex h-10 w-10 items-center justify-center rounded-full ${
+              className={`flex h-9 w-9 items-center justify-center rounded-full ${
                 item.active ? 'bg-blue-50 shadow-sm ring-1 ring-blue-100' : ''
               }`}
             >
-              <Icon className="h-5 w-5" path={item.icon} />
+              <Icon className="h-[18px] w-[18px]" path={item.icon} />
             </span>
-            <span>{item.label}</span>
+            <span className={item.active ? 'font-semibold' : ''}>{item.label}</span>
           </button>
         ))}
       </div>

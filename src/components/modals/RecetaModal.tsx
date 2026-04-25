@@ -48,18 +48,23 @@ export function RecetaModal({
       onClick={onClose}
     >
       <div
-        className="max-h-[90vh] w-full overflow-y-auto rounded-t-3xl bg-white p-4 shadow-xl lg:max-w-[760px] lg:rounded-[28px] lg:border lg:border-white/80 lg:p-5 lg:shadow-[0_30px_90px_rgba(15,23,42,0.18)]"
+        className="max-h-[92vh] w-full overflow-hidden rounded-t-3xl bg-white shadow-xl lg:max-h-[90vh] lg:max-w-[760px] lg:rounded-[28px] lg:border lg:border-white/80 lg:shadow-[0_30px_90px_rgba(15,23,42,0.18)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 lg:pb-4">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-4 pb-3 pt-4 lg:px-5 lg:pb-4 lg:pt-5">
           <h3 className="text-base font-semibold text-slate-900">
             {recetaEditId ? 'Editar receta' : 'Nueva receta'}
           </h3>
-          <button type="button" onClick={onClose} className="text-sm font-medium text-slate-500">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full px-2 py-1 text-sm font-medium text-slate-500"
+          >
             Cerrar
           </button>
         </div>
 
+        <div className="max-h-[calc(92vh-76px)] overflow-y-auto px-4 pb-4 pt-4 lg:max-h-[calc(90vh-88px)] lg:px-5 lg:pb-5 lg:pt-4">
         <div className="space-y-4">
           <div className="rounded-3xl bg-slate-50 p-4">
             <div className="space-y-3">
@@ -152,6 +157,7 @@ export function RecetaModal({
               ? 'Actualizar receta'
               : 'Guardar receta'}
           </button>
+        </div>
         </div>
       </div>
     </div>

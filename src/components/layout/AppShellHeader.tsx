@@ -347,15 +347,15 @@ export function AppShellHeader({
       </aside>
 
       <div className="lg:hidden">
-        <div className="border-b border-slate-200/60 bg-white px-5 pb-4 pt-4 shadow-[0_10px_24px_rgba(15,23,42,0.03)] backdrop-blur">
-          <div className="flex items-center gap-3.5">
+        <div className="border-b border-slate-200/60 bg-white px-4 pb-3 pt-3 shadow-[0_8px_18px_rgba(15,23,42,0.025)] backdrop-blur">
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="flex h-[58px] w-[58px] items-center justify-center rounded-[22px] border border-slate-200 bg-white text-slate-600 shadow-[0_10px_24px_rgba(15,23,42,0.06)]"
+              className="flex h-[50px] w-[50px] items-center justify-center rounded-[19px] border border-slate-200 bg-white text-slate-600 shadow-[0_8px_16px_rgba(15,23,42,0.04)]"
             >
               <Icon
-                className="h-6 w-6"
+                className="h-[22px] w-[22px]"
                 path={
                   <>
                     <path d="M4 7h16" />
@@ -371,18 +371,18 @@ export function AppShellHeader({
               onClick={() => handleGroupTabChange('operativa', 'stock')}
               className="min-w-0 flex-1 text-left"
             >
-              <div className="text-[1.95rem] font-semibold tracking-tight text-slate-950">Nexo</div>
-              <div className="mt-0.5 text-[15px] text-slate-500">
+              <div className="text-[1.64rem] font-semibold tracking-tight text-slate-950">Nexo</div>
+              <div className="mt-0.5 text-[12px] text-slate-500">
                 Inventario en orden
               </div>
             </button>
 
             <button
               type="button"
-              className="relative flex h-[56px] w-[56px] items-center justify-center rounded-[21px] border border-slate-200 bg-white text-slate-600 shadow-[0_8px_20px_rgba(15,23,42,0.05)]"
+              className="relative flex h-[48px] w-[48px] items-center justify-center rounded-[18px] border border-slate-200 bg-white text-slate-600 shadow-[0_8px_16px_rgba(15,23,42,0.04)]"
             >
               <Icon
-                className="h-5 w-5"
+                className="h-[18px] w-[18px]"
                 path={
                   <>
                     <path d="M15 17h5l-1.5-1.5A2 2 0 0 1 18 14.1V11a6 6 0 1 0-12 0v3.1a2 2 0 0 1-.5 1.4L4 17h5" />
@@ -390,19 +390,19 @@ export function AppShellHeader({
                   </>
                 }
               />
-              <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-blue-500" />
+              <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-blue-500" />
             </button>
 
             <button
               type="button"
               onClick={onOpenProfile}
-              className="flex h-[56px] w-[56px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#2f7bff_0%,#7a3cff_58%,#9b5cff_100%)] text-lg font-semibold text-white shadow-[0_16px_28px_rgba(89,88,255,0.2)]"
+              className="flex h-[48px] w-[48px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#2f7bff_0%,#7a3cff_58%,#9b5cff_100%)] text-[15px] font-semibold text-white shadow-[0_12px_20px_rgba(89,88,255,0.16)]"
             >
               {userInitials}
             </button>
           </div>
 
-          <div className="mt-5 rounded-[24px] border border-slate-200 bg-white p-1.5 shadow-[0_12px_28px_rgba(15,23,42,0.045)]">
+          <div className="mt-3.5 rounded-[20px] border border-slate-200 bg-white p-1.5 shadow-[0_8px_18px_rgba(15,23,42,0.035)]">
             <div className="grid grid-cols-3 gap-1.5">
               {mobileTabs.slice(0, 3).map((item) => {
                 const active = currentTab === item
@@ -411,7 +411,7 @@ export function AppShellHeader({
                     key={item}
                     type="button"
                     onClick={() => onTabChange(item)}
-                    className={`flex items-center justify-center gap-2 rounded-[18px] px-3 py-3 text-[14px] font-semibold transition ${
+                    className={`flex items-center justify-center gap-2 rounded-[16px] px-2 py-2 text-[12px] font-semibold transition ${
                       active
                         ? 'border border-blue-300 bg-white text-blue-600 shadow-[0_8px_18px_rgba(59,130,246,0.12)]'
                         : 'text-slate-600'
