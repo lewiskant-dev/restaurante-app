@@ -60,31 +60,23 @@ function getMetricTone(tone: 'emerald' | 'blue' | 'amber' | 'violet') {
     return {
       badge: 'bg-emerald-50 text-emerald-600',
       value: 'text-emerald-600',
-      graphLine: '#5ACF98',
-      graphFill: 'rgba(90, 207, 152, 0.16)',
     }
   }
   if (tone === 'amber') {
     return {
       badge: 'bg-amber-50 text-amber-500',
       value: 'text-amber-500',
-      graphLine: '#F6B24A',
-      graphFill: 'rgba(246, 178, 74, 0.14)',
     }
   }
   if (tone === 'violet') {
     return {
       badge: 'bg-violet-50 text-violet-600',
       value: 'text-violet-600',
-      graphLine: '#9A62F7',
-      graphFill: 'rgba(154, 98, 247, 0.14)',
     }
   }
   return {
     badge: 'bg-blue-50 text-blue-600',
     value: 'text-blue-600',
-    graphLine: '#4E84FF',
-    graphFill: 'rgba(78, 132, 255, 0.14)',
   }
 }
 
@@ -431,27 +423,6 @@ export default function StockTab({
                 </div>
               </div>
 
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-10 lg:block">
-                <svg
-                  viewBox="0 0 260 44"
-                  preserveAspectRatio="none"
-                  className="absolute inset-x-0 bottom-0 h-10 w-full"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M0 44V33c18 1 27-4 39-4 14 0 16 9 31 9 14 0 19-12 33-12 14 0 19 7 29 7 12 0 17-11 31-11 15 0 19 10 31 10 14 0 18-8 32-8 14 0 22 7 34 7V44Z"
-                    fill={tone.graphFill}
-                  />
-                  <path
-                    d="M0 33c18 1 27-4 39-4 14 0 16 9 31 9 14 0 19-12 33-12 14 0 19 7 29 7 12 0 17-11 31-11 15 0 19 10 31 10 14 0 18-8 32-8 14 0 22 7 34 7"
-                    fill="none"
-                    stroke={tone.graphLine}
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
             </div>
           )
         })}

@@ -975,6 +975,7 @@ export default function HomePage() {
           userDisplayName={userDisplayName}
           userRoleLabel={userRoleLabel}
           userEmail={currentUser.email || ''}
+          currentUserRole={currentUserRole}
           currentMainTab={mainTab}
           currentTab={tab}
           visibleMainGroups={visibleMainGroups}

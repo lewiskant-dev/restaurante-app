@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import type { MainTab, TabKey } from '@/features/home/types'
-import { getTabLabel } from '@/features/home/utils'
+import { getTabLabel, canAccessTab } from '@/features/home/utils'
 
 type AppShellHeaderProps = {
   stockBajo: number
@@ -10,6 +10,7 @@ type AppShellHeaderProps = {
   userDisplayName: string
   userRoleLabel: string
   userEmail: string
+  currentUserRole: 'empleado' | 'encargado' | 'administrador' | 'master'
   currentMainTab: MainTab
   currentTab: TabKey
   visibleMainGroups: MainTab[]
@@ -247,6 +248,7 @@ export function AppShellHeader({
   userDisplayName,
   userRoleLabel,
   userEmail,
+  currentUserRole,
   currentMainTab,
   currentTab,
   visibleMainGroups,
@@ -262,7 +264,10 @@ export function AppShellHeader({
     () => visibleTabsByGroup[currentMainTab] ?? [],
     [currentMainTab, visibleTabsByGroup]
   )
-  const configTabs = visibleTabsByGroup.gestion.filter((tab) => tab === 'usuarios')
+  const configTabs = useMemo(
+    () => (canAccessTab(currentUserRole, 'usuarios') ? (['usuarios'] as TabKey[]) : []),
+    [currentUserRole]
+  )
 
   const handleGroupTabChange = (group: MainTab, tab: TabKey) => {
     onMainTabChange(group)
