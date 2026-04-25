@@ -6,6 +6,8 @@ export type Producto = {
   stock_actual: number
   stock_minimo: number
   referencia: string
+  imagen_url?: string | null
+  icono?: string | null
   activo: boolean
   archivado: boolean
   created_at: string

@@ -40,6 +40,8 @@ export type NuevoProductoForm = {
   stock_actual: string
   stock_minimo: string
   referencia: string
+  imagen_url: string
+  icono: string
 }
 
 export type AlbaranLineaForm = {

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import type { ReactNode } from 'react'
 import { ActionMenu } from '@/components/ui/ActionMenu'
 import type { Producto } from '@/types'
@@ -59,35 +60,58 @@ function getMetricTone(tone: 'emerald' | 'blue' | 'amber' | 'violet') {
     return {
       badge: 'bg-emerald-50 text-emerald-600',
       value: 'text-emerald-600',
-      wave: 'from-emerald-300/10 via-emerald-300/45 to-emerald-400/10',
-      stroke: 'border-emerald-300/60',
+      graphLine: '#5ACF98',
+      graphFill: 'rgba(90, 207, 152, 0.16)',
     }
   }
   if (tone === 'amber') {
     return {
       badge: 'bg-amber-50 text-amber-500',
       value: 'text-amber-500',
-      wave: 'from-amber-300/10 via-amber-300/45 to-amber-400/10',
-      stroke: 'border-amber-300/60',
+      graphLine: '#F6B24A',
+      graphFill: 'rgba(246, 178, 74, 0.14)',
     }
   }
   if (tone === 'violet') {
     return {
       badge: 'bg-violet-50 text-violet-600',
       value: 'text-violet-600',
-      wave: 'from-violet-300/10 via-violet-300/45 to-violet-400/10',
-      stroke: 'border-violet-300/60',
+      graphLine: '#9A62F7',
+      graphFill: 'rgba(154, 98, 247, 0.14)',
     }
   }
   return {
     badge: 'bg-blue-50 text-blue-600',
     value: 'text-blue-600',
-    wave: 'from-blue-300/10 via-blue-300/45 to-blue-400/10',
-    stroke: 'border-blue-300/60',
+    graphLine: '#4E84FF',
+    graphFill: 'rgba(78, 132, 255, 0.14)',
   }
 }
 
 function getProductVisual(producto: Producto) {
+  if (producto.imagen_url) {
+    return {
+      hue: 'from-slate-100 to-white',
+      art: (
+        <Image
+          src={producto.imagen_url}
+          alt={producto.nombre}
+          width={40}
+          height={40}
+          unoptimized
+          className="h-10 w-10 rounded-xl object-cover"
+        />
+      ),
+    }
+  }
+
+  if (producto.icono) {
+    return {
+      hue: 'from-slate-100 to-white',
+      art: <span className="text-[28px] leading-none">{producto.icono}</span>,
+    }
+  }
+
   const text = `${producto.categoria} ${producto.nombre}`.toLowerCase()
   if (text.includes('vino') || text.includes('aceite')) {
     return {
@@ -408,8 +432,25 @@ export default function StockTab({
               </div>
 
               <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-10 lg:block">
-                <div className={`absolute inset-x-0 bottom-0 h-6 bg-gradient-to-r ${tone.wave}`} />
-                <div className={`absolute inset-x-3 bottom-2 h-4 rounded-[999px] border-t ${tone.stroke}`} />
+                <svg
+                  viewBox="0 0 260 44"
+                  preserveAspectRatio="none"
+                  className="absolute inset-x-0 bottom-0 h-10 w-full"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M0 44V33c18 1 27-4 39-4 14 0 16 9 31 9 14 0 19-12 33-12 14 0 19 7 29 7 12 0 17-11 31-11 15 0 19 10 31 10 14 0 18-8 32-8 14 0 22 7 34 7V44Z"
+                    fill={tone.graphFill}
+                  />
+                  <path
+                    d="M0 33c18 1 27-4 39-4 14 0 16 9 31 9 14 0 19-12 33-12 14 0 19 7 29 7 12 0 17-11 31-11 15 0 19 10 31 10 14 0 18-8 32-8 14 0 22 7 34 7"
+                    fill="none"
+                    stroke={tone.graphLine}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </div>
             </div>
           )

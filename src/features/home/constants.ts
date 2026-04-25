@@ -12,6 +12,8 @@ export const initialProductoForm: NuevoProductoForm = {
   stock_actual: '',
   stock_minimo: '',
   referencia: '',
+  imagen_url: '',
+  icono: '',
 }
 
 export const initialLinea: AlbaranLineaForm = {

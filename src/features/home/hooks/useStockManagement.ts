@@ -179,6 +179,8 @@ export function useStockManagement({
       stock_actual: String(producto.stock_actual ?? ''),
       stock_minimo: String(producto.stock_minimo ?? ''),
       referencia: producto.referencia || '',
+      imagen_url: producto.imagen_url || '',
+      icono: producto.icono || '',
     })
     onError('')
     setProductoModalOpen(true)
@@ -197,7 +199,9 @@ export function useStockManagement({
     setProductoSaving(true)
     onError('')
 
-    const payload = {
+    const productoAntes = productoEditId ? productos.find((p) => p.id === productoEditId) || null : null
+
+    const payload: Record<string, string | number | boolean | null> = {
       nombre: productoForm.nombre.trim(),
       categoria: productoForm.categoria.trim(),
       unidad: productoForm.unidad.trim() || 'uds',
@@ -206,10 +210,20 @@ export function useStockManagement({
       referencia: productoForm.referencia.trim(),
     }
 
+    if (productoForm.imagen_url.trim()) {
+      payload.imagen_url = productoForm.imagen_url.trim()
+    } else if (productoAntes?.imagen_url) {
+      payload.imagen_url = null
+    }
+
+    if (productoForm.icono.trim()) {
+      payload.icono = productoForm.icono.trim()
+    } else if (productoAntes?.icono) {
+      payload.icono = null
+    }
+
     try {
       if (productoEditId) {
-        const productoAntes = productos.find((p) => p.id === productoEditId) || null
-
         const { data, error } = await supabase
           .from('productos')
           .update(payload)

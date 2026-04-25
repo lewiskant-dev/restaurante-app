@@ -752,7 +752,9 @@ export default function HomePage() {
   const userCanManageUsers = hasPermission(currentUserRole, 'user_manage')
   const visibleTabsByGroup: Record<MainTab, TabKey[]> = {
     operativa: mainTabConfig.operativa.tabs.filter((item) => canAccessTab(currentUserRole, item)),
-    gestion: mainTabConfig.gestion.tabs.filter((item) => canAccessTab(currentUserRole, item)),
+    gestion: mainTabConfig.gestion.tabs.filter(
+      (item) => item !== 'usuarios' && canAccessTab(currentUserRole, item)
+    ),
     control: mainTabConfig.control.tabs.filter((item) => canAccessTab(currentUserRole, item)),
   }
   const visibleMainGroups = (['operativa', 'gestion', 'control'] as MainTab[]).filter((group) =>
@@ -762,6 +764,60 @@ export default function HomePage() {
   const userRoleLabel = getUserRoleLabel(currentUser)
   const userInitials = getInitials(userDisplayName || 'Usuario')
   const totalCategorias = categoriasProducto.length
+  const topSearchPlaceholder =
+    tab === 'stock'
+      ? 'Buscar producto...'
+      : tab === 'historial'
+        ? 'Buscar movimiento...'
+        : tab === 'proveedores'
+          ? 'Buscar proveedor...'
+          : tab === 'albaran' || tab === 'albaranes'
+            ? 'Buscar albarán...'
+            : tab === 'auditoria'
+              ? 'Buscar registro...'
+              : tab === 'usuarios'
+                ? 'Buscar usuario...'
+                : 'Buscar...'
+  const topSearchValue =
+    tab === 'stock'
+      ? busqueda
+      : tab === 'historial'
+        ? busquedaMov
+        : tab === 'proveedores'
+          ? busquedaProveedor
+          : tab === 'albaran' || tab === 'albaranes'
+            ? busquedaAlbaran
+            : tab === 'auditoria'
+              ? busquedaAuditoria
+              : tab === 'usuarios'
+                ? busquedaUsuarios
+                : ''
+
+  function handleTopSearchChange(value: string) {
+    if (tab === 'stock') {
+      setBusqueda(value)
+      return
+    }
+    if (tab === 'historial') {
+      setBusquedaMov(value)
+      return
+    }
+    if (tab === 'proveedores') {
+      setBusquedaProveedor(value)
+      return
+    }
+    if (tab === 'albaran' || tab === 'albaranes') {
+      setBusquedaAlbaran(value)
+      return
+    }
+    if (tab === 'auditoria') {
+      setBusquedaAuditoria(value)
+      return
+    }
+    if (tab === 'usuarios') {
+      setBusquedaUsuarios(value)
+    }
+  }
 
   function descargarCSV(nombreArchivo: string, filas: Record<string, unknown>[]) {
     if (!filas.length) {
@@ -955,7 +1011,9 @@ export default function HomePage() {
             </svg>
             <input
               type="search"
-              placeholder="Buscar producto..."
+              value={topSearchValue}
+              onChange={(e) => handleTopSearchChange(e.target.value)}
+              placeholder={topSearchPlaceholder}
               className="w-full bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
             />
             <span className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-400">

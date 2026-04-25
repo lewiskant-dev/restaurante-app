@@ -180,12 +180,6 @@ function getSectionLabel(group: MainTab) {
   return 'Control'
 }
 
-function getSectionSubtitle(group: MainTab) {
-  if (group === 'operativa') return 'Trabajo diario'
-  if (group === 'gestion') return 'Compras y catálogo'
-  return 'Seguimiento'
-}
-
 function BrandMark({ className = 'h-5 w-5' }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
@@ -204,13 +198,11 @@ function BrandMark({ className = 'h-5 w-5' }: { className?: string }) {
 
 function NavGroup({
   label,
-  subtitle,
   tabs,
   currentTab,
   onTabChange,
 }: {
   label: string
-  subtitle?: string
   tabs: TabKey[]
   currentTab: TabKey
   onTabChange: (tab: TabKey) => void
@@ -223,7 +215,6 @@ function NavGroup({
         <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
           {label}
         </div>
-        {subtitle ? <div className="mt-1 text-[11px] text-slate-400">{subtitle}</div> : null}
       </div>
 
       <div className="space-y-1">
@@ -304,7 +295,6 @@ export function AppShellHeader({
           <NavGroup
             key={group}
             label={getSectionLabel(group)}
-            subtitle={getSectionSubtitle(group)}
             tabs={visibleTabsByGroup[group]}
             currentTab={currentTab}
             onTabChange={(nextTab) => handleGroupTabChange(group, nextTab)}
