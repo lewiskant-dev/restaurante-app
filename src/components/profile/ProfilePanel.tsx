@@ -48,17 +48,30 @@ export function ProfilePanel({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-20 flex items-end bg-black/40">
-      <div className="w-full rounded-t-3xl bg-white p-4 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-slate-900">Mi perfil</h3>
-          <button onClick={onClose} className="text-sm font-medium text-slate-500">
+    <div
+      className="fixed inset-0 z-30 flex items-end bg-slate-950/40 lg:items-center lg:justify-center lg:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="w-full rounded-t-3xl bg-white p-4 shadow-xl lg:max-w-[760px] lg:rounded-[28px] lg:border lg:border-white/80 lg:p-5 lg:shadow-[0_30px_90px_rgba(15,23,42,0.18)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 lg:mb-5 lg:pb-4">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900 lg:text-[1.1rem]">Información personal</h3>
+            <p className="mt-1 text-sm text-slate-500">Gestiona tu perfil y seguridad.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-10 items-center justify-center rounded-2xl border border-slate-200 px-3 text-sm font-medium text-slate-500 transition hover:bg-slate-50"
+          >
             Cerrar
           </button>
         </div>
 
-        <div className="space-y-5">
-          <div className="rounded-3xl bg-slate-50 p-4">
+        <div className="space-y-5 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
+          <div className="rounded-3xl bg-slate-50 p-4 lg:rounded-[24px] lg:p-5">
             <div className="mb-3">
               <h4 className="text-sm font-semibold text-slate-900">Información personal</h4>
               <p className="mt-1 text-sm text-slate-500">
@@ -93,6 +106,7 @@ export function ProfilePanel({
               />
 
               <button
+                type="button"
                 onClick={onSaveProfile}
                 disabled={savingProfile || !!profileNameError}
                 className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
@@ -102,7 +116,7 @@ export function ProfilePanel({
             </div>
           </div>
 
-          <div className="rounded-3xl bg-slate-50 p-4">
+          <div className="rounded-3xl bg-slate-50 p-4 lg:rounded-[24px] lg:p-5">
             <div className="mb-3">
               <h4 className="text-sm font-semibold text-slate-900">Seguridad</h4>
               <p className="mt-1 text-sm text-slate-500">
@@ -150,6 +164,7 @@ export function ProfilePanel({
               </div>
 
               <button
+                type="button"
                 onClick={onUpdatePassword}
                 disabled={
                   updatingOwnPassword ||
@@ -164,6 +179,16 @@ export function ProfilePanel({
               </button>
             </div>
           </div>
+        </div>
+
+        <div className="mt-5 flex justify-end border-t border-slate-100 pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          >
+            Salir sin guardar
+          </button>
         </div>
       </div>
     </div>

@@ -911,8 +911,8 @@ export default function HomePage() {
         <div className="absolute bottom-[-8rem] left-[20%] h-[20rem] w-[20rem] rounded-full bg-sky-200/20 blur-3xl" />
       </div>
 
-      <div className="relative mx-auto max-w-[1600px] px-3 pb-12 pt-3 sm:px-4 lg:px-5">
-        <div className="lg:flex lg:items-start lg:gap-6">
+      <div className="relative mx-auto max-w-[1180px] px-3 pb-12 pt-3 sm:px-4 lg:px-4">
+        <div className="lg:flex lg:items-start lg:gap-3">
         <AppShellHeader
           stockBajo={stockBajo}
           userInitials={userInitials}
@@ -938,8 +938,8 @@ export default function HomePage() {
         />
 
         <div className="min-w-0 flex-1">
-        <div className="mb-6 hidden items-center justify-between gap-4 rounded-[32px] border border-white/80 bg-white/88 px-6 py-4 shadow-[0_18px_55px_rgba(15,23,42,0.06)] backdrop-blur lg:flex">
-          <label className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <div className="mb-3 hidden items-center justify-between gap-3 rounded-[20px] border border-white/80 bg-white/88 px-3 py-2 shadow-[0_12px_30px_rgba(15,23,42,0.045)] backdrop-blur lg:flex">
+          <label className="flex min-w-0 max-w-[360px] flex-1 items-center gap-3 rounded-[15px] border border-slate-200 bg-white px-3.5 py-2 shadow-sm">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -966,7 +966,7 @@ export default function HomePage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm"
+              className="relative flex h-9 w-9 items-center justify-center rounded-[15px] border border-slate-200 bg-white text-slate-600 shadow-sm"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -987,14 +987,14 @@ export default function HomePage() {
             <button
               type="button"
               onClick={openProfilePanel}
-              className="flex items-center gap-3 rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:bg-slate-50"
+              className="flex items-center gap-2.5 rounded-[16px] border border-slate-200 bg-white px-3 py-1.5 text-left shadow-sm transition hover:bg-slate-50"
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#2f7bff_0%,#7a3cff_58%,#9b5cff_100%)] text-sm font-semibold text-white">
+              <div className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#2f7bff_0%,#7a3cff_58%,#9b5cff_100%)] text-[11px] font-semibold text-white">
                 {userInitials}
               </div>
               <div className="min-w-0">
-                <div className="truncate text-base font-semibold text-slate-900">{userDisplayName}</div>
-                <div className="truncate text-sm text-slate-500">{userRoleLabel}</div>
+                <div className="truncate text-[13px] font-semibold text-slate-900">{userDisplayName}</div>
+                <div className="truncate text-[12px] text-slate-500">{userRoleLabel}</div>
               </div>
               <span className="text-slate-400">⌄</span>
             </button>

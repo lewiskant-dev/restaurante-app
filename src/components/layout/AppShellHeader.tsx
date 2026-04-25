@@ -218,15 +218,15 @@ function NavGroup({
   if (!tabs.length) return null
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <div className="px-2">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
           {label}
         </div>
-        {subtitle ? <div className="mt-1 text-xs text-slate-400">{subtitle}</div> : null}
+        {subtitle ? <div className="mt-1 text-[11px] text-slate-400">{subtitle}</div> : null}
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         {tabs.map((item) => {
           const active = currentTab === item
           return (
@@ -234,7 +234,7 @@ function NavGroup({
               key={item}
               type="button"
               onClick={() => onTabChange(item)}
-              className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium transition ${
+              className={`flex w-full items-center gap-3 rounded-[16px] px-3 py-2 text-left text-[12.5px] font-medium transition ${
                 active
                   ? 'bg-blue-50 text-blue-600 shadow-[0_10px_30px_rgba(59,130,246,0.12)] ring-1 ring-blue-100'
                   : 'text-slate-600 hover:bg-slate-50'
@@ -281,25 +281,25 @@ export function AppShellHeader({
 
   const desktopNav = (
     <div className="flex h-full flex-col">
-      <div className="border-b border-slate-200/80 px-5 py-5">
+      <div className="border-b border-slate-200/80 px-4 py-3.5">
         <button
           type="button"
           onClick={() => handleGroupTabChange('operativa', 'stock')}
-          className="flex items-center gap-4 text-left"
+          className="flex items-center gap-3.5 text-left"
         >
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#1b86ff_0%,#4956ff_50%,#812dff_100%)] text-white shadow-[0_18px_30px_rgba(89,88,255,0.24)]">
-            <BrandMark className="h-5 w-5" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-[linear-gradient(135deg,#1b86ff_0%,#4956ff_50%,#812dff_100%)] text-white shadow-[0_14px_20px_rgba(89,88,255,0.2)]">
+            <BrandMark className="h-[18px] w-[18px]" />
           </div>
           <div>
-            <div className="text-[1.35rem] font-semibold tracking-tight text-slate-950">Nexo</div>
-            <div className="mt-1 text-sm text-slate-500">
+            <div className="text-[1.08rem] font-semibold tracking-tight text-slate-950">Nexo</div>
+            <div className="mt-0.5 text-[12px] text-slate-500">
               {stockBajo > 0 ? `${stockBajo} alertas de stock` : 'Inventario en orden'}
             </div>
           </div>
         </button>
       </div>
 
-      <div className="flex-1 space-y-7 overflow-y-auto px-4 py-5">
+      <div className="flex-1 space-y-4 overflow-y-auto px-3 py-3.5">
         {visibleMainGroups.map((group) => (
           <NavGroup
             key={group}
@@ -321,11 +321,11 @@ export function AppShellHeader({
         ) : null}
       </div>
 
-      <div className="border-t border-slate-200/80 p-4">
+      <div className="border-t border-slate-200/80 p-3">
         <button
           type="button"
           onClick={onSignOut}
-          className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+          className="flex w-full items-center gap-3 rounded-[16px] px-3 py-2 text-left text-[12.5px] font-medium text-slate-600 transition hover:bg-slate-50"
         >
           <Icon
             className="h-[18px] w-[18px] text-slate-400"
@@ -347,7 +347,7 @@ export function AppShellHeader({
 
   return (
     <>
-      <aside className="hidden lg:sticky lg:top-4 lg:flex lg:h-[calc(100vh-2rem)] lg:w-[286px] lg:flex-col lg:overflow-hidden lg:rounded-[32px] lg:border lg:border-white/80 lg:bg-white/92 lg:shadow-[0_24px_70px_rgba(15,23,42,0.08)] lg:backdrop-blur">
+      <aside className="hidden lg:sticky lg:top-4 lg:flex lg:h-[calc(100vh-2rem)] lg:w-[224px] lg:flex-col lg:overflow-hidden lg:rounded-[24px] lg:border lg:border-white/80 lg:bg-white/92 lg:shadow-[0_20px_44px_rgba(15,23,42,0.07)] lg:backdrop-blur">
         {desktopNav}
       </aside>
 
