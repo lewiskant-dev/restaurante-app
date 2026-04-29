@@ -347,8 +347,8 @@ export function AppShellHeader({
       </aside>
 
       <div className="lg:hidden">
-        <div className="border-b border-slate-200/60 bg-white px-4 pb-3 pt-3 shadow-[0_8px_18px_rgba(15,23,42,0.025)] backdrop-blur">
-          <div className="flex items-center gap-3">
+        <div className="border-b border-slate-200/60 bg-white px-4 pb-3 pt-2.5 shadow-[0_8px_16px_rgba(15,23,42,0.022)] backdrop-blur">
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
@@ -371,8 +371,8 @@ export function AppShellHeader({
               onClick={() => handleGroupTabChange('operativa', 'stock')}
               className="min-w-0 flex-1 text-left"
             >
-              <div className="text-[1.64rem] font-semibold tracking-tight text-slate-950">Nexo</div>
-              <div className="mt-0.5 text-[12px] text-slate-500">
+              <div className="text-[1.58rem] font-semibold tracking-tight text-slate-950">Nexo</div>
+              <div className="mt-0.5 text-[11px] text-slate-500">
                 Inventario en orden
               </div>
             </button>
@@ -402,7 +402,7 @@ export function AppShellHeader({
             </button>
           </div>
 
-          <div className="mt-3.5 rounded-[20px] border border-slate-200 bg-white p-1.5 shadow-[0_8px_18px_rgba(15,23,42,0.035)]">
+          <div className="mt-3 rounded-[20px] border border-slate-200 bg-white p-1.5 shadow-[0_8px_16px_rgba(15,23,42,0.03)]">
             <div className="grid grid-cols-3 gap-1.5">
               {mobileTabs.slice(0, 3).map((item) => {
                 const active = currentTab === item
@@ -411,7 +411,7 @@ export function AppShellHeader({
                     key={item}
                     type="button"
                     onClick={() => onTabChange(item)}
-                    className={`flex items-center justify-center gap-2 rounded-[16px] px-2 py-2 text-[12px] font-semibold transition ${
+                    className={`flex items-center justify-center gap-1.5 rounded-[16px] px-2 py-2 text-[11px] font-semibold transition ${
                       active
                         ? 'border border-blue-300 bg-white text-blue-600 shadow-[0_8px_18px_rgba(59,130,246,0.12)]'
                         : 'text-slate-600'
