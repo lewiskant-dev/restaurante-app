@@ -323,9 +323,8 @@ export default function StockTab({
       tone: 'blue' as const,
       icon: (
         <>
-          <path d="M4.5 15.5 9 11l3.5 3.5 4.5-6 2.5 2.5" />
-          <path d="M18.5 8.5h-4" />
-          <path d="M18.5 8.5v4" />
+          <path d="M4 16 9 11l4 4 7-8" />
+          <path d="M15 7h5v5" />
         </>
       ),
     },
