@@ -5,11 +5,11 @@ import type { MainTab, TabKey } from '@/features/home/types'
 import { getTabLabel, canAccessTab } from '@/features/home/utils'
 
 type AppShellHeaderProps = {
-  stockBajo: number
   userInitials: string
   userDisplayName: string
   userRoleLabel: string
   userEmail: string
+  restaurantScopeLabel: string
   currentUserRole: 'empleado' | 'encargado' | 'administrador' | 'master'
   currentMainTab: MainTab
   currentTab: TabKey
@@ -243,11 +243,11 @@ function NavGroup({
 }
 
 export function AppShellHeader({
-  stockBajo,
   userInitials,
   userDisplayName,
   userRoleLabel,
   userEmail,
+  restaurantScopeLabel,
   currentUserRole,
   currentMainTab,
   currentTab,
@@ -289,7 +289,7 @@ export function AppShellHeader({
           <div>
             <div className="text-[1.08rem] font-semibold tracking-tight text-slate-950">Nexo</div>
             <div className="mt-0.5 text-[12px] text-slate-500">
-              {stockBajo > 0 ? `${stockBajo} alertas de stock` : 'Inventario en orden'}
+              {restaurantScopeLabel}
             </div>
           </div>
         </button>
@@ -372,7 +372,7 @@ export function AppShellHeader({
               className="min-w-0 flex-1 text-left"
             >
               <div className="text-[1.42rem] font-semibold tracking-tight text-slate-950">Nexo</div>
-              <div className="mt-0.5 text-[10.5px] text-slate-500">Inventario en orden</div>
+              <div className="mt-0.5 text-[10.5px] text-slate-500">{restaurantScopeLabel}</div>
             </button>
 
             <button

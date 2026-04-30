@@ -388,6 +388,13 @@ export function UserManagementPanel({
               const draftPasswordError = draftPassword
                 ? validatePasswordStrength(draftPassword)
                 : 'La contraseña es obligatoria'
+              const restaurantCount = managedUser.restaurant_ids?.length || 0
+              const restaurantLabel =
+                restaurantCount === 0
+                  ? 'Sin restaurante asignado'
+                  : restaurantCount === 1
+                    ? '1 restaurante asignado'
+                    : `${restaurantCount} restaurantes asignados`
 
               return (
                 <div
@@ -426,6 +433,10 @@ export function UserManagementPanel({
                         : ''}
                     </div>
                     <div className="mt-1 text-[12px] text-slate-500">{accessStatus.detail}</div>
+                    <div className="mt-1 text-[12px] text-slate-500">
+                      {restaurantLabel}
+                      {managedUser.current_restaurant_id ? ' · activo configurado' : ''}
+                    </div>
                   </div>
 
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

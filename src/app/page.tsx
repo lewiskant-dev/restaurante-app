@@ -51,6 +51,11 @@ import {
   todayLocalInputDate,
 } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
+import {
+  getRestaurantScopeDetail,
+  getRestaurantScopeFromAppMetadata,
+  getRestaurantScopeLabel,
+} from '@/lib/restaurantMetadata'
 
 export default function HomePage() {
   const allowSelfRegister = process.env.NEXT_PUBLIC_ALLOW_SELF_REGISTER === 'true'
@@ -762,6 +767,11 @@ export default function HomePage() {
   )
   const userDisplayName = getUserDisplayName(currentUser)
   const userRoleLabel = getUserRoleLabel(currentUser)
+  const currentRestaurantScope = getRestaurantScopeFromAppMetadata(
+    (currentUser?.app_metadata as Record<string, unknown> | undefined) ?? undefined
+  )
+  const restaurantScopeLabel = getRestaurantScopeLabel(currentRestaurantScope)
+  const restaurantScopeDetail = getRestaurantScopeDetail(currentRestaurantScope)
   const userInitials = getInitials(userDisplayName || 'Usuario')
   const totalCategorias = categoriasProducto.length
   const topSearchPlaceholder =
@@ -970,11 +980,11 @@ export default function HomePage() {
       <div className="relative mx-auto max-w-[1180px] px-3 pb-12 pt-3 sm:px-4 lg:px-4">
         <div className="lg:flex lg:items-start lg:gap-3">
         <AppShellHeader
-          stockBajo={stockBajo}
           userInitials={userInitials}
           userDisplayName={userDisplayName}
           userRoleLabel={userRoleLabel}
           userEmail={currentUser.email || ''}
+          restaurantScopeLabel={restaurantScopeLabel}
           currentUserRole={currentUserRole}
           currentMainTab={mainTab}
           currentTab={tab}
@@ -1294,6 +1304,8 @@ export default function HomePage() {
         profileNameDraft={profileNameDraft}
         currentUserEmail={currentUser?.email || ''}
         userRoleLabel={userRoleLabel}
+        restaurantScopeLabel={restaurantScopeLabel}
+        restaurantScopeDetail={restaurantScopeDetail}
         savingProfile={savingProfile}
         currentPasswordDraft={currentPasswordDraft}
         newPasswordDraft={newPasswordDraft}

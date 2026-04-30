@@ -46,3 +46,22 @@ export function buildInheritedRestaurantAppMetadata(
     restaurant_ids: inheritedScope.restaurantIds,
   }
 }
+
+export function getRestaurantScopeLabel(scope: RestaurantScope) {
+  if (scope.restaurantIds.length === 0) return 'Sin restaurante asignado'
+  if (scope.restaurantIds.length === 1) return '1 restaurante asignado'
+  return `${scope.restaurantIds.length} restaurantes asignados`
+}
+
+export function getRestaurantScopeDetail(scope: RestaurantScope) {
+  if (scope.restaurantIds.length === 0) {
+    return 'La cuenta todavía no tiene un restaurante activo definido.'
+  }
+  if (scope.currentRestaurantId && scope.restaurantIds.length === 1) {
+    return 'Tu acceso está asociado a un único restaurante.'
+  }
+  if (scope.currentRestaurantId) {
+    return `Hay ${scope.restaurantIds.length} restaurantes asignados y uno de ellos está marcado como activo.`
+  }
+  return `Hay ${scope.restaurantIds.length} restaurantes asignados, pero ninguno está marcado aún como activo.`
+}

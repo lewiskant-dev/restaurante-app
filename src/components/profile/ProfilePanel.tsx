@@ -5,6 +5,8 @@ type ProfilePanelProps = {
   profileNameDraft: string
   currentUserEmail: string
   userRoleLabel: string
+  restaurantScopeLabel: string
+  restaurantScopeDetail: string
   savingProfile: boolean
   currentPasswordDraft: string
   newPasswordDraft: string
@@ -28,6 +30,8 @@ export function ProfilePanel({
   profileNameDraft,
   currentUserEmail,
   userRoleLabel,
+  restaurantScopeLabel,
+  restaurantScopeDetail,
   savingProfile,
   currentPasswordDraft,
   newPasswordDraft,
@@ -105,6 +109,13 @@ export function ProfilePanel({
                 readOnly
                 className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-base text-slate-500"
               />
+              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                  Restaurante
+                </div>
+                <div className="mt-1 text-sm font-medium text-slate-800">{restaurantScopeLabel}</div>
+                <div className="mt-1 text-xs text-slate-500">{restaurantScopeDetail}</div>
+              </div>
 
               <button
                 type="button"
