@@ -121,6 +121,8 @@ export type ManagedUser = {
   email: string
   full_name: string
   role: UserRole
+  current_restaurant_id?: string | null
+  restaurant_ids?: string[]
   created_at: string
   last_sign_in_at: string | null
   banned_until: string | null

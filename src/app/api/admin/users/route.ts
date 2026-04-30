@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabaseAdmin'
+import {
+  buildInheritedRestaurantAppMetadata,
+  getRestaurantScopeFromAppMetadata,
+} from '@/lib/restaurantMetadata'
 
 type UserRole = 'empleado' | 'encargado' | 'administrador' | 'master'
 
@@ -44,11 +48,15 @@ function serializeUser(user: {
   app_metadata?: Record<string, unknown>
   user_metadata?: Record<string, unknown>
 }) {
+  const restaurantScope = getRestaurantScopeFromAppMetadata(user.app_metadata)
+
   return {
     id: user.id,
     email: user.email || '',
     full_name: String(user.user_metadata?.full_name || user.email || 'Usuario'),
     role: getUserRoleFromAuthUser(user),
+    current_restaurant_id: restaurantScope.currentRestaurantId,
+    restaurant_ids: restaurantScope.restaurantIds,
     created_at: user.created_at,
     last_sign_in_at: user.last_sign_in_at || null,
     banned_until: user.banned_until || null,
@@ -118,12 +126,13 @@ async function getRequestUser(request: Request) {
   }
 
   const role = getUserRoleFromAuthUser(data.user)
+  const restaurantScope = getRestaurantScopeFromAppMetadata(data.user.app_metadata)
 
   if (!hasManagementAccess(role)) {
     return { error: 'No tienes permisos para gestionar usuarios', status: 403 as const }
   }
 
-  return { user: data.user, role }
+  return { user: data.user, role, restaurantScope }
 }
 
 export async function GET(request: Request) {
@@ -225,6 +234,7 @@ export async function POST(request: Request) {
       full_name: fullName,
     },
     app_metadata: {
+      ...buildInheritedRestaurantAppMetadata(undefined, authResult.restaurantScope),
       role,
     },
   })
@@ -245,6 +255,8 @@ export async function POST(request: Request) {
       email,
       full_name: fullName,
       role,
+      current_restaurant_id: authResult.restaurantScope.currentRestaurantId,
+      restaurant_ids: authResult.restaurantScope.restaurantIds,
     },
   })
 
@@ -317,6 +329,8 @@ export async function PATCH(request: Request) {
     email: targetUser.email || '',
     full_name: getUserDisplayName(targetUser),
     role: targetRole,
+    current_restaurant_id: getRestaurantScopeFromAppMetadata(targetUser.app_metadata).currentRestaurantId,
+    restaurant_ids: getRestaurantScopeFromAppMetadata(targetUser.app_metadata).restaurantIds,
   }
 
   if (targetRole === 'master' && authResult.role !== 'master') {
@@ -334,7 +348,7 @@ export async function PATCH(request: Request) {
 
   if (nextRole) {
     updatePayload.app_metadata = {
-      ...targetUser.app_metadata,
+      ...buildInheritedRestaurantAppMetadata(targetUser.app_metadata, getRestaurantScopeFromAppMetadata(targetUser.app_metadata)),
       role: nextRole,
     }
   }
@@ -367,6 +381,8 @@ export async function PATCH(request: Request) {
         email: data.user.email || '',
         full_name: getUserDisplayName(data.user),
         role: getUserRoleFromAuthUser(data.user),
+        current_restaurant_id: getRestaurantScopeFromAppMetadata(data.user.app_metadata).currentRestaurantId,
+        restaurant_ids: getRestaurantScopeFromAppMetadata(data.user.app_metadata).restaurantIds,
       },
     })
   }
@@ -398,6 +414,8 @@ export async function PATCH(request: Request) {
         email: data.user.email || '',
         full_name: getUserDisplayName(data.user),
         role: getUserRoleFromAuthUser(data.user),
+        current_restaurant_id: getRestaurantScopeFromAppMetadata(data.user.app_metadata).currentRestaurantId,
+        restaurant_ids: getRestaurantScopeFromAppMetadata(data.user.app_metadata).restaurantIds,
         banned_until: data.user.banned_until || null,
       },
     })
@@ -450,6 +468,8 @@ export async function DELETE(request: Request) {
     email: targetUserData.user.email || '',
     full_name: getUserDisplayName(targetUserData.user),
     role: targetRole,
+    current_restaurant_id: getRestaurantScopeFromAppMetadata(targetUserData.user.app_metadata).currentRestaurantId,
+    restaurant_ids: getRestaurantScopeFromAppMetadata(targetUserData.user.app_metadata).restaurantIds,
   }
 
   if (targetRole === 'master' && authResult.role !== 'master') {

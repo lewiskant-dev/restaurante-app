@@ -1,5 +1,6 @@
 export type Producto = {
   id: string
+  restaurant_id?: string
   nombre: string
   categoria: string
   unidad: string
@@ -15,6 +16,7 @@ export type Producto = {
 
 export type MovimientoStock = {
   id: string
+  restaurant_id?: string
   producto_id: string
   tipo: 'entrada' | 'consumo' | 'ajuste'
   cantidad: number
@@ -28,6 +30,7 @@ export type MovimientoStock = {
 
 export type Proveedor = {
   id: string
+  restaurant_id?: string
   nombre: string
   cif: string
   telefono: string
@@ -40,6 +43,7 @@ export type Proveedor = {
 
 export type Albaran = {
   id: string
+  restaurant_id?: string
   numero: string
   proveedor_id: string | null
   proveedor_nombre: string
@@ -55,6 +59,7 @@ export type Albaran = {
 
 export type AlbaranLinea = {
   id: string
+  restaurant_id?: string
   albaran_id: string
   producto_id: string | null
   nombre_producto: string
@@ -66,6 +71,7 @@ export type AlbaranLinea = {
 
 export type Auditoria = {
   id: string
+  restaurant_id?: string
   entidad: string
   entidad_id: string | null
   accion: string

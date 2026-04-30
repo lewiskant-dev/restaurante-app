@@ -9,6 +9,11 @@
 
 La app guarda el rol en `auth.users.raw_app_meta_data.role`.
 
+Además, la base multi-restaurante queda preparada para usar:
+
+- `current_restaurant_id`
+- `restaurant_ids`
+
 ## Cómo crear el usuario master
 
 1. En Supabase, ve a `Authentication > Users`.
@@ -52,6 +57,13 @@ MASTER_EMAIL=master@interno.local
 - `administrador` y `master` pueden abrir la pestaña `Usuarios`.
 - `master` puede asignar cualquier rol, incluido `master`.
 - `administrador` puede promocionar o degradar entre `empleado`, `encargado` y `administrador`, pero no tocar cuentas `master`.
+
+## Preparación para multi-restaurante
+
+Si vas a activar la fase multi-restaurante, revisa también:
+
+- [multi-restaurant-setup.sql](/Users/jorge/restaurante-app/supabase/multi-restaurant-setup.sql:1)
+- [multi-restaurant-setup.md](/Users/jorge/restaurante-app/supabase/multi-restaurant-setup.md:1)
 
 ## Política RLS recomendada
 
