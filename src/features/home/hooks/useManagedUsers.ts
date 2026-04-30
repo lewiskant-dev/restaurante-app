@@ -1,5 +1,10 @@
 import { useMemo, useState } from 'react'
-import type { ManagedUser, ManagedUserAccessFilter, UserRole } from '@/features/home/types'
+import type {
+  ManagedRestaurant,
+  ManagedUser,
+  ManagedUserAccessFilter,
+  UserRole,
+} from '@/features/home/types'
 import {
   getManagedUserAccessStatus,
   getRoleLabel,
@@ -25,12 +30,14 @@ function hasRecentManagedUserAccess(lastSignInAt: string | null) {
 
 export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUsersOptions) {
   const [managedUsers, setManagedUsers] = useState<ManagedUser[]>([])
+  const [managedRestaurants, setManagedRestaurants] = useState<ManagedRestaurant[]>([])
   const [loadingManagedUsers, setLoadingManagedUsers] = useState(false)
   const [savingManagedUserId, setSavingManagedUserId] = useState('')
   const [creatingManagedUser, setCreatingManagedUser] = useState(false)
   const [deletingManagedUserId, setDeletingManagedUserId] = useState('')
   const [resettingManagedUserId, setResettingManagedUserId] = useState('')
   const [blockingManagedUserId, setBlockingManagedUserId] = useState('')
+  const [savingManagedUserRestaurantId, setSavingManagedUserRestaurantId] = useState('')
   const [busquedaUsuarios, setBusquedaUsuarios] = useState('')
   const [managedUserRoleFilter, setManagedUserRoleFilter] = useState<'todos' | UserRole>('todos')
   const [managedUserAccessFilter, setManagedUserAccessFilter] =
@@ -40,6 +47,12 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
   const [newManagedUserPassword, setNewManagedUserPassword] = useState('')
   const [newManagedUserRole, setNewManagedUserRole] = useState<UserRole>('empleado')
   const [managedUserPasswordDrafts, setManagedUserPasswordDrafts] = useState<
+    Record<string, string>
+  >({})
+  const [managedUserRestaurantDrafts, setManagedUserRestaurantDrafts] = useState<
+    Record<string, string[]>
+  >({})
+  const [managedUserCurrentRestaurantDrafts, setManagedUserCurrentRestaurantDrafts] = useState<
     Record<string, string>
   >({})
 
@@ -66,6 +79,19 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
 
       return (a.full_name || a.email).localeCompare(b.full_name || b.email, 'es')
     })
+  }
+
+  function syncRestaurantDrafts(users: ManagedUser[]) {
+    const nextRestaurantDrafts: Record<string, string[]> = {}
+    const nextCurrentRestaurantDrafts: Record<string, string> = {}
+
+    users.forEach((item) => {
+      nextRestaurantDrafts[item.id] = item.restaurant_ids ?? []
+      nextCurrentRestaurantDrafts[item.id] = item.current_restaurant_id ?? item.restaurant_ids?.[0] ?? ''
+    })
+
+    setManagedUserRestaurantDrafts(nextRestaurantDrafts)
+    setManagedUserCurrentRestaurantDrafts(nextCurrentRestaurantDrafts)
   }
 
   const managedUsersFiltrados = useMemo(() => {
@@ -130,13 +156,20 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
         },
       })
 
-      const payload = (await response.json()) as { error?: string; users?: ManagedUser[] }
+      const payload = (await response.json()) as {
+        error?: string
+        users?: ManagedUser[]
+        restaurants?: ManagedRestaurant[]
+      }
 
       if (!response.ok) {
         throw new Error(payload.error || 'No se pudieron cargar los usuarios')
       }
 
-      setManagedUsers(sortManagedUsers(payload.users ?? []))
+      const nextUsers = sortManagedUsers(payload.users ?? [])
+      setManagedUsers(nextUsers)
+      setManagedRestaurants(payload.restaurants ?? [])
+      syncRestaurantDrafts(nextUsers)
     } catch (err) {
       onError(err instanceof Error ? err.message : 'No se pudieron cargar los usuarios')
     } finally {
@@ -236,6 +269,7 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
       }
 
       setManagedUsers((current) => sortManagedUsers([...current, payload.user!]))
+      syncRestaurantDrafts(sortManagedUsers([...managedUsers, payload.user!]))
       setNewManagedUserName('')
       setNewManagedUserEmail('')
       setNewManagedUserPassword('')
@@ -370,14 +404,68 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
     }
   }
 
+  async function updateManagedUserRestaurants(userId: string, label: string) {
+    if (!accessToken) return
+
+    const restaurantIds = managedUserRestaurantDrafts[userId] ?? []
+    const currentRestaurantId = managedUserCurrentRestaurantDrafts[userId] || restaurantIds[0] || ''
+
+    const confirmed = window.confirm(
+      `¿Guardar la asignación de restaurantes para "${label}"?\n\nEsto actualizará también su restaurante activo.`
+    )
+
+    if (!confirmed) return
+
+    setSavingManagedUserRestaurantId(userId)
+    onError('')
+
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          userId,
+          restaurantIds,
+          currentRestaurantId,
+        }),
+      })
+
+      const payload = (await response.json()) as { error?: string; user?: ManagedUser }
+
+      if (!response.ok || !payload.user) {
+        throw new Error(payload.error || 'No se pudo actualizar la asignación de restaurantes')
+      }
+
+      setManagedUsers((current) => {
+        const nextUsers = sortManagedUsers(
+          current.map((item) => (item.id === userId ? payload.user ?? item : item))
+        )
+        syncRestaurantDrafts(nextUsers)
+        return nextUsers
+      })
+      onToast(`Asignación de restaurantes actualizada para ${label}`)
+    } catch (err) {
+      onError(
+        err instanceof Error ? err.message : 'No se pudo actualizar la asignación de restaurantes'
+      )
+    } finally {
+      setSavingManagedUserRestaurantId('')
+    }
+  }
+
   function resetManagedUsersState() {
     setManagedUsers([])
+    setManagedRestaurants([])
     setLoadingManagedUsers(false)
     setSavingManagedUserId('')
     setCreatingManagedUser(false)
     setDeletingManagedUserId('')
     setResettingManagedUserId('')
     setBlockingManagedUserId('')
+    setSavingManagedUserRestaurantId('')
     setBusquedaUsuarios('')
     setManagedUserRoleFilter('todos')
     setNewManagedUserName('')
@@ -385,10 +473,13 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
     setNewManagedUserPassword('')
     setNewManagedUserRole('empleado')
     setManagedUserPasswordDrafts({})
+    setManagedUserRestaurantDrafts({})
+    setManagedUserCurrentRestaurantDrafts({})
   }
 
   return {
     managedUsers,
+    managedRestaurants,
     managedUsersFiltrados,
     loadingManagedUsers,
     savingManagedUserId,
@@ -396,6 +487,7 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
     deletingManagedUserId,
     resettingManagedUserId,
     blockingManagedUserId,
+    savingManagedUserRestaurantId,
     busquedaUsuarios,
     managedUserRoleFilter,
     managedUserAccessFilter,
@@ -409,6 +501,8 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
     newManagedUserPasswordError,
     canSubmitManagedUser,
     managedUserPasswordDrafts,
+    managedUserRestaurantDrafts,
+    managedUserCurrentRestaurantDrafts,
     setBusquedaUsuarios,
     setManagedUserRoleFilter,
     setManagedUserAccessFilter,
@@ -417,12 +511,15 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
     setNewManagedUserPassword,
     setNewManagedUserRole,
     setManagedUserPasswordDrafts,
+    setManagedUserRestaurantDrafts,
+    setManagedUserCurrentRestaurantDrafts,
     loadManagedUsers,
     updateManagedUserRole,
     createManagedUser,
     deleteManagedUser,
     resetManagedUserPassword,
     toggleManagedUserBlocked,
+    updateManagedUserRestaurants,
     resetManagedUsersState,
   }
 }

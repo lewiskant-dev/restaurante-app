@@ -21,6 +21,7 @@ type AuditoriaParams = {
 }
 
 type UseAlbaranManagementOptions = {
+  currentRestaurantId?: string | null
   productos: Producto[]
   proveedores: Proveedor[]
   mapeosProductos: MapeoProducto[]
@@ -35,6 +36,7 @@ type UseAlbaranManagementOptions = {
 }
 
 export function useAlbaranManagement({
+  currentRestaurantId,
   productos,
   proveedores,
   mapeosProductos,
@@ -101,10 +103,16 @@ export function useAlbaranManagement({
   async function loadAlbaranes() {
     setLoadingAlbaranes(true)
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('albaranes')
       .select('*')
       .order('fecha', { ascending: false })
+
+    if (currentRestaurantId) {
+      query = query.eq('restaurant_id', currentRestaurantId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       onError(error.message)

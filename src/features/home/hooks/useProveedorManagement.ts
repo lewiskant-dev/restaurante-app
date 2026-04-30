@@ -14,6 +14,7 @@ type AuditoriaParams = {
 }
 
 type UseProveedorManagementOptions = {
+  currentRestaurantId?: string | null
   onError: (message: string) => void
   onToast: (message: string) => void
   requirePermission: (permission: PermissionKey, message: string) => boolean
@@ -22,6 +23,7 @@ type UseProveedorManagementOptions = {
 }
 
 export function useProveedorManagement({
+  currentRestaurantId,
   onError,
   onToast,
   requirePermission,
@@ -69,10 +71,16 @@ export function useProveedorManagement({
   async function loadProveedores() {
     setLoadingProveedores(true)
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('proveedores')
       .select('*')
       .order('nombre', { ascending: true })
+
+    if (currentRestaurantId) {
+      query = query.eq('restaurant_id', currentRestaurantId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       onError(error.message)

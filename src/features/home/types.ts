@@ -128,6 +128,13 @@ export type ManagedUser = {
   banned_until: string | null
 }
 
+export type ManagedRestaurant = {
+  id: string
+  nombre: string
+  slug: string
+  activo: boolean
+}
+
 export type ManagedUserAccessFilter =
   | 'todos'
   | 'sin_acceso'

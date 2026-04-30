@@ -21,6 +21,7 @@ type AuditoriaParams = {
 }
 
 type UseRecetaTpvManagementOptions = {
+  currentRestaurantId?: string | null
   onError: (message: string) => void
   onToast: (message: string) => void
   requirePermission: (permission: PermissionKey, message: string) => boolean
@@ -31,6 +32,7 @@ type UseRecetaTpvManagementOptions = {
 }
 
 export function useRecetaTpvManagement({
+  currentRestaurantId,
   onError,
   onToast,
   requirePermission,
@@ -102,10 +104,16 @@ export function useRecetaTpvManagement({
   async function loadRecetas() {
     setLoadingRecetas(true)
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('recetas')
       .select('*')
       .order('nombre', { ascending: true })
+
+    if (currentRestaurantId) {
+      query = query.eq('restaurant_id', currentRestaurantId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       onError(error.message)
@@ -166,11 +174,17 @@ export function useRecetaTpvManagement({
     setRecetaNombreTPV(receta.nombre_tpv || '')
     setRecetaActiva(receta.activo !== false)
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('recetas_lineas')
       .select('*')
       .eq('receta_id', receta.id)
       .order('created_at', { ascending: true })
+
+    if (currentRestaurantId) {
+      query = query.eq('restaurant_id', currentRestaurantId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       onError(error.message)

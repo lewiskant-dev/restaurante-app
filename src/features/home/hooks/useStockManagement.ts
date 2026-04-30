@@ -15,6 +15,7 @@ type AuditoriaParams = {
 }
 
 type UseStockManagementOptions = {
+  currentRestaurantId?: string | null
   onError: (message: string) => void
   onToast: (message: string) => void
   requirePermission: (permission: PermissionKey, message: string) => boolean
@@ -22,6 +23,7 @@ type UseStockManagementOptions = {
 }
 
 export function useStockManagement({
+  currentRestaurantId,
   onError,
   onToast,
   requirePermission,
@@ -112,9 +114,15 @@ export function useStockManagement({
   async function loadProductos() {
     setLoadingProductos(true)
 
-    const { data, error } = await supabase.from('productos').select('*').order('nombre', {
+    let query = supabase.from('productos').select('*').order('nombre', {
       ascending: true,
     })
+
+    if (currentRestaurantId) {
+      query = query.eq('restaurant_id', currentRestaurantId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       onError(error.message)
@@ -129,7 +137,7 @@ export function useStockManagement({
   async function loadMovimientos() {
     setLoadingMovimientos(true)
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('movimientos_stock')
       .select(
         `
@@ -141,6 +149,12 @@ export function useStockManagement({
       `
       )
       .order('created_at', { ascending: false })
+
+    if (currentRestaurantId) {
+      query = query.eq('restaurant_id', currentRestaurantId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       onError(error.message)

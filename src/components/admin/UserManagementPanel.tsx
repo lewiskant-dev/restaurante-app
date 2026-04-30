@@ -1,6 +1,11 @@
 'use client'
 
-import type { ManagedUser, ManagedUserAccessFilter, UserRole } from '@/features/home/types'
+import type {
+  ManagedRestaurant,
+  ManagedUser,
+  ManagedUserAccessFilter,
+  UserRole,
+} from '@/features/home/types'
 import {
   formatFechaHora,
   getManagedUserAccessStatus,
@@ -12,6 +17,7 @@ type UserManagementPanelProps = {
   currentUserId: string
   currentUserRole: UserRole
   managedUsers: ManagedUser[]
+  managedRestaurants: ManagedRestaurant[]
   managedUsersFiltrados: ManagedUser[]
   loadingManagedUsers: boolean
   savingManagedUserId: string
@@ -19,6 +25,7 @@ type UserManagementPanelProps = {
   deletingManagedUserId: string
   resettingManagedUserId: string
   blockingManagedUserId: string
+  savingManagedUserRestaurantId: string
   busquedaUsuarios: string
   managedUserRoleFilter: 'todos' | UserRole
   managedUserAccessFilter: ManagedUserAccessFilter
@@ -42,6 +49,8 @@ type UserManagementPanelProps = {
   newManagedUserPasswordError: string
   canSubmitManagedUser: boolean
   managedUserPasswordDrafts: Record<string, string>
+  managedUserRestaurantDrafts: Record<string, string[]>
+  managedUserCurrentRestaurantDrafts: Record<string, string>
   onReload: () => void
   onCreate: () => void
   onUpdateRole: (userId: string, role: UserRole) => void
@@ -57,12 +66,16 @@ type UserManagementPanelProps = {
   onNewPasswordChange: (value: string) => void
   onNewRoleChange: (value: UserRole) => void
   onManagedPasswordDraftChange: (userId: string, value: string) => void
+  onManagedRestaurantDraftToggle: (userId: string, restaurantId: string, checked: boolean) => void
+  onManagedCurrentRestaurantDraftChange: (userId: string, restaurantId: string) => void
+  onSaveRestaurants: (userId: string, label: string) => void
 }
 
 export function UserManagementPanel({
   currentUserId,
   currentUserRole,
   managedUsers,
+  managedRestaurants,
   managedUsersFiltrados,
   loadingManagedUsers,
   savingManagedUserId,
@@ -70,6 +83,7 @@ export function UserManagementPanel({
   deletingManagedUserId,
   resettingManagedUserId,
   blockingManagedUserId,
+  savingManagedUserRestaurantId,
   busquedaUsuarios,
   managedUserRoleFilter,
   managedUserAccessFilter,
@@ -83,6 +97,8 @@ export function UserManagementPanel({
   newManagedUserPasswordError,
   canSubmitManagedUser,
   managedUserPasswordDrafts,
+  managedUserRestaurantDrafts,
+  managedUserCurrentRestaurantDrafts,
   onReload,
   onCreate,
   onUpdateRole,
@@ -98,6 +114,9 @@ export function UserManagementPanel({
   onNewPasswordChange,
   onNewRoleChange,
   onManagedPasswordDraftChange,
+  onManagedRestaurantDraftToggle,
+  onManagedCurrentRestaurantDraftChange,
+  onSaveRestaurants,
 }: UserManagementPanelProps) {
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -395,6 +414,9 @@ export function UserManagementPanel({
                   : restaurantCount === 1
                     ? '1 restaurante asignado'
                     : `${restaurantCount} restaurantes asignados`
+              const selectedRestaurantIds = managedUserRestaurantDrafts[managedUser.id] ?? []
+              const selectedCurrentRestaurantId =
+                managedUserCurrentRestaurantDrafts[managedUser.id] ?? ''
 
               return (
                 <div
@@ -497,35 +519,117 @@ export function UserManagementPanel({
                   </div>
 
                   {canEditTarget ? (
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                      <div className="flex-1">
-                        <input
-                          type="password"
-                          value={draftPassword}
-                          onChange={(e) => onManagedPasswordDraftChange(managedUser.id, e.target.value)}
-                          placeholder="Nueva contraseña"
-                          className={`w-full rounded-[18px] border bg-white px-4 py-3 text-[14px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-2xl sm:py-2 sm:text-sm ${
-                            draftPassword && draftPasswordError ? 'border-red-200' : 'border-slate-200'
-                          }`}
-                        />
-                        <div
-                          className={`mt-1 text-[11px] ${
-                            draftPassword && draftPasswordError ? 'text-red-500' : 'text-slate-500'
-                          }`}
-                        >
-                          {draftPassword && draftPasswordError
-                            ? draftPasswordError
-                            : 'Min. 8 caracteres, con letra y numero.'}
+                    <div className="w-full space-y-3">
+                      {managedRestaurants.length > 0 ? (
+                        <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-3">
+                          <div className="mb-2">
+                            <div className="text-[12px] font-semibold text-slate-800">
+                              Acceso por restaurante
+                            </div>
+                            <div className="mt-1 text-[11px] text-slate-500">
+                              Marca los restaurantes permitidos y cuál queda activo por defecto.
+                            </div>
+                          </div>
+
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {managedRestaurants.map((restaurant) => {
+                              const checked = selectedRestaurantIds.includes(restaurant.id)
+                              return (
+                                <label
+                                  key={restaurant.id}
+                                  className={`flex items-center gap-2 rounded-[14px] border px-3 py-2 text-[12px] ${
+                                    checked
+                                      ? 'border-blue-200 bg-blue-50 text-blue-700'
+                                      : 'border-slate-200 bg-white text-slate-600'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={(e) =>
+                                      onManagedRestaurantDraftToggle(
+                                        managedUser.id,
+                                        restaurant.id,
+                                        e.target.checked
+                                      )
+                                    }
+                                  />
+                                  <span className="truncate">{restaurant.nombre}</span>
+                                </label>
+                              )
+                            })}
+                          </div>
+
+                          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <select
+                              value={selectedCurrentRestaurantId}
+                              onChange={(e) =>
+                                onManagedCurrentRestaurantDraftChange(managedUser.id, e.target.value)
+                              }
+                              disabled={!selectedRestaurantIds.length}
+                              className="rounded-[16px] border border-slate-200 bg-white px-3 py-2 text-[12px] text-slate-900 disabled:opacity-60"
+                            >
+                              {!selectedRestaurantIds.length ? (
+                                <option value="">Sin restaurantes asignados</option>
+                              ) : null}
+                              {managedRestaurants
+                                .filter((restaurant) => selectedRestaurantIds.includes(restaurant.id))
+                                .map((restaurant) => (
+                                  <option key={restaurant.id} value={restaurant.id}>
+                                    {restaurant.nombre}
+                                  </option>
+                                ))}
+                            </select>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onSaveRestaurants(
+                                  managedUser.id,
+                                  managedUser.full_name || managedUser.email
+                                )
+                              }
+                              disabled={savingManagedUserRestaurantId === managedUser.id}
+                              className="rounded-[16px] bg-indigo-50 px-4 py-2 text-[12px] font-semibold text-indigo-700 disabled:opacity-60"
+                            >
+                              {savingManagedUserRestaurantId === managedUser.id
+                                ? 'Guardando alcance...'
+                                : 'Guardar restaurantes'}
+                            </button>
+                          </div>
                         </div>
+                      ) : null}
+
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <div className="flex-1">
+                          <input
+                            type="password"
+                            value={draftPassword}
+                            onChange={(e) => onManagedPasswordDraftChange(managedUser.id, e.target.value)}
+                            placeholder="Nueva contraseña"
+                            className={`w-full rounded-[18px] border bg-white px-4 py-3 text-[14px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-2xl sm:py-2 sm:text-sm ${
+                              draftPassword && draftPasswordError ? 'border-red-200' : 'border-slate-200'
+                            }`}
+                          />
+                          <div
+                            className={`mt-1 text-[11px] ${
+                              draftPassword && draftPasswordError ? 'text-red-500' : 'text-slate-500'
+                            }`}
+                          >
+                            {draftPassword && draftPasswordError
+                              ? draftPasswordError
+                              : 'Min. 8 caracteres, con letra y numero.'}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onResetPassword(managedUser.id, managedUser.full_name || managedUser.email)}
+                          disabled={resettingManagedUserId === managedUser.id || !!draftPasswordError}
+                          className="rounded-[18px] bg-amber-50 px-4 py-3 text-[14px] font-semibold text-amber-700 disabled:opacity-60 sm:rounded-2xl sm:py-2 sm:text-sm"
+                        >
+                          {resettingManagedUserId === managedUser.id ? 'Guardando...' : 'Resetear contraseña'}
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => onResetPassword(managedUser.id, managedUser.full_name || managedUser.email)}
-                        disabled={resettingManagedUserId === managedUser.id || !!draftPasswordError}
-                        className="rounded-[18px] bg-amber-50 px-4 py-3 text-[14px] font-semibold text-amber-700 disabled:opacity-60 sm:rounded-2xl sm:py-2 sm:text-sm"
-                      >
-                        {resettingManagedUserId === managedUser.id ? 'Guardando...' : 'Resetear contraseña'}
-                      </button>
                     </div>
                   ) : null}
                 </div>

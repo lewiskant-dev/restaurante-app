@@ -1,3 +1,4 @@
+import { PostgrestError } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabaseAdmin'
 import {
@@ -6,6 +7,12 @@ import {
 } from '@/lib/restaurantMetadata'
 
 type UserRole = 'empleado' | 'encargado' | 'administrador' | 'master'
+type ManagedRestaurant = {
+  id: string
+  nombre: string
+  slug: string
+  activo: boolean
+}
 
 function normalizeRole(value: unknown): UserRole {
   const normalized =
@@ -70,6 +77,62 @@ function getAdminClientOrError() {
     return {
       error: error instanceof Error ? error.message : 'Configuración server incompleta',
     }
+  }
+}
+
+function isMissingRelationError(error: unknown) {
+  return error instanceof PostgrestError && error.code === '42P01'
+}
+
+async function loadRestaurantsCatalog(
+  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>
+): Promise<ManagedRestaurant[]> {
+  const { data, error } = await supabaseAdmin
+    .from('restaurantes')
+    .select('id, nombre, slug, activo')
+    .order('nombre', { ascending: true })
+
+  if (error) {
+    if (isMissingRelationError(error)) return []
+    throw error
+  }
+
+  return (data ?? []) as ManagedRestaurant[]
+}
+
+async function syncUserRestaurantMemberships(
+  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
+  params: {
+    userId: string
+    role: UserRole
+    restaurantIds: string[]
+    currentRestaurantId: string | null
+  }
+) {
+  const { userId, role, restaurantIds, currentRestaurantId } = params
+
+  const { error: deleteError } = await supabaseAdmin
+    .from('usuario_restaurantes')
+    .delete()
+    .eq('user_id', userId)
+
+  if (deleteError && !isMissingRelationError(deleteError)) {
+    throw deleteError
+  }
+
+  if (!restaurantIds.length) return
+
+  const payload = restaurantIds.map((restaurantId) => ({
+    user_id: userId,
+    restaurant_id: restaurantId,
+    role,
+    is_default: currentRestaurantId === restaurantId,
+  }))
+
+  const { error: insertError } = await supabaseAdmin.from('usuario_restaurantes').insert(payload)
+
+  if (insertError && !isMissingRelationError(insertError)) {
+    throw insertError
   }
 }
 
@@ -175,7 +238,12 @@ export async function GET(request: Request) {
     page += 1
   }
 
-  return NextResponse.json({ users })
+  const restaurants = await loadRestaurantsCatalog(supabaseAdmin).catch((error) => {
+    console.warn('No se pudo cargar el catálogo de restaurantes:', error)
+    return [] as ManagedRestaurant[]
+  })
+
+  return NextResponse.json({ users, restaurants })
 }
 
 export async function POST(request: Request) {
@@ -280,21 +348,56 @@ export async function PATCH(request: Request) {
   const supabaseAdmin = adminResult.client
 
   const body = (await request.json().catch(() => null)) as
-    | { userId?: string; role?: UserRole; password?: string; blocked?: boolean }
+    | {
+        userId?: string
+        role?: UserRole
+        password?: string
+        blocked?: boolean
+        restaurantIds?: string[]
+        currentRestaurantId?: string | null
+      }
     | null
 
   const userId = body?.userId?.trim() || ''
   const nextRole = body?.role ? normalizeRole(body.role) : null
   const nextPassword = body?.password || ''
   const nextBlocked = typeof body?.blocked === 'boolean' ? body.blocked : null
+  const nextRestaurantIds = Array.isArray(body?.restaurantIds)
+    ? Array.from(
+        new Set(
+          body.restaurantIds
+            .map((value) => (typeof value === 'string' ? value.trim() : ''))
+            .filter(Boolean)
+        )
+      )
+    : null
+  const requestedCurrentRestaurantId =
+    typeof body?.currentRestaurantId === 'string' ? body.currentRestaurantId.trim() : ''
+  const nextCurrentRestaurantId =
+    nextRestaurantIds === null
+      ? null
+      : requestedCurrentRestaurantId && nextRestaurantIds.includes(requestedCurrentRestaurantId)
+        ? requestedCurrentRestaurantId
+        : nextRestaurantIds[0] || null
 
   if (!userId) {
     return NextResponse.json({ error: 'Falta el usuario a actualizar' }, { status: 400 })
   }
 
-  if (!nextRole && !nextPassword && nextBlocked === null) {
+  if (!nextRole && !nextPassword && nextBlocked === null && nextRestaurantIds === null) {
     return NextResponse.json(
-      { error: 'Debes indicar un rol, un bloqueo o una nueva contraseña' },
+      { error: 'Debes indicar un rol, un bloqueo, restaurantes o una nueva contraseña' },
+      { status: 400 }
+    )
+  }
+
+  if (
+    nextRestaurantIds !== null &&
+    requestedCurrentRestaurantId &&
+    !nextRestaurantIds.includes(requestedCurrentRestaurantId)
+  ) {
+    return NextResponse.json(
+      { error: 'El restaurante activo debe estar dentro de la asignación seleccionada' },
       { status: 400 }
     )
   }
@@ -346,10 +449,16 @@ export async function PATCH(request: Request) {
     ban_duration?: string | 'none'
   } = {}
 
-  if (nextRole) {
+  if (nextRole || nextRestaurantIds !== null) {
+    const targetRestaurantScope = getRestaurantScopeFromAppMetadata(targetUser.app_metadata)
     updatePayload.app_metadata = {
-      ...buildInheritedRestaurantAppMetadata(targetUser.app_metadata, getRestaurantScopeFromAppMetadata(targetUser.app_metadata)),
-      role: nextRole,
+      ...buildInheritedRestaurantAppMetadata(targetUser.app_metadata, {
+        currentRestaurantId:
+          nextRestaurantIds !== null ? nextCurrentRestaurantId : targetRestaurantScope.currentRestaurantId,
+        restaurantIds:
+          nextRestaurantIds !== null ? nextRestaurantIds : targetRestaurantScope.restaurantIds,
+      }),
+      role: nextRole ?? targetRole,
     }
   }
 
@@ -368,6 +477,27 @@ export async function PATCH(request: Request) {
       { error: error?.message || 'No se pudo actualizar el rol' },
       { status: 500 }
     )
+  }
+
+  if (nextRestaurantIds !== null) {
+    try {
+      await syncUserRestaurantMemberships(supabaseAdmin, {
+        userId,
+        role: nextRole ?? targetRole,
+        restaurantIds: nextRestaurantIds,
+        currentRestaurantId: nextCurrentRestaurantId,
+      })
+    } catch (membershipError) {
+      return NextResponse.json(
+        {
+          error:
+            membershipError instanceof Error
+              ? membershipError.message
+              : 'No se pudo sincronizar la asignación de restaurantes',
+        },
+        { status: 500 }
+      )
+    }
   }
 
   if (nextRole) {
@@ -417,6 +547,23 @@ export async function PATCH(request: Request) {
         current_restaurant_id: getRestaurantScopeFromAppMetadata(data.user.app_metadata).currentRestaurantId,
         restaurant_ids: getRestaurantScopeFromAppMetadata(data.user.app_metadata).restaurantIds,
         banned_until: data.user.banned_until || null,
+      },
+    })
+  }
+
+  if (nextRestaurantIds !== null) {
+    await logAdminAudit(supabaseAdmin, {
+      actor: authResult.user,
+      entidadId: data.user.id,
+      accion: 'editar',
+      detalle: `Asignación de restaurantes actualizada para: ${getUserDisplayName(data.user)}`,
+      payloadAntes: targetSnapshotBefore,
+      payloadDespues: {
+        email: data.user.email || '',
+        full_name: getUserDisplayName(data.user),
+        role: getUserRoleFromAuthUser(data.user),
+        current_restaurant_id: getRestaurantScopeFromAppMetadata(data.user.app_metadata).currentRestaurantId,
+        restaurant_ids: getRestaurantScopeFromAppMetadata(data.user.app_metadata).restaurantIds,
       },
     })
   }

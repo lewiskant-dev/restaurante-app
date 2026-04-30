@@ -26,6 +26,7 @@ import type {
 } from '@/types'
 import type {
   MainTab,
+  ManagedRestaurant,
   MapeoProducto,
   PermissionKey,
   TabKey,
@@ -65,6 +66,13 @@ export default function HomePage() {
   const [session, setSession] = useState<Session | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [authReady, setAuthReady] = useState(false)
+  const currentRestaurantScope = getRestaurantScopeFromAppMetadata(
+    (currentUser?.app_metadata as Record<string, unknown> | undefined) ?? undefined
+  )
+  const activeRestaurantId = currentRestaurantScope.currentRestaurantId
+  const [accessibleRestaurants, setAccessibleRestaurants] = useState<ManagedRestaurant[]>([])
+  const [loadingAccessibleRestaurants, setLoadingAccessibleRestaurants] = useState(false)
+  const [switchingRestaurant, setSwitchingRestaurant] = useState(false)
 
   const [mapeosProductos, setMapeosProductos] = useState<MapeoProducto[]>([])
   const [auditoria, setAuditoria] = useState<Auditoria[]>([])
@@ -139,6 +147,7 @@ export default function HomePage() {
 
   const {
     managedUsers,
+    managedRestaurants,
     managedUsersFiltrados,
     loadingManagedUsers,
     savingManagedUserId,
@@ -146,6 +155,7 @@ export default function HomePage() {
     deletingManagedUserId,
     resettingManagedUserId,
     blockingManagedUserId,
+    savingManagedUserRestaurantId,
     busquedaUsuarios,
     managedUserRoleFilter,
     managedUserAccessFilter,
@@ -159,6 +169,8 @@ export default function HomePage() {
     newManagedUserPasswordError,
     canSubmitManagedUser,
     managedUserPasswordDrafts,
+    managedUserRestaurantDrafts,
+    managedUserCurrentRestaurantDrafts,
     setBusquedaUsuarios,
     setManagedUserRoleFilter,
     setManagedUserAccessFilter,
@@ -167,12 +179,15 @@ export default function HomePage() {
     setNewManagedUserPassword,
     setNewManagedUserRole,
     setManagedUserPasswordDrafts,
+    setManagedUserRestaurantDrafts,
+    setManagedUserCurrentRestaurantDrafts,
     loadManagedUsers,
     updateManagedUserRole,
     createManagedUser,
     deleteManagedUser,
     resetManagedUserPassword,
     toggleManagedUserBlocked,
+    updateManagedUserRestaurants,
     resetManagedUsersState,
   } = useManagedUsers({
     accessToken: session?.access_token,
@@ -244,6 +259,87 @@ export default function HomePage() {
     }
   }, [])
 
+  async function activateRestaurant(restaurantId: string, silent = false) {
+    if (!session?.access_token) return
+
+    setSwitchingRestaurant(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/auth/restaurants', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ restaurantId }),
+      })
+
+      const payload = (await response.json()) as { error?: string }
+
+      if (!response.ok) {
+        throw new Error(payload.error || 'No se pudo cambiar el restaurante activo')
+      }
+
+      const { data, error } = await supabase.auth.refreshSession()
+      if (error) throw error
+
+      setSession(data.session ?? null)
+      setCurrentUser(data.session?.user ?? null)
+
+      if (!silent) {
+        setToast('Restaurante activo actualizado')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo cambiar el restaurante activo')
+    } finally {
+      setSwitchingRestaurant(false)
+    }
+  }
+
+  const loadAccessibleRestaurantsEvent = useEffectEvent(async () => {
+    if (!session?.access_token) {
+      setAccessibleRestaurants([])
+      return
+    }
+
+    setLoadingAccessibleRestaurants(true)
+
+    try {
+      const response = await fetch('/api/auth/restaurants', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+
+      const payload = (await response.json()) as {
+        error?: string
+        restaurants?: ManagedRestaurant[]
+        current_restaurant_id?: string | null
+      }
+
+      if (!response.ok) {
+        throw new Error(payload.error || 'No se pudo cargar la asignación de restaurantes')
+      }
+
+      const restaurants = payload.restaurants ?? []
+      setAccessibleRestaurants(restaurants)
+
+      if (restaurants.length === 1 && !payload.current_restaurant_id) {
+        await activateRestaurant(restaurants[0].id, true)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo cargar la asignación de restaurantes')
+    } finally {
+      setLoadingAccessibleRestaurants(false)
+    }
+  })
+
+  useEffect(() => {
+    if (!authReady || !session || !currentUser) return
+    void loadAccessibleRestaurantsEvent()
+  }, [authReady, session, currentUser])
+
   const loadInitialDataEvent = useEffectEvent(async () => {
     const role = getUserRole(currentUser)
     const tasks: Promise<void>[] = [loadProductos(), loadMovimientos()]
@@ -282,9 +378,10 @@ export default function HomePage() {
   })
 
   useEffect(() => {
-    if (!authReady || !session) return
+    if (!authReady || !session || loadingAccessibleRestaurants || switchingRestaurant) return
+    if (currentRestaurantScope.restaurantIds.length > 0 && !activeRestaurantId) return
     void loadInitialDataEvent()
-  }, [authReady, session])
+  }, [authReady, session, loadingAccessibleRestaurants, switchingRestaurant, activeRestaurantId, currentRestaurantScope.restaurantIds.length])
 
   const syncManagedUsersForActiveTab = useEffectEvent(async () => {
     if (!session || !canManageUsers(getUserRole(currentUser))) {
@@ -421,6 +518,7 @@ export default function HomePage() {
     registrarConsumo,
     resetStockState,
   } = useStockManagement({
+    currentRestaurantId: activeRestaurantId,
     onError: setError,
     onToast: setToast,
     requirePermission,
@@ -449,6 +547,7 @@ export default function HomePage() {
     reactivarProveedor,
     resetProveedorState,
   } = useProveedorManagement({
+    currentRestaurantId: activeRestaurantId,
     onError: setError,
     onToast: setToast,
     requirePermission,
@@ -506,6 +605,7 @@ export default function HomePage() {
     getOCRStatusClasses,
     resetAlbaranState,
   } = useAlbaranManagement({
+    currentRestaurantId: activeRestaurantId,
     productos,
     proveedores,
     mapeosProductos,
@@ -555,6 +655,7 @@ export default function HomePage() {
     aplicarImportacionTPV,
     resetRecetaTpvState,
   } = useRecetaTpvManagement({
+    currentRestaurantId: activeRestaurantId,
     onError: setError,
     onToast: setToast,
     requirePermission,
@@ -573,10 +674,16 @@ export default function HomePage() {
   async function loadAuditoria() {
     setLoadingAuditoria(true)
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('auditoria')
       .select('*')
       .order('created_at', { ascending: false })
+
+    if (activeRestaurantId) {
+      query = query.eq('restaurant_id', activeRestaurantId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       setError(error.message)
@@ -589,10 +696,16 @@ export default function HomePage() {
   }
 
   async function loadMapeosProductos() {
-    const { data, error } = await supabase
+    let query = supabase
       .from('mapeos_productos')
       .select('*')
       .order('created_at', { ascending: false })
+
+    if (activeRestaurantId) {
+      query = query.eq('restaurant_id', activeRestaurantId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       console.warn('No se pudieron cargar mapeos_productos:', error.message)
@@ -767,11 +880,10 @@ export default function HomePage() {
   )
   const userDisplayName = getUserDisplayName(currentUser)
   const userRoleLabel = getUserRoleLabel(currentUser)
-  const currentRestaurantScope = getRestaurantScopeFromAppMetadata(
-    (currentUser?.app_metadata as Record<string, unknown> | undefined) ?? undefined
-  )
   const restaurantScopeLabel = getRestaurantScopeLabel(currentRestaurantScope)
   const restaurantScopeDetail = getRestaurantScopeDetail(currentRestaurantScope)
+  const needsRestaurantSelection =
+    !!session && !!currentUser && accessibleRestaurants.length > 1 && !activeRestaurantId
   const userInitials = getInitials(userDisplayName || 'Usuario')
   const totalCategorias = categoriasProducto.length
   const topSearchPlaceholder =
@@ -971,6 +1083,41 @@ export default function HomePage() {
 
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-[#f6f8fc] pb-28 text-slate-900 lg:pb-16">
+      {needsRestaurantSelection ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-xl rounded-[28px] border border-white/80 bg-white p-5 shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+            <div className="mb-4">
+              <h2 className="text-[1.4rem] font-semibold tracking-tight text-slate-950">
+                Elige restaurante
+              </h2>
+              <p className="mt-1 text-[13px] text-slate-500">
+                Tu cuenta tiene acceso a varios restaurantes. Selecciona cuál quieres abrir ahora.
+              </p>
+            </div>
+
+            <div className="grid gap-3">
+              {accessibleRestaurants.map((restaurant) => (
+                <button
+                  key={restaurant.id}
+                  type="button"
+                  onClick={() => void activateRestaurant(restaurant.id)}
+                  disabled={switchingRestaurant}
+                  className="flex items-center justify-between rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4 text-left transition hover:border-blue-200 hover:bg-blue-50/60 disabled:opacity-60"
+                >
+                  <div>
+                    <div className="text-[15px] font-semibold text-slate-900">{restaurant.nombre}</div>
+                    <div className="mt-1 text-[12px] text-slate-500">{restaurant.slug}</div>
+                  </div>
+                  <div className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-slate-200">
+                    {switchingRestaurant ? 'Abriendo...' : 'Entrar'}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-[-10rem] top-[-6rem] h-[24rem] w-[24rem] rounded-full bg-blue-200/30 blur-3xl" />
         <div className="absolute right-[-6rem] top-[4rem] h-[22rem] w-[22rem] rounded-full bg-violet-200/30 blur-3xl" />
@@ -1209,6 +1356,7 @@ export default function HomePage() {
             currentUserId={currentUser?.id || ''}
             currentUserRole={currentUserRole}
             managedUsers={managedUsers}
+            managedRestaurants={managedRestaurants}
             managedUsersFiltrados={managedUsersFiltrados}
             loadingManagedUsers={loadingManagedUsers}
             savingManagedUserId={savingManagedUserId}
@@ -1216,6 +1364,7 @@ export default function HomePage() {
             deletingManagedUserId={deletingManagedUserId}
             resettingManagedUserId={resettingManagedUserId}
             blockingManagedUserId={blockingManagedUserId}
+            savingManagedUserRestaurantId={savingManagedUserRestaurantId}
             busquedaUsuarios={busquedaUsuarios}
             managedUserRoleFilter={managedUserRoleFilter}
             managedUserAccessFilter={managedUserAccessFilter}
@@ -1229,6 +1378,8 @@ export default function HomePage() {
             newManagedUserPasswordError={newManagedUserPasswordError}
             canSubmitManagedUser={canSubmitManagedUser}
             managedUserPasswordDrafts={managedUserPasswordDrafts}
+            managedUserRestaurantDrafts={managedUserRestaurantDrafts}
+            managedUserCurrentRestaurantDrafts={managedUserCurrentRestaurantDrafts}
             onReload={() => void loadManagedUsers()}
             onCreate={() => void createManagedUser()}
             onUpdateRole={(userId, role) => void updateManagedUserRole(userId, role)}
@@ -1250,6 +1401,36 @@ export default function HomePage() {
                 ...current,
                 [userId]: value,
               }))
+            }
+            onManagedRestaurantDraftToggle={(userId, restaurantId, checked) => {
+              setManagedUserRestaurantDrafts((current) => {
+                const currentList = current[userId] ?? []
+                const nextList = checked
+                  ? Array.from(new Set([...currentList, restaurantId]))
+                  : currentList.filter((item) => item !== restaurantId)
+
+                setManagedUserCurrentRestaurantDrafts((currentCurrent) => ({
+                  ...currentCurrent,
+                  [userId]:
+                    nextList.includes(currentCurrent[userId])
+                      ? currentCurrent[userId]
+                      : nextList[0] ?? '',
+                }))
+
+                return {
+                  ...current,
+                  [userId]: nextList,
+                }
+              })
+            }}
+            onManagedCurrentRestaurantDraftChange={(userId, restaurantId) =>
+              setManagedUserCurrentRestaurantDrafts((current) => ({
+                ...current,
+                [userId]: restaurantId,
+              }))
+            }
+            onSaveRestaurants={(userId, label) =>
+              void updateManagedUserRestaurants(userId, label)
             }
           />
         )}
