@@ -10,6 +10,12 @@ type AppShellHeaderProps = {
   userRoleLabel: string
   userEmail: string
   restaurantScopeLabel: string
+  activeRestaurantId: string
+  accessibleRestaurants: Array<{
+    id: string
+    nombre: string
+  }>
+  switchingRestaurant: boolean
   currentUserRole: 'empleado' | 'encargado' | 'administrador' | 'master'
   currentMainTab: MainTab
   currentTab: TabKey
@@ -17,6 +23,7 @@ type AppShellHeaderProps = {
   visibleTabsByGroup: Record<MainTab, TabKey[]>
   onOpenProfile: () => void
   onSignOut: () => void
+  onRestaurantChange: (restaurantId: string) => void
   onMainTabChange: (mainTab: MainTab) => void
   onTabChange: (tab: TabKey) => void
 }
@@ -248,6 +255,9 @@ export function AppShellHeader({
   userRoleLabel,
   userEmail,
   restaurantScopeLabel,
+  activeRestaurantId,
+  accessibleRestaurants,
+  switchingRestaurant,
   currentUserRole,
   currentMainTab,
   currentTab,
@@ -255,6 +265,7 @@ export function AppShellHeader({
   visibleTabsByGroup,
   onOpenProfile,
   onSignOut,
+  onRestaurantChange,
   onMainTabChange,
   onTabChange,
 }: AppShellHeaderProps) {
@@ -268,6 +279,7 @@ export function AppShellHeader({
     () => (canAccessTab(currentUserRole, 'usuarios') ? (['usuarios'] as TabKey[]) : []),
     [currentUserRole]
   )
+  const showRestaurantSelector = accessibleRestaurants.length > 1
 
   const handleGroupTabChange = (group: MainTab, tab: TabKey) => {
     onMainTabChange(group)
@@ -399,6 +411,25 @@ export function AppShellHeader({
               {userInitials}
             </button>
           </div>
+
+          {showRestaurantSelector ? (
+            <div className="mt-2.5">
+              <select
+                value={activeRestaurantId}
+                onChange={(e) => onRestaurantChange(e.target.value)}
+                disabled={switchingRestaurant}
+                className="w-full rounded-[16px] border border-slate-200 bg-white px-3 py-2.5 text-[12px] font-medium text-slate-700 outline-none shadow-[0_6px_14px_rgba(15,23,42,0.028)] disabled:opacity-60"
+              >
+                {accessibleRestaurants.map((restaurant) => (
+                  <option key={restaurant.id} value={restaurant.id}>
+                    {switchingRestaurant && activeRestaurantId === restaurant.id
+                      ? `${restaurant.nombre} · cambiando...`
+                      : restaurant.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
 
           <div className="mt-2.5 rounded-[18px] border border-slate-200 bg-white p-1.5 shadow-[0_6px_14px_rgba(15,23,42,0.028)]">
             <div className="grid grid-cols-3 gap-1">

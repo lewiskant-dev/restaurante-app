@@ -7,6 +7,12 @@ type ProfilePanelProps = {
   userRoleLabel: string
   restaurantScopeLabel: string
   restaurantScopeDetail: string
+  accessibleRestaurants: Array<{
+    id: string
+    nombre: string
+  }>
+  activeRestaurantId: string
+  switchingRestaurant: boolean
   savingProfile: boolean
   currentPasswordDraft: string
   newPasswordDraft: string
@@ -23,6 +29,7 @@ type ProfilePanelProps = {
   onConfirmPasswordChange: (value: string) => void
   onSaveProfile: () => void
   onUpdatePassword: () => void
+  onRestaurantChange: (restaurantId: string) => void
 }
 
 export function ProfilePanel({
@@ -32,6 +39,9 @@ export function ProfilePanel({
   userRoleLabel,
   restaurantScopeLabel,
   restaurantScopeDetail,
+  accessibleRestaurants,
+  activeRestaurantId,
+  switchingRestaurant,
   savingProfile,
   currentPasswordDraft,
   newPasswordDraft,
@@ -48,6 +58,7 @@ export function ProfilePanel({
   onConfirmPasswordChange,
   onSaveProfile,
   onUpdatePassword,
+  onRestaurantChange,
 }: ProfilePanelProps) {
   if (!open) return null
 
@@ -115,6 +126,22 @@ export function ProfilePanel({
                 </div>
                 <div className="mt-1 text-sm font-medium text-slate-800">{restaurantScopeLabel}</div>
                 <div className="mt-1 text-xs text-slate-500">{restaurantScopeDetail}</div>
+                {accessibleRestaurants.length > 1 ? (
+                  <select
+                    value={activeRestaurantId}
+                    onChange={(e) => onRestaurantChange(e.target.value)}
+                    disabled={switchingRestaurant}
+                    className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none disabled:opacity-60"
+                  >
+                    {accessibleRestaurants.map((restaurant) => (
+                      <option key={restaurant.id} value={restaurant.id}>
+                        {switchingRestaurant && activeRestaurantId === restaurant.id
+                          ? `${restaurant.nombre} · cambiando...`
+                          : restaurant.nombre}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
               </div>
 
               <button

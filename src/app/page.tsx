@@ -884,6 +884,7 @@ export default function HomePage() {
   const restaurantScopeDetail = getRestaurantScopeDetail(currentRestaurantScope)
   const needsRestaurantSelection =
     !!session && !!currentUser && accessibleRestaurants.length > 1 && !activeRestaurantId
+  const normalizedActiveRestaurantId = activeRestaurantId || accessibleRestaurants[0]?.id || ''
   const userInitials = getInitials(userDisplayName || 'Usuario')
   const totalCategorias = categoriasProducto.length
   const topSearchPlaceholder =
@@ -1132,6 +1133,12 @@ export default function HomePage() {
           userRoleLabel={userRoleLabel}
           userEmail={currentUser.email || ''}
           restaurantScopeLabel={restaurantScopeLabel}
+          activeRestaurantId={normalizedActiveRestaurantId}
+          accessibleRestaurants={accessibleRestaurants.map((restaurant) => ({
+            id: restaurant.id,
+            nombre: restaurant.nombre,
+          }))}
+          switchingRestaurant={switchingRestaurant}
           currentUserRole={currentUserRole}
           currentMainTab={mainTab}
           currentTab={tab}
@@ -1139,6 +1146,7 @@ export default function HomePage() {
           visibleTabsByGroup={visibleTabsByGroup}
           onOpenProfile={openProfilePanel}
           onSignOut={() => void handleSignOut()}
+          onRestaurantChange={(restaurantId) => void activateRestaurant(restaurantId)}
           onMainTabChange={(item) => {
             setMainTab(item)
             const firstAccessibleTab = mainTabConfig[item].tabs.find((candidate) =>
@@ -1487,6 +1495,12 @@ export default function HomePage() {
         userRoleLabel={userRoleLabel}
         restaurantScopeLabel={restaurantScopeLabel}
         restaurantScopeDetail={restaurantScopeDetail}
+        accessibleRestaurants={accessibleRestaurants.map((restaurant) => ({
+          id: restaurant.id,
+          nombre: restaurant.nombre,
+        }))}
+        activeRestaurantId={normalizedActiveRestaurantId}
+        switchingRestaurant={switchingRestaurant}
         savingProfile={savingProfile}
         currentPasswordDraft={currentPasswordDraft}
         newPasswordDraft={newPasswordDraft}
@@ -1503,6 +1517,7 @@ export default function HomePage() {
         onConfirmPasswordChange={setConfirmPasswordDraft}
         onSaveProfile={() => void updateOwnProfile()}
         onUpdatePassword={() => void updateOwnPassword()}
+        onRestaurantChange={(restaurantId) => void activateRestaurant(restaurantId)}
       />
 
       <ProductModal
