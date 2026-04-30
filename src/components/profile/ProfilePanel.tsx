@@ -53,10 +53,10 @@ export function ProfilePanel({
       onClick={onClose}
     >
       <div
-        className="w-full rounded-t-3xl bg-white p-4 shadow-xl lg:max-w-[760px] lg:rounded-[28px] lg:border lg:border-white/80 lg:p-5 lg:shadow-[0_30px_90px_rgba(15,23,42,0.18)]"
+        className="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-xl lg:max-w-[760px] lg:rounded-[28px] lg:border lg:border-white/80 lg:shadow-[0_30px_90px_rgba(15,23,42,0.18)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 lg:mb-5 lg:pb-4">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-4 pb-3 pt-4 lg:pb-4 lg:pt-5">
           <div>
             <h3 className="text-base font-semibold text-slate-900 lg:text-[1.1rem]">Información personal</h3>
             <p className="mt-1 text-sm text-slate-500">Gestiona tu perfil y seguridad.</p>
@@ -70,8 +70,9 @@ export function ProfilePanel({
           </button>
         </div>
 
-        <div className="space-y-5 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
-          <div className="rounded-3xl bg-slate-50 p-4 lg:rounded-[24px] lg:p-5">
+        <div className="flex-1 overflow-y-auto px-4 py-4 lg:px-5 lg:py-5">
+          <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
+            <div className="rounded-[22px] bg-slate-50 p-4 lg:rounded-[24px] lg:p-5">
             <div className="mb-3">
               <h4 className="text-sm font-semibold text-slate-900">Información personal</h4>
               <p className="mt-1 text-sm text-slate-500">
@@ -116,7 +117,7 @@ export function ProfilePanel({
             </div>
           </div>
 
-          <div className="rounded-3xl bg-slate-50 p-4 lg:rounded-[24px] lg:p-5">
+            <div className="rounded-[22px] bg-slate-50 p-4 lg:rounded-[24px] lg:p-5">
             <div className="mb-3">
               <h4 className="text-sm font-semibold text-slate-900">Seguridad</h4>
               <p className="mt-1 text-sm text-slate-500">
@@ -180,8 +181,9 @@ export function ProfilePanel({
             </div>
           </div>
         </div>
+        </div>
 
-        <div className="mt-5 flex justify-end border-t border-slate-100 pt-4">
+        <div className="sticky bottom-0 flex justify-end border-t border-slate-100 bg-white px-4 py-4 lg:px-5">
           <button
             type="button"
             onClick={onClose}

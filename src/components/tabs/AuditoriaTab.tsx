@@ -76,66 +76,66 @@ export function AuditoriaTab({
 
   return (
     <>
-      <div className="mb-5">
-        <h2 className="text-[1.85rem] font-semibold tracking-tight text-slate-950 sm:text-[1.9rem]">
+      <div className="mb-4">
+        <h2 className="text-[1.62rem] font-semibold tracking-tight text-slate-950 sm:text-[1.9rem]">
           Auditoría
         </h2>
-        <p className="mt-1 text-[14px] text-slate-500 sm:mt-1.5 sm:text-[15px]">
+        <p className="mt-0.5 text-[12px] text-slate-500 sm:mt-1.5 sm:text-[15px]">
           Revisa cambios, accesos y acciones sensibles del equipo.
         </p>
       </div>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <button
           type="button"
           onClick={onResetFilters}
-          className="rounded-[24px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 sm:rounded-[20px]"
+          className="rounded-[18px] border border-white/80 bg-white p-3.5 text-left shadow-[0_8px_18px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Registros visibles
           </div>
-          <div className="mt-2 text-[2rem] font-semibold text-slate-950">{auditoriaFiltrada.length}</div>
+          <div className="mt-2 text-[1.6rem] font-semibold text-slate-950">{auditoriaFiltrada.length}</div>
           <div className="mt-2 text-[13px] text-slate-500">Sobre un total de {auditoria.length} eventos.</div>
         </button>
 
         <button
           type="button"
           onClick={() => onEntidadFiltroChange('sesion')}
-          className="rounded-[24px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 sm:rounded-[20px]"
+          className="rounded-[18px] border border-white/80 bg-white p-3.5 text-left shadow-[0_8px_18px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Sesión
           </div>
-          <div className="mt-2 text-[2rem] font-semibold text-slate-950">{sessionEvents}</div>
+          <div className="mt-2 text-[1.6rem] font-semibold text-slate-950">{sessionEvents}</div>
           <div className="mt-2 text-[13px] text-slate-500">Logins y cierres de sesión filtrados.</div>
         </button>
 
         <button
           type="button"
           onClick={() => onEntidadFiltroChange('perfil')}
-          className="rounded-[24px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 sm:rounded-[20px]"
+          className="rounded-[18px] border border-white/80 bg-white p-3.5 text-left shadow-[0_8px_18px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Perfil
           </div>
-          <div className="mt-2 text-[2rem] font-semibold text-slate-950">{profileEvents}</div>
+          <div className="mt-2 text-[1.6rem] font-semibold text-slate-950">{profileEvents}</div>
           <div className="mt-2 text-[13px] text-slate-500">Cambios de perfil y contraseña.</div>
         </button>
 
         <button
           type="button"
           onClick={() => onEntidadFiltroChange('usuario')}
-          className="rounded-[24px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 sm:rounded-[20px]"
+          className="rounded-[18px] border border-white/80 bg-white p-3.5 text-left shadow-[0_8px_18px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Usuarios
           </div>
-          <div className="mt-2 text-[2rem] font-semibold text-slate-950">{userEvents}</div>
+          <div className="mt-2 text-[1.6rem] font-semibold text-slate-950">{userEvents}</div>
           <div className="mt-2 text-[13px] text-slate-500">Altas, roles, bajas y resets.</div>
         </button>
       </div>
 
-      <div className="rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:rounded-[24px] sm:p-5">
+      <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_10px_22px_rgba(15,23,42,0.045)] sm:rounded-[24px] sm:p-5">
         <div className="mt-1">
           <input
             type="search"

@@ -100,13 +100,13 @@ export function UserManagementPanel({
   onManagedPasswordDraftChange,
 }: UserManagementPanelProps) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="text-[1.85rem] font-semibold tracking-tight text-slate-950 sm:text-[1.9rem]">
+          <h2 className="text-[1.62rem] font-semibold tracking-tight text-slate-950 sm:text-[1.9rem]">
             Usuarios y permisos
           </h2>
-          <p className="mt-1 text-[14px] text-slate-500 sm:mt-1.5 sm:text-[15px]">
+          <p className="mt-0.5 text-[12px] text-slate-500 sm:mt-1.5 sm:text-[15px]">
             Gestiona quien entra y que nivel de acceso tiene cada persona.
           </p>
         </div>
@@ -114,13 +114,13 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={onReload}
-          className="rounded-[18px] bg-white px-4 py-3 text-[14px] font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 sm:rounded-[15px] sm:py-2 sm:text-[13px]"
+          className="rounded-[15px] bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 sm:rounded-[15px] sm:py-2 sm:text-[13px]"
         >
           Actualizar
         </button>
       </div>
 
-      <div className="rounded-[24px] border border-white/80 bg-white/92 px-4 py-4 text-[14px] text-slate-600 shadow-[0_14px_36px_rgba(15,23,42,0.06)] sm:rounded-[22px] sm:py-3 sm:text-[13px]">
+      <div className="rounded-[20px] border border-white/80 bg-white/92 px-4 py-3 text-[12px] text-slate-600 shadow-[0_10px_22px_rgba(15,23,42,0.045)] sm:rounded-[22px] sm:py-3 sm:text-[13px]">
         Roles disponibles: <span className="font-semibold">Empleado</span>,{' '}
         <span className="font-semibold">Encargado</span> y{' '}
         <span className="font-semibold">Administrador</span>. El rol{' '}
@@ -128,16 +128,16 @@ export function UserManagementPanel({
         usuario normal.
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <button
           type="button"
           onClick={onResetFilters}
-          className="rounded-[24px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 sm:rounded-[20px]"
+          className="rounded-[18px] border border-white/80 bg-white p-3.5 text-left shadow-[0_8px_18px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Equipo total
           </div>
-          <div className="mt-2 text-[2rem] font-semibold text-slate-950">{managedUsersSummary.total}</div>
+          <div className="mt-2 text-[1.6rem] font-semibold text-slate-950">{managedUsersSummary.total}</div>
           <div className="mt-2 text-[13px] text-slate-500">
             {managedUsersSummary.empleados} empleados · {managedUsersSummary.encargados} encargados
           </div>
@@ -146,12 +146,12 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={() => onRoleFilterChange('administrador')}
-          className="rounded-[24px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 sm:rounded-[20px]"
+          className="rounded-[18px] border border-white/80 bg-white p-3.5 text-left shadow-[0_8px_18px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Gestión avanzada
           </div>
-          <div className="mt-2 text-[2rem] font-semibold text-slate-950">
+          <div className="mt-2 text-[1.6rem] font-semibold text-slate-950">
             {managedUsersSummary.administradores + managedUsersSummary.masters}
           </div>
           <div className="mt-2 text-[13px] text-slate-500">
@@ -162,12 +162,12 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={() => onAccessFilterChange('sin_acceso')}
-          className="rounded-[24px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 sm:rounded-[20px]"
+          className="rounded-[18px] border border-white/80 bg-white p-3.5 text-left shadow-[0_8px_18px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Sin acceso aún
           </div>
-          <div className="mt-2 text-[2rem] font-semibold text-slate-950">{managedUsersSummary.sinAcceso}</div>
+          <div className="mt-2 text-[1.6rem] font-semibold text-slate-950">{managedUsersSummary.sinAcceso}</div>
           <div className="mt-2 text-[13px] text-slate-500">
             Usuarios creados que todavía no han iniciado sesión.
           </div>
@@ -176,12 +176,12 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={() => onAccessFilterChange('requiere_revision')}
-          className="rounded-[24px] border border-white/80 bg-white p-4 text-left shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 sm:rounded-[20px]"
+          className="rounded-[18px] border border-white/80 bg-white p-3.5 text-left shadow-[0_8px_18px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 sm:rounded-[20px]"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Requieren revisión
           </div>
-          <div className="mt-2 text-[2rem] font-semibold text-slate-950">{managedUsersSummary.requierenRevision}</div>
+          <div className="mt-2 text-[1.6rem] font-semibold text-slate-950">{managedUsersSummary.requierenRevision}</div>
           <div className="mt-2 text-[13px] text-slate-500">
             Sin acceso o con actividad demasiado antigua.
           </div>

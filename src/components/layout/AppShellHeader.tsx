@@ -347,15 +347,15 @@ export function AppShellHeader({
       </aside>
 
       <div className="lg:hidden">
-        <div className="border-b border-slate-200/60 bg-white px-4 pb-3 pt-2.5 shadow-[0_8px_16px_rgba(15,23,42,0.022)] backdrop-blur">
-          <div className="flex items-center gap-2.5">
+        <div className="border-b border-slate-200/60 bg-white px-4 pb-2.5 pt-2 shadow-[0_8px_16px_rgba(15,23,42,0.018)] backdrop-blur">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="flex h-[50px] w-[50px] items-center justify-center rounded-[19px] border border-slate-200 bg-white text-slate-600 shadow-[0_8px_16px_rgba(15,23,42,0.04)]"
+              className="flex h-[46px] w-[46px] items-center justify-center rounded-[17px] border border-slate-200 bg-white text-slate-600 shadow-[0_7px_14px_rgba(15,23,42,0.035)]"
             >
               <Icon
-                className="h-[22px] w-[22px]"
+                className="h-[20px] w-[20px]"
                 path={
                   <>
                     <path d="M4 7h16" />
@@ -371,18 +371,16 @@ export function AppShellHeader({
               onClick={() => handleGroupTabChange('operativa', 'stock')}
               className="min-w-0 flex-1 text-left"
             >
-              <div className="text-[1.58rem] font-semibold tracking-tight text-slate-950">Nexo</div>
-              <div className="mt-0.5 text-[11px] text-slate-500">
-                Inventario en orden
-              </div>
+              <div className="text-[1.42rem] font-semibold tracking-tight text-slate-950">Nexo</div>
+              <div className="mt-0.5 text-[10.5px] text-slate-500">Inventario en orden</div>
             </button>
 
             <button
               type="button"
-              className="relative flex h-[48px] w-[48px] items-center justify-center rounded-[18px] border border-slate-200 bg-white text-slate-600 shadow-[0_8px_16px_rgba(15,23,42,0.04)]"
+              className="relative flex h-[44px] w-[44px] items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-600 shadow-[0_7px_14px_rgba(15,23,42,0.035)]"
             >
               <Icon
-                className="h-[18px] w-[18px]"
+                className="h-[17px] w-[17px]"
                 path={
                   <>
                     <path d="M15 17h5l-1.5-1.5A2 2 0 0 1 18 14.1V11a6 6 0 1 0-12 0v3.1a2 2 0 0 1-.5 1.4L4 17h5" />
@@ -390,20 +388,20 @@ export function AppShellHeader({
                   </>
                 }
               />
-              <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-blue-500" />
+              <span className="absolute right-[11px] top-[11px] h-1.5 w-1.5 rounded-full bg-blue-500" />
             </button>
 
             <button
               type="button"
               onClick={onOpenProfile}
-              className="flex h-[48px] w-[48px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#2f7bff_0%,#7a3cff_58%,#9b5cff_100%)] text-[15px] font-semibold text-white shadow-[0_12px_20px_rgba(89,88,255,0.16)]"
+              className="flex h-[44px] w-[44px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#2f7bff_0%,#7a3cff_58%,#9b5cff_100%)] text-[14px] font-semibold text-white shadow-[0_10px_18px_rgba(89,88,255,0.15)]"
             >
               {userInitials}
             </button>
           </div>
 
-          <div className="mt-3 rounded-[20px] border border-slate-200 bg-white p-1.5 shadow-[0_8px_16px_rgba(15,23,42,0.03)]">
-            <div className="grid grid-cols-3 gap-1.5">
+          <div className="mt-2.5 rounded-[18px] border border-slate-200 bg-white p-1.5 shadow-[0_6px_14px_rgba(15,23,42,0.028)]">
+            <div className="grid grid-cols-3 gap-1">
               {mobileTabs.slice(0, 3).map((item) => {
                 const active = currentTab === item
                 return (
@@ -411,9 +409,9 @@ export function AppShellHeader({
                     key={item}
                     type="button"
                     onClick={() => onTabChange(item)}
-                    className={`flex items-center justify-center gap-1.5 rounded-[16px] px-2 py-2 text-[11px] font-semibold transition ${
+                    className={`flex min-h-[40px] items-center justify-center gap-1.5 rounded-[14px] px-2 py-2 text-[10.5px] font-semibold transition ${
                       active
-                        ? 'border border-blue-300 bg-white text-blue-600 shadow-[0_8px_18px_rgba(59,130,246,0.12)]'
+                        ? 'border border-blue-300 bg-white text-blue-600 shadow-[0_8px_16px_rgba(59,130,246,0.11)]'
                         : 'text-slate-600'
                     }`}
                   >
@@ -427,12 +425,12 @@ export function AppShellHeader({
         </div>
 
         {mobileMenuOpen ? (
-          <div className="fixed inset-0 z-50 bg-slate-950/28 p-4 backdrop-blur-sm">
-            <div className="mx-auto flex h-full max-w-sm flex-col overflow-hidden rounded-[32px] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.16)]">
-              <div className="flex items-center justify-between border-b border-slate-200/80 px-5 py-5">
+          <div className="fixed inset-0 z-50 bg-slate-950/28 p-3 backdrop-blur-sm">
+            <div className="mx-auto flex h-full max-w-sm flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.16)]">
+              <div className="flex items-center justify-between border-b border-slate-200/80 px-4 py-4">
                 <div>
-                  <div className="text-lg font-semibold text-slate-950">{userDisplayName}</div>
-                  <div className="text-sm text-slate-500">
+                  <div className="text-[1rem] font-semibold text-slate-950">{userDisplayName}</div>
+                  <div className="text-[12px] text-slate-500">
                     {userRoleLabel}
                     {userEmail ? ` · ${userEmail}` : ''}
                   </div>
@@ -440,10 +438,10 @@ export function AppShellHeader({
                 <button
                   type="button"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 text-slate-500"
+                  className="flex h-10 w-10 items-center justify-center rounded-[15px] border border-slate-200 text-slate-500"
                 >
                   <Icon
-                    className="h-5 w-5"
+                    className="h-4.5 w-4.5"
                     path={
                       <>
                         <path d="M6 6l12 12" />
@@ -454,7 +452,7 @@ export function AppShellHeader({
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4">{desktopNav}</div>
+              <div className="flex-1 overflow-y-auto p-3">{desktopNav}</div>
             </div>
           </div>
         ) : null}

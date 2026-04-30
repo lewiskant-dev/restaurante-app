@@ -146,23 +146,23 @@ export function MobileBottomNav({
   ]
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/98 px-2 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] pt-1 shadow-[0_-8px_18px_rgba(15,23,42,0.04)] backdrop-blur lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/98 px-2 pb-[calc(env(safe-area-inset-bottom)+0.2rem)] pt-1 shadow-[0_-8px_18px_rgba(15,23,42,0.035)] backdrop-blur lg:hidden">
       <div className="grid grid-cols-5 gap-0.5">
         {items.map((item) => (
           <button
             key={item.key}
             type="button"
             onClick={item.onClick}
-            className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-0.5 text-[9.5px] font-medium transition ${
+            className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-0.5 text-[9px] font-medium transition ${
               item.active ? 'text-blue-600' : 'text-slate-500'
             }`}
           >
             <span
-              className={`flex h-9 w-9 items-center justify-center rounded-full ${
+              className={`flex h-8.5 w-8.5 items-center justify-center rounded-full ${
                 item.active ? 'bg-blue-50 shadow-sm ring-1 ring-blue-100' : ''
               }`}
             >
-              <Icon className="h-4 w-4" path={item.icon} />
+              <Icon className="h-[15px] w-[15px]" path={item.icon} />
             </span>
             <span className={item.active ? 'font-semibold' : ''}>{item.label}</span>
           </button>
