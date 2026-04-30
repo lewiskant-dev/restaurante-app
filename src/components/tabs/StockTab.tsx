@@ -323,8 +323,9 @@ export default function StockTab({
       tone: 'blue' as const,
       icon: (
         <>
-          <path d="M5 16l5-5 4 4 5-7" />
-          <path d="M19 8v4h-4" />
+          <path d="M4.5 15.5 9 11l3.5 3.5 4.5-6 2.5 2.5" />
+          <path d="M18.5 8.5h-4" />
+          <path d="M18.5 8.5v4" />
         </>
       ),
     },
@@ -363,16 +364,6 @@ export default function StockTab({
     <>
       <div className="mb-3 flex items-start justify-between gap-2.5 xl:items-end">
         <div className="min-w-0 flex-1">
-          <div className="mb-2.5 hidden h-9 w-9 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 lg:flex">
-            <Icon
-              className="h-4 w-4"
-              path={
-                <>
-                  <path d="m8 12 3-3 2 6 3-8 2 5" />
-                </>
-              }
-            />
-          </div>
           <h2 className="text-[1.56rem] font-semibold tracking-tight text-slate-950 md:text-[2.5rem] lg:text-[1.9rem]">
             Stock actual
           </h2>
