@@ -72,6 +72,7 @@ export default function HomePage() {
   const activeRestaurantId = currentRestaurantScope.currentRestaurantId
   const currentUserRole = getUserRole(currentUser)
   const [accessibleRestaurants, setAccessibleRestaurants] = useState<ManagedRestaurant[]>([])
+  const [loadingAccessibleRestaurants, setLoadingAccessibleRestaurants] = useState(false)
   const [switchingRestaurant, setSwitchingRestaurant] = useState(false)
 
   const [mapeosProductos, setMapeosProductos] = useState<MapeoProducto[]>([])
@@ -278,6 +279,8 @@ export default function HomePage() {
       return
     }
 
+    setLoadingAccessibleRestaurants(true)
+
     try {
       const response = await fetch('/api/auth/restaurants', {
         headers: {
@@ -326,6 +329,8 @@ export default function HomePage() {
       setError(
         err instanceof Error ? err.message : 'No se pudo cargar la asignación de restaurantes'
       )
+    } finally {
+      setLoadingAccessibleRestaurants(false)
     }
   })
 
@@ -379,7 +384,7 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    if (!authReady || !currentUser) {
+  if (!authReady || !currentUser) {
       setAccessibleRestaurants([])
       return
     }
@@ -911,6 +916,8 @@ export default function HomePage() {
   const userRoleLabel = getUserRoleLabel(currentUser)
   const restaurantScopeLabel = getRestaurantScopeLabel(currentRestaurantScope)
   const restaurantScopeDetail = getRestaurantScopeDetail(currentRestaurantScope)
+  const hasAnyAssignedRestaurant = accessibleRestaurants.length > 0
+  const hasAnyActiveRestaurant = accessibleRestaurants.some((restaurant) => restaurant.activo)
   const userInitials = getInitials(userDisplayName || 'Usuario')
   const totalCategorias = categoriasProducto.length
   const topSearchPlaceholder =
@@ -1105,6 +1112,79 @@ export default function HomePage() {
         onCompleteRecovery={() => void completePasswordRecovery()}
         onCancelRecovery={closeRecoveryMode}
       />
+    )
+  }
+
+  if (loadingAccessibleRestaurants) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f6f8fc] px-4 text-slate-900">
+        <div className="w-full max-w-lg rounded-[32px] border border-white/80 bg-white/95 p-8 text-center shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+          <h1 className="text-2xl font-semibold text-slate-950">Preparando tu acceso</h1>
+          <p className="mt-3 text-sm text-slate-500">
+            Estamos comprobando qué restaurante te corresponde dentro de Nexo.
+          </p>
+        </div>
+      </main>
+    )
+  }
+
+  if (currentUserRole !== 'master' && !hasAnyAssignedRestaurant) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f6f8fc] px-4 text-slate-900">
+        <div className="w-full max-w-xl rounded-[32px] border border-white/80 bg-white/95 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+          <h1 className="text-2xl font-semibold text-slate-950">Cuenta sin restaurante asignado</h1>
+          <p className="mt-3 text-sm leading-7 text-slate-600">
+            Tu usuario todavía no tiene acceso a ningún restaurante. Un administrador o el usuario
+            master debe asignarte al menos un restaurante antes de poder operar en Nexo.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={openProfilePanel}
+              className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white"
+            >
+              Ver perfil
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSignOut()}
+              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700"
+            >
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
+  if (currentUserRole !== 'master' && hasAnyAssignedRestaurant && !hasAnyActiveRestaurant) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f6f8fc] px-4 text-slate-900">
+        <div className="w-full max-w-xl rounded-[32px] border border-white/80 bg-white/95 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+          <h1 className="text-2xl font-semibold text-slate-950">Restaurantes temporalmente inactivos</h1>
+          <p className="mt-3 text-sm leading-7 text-slate-600">
+            Tu cuenta sí tiene restaurantes asignados, pero ahora mismo todos están marcados como
+            inactivos. Cuando uno vuelva a estar operativo, podrás entrar con normalidad.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={openProfilePanel}
+              className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white"
+            >
+              Ver perfil
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSignOut()}
+              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700"
+            >
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      </main>
     )
   }
 

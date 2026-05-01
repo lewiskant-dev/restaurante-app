@@ -193,110 +193,112 @@ export function UserManagementPanel({
         usuario normal.
       </div>
 
-      <div className="rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:rounded-[24px] sm:p-5">
-        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h3 className="text-[17px] font-semibold text-slate-900 sm:text-sm">Restaurantes</h3>
-            <p className="mt-1 text-[14px] text-slate-500 sm:text-sm">
-              Da de alta nuevos restaurantes y ajusta su nombre visible y slug interno.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={onSyncRestaurantMemberships}
-              className="rounded-[15px] bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm"
-            >
-              {syncingManagedRestaurantMemberships
-                ? 'Sincronizando usuarios...'
-                : 'Sincronizar usuarios'}
-            </button>
-            <button
-              type="button"
-              onClick={onReloadRestaurants}
-              className="rounded-[15px] bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200"
-            >
-              Recargar restaurantes
-            </button>
-          </div>
-        </div>
-
-        <div className="grid gap-3 xl:grid-cols-[1fr_0.8fr_auto]">
-          <input
-            type="text"
-            value={newRestaurantName}
-            onChange={(e) => onNewRestaurantNameChange(e.target.value)}
-            placeholder="Nombre del restaurante"
-            className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
-          />
-          <input
-            type="text"
-            value={newRestaurantSlug}
-            onChange={(e) => onNewRestaurantSlugChange(e.target.value)}
-            placeholder="slug-restaurante"
-            className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
-          />
-          <button
-            type="button"
-            onClick={onCreateRestaurant}
-            className="rounded-[20px] bg-indigo-600 px-5 py-3 text-[15px] font-semibold text-white shadow-[0_14px_30px_rgba(79,70,229,0.25)] sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
-          >
-            {creatingManagedRestaurant ? 'Creando...' : 'Crear restaurante'}
-          </button>
-        </div>
-
-        <div className="mt-4 space-y-3">
-          {loadingManagedRestaurants ? (
-            <div className="py-6 text-center text-sm text-slate-400">
-              Cargando restaurantes...
+      {currentUserRole === 'master' ? (
+        <div className="rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:rounded-[24px] sm:p-5">
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h3 className="text-[17px] font-semibold text-slate-900 sm:text-sm">Restaurantes</h3>
+              <p className="mt-1 text-[14px] text-slate-500 sm:text-sm">
+                Da de alta nuevos restaurantes y ajusta su nombre visible y slug interno.
+              </p>
             </div>
-          ) : managedRestaurants.length === 0 ? (
-            <div className="py-6 text-center text-sm text-slate-400">
-              Todavía no hay restaurantes dados de alta.
-            </div>
-          ) : (
-            managedRestaurants.map((restaurant) => (
-              <div
-                key={restaurant.id}
-                className="grid gap-3 rounded-[20px] border border-slate-200 bg-slate-50/70 p-3 xl:grid-cols-[1fr_0.8fr_auto]"
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={onSyncRestaurantMemberships}
+                className="rounded-[15px] bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm"
               >
-                <div className="space-y-2">
+                {syncingManagedRestaurantMemberships
+                  ? 'Sincronizando usuarios...'
+                  : 'Sincronizar usuarios'}
+              </button>
+              <button
+                type="button"
+                onClick={onReloadRestaurants}
+                className="rounded-[15px] bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200"
+              >
+                Recargar restaurantes
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 xl:grid-cols-[1fr_0.8fr_auto]">
+            <input
+              type="text"
+              value={newRestaurantName}
+              onChange={(e) => onNewRestaurantNameChange(e.target.value)}
+              placeholder="Nombre del restaurante"
+              className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+            />
+            <input
+              type="text"
+              value={newRestaurantSlug}
+              onChange={(e) => onNewRestaurantSlugChange(e.target.value)}
+              placeholder="slug-restaurante"
+              className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+            />
+            <button
+              type="button"
+              onClick={onCreateRestaurant}
+              className="rounded-[20px] bg-indigo-600 px-5 py-3 text-[15px] font-semibold text-white shadow-[0_14px_30px_rgba(79,70,229,0.25)] sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+            >
+              {creatingManagedRestaurant ? 'Creando...' : 'Crear restaurante'}
+            </button>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {loadingManagedRestaurants ? (
+              <div className="py-6 text-center text-sm text-slate-400">
+                Cargando restaurantes...
+              </div>
+            ) : managedRestaurants.length === 0 ? (
+              <div className="py-6 text-center text-sm text-slate-400">
+                Todavía no hay restaurantes dados de alta.
+              </div>
+            ) : (
+              managedRestaurants.map((restaurant) => (
+                <div
+                  key={restaurant.id}
+                  className="grid gap-3 rounded-[20px] border border-slate-200 bg-slate-50/70 p-3 xl:grid-cols-[1fr_0.8fr_auto]"
+                >
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={restaurantNameDrafts[restaurant.id] ?? restaurant.nombre}
+                      onChange={(e) => onRestaurantNameDraftChange(restaurant.id, e.target.value)}
+                      className="w-full rounded-[16px] border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none"
+                    />
+                    <label className="flex items-center gap-2 text-[12px] text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={restaurant.activo}
+                        onChange={(e) =>
+                          onRestaurantActiveDraftChange(restaurant.id, e.target.checked)
+                        }
+                      />
+                      Restaurante activo
+                    </label>
+                  </div>
                   <input
                     type="text"
-                    value={restaurantNameDrafts[restaurant.id] ?? restaurant.nombre}
-                    onChange={(e) => onRestaurantNameDraftChange(restaurant.id, e.target.value)}
-                    className="w-full rounded-[16px] border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none"
+                    value={restaurantSlugDrafts[restaurant.id] ?? restaurant.slug}
+                    onChange={(e) => onRestaurantSlugDraftChange(restaurant.id, e.target.value)}
+                    className="rounded-[16px] border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none"
                   />
-                  <label className="flex items-center gap-2 text-[12px] text-slate-600">
-                    <input
-                      type="checkbox"
-                      checked={restaurant.activo}
-                      onChange={(e) =>
-                        onRestaurantActiveDraftChange(restaurant.id, e.target.checked)
-                      }
-                    />
-                    Restaurante activo
-                  </label>
+                  <button
+                    type="button"
+                    onClick={() => onSaveRestaurant(restaurant.id)}
+                    className="rounded-[16px] bg-slate-900 px-4 py-2.5 text-[13px] font-semibold text-white"
+                  >
+                    {savingManagedRestaurantId === restaurant.id ? 'Guardando...' : 'Guardar'}
+                  </button>
                 </div>
-                <input
-                  type="text"
-                  value={restaurantSlugDrafts[restaurant.id] ?? restaurant.slug}
-                  onChange={(e) => onRestaurantSlugDraftChange(restaurant.id, e.target.value)}
-                  className="rounded-[16px] border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => onSaveRestaurant(restaurant.id)}
-                  className="rounded-[16px] bg-slate-900 px-4 py-2.5 text-[13px] font-semibold text-white"
-                >
-                  {savingManagedRestaurantId === restaurant.id ? 'Guardando...' : 'Guardar'}
-                </button>
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <button
@@ -736,7 +738,7 @@ export function UserManagementPanel({
 
                   {canEditTarget ? (
                     <div className="w-full space-y-3">
-                      {managedRestaurants.length > 0 ? (
+                      {currentUserRole === 'master' && managedRestaurants.length > 0 ? (
                         <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-3">
                           <div className="mb-2">
                             <div className="text-[12px] font-semibold text-slate-800">
