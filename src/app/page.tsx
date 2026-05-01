@@ -148,10 +148,13 @@ export default function HomePage() {
   const {
     managedUsers,
     managedRestaurants,
+    loadingManagedRestaurants,
     managedUsersFiltrados,
     loadingManagedUsers,
     savingManagedUserId,
     creatingManagedUser,
+    creatingManagedRestaurant,
+    savingManagedRestaurantId,
     deletingManagedUserId,
     resettingManagedUserId,
     blockingManagedUserId,
@@ -171,6 +174,10 @@ export default function HomePage() {
     managedUserPasswordDrafts,
     managedUserRestaurantDrafts,
     managedUserCurrentRestaurantDrafts,
+    newRestaurantName,
+    newRestaurantSlug,
+    restaurantNameDrafts,
+    restaurantSlugDrafts,
     setBusquedaUsuarios,
     setManagedUserRoleFilter,
     setManagedUserAccessFilter,
@@ -181,13 +188,20 @@ export default function HomePage() {
     setManagedUserPasswordDrafts,
     setManagedUserRestaurantDrafts,
     setManagedUserCurrentRestaurantDrafts,
+    setNewRestaurantName,
+    setNewRestaurantSlug,
+    setRestaurantNameDrafts,
+    setRestaurantSlugDrafts,
     loadManagedUsers,
+    loadManagedRestaurants,
     updateManagedUserRole,
     createManagedUser,
     deleteManagedUser,
     resetManagedUserPassword,
     toggleManagedUserBlocked,
     updateManagedUserRestaurants,
+    createManagedRestaurant,
+    saveManagedRestaurant,
     resetManagedUsersState,
   } = useManagedUsers({
     accessToken: session?.access_token,
@@ -390,7 +404,7 @@ export default function HomePage() {
     }
 
     if (tab === 'usuarios') {
-      await loadManagedUsers()
+      await Promise.all([loadManagedUsers(), loadManagedRestaurants()])
     }
   })
 
@@ -1365,10 +1379,13 @@ export default function HomePage() {
             currentUserRole={currentUserRole}
             managedUsers={managedUsers}
             managedRestaurants={managedRestaurants}
+            loadingManagedRestaurants={loadingManagedRestaurants}
             managedUsersFiltrados={managedUsersFiltrados}
             loadingManagedUsers={loadingManagedUsers}
             savingManagedUserId={savingManagedUserId}
             creatingManagedUser={creatingManagedUser}
+            creatingManagedRestaurant={creatingManagedRestaurant}
+            savingManagedRestaurantId={savingManagedRestaurantId}
             deletingManagedUserId={deletingManagedUserId}
             resettingManagedUserId={resettingManagedUserId}
             blockingManagedUserId={blockingManagedUserId}
@@ -1388,8 +1405,14 @@ export default function HomePage() {
             managedUserPasswordDrafts={managedUserPasswordDrafts}
             managedUserRestaurantDrafts={managedUserRestaurantDrafts}
             managedUserCurrentRestaurantDrafts={managedUserCurrentRestaurantDrafts}
+            newRestaurantName={newRestaurantName}
+            newRestaurantSlug={newRestaurantSlug}
+            restaurantNameDrafts={restaurantNameDrafts}
+            restaurantSlugDrafts={restaurantSlugDrafts}
             onReload={() => void loadManagedUsers()}
+            onReloadRestaurants={() => void loadManagedRestaurants()}
             onCreate={() => void createManagedUser()}
+            onCreateRestaurant={() => void createManagedRestaurant()}
             onUpdateRole={(userId, role) => void updateManagedUserRole(userId, role)}
             onDelete={(userId, label) => void deleteManagedUser(userId, label)}
             onResetPassword={(userId, label) => void resetManagedUserPassword(userId, label)}
@@ -1404,10 +1427,24 @@ export default function HomePage() {
             onNewEmailChange={setNewManagedUserEmail}
             onNewPasswordChange={setNewManagedUserPassword}
             onNewRoleChange={setNewManagedUserRole}
+            onNewRestaurantNameChange={setNewRestaurantName}
+            onNewRestaurantSlugChange={setNewRestaurantSlug}
             onManagedPasswordDraftChange={(userId, value) =>
               setManagedUserPasswordDrafts((current) => ({
                 ...current,
                 [userId]: value,
+              }))
+            }
+            onRestaurantNameDraftChange={(restaurantId, value) =>
+              setRestaurantNameDrafts((current) => ({
+                ...current,
+                [restaurantId]: value,
+              }))
+            }
+            onRestaurantSlugDraftChange={(restaurantId, value) =>
+              setRestaurantSlugDrafts((current) => ({
+                ...current,
+                [restaurantId]: value,
               }))
             }
             onManagedRestaurantDraftToggle={(userId, restaurantId, checked) => {
@@ -1440,6 +1477,7 @@ export default function HomePage() {
             onSaveRestaurants={(userId, label) =>
               void updateManagedUserRestaurants(userId, label)
             }
+            onSaveRestaurant={(restaurantId) => void saveManagedRestaurant(restaurantId)}
           />
         )}
 

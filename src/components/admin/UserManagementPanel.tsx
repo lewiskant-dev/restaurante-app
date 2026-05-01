@@ -18,10 +18,13 @@ type UserManagementPanelProps = {
   currentUserRole: UserRole
   managedUsers: ManagedUser[]
   managedRestaurants: ManagedRestaurant[]
+  loadingManagedRestaurants: boolean
   managedUsersFiltrados: ManagedUser[]
   loadingManagedUsers: boolean
   savingManagedUserId: string
   creatingManagedUser: boolean
+  creatingManagedRestaurant: boolean
+  savingManagedRestaurantId: string
   deletingManagedUserId: string
   resettingManagedUserId: string
   blockingManagedUserId: string
@@ -51,8 +54,14 @@ type UserManagementPanelProps = {
   managedUserPasswordDrafts: Record<string, string>
   managedUserRestaurantDrafts: Record<string, string[]>
   managedUserCurrentRestaurantDrafts: Record<string, string>
+  newRestaurantName: string
+  newRestaurantSlug: string
+  restaurantNameDrafts: Record<string, string>
+  restaurantSlugDrafts: Record<string, string>
   onReload: () => void
+  onReloadRestaurants: () => void
   onCreate: () => void
+  onCreateRestaurant: () => void
   onUpdateRole: (userId: string, role: UserRole) => void
   onDelete: (userId: string, label: string) => void
   onResetPassword: (userId: string, label: string) => void
@@ -66,9 +75,14 @@ type UserManagementPanelProps = {
   onNewPasswordChange: (value: string) => void
   onNewRoleChange: (value: UserRole) => void
   onManagedPasswordDraftChange: (userId: string, value: string) => void
+  onNewRestaurantNameChange: (value: string) => void
+  onNewRestaurantSlugChange: (value: string) => void
+  onRestaurantNameDraftChange: (restaurantId: string, value: string) => void
+  onRestaurantSlugDraftChange: (restaurantId: string, value: string) => void
   onManagedRestaurantDraftToggle: (userId: string, restaurantId: string, checked: boolean) => void
   onManagedCurrentRestaurantDraftChange: (userId: string, restaurantId: string) => void
   onSaveRestaurants: (userId: string, label: string) => void
+  onSaveRestaurant: (restaurantId: string) => void
 }
 
 export function UserManagementPanel({
@@ -76,10 +90,13 @@ export function UserManagementPanel({
   currentUserRole,
   managedUsers,
   managedRestaurants,
+  loadingManagedRestaurants,
   managedUsersFiltrados,
   loadingManagedUsers,
   savingManagedUserId,
   creatingManagedUser,
+  creatingManagedRestaurant,
+  savingManagedRestaurantId,
   deletingManagedUserId,
   resettingManagedUserId,
   blockingManagedUserId,
@@ -99,8 +116,14 @@ export function UserManagementPanel({
   managedUserPasswordDrafts,
   managedUserRestaurantDrafts,
   managedUserCurrentRestaurantDrafts,
+  newRestaurantName,
+  newRestaurantSlug,
+  restaurantNameDrafts,
+  restaurantSlugDrafts,
   onReload,
+  onReloadRestaurants,
   onCreate,
+  onCreateRestaurant,
   onUpdateRole,
   onDelete,
   onResetPassword,
@@ -114,9 +137,14 @@ export function UserManagementPanel({
   onNewPasswordChange,
   onNewRoleChange,
   onManagedPasswordDraftChange,
+  onNewRestaurantNameChange,
+  onNewRestaurantSlugChange,
+  onRestaurantNameDraftChange,
+  onRestaurantSlugDraftChange,
   onManagedRestaurantDraftToggle,
   onManagedCurrentRestaurantDraftChange,
   onSaveRestaurants,
+  onSaveRestaurant,
 }: UserManagementPanelProps) {
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -145,6 +173,88 @@ export function UserManagementPanel({
         <span className="font-semibold">Administrador</span>. El rol{' '}
         <span className="font-semibold">Master</span> es interno y no se puede degradar desde un
         usuario normal.
+      </div>
+
+      <div className="rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:rounded-[24px] sm:p-5">
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h3 className="text-[17px] font-semibold text-slate-900 sm:text-sm">Restaurantes</h3>
+            <p className="mt-1 text-[14px] text-slate-500 sm:text-sm">
+              Da de alta nuevos restaurantes y ajusta su nombre visible y slug interno.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onReloadRestaurants}
+            className="rounded-[15px] bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200"
+          >
+            Recargar restaurantes
+          </button>
+        </div>
+
+        <div className="grid gap-3 xl:grid-cols-[1fr_0.8fr_auto]">
+          <input
+            type="text"
+            value={newRestaurantName}
+            onChange={(e) => onNewRestaurantNameChange(e.target.value)}
+            placeholder="Nombre del restaurante"
+            className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+          />
+          <input
+            type="text"
+            value={newRestaurantSlug}
+            onChange={(e) => onNewRestaurantSlugChange(e.target.value)}
+            placeholder="slug-restaurante"
+            className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+          />
+          <button
+            type="button"
+            onClick={onCreateRestaurant}
+            className="rounded-[20px] bg-indigo-600 px-5 py-3 text-[15px] font-semibold text-white shadow-[0_14px_30px_rgba(79,70,229,0.25)] sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+          >
+            {creatingManagedRestaurant ? 'Creando...' : 'Crear restaurante'}
+          </button>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {loadingManagedRestaurants ? (
+            <div className="py-6 text-center text-sm text-slate-400">
+              Cargando restaurantes...
+            </div>
+          ) : managedRestaurants.length === 0 ? (
+            <div className="py-6 text-center text-sm text-slate-400">
+              Todavía no hay restaurantes dados de alta.
+            </div>
+          ) : (
+            managedRestaurants.map((restaurant) => (
+              <div
+                key={restaurant.id}
+                className="grid gap-3 rounded-[20px] border border-slate-200 bg-slate-50/70 p-3 xl:grid-cols-[1fr_0.8fr_auto]"
+              >
+                <input
+                  type="text"
+                  value={restaurantNameDrafts[restaurant.id] ?? restaurant.nombre}
+                  onChange={(e) => onRestaurantNameDraftChange(restaurant.id, e.target.value)}
+                  className="rounded-[16px] border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none"
+                />
+                <input
+                  type="text"
+                  value={restaurantSlugDrafts[restaurant.id] ?? restaurant.slug}
+                  onChange={(e) => onRestaurantSlugDraftChange(restaurant.id, e.target.value)}
+                  className="rounded-[16px] border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => onSaveRestaurant(restaurant.id)}
+                  className="rounded-[16px] bg-slate-900 px-4 py-2.5 text-[13px] font-semibold text-white"
+                >
+                  {savingManagedRestaurantId === restaurant.id ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">

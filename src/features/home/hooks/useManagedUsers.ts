@@ -31,9 +31,12 @@ function hasRecentManagedUserAccess(lastSignInAt: string | null) {
 export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUsersOptions) {
   const [managedUsers, setManagedUsers] = useState<ManagedUser[]>([])
   const [managedRestaurants, setManagedRestaurants] = useState<ManagedRestaurant[]>([])
+  const [loadingManagedRestaurants, setLoadingManagedRestaurants] = useState(false)
   const [loadingManagedUsers, setLoadingManagedUsers] = useState(false)
   const [savingManagedUserId, setSavingManagedUserId] = useState('')
   const [creatingManagedUser, setCreatingManagedUser] = useState(false)
+  const [creatingManagedRestaurant, setCreatingManagedRestaurant] = useState(false)
+  const [savingManagedRestaurantId, setSavingManagedRestaurantId] = useState('')
   const [deletingManagedUserId, setDeletingManagedUserId] = useState('')
   const [resettingManagedUserId, setResettingManagedUserId] = useState('')
   const [blockingManagedUserId, setBlockingManagedUserId] = useState('')
@@ -55,6 +58,10 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
   const [managedUserCurrentRestaurantDrafts, setManagedUserCurrentRestaurantDrafts] = useState<
     Record<string, string>
   >({})
+  const [newRestaurantName, setNewRestaurantName] = useState('')
+  const [newRestaurantSlug, setNewRestaurantSlug] = useState('')
+  const [restaurantNameDrafts, setRestaurantNameDrafts] = useState<Record<string, string>>({})
+  const [restaurantSlugDrafts, setRestaurantSlugDrafts] = useState<Record<string, string>>({})
 
   const newManagedUserNameError =
     newManagedUserName || creatingManagedUser ? validateDisplayName(newManagedUserName) : ''
@@ -92,6 +99,19 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
 
     setManagedUserRestaurantDrafts(nextRestaurantDrafts)
     setManagedUserCurrentRestaurantDrafts(nextCurrentRestaurantDrafts)
+  }
+
+  function syncManagedRestaurantDrafts(restaurants: ManagedRestaurant[]) {
+    const nextNameDrafts: Record<string, string> = {}
+    const nextSlugDrafts: Record<string, string> = {}
+
+    restaurants.forEach((item) => {
+      nextNameDrafts[item.id] = item.nombre
+      nextSlugDrafts[item.id] = item.slug
+    })
+
+    setRestaurantNameDrafts(nextNameDrafts)
+    setRestaurantSlugDrafts(nextSlugDrafts)
   }
 
   const managedUsersFiltrados = useMemo(() => {
@@ -170,10 +190,43 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
       setManagedUsers(nextUsers)
       setManagedRestaurants(payload.restaurants ?? [])
       syncRestaurantDrafts(nextUsers)
+      syncManagedRestaurantDrafts(payload.restaurants ?? [])
     } catch (err) {
       onError(err instanceof Error ? err.message : 'No se pudieron cargar los usuarios')
     } finally {
       setLoadingManagedUsers(false)
+    }
+  }
+
+  async function loadManagedRestaurants() {
+    if (!accessToken) return
+
+    setLoadingManagedRestaurants(true)
+    onError('')
+
+    try {
+      const response = await fetch('/api/admin/restaurants', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      const payload = (await response.json()) as {
+        error?: string
+        restaurants?: ManagedRestaurant[]
+      }
+
+      if (!response.ok) {
+        throw new Error(payload.error || 'No se pudieron cargar los restaurantes')
+      }
+
+      const restaurants = payload.restaurants ?? []
+      setManagedRestaurants(restaurants)
+      syncManagedRestaurantDrafts(restaurants)
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'No se pudieron cargar los restaurantes')
+    } finally {
+      setLoadingManagedRestaurants(false)
     }
   }
 
@@ -456,12 +509,121 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
     }
   }
 
+  async function createManagedRestaurant() {
+    if (!accessToken) return
+
+    const nombre = sanitizeSingleLine(newRestaurantName)
+    const slug = sanitizeSingleLine(newRestaurantSlug).toLowerCase()
+
+    if (!nombre) {
+      onError('El nombre del restaurante es obligatorio')
+      return
+    }
+
+    setCreatingManagedRestaurant(true)
+    onError('')
+
+    try {
+      const response = await fetch('/api/admin/restaurants', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ nombre, slug }),
+      })
+
+      const payload = (await response.json()) as {
+        error?: string
+        restaurant?: ManagedRestaurant
+      }
+
+      if (!response.ok || !payload.restaurant) {
+        throw new Error(payload.error || 'No se pudo crear el restaurante')
+      }
+
+      const nextRestaurants = [...managedRestaurants, payload.restaurant].sort((a, b) =>
+        a.nombre.localeCompare(b.nombre, 'es')
+      )
+      setManagedRestaurants(nextRestaurants)
+      syncManagedRestaurantDrafts(nextRestaurants)
+      setNewRestaurantName('')
+      setNewRestaurantSlug('')
+      onToast('Restaurante creado')
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'No se pudo crear el restaurante')
+    } finally {
+      setCreatingManagedRestaurant(false)
+    }
+  }
+
+  async function saveManagedRestaurant(restaurantId: string) {
+    if (!accessToken) return
+
+    const nombre = sanitizeSingleLine(restaurantNameDrafts[restaurantId] || '')
+    const slug = sanitizeSingleLine(restaurantSlugDrafts[restaurantId] || '').toLowerCase()
+    const currentRestaurant = managedRestaurants.find((item) => item.id === restaurantId)
+
+    if (!currentRestaurant) {
+      onError('No se pudo localizar el restaurante seleccionado')
+      return
+    }
+
+    if (!nombre || !slug) {
+      onError('Nombre y slug del restaurante son obligatorios')
+      return
+    }
+
+    setSavingManagedRestaurantId(restaurantId)
+    onError('')
+
+    try {
+      const response = await fetch('/api/admin/restaurants', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          id: restaurantId,
+          nombre,
+          slug,
+          activo: currentRestaurant.activo,
+        }),
+      })
+
+      const payload = (await response.json()) as {
+        error?: string
+        restaurant?: ManagedRestaurant
+      }
+
+      if (!response.ok || !payload.restaurant) {
+        throw new Error(payload.error || 'No se pudo actualizar el restaurante')
+      }
+
+      const nextRestaurants = managedRestaurants
+        .map((item) => (item.id === restaurantId ? payload.restaurant ?? item : item))
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+
+      setManagedRestaurants(nextRestaurants)
+      syncManagedRestaurantDrafts(nextRestaurants)
+      onToast(`Restaurante actualizado: ${payload.restaurant.nombre}`)
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'No se pudo actualizar el restaurante')
+    } finally {
+      setSavingManagedRestaurantId('')
+    }
+  }
+
   function resetManagedUsersState() {
     setManagedUsers([])
     setManagedRestaurants([])
+    setLoadingManagedRestaurants(false)
     setLoadingManagedUsers(false)
     setSavingManagedUserId('')
     setCreatingManagedUser(false)
+    setCreatingManagedRestaurant(false)
+    setSavingManagedRestaurantId('')
     setDeletingManagedUserId('')
     setResettingManagedUserId('')
     setBlockingManagedUserId('')
@@ -475,15 +637,22 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
     setManagedUserPasswordDrafts({})
     setManagedUserRestaurantDrafts({})
     setManagedUserCurrentRestaurantDrafts({})
+    setNewRestaurantName('')
+    setNewRestaurantSlug('')
+    setRestaurantNameDrafts({})
+    setRestaurantSlugDrafts({})
   }
 
   return {
     managedUsers,
     managedRestaurants,
+    loadingManagedRestaurants,
     managedUsersFiltrados,
     loadingManagedUsers,
     savingManagedUserId,
     creatingManagedUser,
+    creatingManagedRestaurant,
+    savingManagedRestaurantId,
     deletingManagedUserId,
     resettingManagedUserId,
     blockingManagedUserId,
@@ -503,6 +672,10 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
     managedUserPasswordDrafts,
     managedUserRestaurantDrafts,
     managedUserCurrentRestaurantDrafts,
+    newRestaurantName,
+    newRestaurantSlug,
+    restaurantNameDrafts,
+    restaurantSlugDrafts,
     setBusquedaUsuarios,
     setManagedUserRoleFilter,
     setManagedUserAccessFilter,
@@ -513,13 +686,20 @@ export function useManagedUsers({ accessToken, onError, onToast }: UseManagedUse
     setManagedUserPasswordDrafts,
     setManagedUserRestaurantDrafts,
     setManagedUserCurrentRestaurantDrafts,
+    setNewRestaurantName,
+    setNewRestaurantSlug,
+    setRestaurantNameDrafts,
+    setRestaurantSlugDrafts,
     loadManagedUsers,
+    loadManagedRestaurants,
     updateManagedUserRole,
     createManagedUser,
     deleteManagedUser,
     resetManagedUserPassword,
     toggleManagedUserBlocked,
     updateManagedUserRestaurants,
+    createManagedRestaurant,
+    saveManagedRestaurant,
     resetManagedUsersState,
   }
 }
