@@ -1431,7 +1431,6 @@ export default function HomePage() {
           <UserManagementPanel
             currentUserId={currentUser?.id || ''}
             currentUserRole={currentUserRole}
-            currentRestaurantId={activeRestaurantId ?? ''}
             managedUsers={managedUsers}
             managedRestaurants={managedRestaurants}
             loadingManagedRestaurants={loadingManagedRestaurants}

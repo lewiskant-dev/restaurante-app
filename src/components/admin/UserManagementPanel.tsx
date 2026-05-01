@@ -16,7 +16,6 @@ import {
 type UserManagementPanelProps = {
   currentUserId: string
   currentUserRole: UserRole
-  currentRestaurantId: string
   managedUsers: ManagedUser[]
   managedRestaurants: ManagedRestaurant[]
   loadingManagedRestaurants: boolean
@@ -97,7 +96,6 @@ type UserManagementPanelProps = {
 export function UserManagementPanel({
   currentUserId,
   currentUserRole,
-  currentRestaurantId,
   managedUsers,
   managedRestaurants,
   loadingManagedRestaurants,
@@ -480,9 +478,9 @@ export function UserManagementPanel({
           <div />
         </div>
 
-        <div className="mt-4 rounded-[20px] border border-slate-200 bg-slate-50/70 p-4">
-          <div className="text-[13px] font-semibold text-slate-900">Alcance del usuario</div>
-          {currentUserRole === 'master' ? (
+        {currentUserRole === 'master' ? (
+          <div className="mt-4 rounded-[20px] border border-slate-200 bg-slate-50/70 p-4">
+            <div className="text-[13px] font-semibold text-slate-900">Alcance del usuario</div>
             <div className="mt-3 space-y-3">
               <div className="grid gap-2 sm:grid-cols-2">
                 {managedRestaurants.map((restaurant) => {
@@ -529,21 +527,18 @@ export function UserManagementPanel({
               </select>
 
               <div
-                className={newManagedUserRestaurantsError ? 'text-[12px] text-red-500' : 'text-[12px] text-slate-500'}
+                className={
+                  newManagedUserRestaurantsError
+                    ? 'text-[12px] text-red-500'
+                    : 'text-[12px] text-slate-500'
+                }
               >
                 {newManagedUserRestaurantsError ||
                   'El usuario solo verá los restaurantes que selecciones aquí.'}
               </div>
             </div>
-          ) : (
-            <div className="mt-3 text-[13px] text-slate-600">
-              Este usuario se creará dentro del restaurante activo actual.
-              <span className="font-semibold text-slate-900">
-                {currentRestaurantId ? ' La asignación se limitará a ese restaurante.' : ' Antes debes tener un restaurante activo.'}
-              </span>
-            </div>
-          )}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:rounded-[24px] sm:p-5">
@@ -639,226 +634,299 @@ export function UserManagementPanel({
               return (
                 <div
                   key={managedUser.id}
-                  className="flex flex-col gap-4 rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.05)] lg:flex-row lg:items-center lg:justify-between lg:bg-slate-50/80 lg:shadow-none"
+                  className="rounded-[26px] border border-slate-200 bg-white/98 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.045)] sm:p-5"
                 >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="truncate text-[17px] font-semibold text-slate-900 sm:text-sm">
-                        {managedUser.full_name || managedUser.email}
-                      </h3>
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-[12px] font-semibold sm:text-[11px] ${accessStatus.className}`}
-                      >
-                        {accessStatus.label}
-                      </span>
-                      {isBlocked ? (
-                        <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600">
-                          Bloqueado
-                        </span>
-                      ) : null}
-                      {isCurrentUser ? (
-                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-600">
-                          Tu
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="mt-1 text-[14px] text-slate-500 sm:text-sm">{managedUser.email}</div>
-                    <div className="mt-1 text-[12px] text-slate-400">
-                      Alta: {formatFechaHora(managedUser.created_at)}
-                      {managedUser.last_sign_in_at
-                        ? ` · Último acceso: ${formatFechaHora(managedUser.last_sign_in_at)}`
-                        : ' · Aun no ha iniciado sesion'}
-                      {isBlocked && managedUser.banned_until
-                        ? ` · Bloqueado hasta: ${formatFechaHora(managedUser.banned_until)}`
-                        : ''}
-                    </div>
-                    <div className="mt-1 text-[12px] text-slate-500">{accessStatus.detail}</div>
-                    <div className="mt-1 text-[12px] text-slate-500">
-                      {restaurantLabel}
-                      {managedUser.current_restaurant_id ? ' · activo configurado' : ''}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <div className="rounded-[18px] bg-slate-100 px-3 py-2.5 text-[14px] font-semibold text-slate-700 shadow-sm sm:rounded-2xl sm:bg-white sm:py-2 sm:text-sm">
-                      {getRoleLabel(managedUser.role)}
-                    </div>
-
-                    <select
-                      value={managedUser.role}
-                      disabled={!canEditTarget || savingManagedUserId === managedUser.id}
-                      onChange={(e) => onUpdateRole(managedUser.id, e.target.value as UserRole)}
-                      className="rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-[14px] text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-2xl sm:py-2 sm:text-sm"
-                    >
-                      <option value="empleado">Empleado</option>
-                      <option value="encargado">Encargado</option>
-                      <option value="administrador">Administrador</option>
-                      {currentUserRole === 'master' ? <option value="master">Master</option> : null}
-                    </select>
-
-                    {canDeleteTarget ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onToggleBlocked(
-                              managedUser.id,
-                              !isBlocked,
-                              managedUser.full_name || managedUser.email
-                            )
-                          }
-                          disabled={blockingManagedUserId === managedUser.id}
-                          className={`rounded-[18px] px-4 py-3 text-[14px] font-semibold disabled:opacity-60 sm:rounded-2xl sm:py-2 sm:text-sm ${
-                            isBlocked
-                              ? 'bg-emerald-50 text-emerald-700'
-                              : 'bg-slate-100 text-slate-700'
-                          }`}
+                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1.28fr)_minmax(300px,0.82fr)] xl:gap-5">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="truncate text-[17px] font-semibold text-slate-900 sm:text-[18px]">
+                          {managedUser.full_name || managedUser.email}
+                        </h3>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-[12px] font-semibold sm:text-[11px] ${accessStatus.className}`}
                         >
-                          {blockingManagedUserId === managedUser.id
-                            ? isBlocked
-                              ? 'Desbloqueando...'
-                              : 'Bloqueando...'
-                            : isBlocked
-                              ? 'Desbloquear'
-                              : 'Bloquear'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onDelete(managedUser.id, managedUser.full_name || managedUser.email)
-                          }
-                          disabled={deletingManagedUserId === managedUser.id}
-                          className="rounded-[18px] bg-red-50 px-4 py-3 text-[14px] font-semibold text-red-600 disabled:opacity-60 sm:rounded-2xl sm:py-2 sm:text-sm"
+                          {accessStatus.label}
+                        </span>
+                        {isBlocked ? (
+                          <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600">
+                            Bloqueado
+                          </span>
+                        ) : null}
+                        {isCurrentUser ? (
+                          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-600">
+                            Actual
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <div className="mt-1 truncate text-[14px] text-slate-500 sm:text-[15px]">
+                        {managedUser.email}
+                      </div>
+
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2 2xl:grid-cols-2">
+                        <div className="rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-2.5">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                            Alta
+                          </div>
+                          <div className="mt-1 text-[12px] font-medium text-slate-700">
+                            {formatFechaHora(managedUser.created_at)}
+                          </div>
+                        </div>
+
+                        <div className="rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-2.5">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                            Último acceso
+                          </div>
+                          <div className="mt-1 text-[12px] font-medium text-slate-700">
+                            {managedUser.last_sign_in_at
+                              ? formatFechaHora(managedUser.last_sign_in_at)
+                              : 'Sin acceso todavía'}
+                          </div>
+                        </div>
+
+                        <div className="rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-2.5">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                            Restaurantes
+                          </div>
+                          <div className="mt-1 text-[12px] font-medium text-slate-700">
+                            {restaurantLabel}
+                            {managedUser.current_restaurant_id ? ' · activo configurado' : ''}
+                          </div>
+                        </div>
+
+                        <div className="rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-2.5">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                            Estado
+                          </div>
+                          <div className="mt-1 text-[12px] font-medium text-slate-700">{accessStatus.detail}</div>
+                        </div>
+                      </div>
+
+                      {isBlocked && managedUser.banned_until ? (
+                        <div className="mt-2 rounded-[14px] bg-red-50 px-3 py-2 text-[12px] font-medium text-red-600">
+                          Bloqueado hasta: {formatFechaHora(managedUser.banned_until)}
+                        </div>
+                      ) : null}
+
+                      <div className="mt-4 flex flex-col gap-3 rounded-[18px] border border-slate-200 bg-slate-50/80 p-3 sm:flex-row sm:flex-wrap sm:items-center">
+                        <div className="rounded-[14px] bg-white px-3.5 py-2 text-[13px] font-semibold text-slate-700 ring-1 ring-slate-200">
+                          {getRoleLabel(managedUser.role)}
+                        </div>
+
+                        <select
+                          value={managedUser.role}
+                          disabled={!canEditTarget || savingManagedUserId === managedUser.id}
+                          onChange={(e) => onUpdateRole(managedUser.id, e.target.value as UserRole)}
+                          className="min-w-[210px] rounded-[14px] border border-slate-200 bg-white px-4 py-2 text-[13px] text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {deletingManagedUserId === managedUser.id ? 'Eliminando...' : 'Eliminar'}
-                        </button>
-                      </>
-                    ) : null}
-                  </div>
+                          <option value="empleado">Empleado</option>
+                          <option value="encargado">Encargado</option>
+                          <option value="administrador">Administrador</option>
+                          {currentUserRole === 'master' ? <option value="master">Master</option> : null}
+                        </select>
 
-                  {canEditTarget ? (
-                    <div className="w-full space-y-3">
-                      {currentUserRole === 'master' && managedRestaurants.length > 0 ? (
-                        <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-3">
-                          <div className="mb-2">
-                            <div className="text-[12px] font-semibold text-slate-800">
-                              Acceso por restaurante
-                            </div>
-                            <div className="mt-1 text-[11px] text-slate-500">
-                              Marca los restaurantes permitidos y cuál queda activo por defecto.
-                            </div>
-                          </div>
-
-                          <div className="grid gap-2 sm:grid-cols-2">
-                            {managedRestaurants.map((restaurant) => {
-                              const checked = selectedRestaurantIds.includes(restaurant.id)
-                              return (
-                                <label
-                                  key={restaurant.id}
-                                  className={`flex items-center gap-2 rounded-[14px] border px-3 py-2 text-[12px] ${
-                                    checked
-                                      ? 'border-blue-200 bg-blue-50 text-blue-700'
-                                      : 'border-slate-200 bg-white text-slate-600'
-                                  }`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={(e) =>
-                                      onManagedRestaurantDraftToggle(
-                                        managedUser.id,
-                                        restaurant.id,
-                                        e.target.checked
-                                      )
-                                    }
-                                  />
-                                  <span className="truncate">
-                                    {restaurant.nombre}
-                                    {!restaurant.activo ? ' · inactivo' : ''}
-                                  </span>
-                                </label>
-                              )
-                            })}
-                          </div>
-
-                          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-                            <select
-                              value={selectedCurrentRestaurantId}
-                              onChange={(e) =>
-                                onManagedCurrentRestaurantDraftChange(managedUser.id, e.target.value)
-                              }
-                              disabled={!selectedRestaurantIds.length}
-                              className="rounded-[16px] border border-slate-200 bg-white px-3 py-2 text-[12px] text-slate-900 disabled:opacity-60"
-                            >
-                              {!selectedRestaurantIds.length ? (
-                                <option value="">Sin restaurantes asignados</option>
-                              ) : null}
-                              {managedRestaurants
-                                .filter((restaurant) => selectedRestaurantIds.includes(restaurant.id))
-                                .map((restaurant) => (
-                                  <option
-                                    key={restaurant.id}
-                                    value={restaurant.id}
-                                    disabled={!restaurant.activo}
-                                  >
-                                    {restaurant.activo
-                                      ? restaurant.nombre
-                                      : `${restaurant.nombre} · inactivo`}
-                                  </option>
-                                ))}
-                            </select>
-
+                        {canDeleteTarget ? (
+                          <>
                             <button
                               type="button"
                               onClick={() =>
-                                onSaveRestaurants(
+                                onToggleBlocked(
+                                  managedUser.id,
+                                  !isBlocked,
+                                  managedUser.full_name || managedUser.email
+                                )
+                              }
+                              disabled={blockingManagedUserId === managedUser.id}
+                              className={`rounded-[14px] px-4 py-2 text-[12px] font-semibold disabled:opacity-60 ${
+                                isBlocked
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : 'bg-white text-slate-700 ring-1 ring-slate-200'
+                              }`}
+                            >
+                              {blockingManagedUserId === managedUser.id
+                                ? isBlocked
+                                  ? 'Desbloqueando...'
+                                  : 'Bloqueando...'
+                                : isBlocked
+                                  ? 'Desbloquear'
+                                  : 'Bloquear'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onDelete(managedUser.id, managedUser.full_name || managedUser.email)
+                              }
+                              disabled={deletingManagedUserId === managedUser.id}
+                              className="rounded-[14px] bg-red-50 px-4 py-2 text-[12px] font-semibold text-red-600 disabled:opacity-60"
+                            >
+                              {deletingManagedUserId === managedUser.id ? 'Eliminando...' : 'Eliminar'}
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {canEditTarget ? (
+                      <div className="space-y-3 xl:border-l xl:border-slate-200 xl:pl-5">
+                        {currentUserRole === 'master' && managedRestaurants.length > 0 ? (
+                          <div className="rounded-[18px] border border-slate-200 bg-slate-50/55 p-3.5">
+                            <div className="mb-3">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                                Permisos
+                              </div>
+                              <div className="mt-1 text-[13px] font-semibold text-slate-800">
+                                Acceso por restaurante
+                              </div>
+                              <div className="mt-1 text-[12px] text-slate-500">
+                                Marca los restaurantes permitidos y cuál queda activo por defecto.
+                              </div>
+                            </div>
+
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              {managedRestaurants.map((restaurant) => {
+                                const checked = selectedRestaurantIds.includes(restaurant.id)
+                                return (
+                                  <label
+                                    key={restaurant.id}
+                                    className={`flex items-center gap-2 rounded-[14px] border px-3 py-2 text-[12px] leading-tight ${
+                                      checked
+                                        ? 'border-blue-200 bg-blue-50 text-blue-700'
+                                        : 'border-slate-200 bg-white text-slate-600'
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={(e) =>
+                                        onManagedRestaurantDraftToggle(
+                                          managedUser.id,
+                                          restaurant.id,
+                                          e.target.checked
+                                        )
+                                      }
+                                    />
+                                    <span className="truncate">
+                                      {restaurant.nombre}
+                                      {!restaurant.activo ? ' · inactivo' : ''}
+                                    </span>
+                                  </label>
+                                )
+                              })}
+                            </div>
+
+                            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                              <select
+                                value={selectedCurrentRestaurantId}
+                                onChange={(e) =>
+                                  onManagedCurrentRestaurantDraftChange(
+                                    managedUser.id,
+                                    e.target.value
+                                  )
+                                }
+                                disabled={!selectedRestaurantIds.length}
+                                className="min-w-0 flex-1 rounded-[14px] border border-slate-200 bg-white px-3 py-2 text-[12px] text-slate-900 disabled:opacity-60"
+                              >
+                                {!selectedRestaurantIds.length ? (
+                                  <option value="">Sin restaurantes asignados</option>
+                                ) : null}
+                                {managedRestaurants
+                                  .filter((restaurant) =>
+                                    selectedRestaurantIds.includes(restaurant.id)
+                                  )
+                                  .map((restaurant) => (
+                                    <option
+                                      key={restaurant.id}
+                                      value={restaurant.id}
+                                      disabled={!restaurant.activo}
+                                    >
+                                      {restaurant.activo
+                                        ? restaurant.nombre
+                                        : `${restaurant.nombre} · inactivo`}
+                                    </option>
+                                  ))}
+                              </select>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  onSaveRestaurants(
+                                    managedUser.id,
+                                    managedUser.full_name || managedUser.email
+                                  )
+                                }
+                                disabled={savingManagedUserRestaurantId === managedUser.id}
+                                className="rounded-[14px] bg-indigo-50 px-4 py-2 text-[12px] font-semibold text-indigo-700 disabled:opacity-60 sm:self-auto"
+                              >
+                                {savingManagedUserRestaurantId === managedUser.id
+                                  ? 'Guardando alcance...'
+                                  : 'Guardar cambios'}
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        <div className="rounded-[18px] border border-slate-200 bg-slate-50/55 p-3.5">
+                          <div className="mb-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                              Seguridad
+                            </div>
+                            <div className="mt-1 text-[13px] font-semibold text-slate-800">
+                              Restablecer contraseña
+                            </div>
+                            <div className="mt-1 text-[12px] text-slate-500">
+                              Define una nueva contraseña temporal para esta cuenta.
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                            <div className="flex-1">
+                              <input
+                                type="password"
+                                value={draftPassword}
+                                onChange={(e) =>
+                                  onManagedPasswordDraftChange(managedUser.id, e.target.value)
+                                }
+                                placeholder="Nueva contraseña"
+                                className={`w-full rounded-[14px] border bg-white px-4 py-2 text-[12px] text-slate-900 outline-none placeholder:text-slate-400 ${
+                                  draftPassword && draftPasswordError
+                                    ? 'border-red-200'
+                                    : 'border-slate-200'
+                                }`}
+                              />
+                              <div
+                                className={`mt-1 text-[11px] ${
+                                  draftPassword && draftPasswordError
+                                    ? 'text-red-500'
+                                    : 'text-slate-500'
+                                }`}
+                              >
+                                {draftPassword && draftPasswordError
+                                  ? draftPasswordError
+                                  : 'Min. 8 caracteres, con letra y numero.'}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onResetPassword(
                                   managedUser.id,
                                   managedUser.full_name || managedUser.email
                                 )
                               }
-                              disabled={savingManagedUserRestaurantId === managedUser.id}
-                              className="rounded-[16px] bg-indigo-50 px-4 py-2 text-[12px] font-semibold text-indigo-700 disabled:opacity-60"
+                              disabled={
+                                resettingManagedUserId === managedUser.id || !!draftPasswordError
+                              }
+                              className="rounded-[14px] bg-amber-50 px-4 py-2 text-[12px] font-semibold text-amber-700 disabled:opacity-60 sm:self-auto"
                             >
-                              {savingManagedUserRestaurantId === managedUser.id
-                                ? 'Guardando alcance...'
-                                : 'Guardar restaurantes'}
+                              {resettingManagedUserId === managedUser.id
+                                ? 'Guardando...'
+                                : 'Resetear contraseña'}
                             </button>
                           </div>
                         </div>
-                      ) : null}
-
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <div className="flex-1">
-                          <input
-                            type="password"
-                            value={draftPassword}
-                            onChange={(e) => onManagedPasswordDraftChange(managedUser.id, e.target.value)}
-                            placeholder="Nueva contraseña"
-                            className={`w-full rounded-[18px] border bg-white px-4 py-3 text-[14px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-2xl sm:py-2 sm:text-sm ${
-                              draftPassword && draftPasswordError ? 'border-red-200' : 'border-slate-200'
-                            }`}
-                          />
-                          <div
-                            className={`mt-1 text-[11px] ${
-                              draftPassword && draftPasswordError ? 'text-red-500' : 'text-slate-500'
-                            }`}
-                          >
-                            {draftPassword && draftPasswordError
-                              ? draftPasswordError
-                              : 'Min. 8 caracteres, con letra y numero.'}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => onResetPassword(managedUser.id, managedUser.full_name || managedUser.email)}
-                          disabled={resettingManagedUserId === managedUser.id || !!draftPasswordError}
-                          className="rounded-[18px] bg-amber-50 px-4 py-3 text-[14px] font-semibold text-amber-700 disabled:opacity-60 sm:rounded-2xl sm:py-2 sm:text-sm"
-                        >
-                          {resettingManagedUserId === managedUser.id ? 'Guardando...' : 'Resetear contraseña'}
-                        </button>
                       </div>
-                    </div>
-                  ) : null}
+                    ) : null}
+                  </div>
                 </div>
               )
             })}
