@@ -183,14 +183,6 @@ export function UserManagementPanel({
         </button>
       </div>
 
-      <div className="rounded-[20px] border border-white/80 bg-white/92 px-4 py-3 text-[12px] text-slate-600 shadow-[0_10px_22px_rgba(15,23,42,0.045)] sm:rounded-[22px] sm:py-3 sm:text-[13px]">
-        Roles disponibles: <span className="font-semibold">Empleado</span>,{' '}
-        <span className="font-semibold">Encargado</span> y{' '}
-        <span className="font-semibold">Administrador</span>. El rol{' '}
-        <span className="font-semibold">Master</span> es interno y no se puede degradar desde un
-        usuario normal.
-      </div>
-
       {currentUserRole === 'master' ? (
         <div className="rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:rounded-[24px] sm:p-5">
           <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
