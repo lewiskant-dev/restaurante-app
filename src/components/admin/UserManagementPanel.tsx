@@ -16,6 +16,7 @@ import {
 type UserManagementPanelProps = {
   currentUserId: string
   currentUserRole: UserRole
+  currentRestaurantId: string
   managedUsers: ManagedUser[]
   managedRestaurants: ManagedRestaurant[]
   loadingManagedRestaurants: boolean
@@ -25,6 +26,7 @@ type UserManagementPanelProps = {
   creatingManagedUser: boolean
   creatingManagedRestaurant: boolean
   savingManagedRestaurantId: string
+  syncingManagedRestaurantMemberships: boolean
   deletingManagedUserId: string
   resettingManagedUserId: string
   blockingManagedUserId: string
@@ -47,9 +49,12 @@ type UserManagementPanelProps = {
   newManagedUserEmail: string
   newManagedUserPassword: string
   newManagedUserRole: UserRole
+  newManagedUserRestaurantIds: string[]
+  newManagedUserCurrentRestaurantId: string
   newManagedUserNameError: string
   newManagedUserEmailError: string
   newManagedUserPasswordError: string
+  newManagedUserRestaurantsError: string
   canSubmitManagedUser: boolean
   managedUserPasswordDrafts: Record<string, string>
   managedUserRestaurantDrafts: Record<string, string[]>
@@ -62,6 +67,7 @@ type UserManagementPanelProps = {
   onReloadRestaurants: () => void
   onCreate: () => void
   onCreateRestaurant: () => void
+  onSyncRestaurantMemberships: () => void
   onUpdateRole: (userId: string, role: UserRole) => void
   onDelete: (userId: string, label: string) => void
   onResetPassword: (userId: string, label: string) => void
@@ -74,11 +80,14 @@ type UserManagementPanelProps = {
   onNewEmailChange: (value: string) => void
   onNewPasswordChange: (value: string) => void
   onNewRoleChange: (value: UserRole) => void
+  onNewManagedUserRestaurantToggle: (restaurantId: string, checked: boolean) => void
+  onNewManagedUserCurrentRestaurantChange: (restaurantId: string) => void
   onManagedPasswordDraftChange: (userId: string, value: string) => void
   onNewRestaurantNameChange: (value: string) => void
   onNewRestaurantSlugChange: (value: string) => void
   onRestaurantNameDraftChange: (restaurantId: string, value: string) => void
   onRestaurantSlugDraftChange: (restaurantId: string, value: string) => void
+  onRestaurantActiveDraftChange: (restaurantId: string, value: boolean) => void
   onManagedRestaurantDraftToggle: (userId: string, restaurantId: string, checked: boolean) => void
   onManagedCurrentRestaurantDraftChange: (userId: string, restaurantId: string) => void
   onSaveRestaurants: (userId: string, label: string) => void
@@ -88,6 +97,7 @@ type UserManagementPanelProps = {
 export function UserManagementPanel({
   currentUserId,
   currentUserRole,
+  currentRestaurantId,
   managedUsers,
   managedRestaurants,
   loadingManagedRestaurants,
@@ -97,6 +107,7 @@ export function UserManagementPanel({
   creatingManagedUser,
   creatingManagedRestaurant,
   savingManagedRestaurantId,
+  syncingManagedRestaurantMemberships,
   deletingManagedUserId,
   resettingManagedUserId,
   blockingManagedUserId,
@@ -109,9 +120,12 @@ export function UserManagementPanel({
   newManagedUserEmail,
   newManagedUserPassword,
   newManagedUserRole,
+  newManagedUserRestaurantIds,
+  newManagedUserCurrentRestaurantId,
   newManagedUserNameError,
   newManagedUserEmailError,
   newManagedUserPasswordError,
+  newManagedUserRestaurantsError,
   canSubmitManagedUser,
   managedUserPasswordDrafts,
   managedUserRestaurantDrafts,
@@ -124,6 +138,7 @@ export function UserManagementPanel({
   onReloadRestaurants,
   onCreate,
   onCreateRestaurant,
+  onSyncRestaurantMemberships,
   onUpdateRole,
   onDelete,
   onResetPassword,
@@ -136,11 +151,14 @@ export function UserManagementPanel({
   onNewEmailChange,
   onNewPasswordChange,
   onNewRoleChange,
+  onNewManagedUserRestaurantToggle,
+  onNewManagedUserCurrentRestaurantChange,
   onManagedPasswordDraftChange,
   onNewRestaurantNameChange,
   onNewRestaurantSlugChange,
   onRestaurantNameDraftChange,
   onRestaurantSlugDraftChange,
+  onRestaurantActiveDraftChange,
   onManagedRestaurantDraftToggle,
   onManagedCurrentRestaurantDraftChange,
   onSaveRestaurants,
@@ -184,13 +202,24 @@ export function UserManagementPanel({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onReloadRestaurants}
-            className="rounded-[15px] bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200"
-          >
-            Recargar restaurantes
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onSyncRestaurantMemberships}
+              className="rounded-[15px] bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm"
+            >
+              {syncingManagedRestaurantMemberships
+                ? 'Sincronizando usuarios...'
+                : 'Sincronizar usuarios'}
+            </button>
+            <button
+              type="button"
+              onClick={onReloadRestaurants}
+              className="rounded-[15px] bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200"
+            >
+              Recargar restaurantes
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-3 xl:grid-cols-[1fr_0.8fr_auto]">
@@ -232,12 +261,24 @@ export function UserManagementPanel({
                 key={restaurant.id}
                 className="grid gap-3 rounded-[20px] border border-slate-200 bg-slate-50/70 p-3 xl:grid-cols-[1fr_0.8fr_auto]"
               >
-                <input
-                  type="text"
-                  value={restaurantNameDrafts[restaurant.id] ?? restaurant.nombre}
-                  onChange={(e) => onRestaurantNameDraftChange(restaurant.id, e.target.value)}
-                  className="rounded-[16px] border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none"
-                />
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={restaurantNameDrafts[restaurant.id] ?? restaurant.nombre}
+                    onChange={(e) => onRestaurantNameDraftChange(restaurant.id, e.target.value)}
+                    className="w-full rounded-[16px] border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none"
+                  />
+                  <label className="flex items-center gap-2 text-[12px] text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={restaurant.activo}
+                      onChange={(e) =>
+                        onRestaurantActiveDraftChange(restaurant.id, e.target.checked)
+                      }
+                    />
+                    Restaurante activo
+                  </label>
+                </div>
                 <input
                   type="text"
                   value={restaurantSlugDrafts[restaurant.id] ?? restaurant.slug}
@@ -435,6 +476,71 @@ export function UserManagementPanel({
           </div>
           <div className="text-slate-500">El rol podras cambiarlo despues.</div>
           <div />
+        </div>
+
+        <div className="mt-4 rounded-[20px] border border-slate-200 bg-slate-50/70 p-4">
+          <div className="text-[13px] font-semibold text-slate-900">Alcance del usuario</div>
+          {currentUserRole === 'master' ? (
+            <div className="mt-3 space-y-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                {managedRestaurants.map((restaurant) => {
+                  const checked = newManagedUserRestaurantIds.includes(restaurant.id)
+
+                  return (
+                    <label
+                      key={restaurant.id}
+                      className={`flex items-center gap-3 rounded-[16px] border px-3 py-2.5 text-[13px] ${
+                        checked
+                          ? 'border-blue-200 bg-blue-50 text-blue-900'
+                          : 'border-slate-200 bg-white text-slate-700'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) =>
+                          onNewManagedUserRestaurantToggle(restaurant.id, e.target.checked)
+                        }
+                      />
+                      <span className="font-medium">
+                        {restaurant.nombre}
+                        {!restaurant.activo ? ' · inactivo' : ''}
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+
+              <select
+                value={newManagedUserCurrentRestaurantId}
+                onChange={(e) => onNewManagedUserCurrentRestaurantChange(e.target.value)}
+                className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-[13px] text-slate-900 outline-none"
+              >
+                <option value="">Selecciona restaurante activo por defecto</option>
+                {managedRestaurants
+                  .filter((restaurant) => newManagedUserRestaurantIds.includes(restaurant.id))
+                  .map((restaurant) => (
+                    <option key={restaurant.id} value={restaurant.id}>
+                      {restaurant.nombre}
+                    </option>
+                  ))}
+              </select>
+
+              <div
+                className={newManagedUserRestaurantsError ? 'text-[12px] text-red-500' : 'text-[12px] text-slate-500'}
+              >
+                {newManagedUserRestaurantsError ||
+                  'El usuario solo verá los restaurantes que selecciones aquí.'}
+              </div>
+            </div>
+          ) : (
+            <div className="mt-3 text-[13px] text-slate-600">
+              Este usuario se creará dentro del restaurante activo actual.
+              <span className="font-semibold text-slate-900">
+                {currentRestaurantId ? ' La asignación se limitará a ese restaurante.' : ' Antes debes tener un restaurante activo.'}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -664,7 +770,10 @@ export function UserManagementPanel({
                                       )
                                     }
                                   />
-                                  <span className="truncate">{restaurant.nombre}</span>
+                                  <span className="truncate">
+                                    {restaurant.nombre}
+                                    {!restaurant.activo ? ' · inactivo' : ''}
+                                  </span>
                                 </label>
                               )
                             })}
@@ -685,8 +794,14 @@ export function UserManagementPanel({
                               {managedRestaurants
                                 .filter((restaurant) => selectedRestaurantIds.includes(restaurant.id))
                                 .map((restaurant) => (
-                                  <option key={restaurant.id} value={restaurant.id}>
-                                    {restaurant.nombre}
+                                  <option
+                                    key={restaurant.id}
+                                    value={restaurant.id}
+                                    disabled={!restaurant.activo}
+                                  >
+                                    {restaurant.activo
+                                      ? restaurant.nombre
+                                      : `${restaurant.nombre} · inactivo`}
                                   </option>
                                 ))}
                             </select>

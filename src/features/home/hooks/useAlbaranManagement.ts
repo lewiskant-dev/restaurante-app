@@ -623,8 +623,12 @@ export function useAlbaranManagement({
       let fotoUrl = ''
 
       if (albaranFoto) {
+        if (!currentRestaurantId) {
+          throw new Error('Falta el restaurante activo para guardar la imagen del albarán')
+        }
+
         const safeName = albaranFoto.name.replace(/\s+/g, '_')
-        const fileName = `${Date.now()}_${safeName}`
+        const fileName = `${currentRestaurantId}/${Date.now()}_${safeName}`
 
         const { error: uploadError } = await supabase.storage.from('albaranes').upload(fileName, albaranFoto)
 

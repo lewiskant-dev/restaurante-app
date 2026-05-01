@@ -11,13 +11,16 @@ Esta es la primera base seria para convertir Nexo en una app usable por varios r
 - helpers RLS para leer `current_restaurant_id` y `restaurant_ids` desde `app_metadata`
 - triggers para rellenar `restaurant_id` automáticamente en inserts
 - políticas RLS que aíslan datos por restaurante
+- policies de storage para que `albaranes/` se segmente por carpeta de restaurante
+- backfill inicial de `usuario_restaurantes` usando la metadata ya presente en `auth.users`
 
 ## Orden recomendado
 
 1. Tener `auth-setup.sql` ya aplicado.
 2. Ejecutar [multi-restaurant-setup.sql](/Users/jorge/restaurante-app/supabase/multi-restaurant-setup.sql:1).
-3. Actualizar usuarios con metadata de restaurante.
-4. Solo después empezar a exponer selector de restaurante en UI.
+3. Revisar que los usuarios existentes tengan `current_restaurant_id` y `restaurant_ids` coherentes.
+4. Comprobar en la app la asignación de restaurantes, el selector activo y la carga filtrada.
+5. Si hace falta, usar `Usuarios > Sincronizar usuarios` para reconstruir `usuario_restaurantes`.
 
 ## Metadata esperada en usuarios
 
@@ -52,18 +55,17 @@ set raw_app_meta_data =
 where email = 'master@interno.local';
 ```
 
-## Qué no hace todavía
+Actualización:
 
-- no añade selector visual de restaurante
-- no permite asignar restaurantes desde la pestaña `Usuarios`
-- no migra automáticamente usuarios ya existentes a `usuario_restaurantes`
-- no separa storage por carpetas de restaurante todavía
+- la app ya sube imágenes de albaranes bajo la ruta `albaranes/<restaurant_id>/archivo`
+- y el SQL de esta fase ya deja preparada la política para respetar esa carpeta
+- la pestaña `Usuarios` ya permite forzar una resincronización de `usuario_restaurantes`
 
 ## Siguiente paso recomendado
 
 Cuando este SQL esté aplicado, el siguiente bloque natural será:
 
-1. leer `current_restaurant_id` en la app
-2. mostrar restaurante activo en cabecera
-3. permitir a `master/administrador` cambiar la asignación de restaurantes por usuario
-4. aislar también storage de `albaranes` por restaurante
+1. revisar que todos los documentos ya usan carpeta por restaurante
+2. seguir endureciendo tablas y rutas sensibles con contexto de restaurante
+3. afinar el comportamiento de usuarios sin restaurante asignado
+4. seguir extendiendo el catálogo multi-restaurante a la operación diaria

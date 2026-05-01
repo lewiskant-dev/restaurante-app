@@ -122,6 +122,23 @@ export async function PATCH(request: Request) {
     )
   }
 
+  const { data: restaurant, error: restaurantError } = await supabaseAdmin
+    .from('restaurantes')
+    .select('id, activo')
+    .eq('id', restaurantId)
+    .maybeSingle()
+
+  if (restaurantError && !isMissingRelationError(restaurantError)) {
+    return NextResponse.json({ error: restaurantError.message }, { status: 500 })
+  }
+
+  if (restaurant && restaurant.activo === false) {
+    return NextResponse.json(
+      { error: 'Ese restaurante está inactivo y no puede usarse como restaurante activo' },
+      { status: 403 }
+    )
+  }
+
   const role = getUserRoleFromAuthUser(user)
 
   const { data, error } = await supabaseAdmin.auth.admin.updateUserById(user.id, {

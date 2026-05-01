@@ -10,6 +10,7 @@ type ProfilePanelProps = {
   accessibleRestaurants: Array<{
     id: string
     nombre: string
+    activo: boolean
   }>
   activeRestaurantId: string
   switchingRestaurant: boolean
@@ -134,10 +135,12 @@ export function ProfilePanel({
                     className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none disabled:opacity-60"
                   >
                     {accessibleRestaurants.map((restaurant) => (
-                      <option key={restaurant.id} value={restaurant.id}>
+                      <option key={restaurant.id} value={restaurant.id} disabled={!restaurant.activo}>
                         {switchingRestaurant && activeRestaurantId === restaurant.id
                           ? `${restaurant.nombre} · cambiando...`
-                          : restaurant.nombre}
+                          : restaurant.activo
+                            ? restaurant.nombre
+                            : `${restaurant.nombre} · inactivo`}
                       </option>
                     ))}
                   </select>

@@ -85,12 +85,19 @@ function isMissingRelationError(error: unknown) {
 }
 
 async function loadRestaurantsCatalog(
-  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>
+  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
+  allowedRestaurantIds?: string[]
 ): Promise<ManagedRestaurant[]> {
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('restaurantes')
     .select('id, nombre, slug, activo')
     .order('nombre', { ascending: true })
+
+  if (allowedRestaurantIds && allowedRestaurantIds.length > 0) {
+    query = query.in('id', allowedRestaurantIds)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     if (isMissingRelationError(error)) return []
@@ -136,12 +143,47 @@ async function syncUserRestaurantMemberships(
   }
 }
 
+async function listAllAuthUsers(supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>) {
+  const users: Array<{
+    id: string
+    email?: string | null
+    created_at: string
+    last_sign_in_at?: string | null
+    banned_until?: string | null
+    app_metadata?: Record<string, unknown>
+    user_metadata?: Record<string, unknown>
+  }> = []
+
+  const perPage = 200
+  let page = 1
+
+  while (true) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      page,
+      perPage,
+    })
+
+    if (error) {
+      throw error
+    }
+
+    const batch = data.users || []
+    users.push(...batch)
+
+    if (batch.length < perPage) break
+    page += 1
+  }
+
+  return users
+}
+
 async function logAdminAudit(
   supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
   params: {
     actor: {
       id: string
       email?: string | null
+      app_metadata?: Record<string, unknown>
       user_metadata?: Record<string, unknown>
     }
     entidadId: string
@@ -152,17 +194,34 @@ async function logAdminAudit(
   }
 ) {
   const { actor, entidadId, accion, detalle, payloadAntes, payloadDespues } = params
+  const restaurantScope = getRestaurantScopeFromAppMetadata(actor.app_metadata)
 
   await supabaseAdmin.from('auditoria').insert({
     entidad: 'usuario',
     entidad_id: entidadId,
     accion,
+    restaurant_id: restaurantScope.currentRestaurantId,
     actor_nombre: getUserDisplayName(actor),
     actor_id: actor.id,
     detalle,
     payload_antes: payloadAntes ?? null,
     payload_despues: payloadDespues ?? null,
   })
+}
+
+function canManageRestaurantIds(actorRole: UserRole, actorRestaurantIds: string[], targetRestaurantIds: string[]) {
+  if (actorRole === 'master') return true
+  return targetRestaurantIds.every((restaurantId) => actorRestaurantIds.includes(restaurantId))
+}
+
+function canManageTargetUser(
+  actorRole: UserRole,
+  actorRestaurantIds: string[],
+  targetRestaurantIds: string[]
+) {
+  if (actorRole === 'master') return true
+  if (!targetRestaurantIds.length) return false
+  return targetRestaurantIds.every((restaurantId) => actorRestaurantIds.includes(restaurantId))
 }
 
 async function getRequestUser(request: Request) {
@@ -214,36 +273,37 @@ export async function GET(request: Request) {
   }
   const supabaseAdmin = adminResult.client
 
-  const users: ReturnType<typeof serializeUser>[] = []
-  const perPage = 200
-  let page = 1
+  let users: ReturnType<typeof serializeUser>[] = []
 
-  while (true) {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-      page,
-      perPage,
-    })
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    const batch = data.users || []
-    users.push(...batch.map(serializeUser))
-
-    if (batch.length < perPage) {
-      break
-    }
-
-    page += 1
+  try {
+    users = (await listAllAuthUsers(supabaseAdmin)).map(serializeUser)
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'No se pudieron cargar los usuarios' },
+      { status: 500 }
+    )
   }
 
-  const restaurants = await loadRestaurantsCatalog(supabaseAdmin).catch((error) => {
+  const allowedRestaurantIds =
+    authResult.role === 'master' ? undefined : authResult.restaurantScope.restaurantIds
+
+  const filteredUsers =
+    authResult.role === 'master'
+      ? users
+      : users.filter((user) =>
+          canManageTargetUser(
+            authResult.role,
+            authResult.restaurantScope.restaurantIds,
+            user.restaurant_ids ?? []
+          )
+        )
+
+  const restaurants = await loadRestaurantsCatalog(supabaseAdmin, allowedRestaurantIds).catch((error) => {
     console.warn('No se pudo cargar el catálogo de restaurantes:', error)
     return [] as ManagedRestaurant[]
   })
 
-  return NextResponse.json({ users, restaurants })
+  return NextResponse.json({ users: filteredUsers, restaurants })
 }
 
 export async function POST(request: Request) {
@@ -261,17 +321,114 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => null)) as
     | {
+        action?: 'sync_restaurant_memberships'
         email?: string
         password?: string
         fullName?: string
         role?: UserRole
+        restaurantIds?: string[]
+        currentRestaurantId?: string | null
       }
     | null
+
+  if (body?.action === 'sync_restaurant_memberships') {
+    let users: Awaited<ReturnType<typeof listAllAuthUsers>> = []
+
+    try {
+      users = await listAllAuthUsers(supabaseAdmin)
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : 'No se pudieron cargar los usuarios' },
+        { status: 500 }
+      )
+    }
+
+    const manageableUsers = users.filter((user) => {
+      const scope = getRestaurantScopeFromAppMetadata(user.app_metadata)
+      return canManageTargetUser(
+        authResult.role,
+        authResult.restaurantScope.restaurantIds,
+        scope.restaurantIds
+      )
+    })
+
+    let synced = 0
+    let skippedWithoutRestaurants = 0
+
+    for (const user of manageableUsers) {
+      const userRole = getUserRoleFromAuthUser(user)
+      const scope = getRestaurantScopeFromAppMetadata(user.app_metadata)
+
+      if (!scope.restaurantIds.length) {
+        skippedWithoutRestaurants += 1
+        continue
+      }
+
+      try {
+        await syncUserRestaurantMemberships(supabaseAdmin, {
+          userId: user.id,
+          role: userRole,
+          restaurantIds: scope.restaurantIds,
+          currentRestaurantId: scope.currentRestaurantId ?? scope.restaurantIds[0] ?? null,
+        })
+        synced += 1
+      } catch (error) {
+        return NextResponse.json(
+          {
+            error:
+              error instanceof Error
+                ? error.message
+                : 'No se pudo sincronizar usuario_restaurantes',
+          },
+          { status: 500 }
+        )
+      }
+    }
+
+    await logAdminAudit(supabaseAdmin, {
+      actor: authResult.user,
+      entidadId: authResult.user.id,
+      accion: 'editar',
+      detalle: `Sincronizada la relacion usuario_restaurantes para ${synced} usuarios`,
+      payloadDespues: {
+        synced,
+        skipped_without_restaurants: skippedWithoutRestaurants,
+        manageable_users: manageableUsers.length,
+      },
+    })
+
+    return NextResponse.json({
+      synced,
+      skippedWithoutRestaurants,
+      manageableUsers: manageableUsers.length,
+    })
+  }
 
   const email = body?.email?.trim().toLowerCase() || ''
   const password = body?.password || ''
   const fullName = body?.fullName?.trim() || ''
   const role = normalizeRole(body?.role)
+  const requestedRestaurantIds = Array.isArray(body?.restaurantIds)
+    ? Array.from(
+        new Set(
+          body.restaurantIds
+            .map((value) => (typeof value === 'string' ? value.trim() : ''))
+            .filter(Boolean)
+        )
+      )
+    : []
+  const requestedCurrentRestaurantId =
+    typeof body?.currentRestaurantId === 'string' ? body.currentRestaurantId.trim() : ''
+  const inheritedRestaurantIds =
+    authResult.role === 'master'
+      ? requestedRestaurantIds
+      : authResult.restaurantScope.currentRestaurantId
+        ? [authResult.restaurantScope.currentRestaurantId]
+        : []
+  const inheritedCurrentRestaurantId =
+    authResult.role === 'master'
+      ? requestedCurrentRestaurantId || inheritedRestaurantIds[0] || null
+      : authResult.restaurantScope.currentRestaurantId ?? null
 
   if (!email || !password || !fullName) {
     return NextResponse.json(
@@ -294,6 +451,37 @@ export async function POST(request: Request) {
     )
   }
 
+  if (authResult.role === 'master' && inheritedRestaurantIds.length === 0) {
+    return NextResponse.json(
+      { error: 'Debes asignar al menos un restaurante al crear el usuario' },
+      { status: 400 }
+    )
+  }
+
+  if (
+    authResult.role === 'master' &&
+    requestedCurrentRestaurantId &&
+    !inheritedRestaurantIds.includes(requestedCurrentRestaurantId)
+  ) {
+    return NextResponse.json(
+      { error: 'El restaurante activo debe estar dentro de la asignación seleccionada' },
+      { status: 400 }
+    )
+  }
+
+  if (
+    !canManageRestaurantIds(
+      authResult.role,
+      authResult.restaurantScope.restaurantIds,
+      inheritedRestaurantIds
+    )
+  ) {
+    return NextResponse.json(
+      { error: 'No puedes crear usuarios fuera de tu alcance de restaurantes' },
+      { status: 403 }
+    )
+  }
+
   const { data, error } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
@@ -302,7 +490,10 @@ export async function POST(request: Request) {
       full_name: fullName,
     },
     app_metadata: {
-      ...buildInheritedRestaurantAppMetadata(undefined, authResult.restaurantScope),
+      ...buildInheritedRestaurantAppMetadata(undefined, {
+        currentRestaurantId: inheritedCurrentRestaurantId,
+        restaurantIds: inheritedRestaurantIds,
+      }),
       role,
     },
   })
@@ -314,19 +505,40 @@ export async function POST(request: Request) {
     )
   }
 
+  if (inheritedRestaurantIds.length) {
+    try {
+      await syncUserRestaurantMemberships(supabaseAdmin, {
+        userId: data.user.id,
+        role,
+        restaurantIds: inheritedRestaurantIds,
+        currentRestaurantId: inheritedCurrentRestaurantId,
+      })
+    } catch (membershipError) {
+      return NextResponse.json(
+        {
+          error:
+            membershipError instanceof Error
+              ? membershipError.message
+              : 'No se pudo sincronizar la asignación inicial de restaurantes',
+        },
+        { status: 500 }
+      )
+    }
+  }
+
   await logAdminAudit(supabaseAdmin, {
     actor: authResult.user,
     entidadId: data.user.id,
     accion: 'crear',
     detalle: `Usuario creado: ${fullName} · Rol: ${role}`,
-    payloadDespues: {
-      email,
-      full_name: fullName,
-      role,
-      current_restaurant_id: authResult.restaurantScope.currentRestaurantId,
-      restaurant_ids: authResult.restaurantScope.restaurantIds,
-    },
-  })
+      payloadDespues: {
+        email,
+        full_name: fullName,
+        role,
+        current_restaurant_id: inheritedCurrentRestaurantId,
+        restaurant_ids: inheritedRestaurantIds,
+      },
+    })
 
   return NextResponse.json({ user: serializeUser(data.user) }, { status: 201 })
 }
@@ -402,6 +614,20 @@ export async function PATCH(request: Request) {
     )
   }
 
+  if (
+    nextRestaurantIds !== null &&
+    !canManageRestaurantIds(
+      authResult.role,
+      authResult.restaurantScope.restaurantIds,
+      nextRestaurantIds
+    )
+  ) {
+    return NextResponse.json(
+      { error: 'No puedes asignar restaurantes fuera de tu propio alcance' },
+      { status: 403 }
+    )
+  }
+
   if (nextPassword && nextPassword.length < 6) {
     return NextResponse.json(
       { error: 'La nueva contraseña debe tener al menos 6 caracteres' },
@@ -428,17 +654,31 @@ export async function PATCH(request: Request) {
 
   const targetUser = targetUserData.user
   const targetRole = getUserRoleFromAuthUser(targetUser)
+  const targetRestaurantScope = getRestaurantScopeFromAppMetadata(targetUser.app_metadata)
   const targetSnapshotBefore = {
     email: targetUser.email || '',
     full_name: getUserDisplayName(targetUser),
     role: targetRole,
-    current_restaurant_id: getRestaurantScopeFromAppMetadata(targetUser.app_metadata).currentRestaurantId,
-    restaurant_ids: getRestaurantScopeFromAppMetadata(targetUser.app_metadata).restaurantIds,
+    current_restaurant_id: targetRestaurantScope.currentRestaurantId,
+    restaurant_ids: targetRestaurantScope.restaurantIds,
   }
 
   if (targetRole === 'master' && authResult.role !== 'master') {
     return NextResponse.json(
       { error: 'Solo el usuario master puede modificar otra cuenta master' },
+      { status: 403 }
+    )
+  }
+
+  if (
+    !canManageTargetUser(
+      authResult.role,
+      authResult.restaurantScope.restaurantIds,
+      targetRestaurantScope.restaurantIds
+    )
+  ) {
+    return NextResponse.json(
+      { error: 'No puedes modificar usuarios fuera de tu alcance de restaurantes' },
       { status: 403 }
     )
   }
@@ -611,17 +851,31 @@ export async function DELETE(request: Request) {
   }
 
   const targetRole = getUserRoleFromAuthUser(targetUserData.user)
+  const targetRestaurantScope = getRestaurantScopeFromAppMetadata(targetUserData.user.app_metadata)
   const targetSnapshot = {
     email: targetUserData.user.email || '',
     full_name: getUserDisplayName(targetUserData.user),
     role: targetRole,
-    current_restaurant_id: getRestaurantScopeFromAppMetadata(targetUserData.user.app_metadata).currentRestaurantId,
-    restaurant_ids: getRestaurantScopeFromAppMetadata(targetUserData.user.app_metadata).restaurantIds,
+    current_restaurant_id: targetRestaurantScope.currentRestaurantId,
+    restaurant_ids: targetRestaurantScope.restaurantIds,
   }
 
   if (targetRole === 'master' && authResult.role !== 'master') {
     return NextResponse.json(
       { error: 'Solo el usuario master puede eliminar otra cuenta master' },
+      { status: 403 }
+    )
+  }
+
+  if (
+    !canManageTargetUser(
+      authResult.role,
+      authResult.restaurantScope.restaurantIds,
+      targetRestaurantScope.restaurantIds
+    )
+  ) {
+    return NextResponse.json(
+      { error: 'No puedes eliminar usuarios fuera de tu alcance de restaurantes' },
       { status: 403 }
     )
   }

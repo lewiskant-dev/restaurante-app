@@ -1,5 +1,6 @@
 import { PostgrestError } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { getRestaurantScopeFromAppMetadata } from '@/lib/restaurantMetadata'
 import { createSupabaseAdminClient } from '@/lib/supabaseAdmin'
 
 type UserRole = 'empleado' | 'encargado' | 'administrador' | 'master'
@@ -14,6 +15,10 @@ function normalizeRole(value: unknown): UserRole {
 
 function hasManagementAccess(role: UserRole) {
   return role === 'administrador' || role === 'master'
+}
+
+function canManageRestaurantCatalog(role: UserRole) {
+  return role === 'master'
 }
 
 function isMissingRelationError(error: unknown) {
@@ -45,12 +50,13 @@ async function getRequestUser(request: Request) {
   }
 
   const role = normalizeRole(data.user.app_metadata?.role ?? data.user.user_metadata?.role)
+  const restaurantScope = getRestaurantScopeFromAppMetadata(data.user.app_metadata)
 
   if (!hasManagementAccess(role)) {
     return { error: 'No tienes permisos para gestionar restaurantes', status: 403 as const }
   }
 
-  return { supabaseAdmin, user: data.user, role }
+  return { supabaseAdmin, user: data.user, role, restaurantScope }
 }
 
 export async function GET(request: Request) {
@@ -62,10 +68,20 @@ export async function GET(request: Request) {
 
   const { supabaseAdmin } = authResult
 
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('restaurantes')
     .select('id, nombre, slug, activo')
     .order('nombre', { ascending: true })
+
+  if (authResult.role !== 'master') {
+    if (!authResult.restaurantScope.restaurantIds.length) {
+      return NextResponse.json({ restaurants: [] })
+    }
+
+    query = query.in('id', authResult.restaurantScope.restaurantIds)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     if (isMissingRelationError(error)) {
@@ -89,6 +105,13 @@ export async function POST(request: Request) {
   }
 
   const { supabaseAdmin } = authResult
+
+  if (!canManageRestaurantCatalog(authResult.role)) {
+    return NextResponse.json(
+      { error: 'Solo el usuario master puede crear restaurantes nuevos' },
+      { status: 403 }
+    )
+  }
   const body = (await request.json().catch(() => null)) as
     | { nombre?: string; slug?: string }
     | null
@@ -125,6 +148,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  await supabaseAdmin.from('auditoria').insert({
+    entidad: 'restaurante',
+    entidad_id: data.id,
+    accion: 'crear',
+    restaurant_id: authResult.restaurantScope.currentRestaurantId,
+    actor_nombre:
+      (typeof authResult.user.user_metadata?.full_name === 'string' &&
+        authResult.user.user_metadata.full_name.trim()) ||
+      authResult.user.email ||
+      'Sin identificar',
+    actor_id: authResult.user.id,
+    detalle: `Restaurante creado: ${data.nombre}`,
+    payload_despues: data,
+  })
+
   return NextResponse.json({ restaurant: data }, { status: 201 })
 }
 
@@ -136,6 +174,13 @@ export async function PATCH(request: Request) {
   }
 
   const { supabaseAdmin } = authResult
+
+  if (!canManageRestaurantCatalog(authResult.role)) {
+    return NextResponse.json(
+      { error: 'Solo el usuario master puede editar el catálogo de restaurantes' },
+      { status: 403 }
+    )
+  }
   const body = (await request.json().catch(() => null)) as
     | { id?: string; nombre?: string; slug?: string; activo?: boolean }
     | null
@@ -150,6 +195,23 @@ export async function PATCH(request: Request) {
       { error: 'Restaurante, nombre y slug son obligatorios' },
       { status: 400 }
     )
+  }
+
+  const { data: beforeRestaurant, error: beforeError } = await supabaseAdmin
+    .from('restaurantes')
+    .select('id, nombre, slug, activo')
+    .eq('id', id)
+    .single()
+
+  if (beforeError) {
+    if (isMissingRelationError(beforeError)) {
+      return NextResponse.json({
+        error:
+          'La tabla restaurantes todavía no existe. Ejecuta multi-restaurant-setup.sql en Supabase.',
+      }, { status: 409 })
+    }
+
+    return NextResponse.json({ error: beforeError.message }, { status: 500 })
   }
 
   const { data, error } = await supabaseAdmin
@@ -173,6 +235,22 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  await supabaseAdmin.from('auditoria').insert({
+    entidad: 'restaurante',
+    entidad_id: data.id,
+    accion: 'editar',
+    restaurant_id: authResult.restaurantScope.currentRestaurantId,
+    actor_nombre:
+      (typeof authResult.user.user_metadata?.full_name === 'string' &&
+        authResult.user.user_metadata.full_name.trim()) ||
+      authResult.user.email ||
+      'Sin identificar',
+    actor_id: authResult.user.id,
+    detalle: `Restaurante actualizado: ${data.nombre}`,
+    payload_antes: beforeRestaurant,
+    payload_despues: data,
+  })
 
   return NextResponse.json({ restaurant: data })
 }

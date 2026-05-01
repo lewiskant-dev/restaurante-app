@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { getRestaurantScopeFromAppMetadata } from '@/lib/restaurantMetadata'
 import { createSupabaseAdminClient } from '@/lib/supabaseAdmin'
 
 type AuditEntity = 'sesion' | 'perfil'
@@ -64,11 +65,13 @@ export async function POST(request: Request) {
   }
 
   const detalle = typeof rawBody.detalle === 'string' ? rawBody.detalle.trim() : ''
+  const restaurantScope = getRestaurantScopeFromAppMetadata(user.app_metadata)
 
   const { error } = await supabaseAdmin.from('auditoria').insert({
     entidad: rawBody.entidad,
     entidad_id: user.id,
     accion: rawBody.accion,
+    restaurant_id: restaurantScope.currentRestaurantId,
     actor_nombre: getDisplayName(user),
     actor_id: user.id,
     detalle,

@@ -70,8 +70,8 @@ export default function HomePage() {
     (currentUser?.app_metadata as Record<string, unknown> | undefined) ?? undefined
   )
   const activeRestaurantId = currentRestaurantScope.currentRestaurantId
+  const currentUserRole = getUserRole(currentUser)
   const [accessibleRestaurants, setAccessibleRestaurants] = useState<ManagedRestaurant[]>([])
-  const [loadingAccessibleRestaurants, setLoadingAccessibleRestaurants] = useState(false)
   const [switchingRestaurant, setSwitchingRestaurant] = useState(false)
 
   const [mapeosProductos, setMapeosProductos] = useState<MapeoProducto[]>([])
@@ -155,6 +155,7 @@ export default function HomePage() {
     creatingManagedUser,
     creatingManagedRestaurant,
     savingManagedRestaurantId,
+    syncingManagedRestaurantMemberships,
     deletingManagedUserId,
     resettingManagedUserId,
     blockingManagedUserId,
@@ -167,9 +168,12 @@ export default function HomePage() {
     newManagedUserEmail,
     newManagedUserPassword,
     newManagedUserRole,
+    newManagedUserRestaurantIds,
+    newManagedUserCurrentRestaurantId,
     newManagedUserNameError,
     newManagedUserEmailError,
     newManagedUserPasswordError,
+    newManagedUserRestaurantsError,
     canSubmitManagedUser,
     managedUserPasswordDrafts,
     managedUserRestaurantDrafts,
@@ -188,6 +192,8 @@ export default function HomePage() {
     setManagedUserPasswordDrafts,
     setManagedUserRestaurantDrafts,
     setManagedUserCurrentRestaurantDrafts,
+    setNewManagedUserRestaurantIds,
+    setNewManagedUserCurrentRestaurantId,
     setNewRestaurantName,
     setNewRestaurantSlug,
     setRestaurantNameDrafts,
@@ -201,10 +207,14 @@ export default function HomePage() {
     toggleManagedUserBlocked,
     updateManagedUserRestaurants,
     createManagedRestaurant,
+    syncManagedRestaurantMemberships,
     saveManagedRestaurant,
+    toggleManagedRestaurantActiveDraft,
     resetManagedUsersState,
   } = useManagedUsers({
     accessToken: session?.access_token,
+    currentUserRole,
+    currentRestaurantId: activeRestaurantId,
     onError: setError,
     onToast: setToast,
   })
@@ -222,6 +232,101 @@ export default function HomePage() {
 
   const openRecoveryModeEvent = useEffectEvent(() => {
     openRecoveryMode()
+  })
+
+  async function activateRestaurant(restaurantId: string, silent = false) {
+    if (!session?.access_token) return
+
+    setSwitchingRestaurant(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/auth/restaurants', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ restaurantId }),
+      })
+
+      const payload = (await response.json()) as { error?: string }
+
+      if (!response.ok) {
+        throw new Error(payload.error || 'No se pudo cambiar el restaurante activo')
+      }
+
+      const { data, error } = await supabase.auth.refreshSession()
+      if (error) throw error
+
+      setSession(data.session ?? null)
+      setCurrentUser(data.session?.user ?? null)
+
+      if (!silent) {
+        setToast('Restaurante activo actualizado')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo cambiar el restaurante activo')
+    } finally {
+      setSwitchingRestaurant(false)
+    }
+  }
+
+  const loadAccessibleRestaurantsEvent = useEffectEvent(async () => {
+    if (!session?.access_token) {
+      setAccessibleRestaurants([])
+      return
+    }
+
+    try {
+      const response = await fetch('/api/auth/restaurants', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+
+      const payload = (await response.json()) as {
+        error?: string
+        restaurants?: ManagedRestaurant[]
+        current_restaurant_id?: string | null
+      }
+
+      if (!response.ok) {
+        throw new Error(payload.error || 'No se pudo cargar la asignación de restaurantes')
+      }
+
+      const restaurants = payload.restaurants ?? []
+      setAccessibleRestaurants(restaurants)
+
+      const activeRestaurants = restaurants.filter((restaurant) => restaurant.activo)
+      const currentRestaurant = restaurants.find(
+        (restaurant) => restaurant.id === payload.current_restaurant_id
+      )
+
+      if (
+        payload.current_restaurant_id &&
+        currentRestaurant &&
+        currentRestaurant.activo === false &&
+        activeRestaurants.length > 0
+      ) {
+        await activateRestaurant(activeRestaurants[0].id, true)
+        setToast('Se ha cambiado al primer restaurante activo disponible')
+        return
+      }
+
+      if (activeRestaurants.length === 1 && !payload.current_restaurant_id) {
+        await activateRestaurant(activeRestaurants[0].id, true)
+        return
+      }
+
+      if (!activeRestaurants.length && restaurants.length > 0) {
+        setError('Todos tus restaurantes asignados están inactivos. Contacta con soporte.')
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'No se pudo cargar la asignación de restaurantes'
+      )
+    }
   })
 
   useEffect(() => {
@@ -273,86 +378,14 @@ export default function HomePage() {
     }
   }, [])
 
-  async function activateRestaurant(restaurantId: string, silent = false) {
-    if (!session?.access_token) return
-
-    setSwitchingRestaurant(true)
-    setError('')
-
-    try {
-      const response = await fetch('/api/auth/restaurants', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ restaurantId }),
-      })
-
-      const payload = (await response.json()) as { error?: string }
-
-      if (!response.ok) {
-        throw new Error(payload.error || 'No se pudo cambiar el restaurante activo')
-      }
-
-      const { data, error } = await supabase.auth.refreshSession()
-      if (error) throw error
-
-      setSession(data.session ?? null)
-      setCurrentUser(data.session?.user ?? null)
-
-      if (!silent) {
-        setToast('Restaurante activo actualizado')
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo cambiar el restaurante activo')
-    } finally {
-      setSwitchingRestaurant(false)
-    }
-  }
-
-  const loadAccessibleRestaurantsEvent = useEffectEvent(async () => {
-    if (!session?.access_token) {
+  useEffect(() => {
+    if (!authReady || !currentUser) {
       setAccessibleRestaurants([])
       return
     }
 
-    setLoadingAccessibleRestaurants(true)
-
-    try {
-      const response = await fetch('/api/auth/restaurants', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      })
-
-      const payload = (await response.json()) as {
-        error?: string
-        restaurants?: ManagedRestaurant[]
-        current_restaurant_id?: string | null
-      }
-
-      if (!response.ok) {
-        throw new Error(payload.error || 'No se pudo cargar la asignación de restaurantes')
-      }
-
-      const restaurants = payload.restaurants ?? []
-      setAccessibleRestaurants(restaurants)
-
-      if (restaurants.length === 1 && !payload.current_restaurant_id) {
-        await activateRestaurant(restaurants[0].id, true)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo cargar la asignación de restaurantes')
-    } finally {
-      setLoadingAccessibleRestaurants(false)
-    }
-  })
-
-  useEffect(() => {
-    if (!authReady || !session || !currentUser) return
     void loadAccessibleRestaurantsEvent()
-  }, [authReady, session, currentUser])
+  }, [authReady, currentUser])
 
   const loadInitialDataEvent = useEffectEvent(async () => {
     const role = getUserRole(currentUser)
@@ -392,10 +425,9 @@ export default function HomePage() {
   })
 
   useEffect(() => {
-    if (!authReady || !session || loadingAccessibleRestaurants || switchingRestaurant) return
-    if (currentRestaurantScope.restaurantIds.length > 0 && !activeRestaurantId) return
+    if (!authReady || !session) return
     void loadInitialDataEvent()
-  }, [authReady, session, loadingAccessibleRestaurants, switchingRestaurant, activeRestaurantId, currentRestaurantScope.restaurantIds.length])
+  }, [authReady, session])
 
   const syncManagedUsersForActiveTab = useEffectEvent(async () => {
     if (!session || !canManageUsers(getUserRole(currentUser))) {
@@ -404,7 +436,7 @@ export default function HomePage() {
     }
 
     if (tab === 'usuarios') {
-      await Promise.all([loadManagedUsers(), loadManagedRestaurants()])
+      await loadManagedUsers()
     }
   })
 
@@ -532,7 +564,6 @@ export default function HomePage() {
     registrarConsumo,
     resetStockState,
   } = useStockManagement({
-    currentRestaurantId: activeRestaurantId,
     onError: setError,
     onToast: setToast,
     requirePermission,
@@ -561,7 +592,6 @@ export default function HomePage() {
     reactivarProveedor,
     resetProveedorState,
   } = useProveedorManagement({
-    currentRestaurantId: activeRestaurantId,
     onError: setError,
     onToast: setToast,
     requirePermission,
@@ -619,7 +649,6 @@ export default function HomePage() {
     getOCRStatusClasses,
     resetAlbaranState,
   } = useAlbaranManagement({
-    currentRestaurantId: activeRestaurantId,
     productos,
     proveedores,
     mapeosProductos,
@@ -669,7 +698,6 @@ export default function HomePage() {
     aplicarImportacionTPV,
     resetRecetaTpvState,
   } = useRecetaTpvManagement({
-    currentRestaurantId: activeRestaurantId,
     onError: setError,
     onToast: setToast,
     requirePermission,
@@ -688,16 +716,10 @@ export default function HomePage() {
   async function loadAuditoria() {
     setLoadingAuditoria(true)
 
-    let query = supabase
+    const { data, error } = await supabase
       .from('auditoria')
       .select('*')
       .order('created_at', { ascending: false })
-
-    if (activeRestaurantId) {
-      query = query.eq('restaurant_id', activeRestaurantId)
-    }
-
-    const { data, error } = await query
 
     if (error) {
       setError(error.message)
@@ -710,16 +732,10 @@ export default function HomePage() {
   }
 
   async function loadMapeosProductos() {
-    let query = supabase
+    const { data, error } = await supabase
       .from('mapeos_productos')
       .select('*')
       .order('created_at', { ascending: false })
-
-    if (activeRestaurantId) {
-      query = query.eq('restaurant_id', activeRestaurantId)
-    }
-
-    const { data, error } = await query
 
     if (error) {
       console.warn('No se pudieron cargar mapeos_productos:', error.message)
@@ -877,7 +893,6 @@ export default function HomePage() {
       })
   }, [auditoria, busquedaAuditoria, auditoriaDesde, auditoriaHasta, auditoriaEntidadFiltro, auditoriaAccionFiltro])
 
-  const currentUserRole = getUserRole(currentUser)
   const canManageStock = hasPermission(currentUserRole, 'stock_manage')
   const canAdjustStock = hasPermission(currentUserRole, 'stock_adjust')
   const canManageProveedores = hasPermission(currentUserRole, 'proveedor_manage')
@@ -896,9 +911,6 @@ export default function HomePage() {
   const userRoleLabel = getUserRoleLabel(currentUser)
   const restaurantScopeLabel = getRestaurantScopeLabel(currentRestaurantScope)
   const restaurantScopeDetail = getRestaurantScopeDetail(currentRestaurantScope)
-  const needsRestaurantSelection =
-    !!session && !!currentUser && accessibleRestaurants.length > 1 && !activeRestaurantId
-  const normalizedActiveRestaurantId = activeRestaurantId || accessibleRestaurants[0]?.id || ''
   const userInitials = getInitials(userDisplayName || 'Usuario')
   const totalCategorias = categoriasProducto.length
   const topSearchPlaceholder =
@@ -1098,41 +1110,6 @@ export default function HomePage() {
 
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-[#f6f8fc] pb-28 text-slate-900 lg:pb-16">
-      {needsRestaurantSelection ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl rounded-[28px] border border-white/80 bg-white p-5 shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
-            <div className="mb-4">
-              <h2 className="text-[1.4rem] font-semibold tracking-tight text-slate-950">
-                Elige restaurante
-              </h2>
-              <p className="mt-1 text-[13px] text-slate-500">
-                Tu cuenta tiene acceso a varios restaurantes. Selecciona cuál quieres abrir ahora.
-              </p>
-            </div>
-
-            <div className="grid gap-3">
-              {accessibleRestaurants.map((restaurant) => (
-                <button
-                  key={restaurant.id}
-                  type="button"
-                  onClick={() => void activateRestaurant(restaurant.id)}
-                  disabled={switchingRestaurant}
-                  className="flex items-center justify-between rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4 text-left transition hover:border-blue-200 hover:bg-blue-50/60 disabled:opacity-60"
-                >
-                  <div>
-                    <div className="text-[15px] font-semibold text-slate-900">{restaurant.nombre}</div>
-                    <div className="mt-1 text-[12px] text-slate-500">{restaurant.slug}</div>
-                  </div>
-                  <div className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-slate-200">
-                    {switchingRestaurant ? 'Abriendo...' : 'Entrar'}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-[-10rem] top-[-6rem] h-[24rem] w-[24rem] rounded-full bg-blue-200/30 blur-3xl" />
         <div className="absolute right-[-6rem] top-[4rem] h-[22rem] w-[22rem] rounded-full bg-violet-200/30 blur-3xl" />
@@ -1147,11 +1124,8 @@ export default function HomePage() {
           userRoleLabel={userRoleLabel}
           userEmail={currentUser.email || ''}
           restaurantScopeLabel={restaurantScopeLabel}
-          activeRestaurantId={normalizedActiveRestaurantId}
-          accessibleRestaurants={accessibleRestaurants.map((restaurant) => ({
-            id: restaurant.id,
-            nombre: restaurant.nombre,
-          }))}
+          activeRestaurantId={activeRestaurantId ?? ''}
+          accessibleRestaurants={accessibleRestaurants}
           switchingRestaurant={switchingRestaurant}
           currentUserRole={currentUserRole}
           currentMainTab={mainTab}
@@ -1377,6 +1351,7 @@ export default function HomePage() {
           <UserManagementPanel
             currentUserId={currentUser?.id || ''}
             currentUserRole={currentUserRole}
+            currentRestaurantId={activeRestaurantId ?? ''}
             managedUsers={managedUsers}
             managedRestaurants={managedRestaurants}
             loadingManagedRestaurants={loadingManagedRestaurants}
@@ -1386,6 +1361,7 @@ export default function HomePage() {
             creatingManagedUser={creatingManagedUser}
             creatingManagedRestaurant={creatingManagedRestaurant}
             savingManagedRestaurantId={savingManagedRestaurantId}
+            syncingManagedRestaurantMemberships={syncingManagedRestaurantMemberships}
             deletingManagedUserId={deletingManagedUserId}
             resettingManagedUserId={resettingManagedUserId}
             blockingManagedUserId={blockingManagedUserId}
@@ -1398,9 +1374,12 @@ export default function HomePage() {
             newManagedUserEmail={newManagedUserEmail}
             newManagedUserPassword={newManagedUserPassword}
             newManagedUserRole={newManagedUserRole}
+            newManagedUserRestaurantIds={newManagedUserRestaurantIds}
+            newManagedUserCurrentRestaurantId={newManagedUserCurrentRestaurantId}
             newManagedUserNameError={newManagedUserNameError}
             newManagedUserEmailError={newManagedUserEmailError}
             newManagedUserPasswordError={newManagedUserPasswordError}
+            newManagedUserRestaurantsError={newManagedUserRestaurantsError}
             canSubmitManagedUser={canSubmitManagedUser}
             managedUserPasswordDrafts={managedUserPasswordDrafts}
             managedUserRestaurantDrafts={managedUserRestaurantDrafts}
@@ -1413,6 +1392,7 @@ export default function HomePage() {
             onReloadRestaurants={() => void loadManagedRestaurants()}
             onCreate={() => void createManagedUser()}
             onCreateRestaurant={() => void createManagedRestaurant()}
+            onSyncRestaurantMemberships={() => void syncManagedRestaurantMemberships()}
             onUpdateRole={(userId, role) => void updateManagedUserRole(userId, role)}
             onDelete={(userId, label) => void deleteManagedUser(userId, label)}
             onResetPassword={(userId, label) => void resetManagedUserPassword(userId, label)}
@@ -1427,6 +1407,20 @@ export default function HomePage() {
             onNewEmailChange={setNewManagedUserEmail}
             onNewPasswordChange={setNewManagedUserPassword}
             onNewRoleChange={setNewManagedUserRole}
+            onNewManagedUserRestaurantToggle={(restaurantId, checked) => {
+              setNewManagedUserRestaurantIds((current) => {
+                const nextList = checked
+                  ? Array.from(new Set([...current, restaurantId]))
+                  : current.filter((item) => item !== restaurantId)
+
+                setNewManagedUserCurrentRestaurantId((currentRestaurant) =>
+                  nextList.includes(currentRestaurant) ? currentRestaurant : nextList[0] ?? ''
+                )
+
+                return nextList
+              })
+            }}
+            onNewManagedUserCurrentRestaurantChange={setNewManagedUserCurrentRestaurantId}
             onNewRestaurantNameChange={setNewRestaurantName}
             onNewRestaurantSlugChange={setNewRestaurantSlug}
             onManagedPasswordDraftChange={(userId, value) =>
@@ -1447,6 +1441,9 @@ export default function HomePage() {
                 [restaurantId]: value,
               }))
             }
+            onRestaurantActiveDraftChange={(restaurantId, value) =>
+              toggleManagedRestaurantActiveDraft(restaurantId, value)
+            }
             onManagedRestaurantDraftToggle={(userId, restaurantId, checked) => {
               setManagedUserRestaurantDrafts((current) => {
                 const currentList = current[userId] ?? []
@@ -1454,12 +1451,11 @@ export default function HomePage() {
                   ? Array.from(new Set([...currentList, restaurantId]))
                   : currentList.filter((item) => item !== restaurantId)
 
-                setManagedUserCurrentRestaurantDrafts((currentCurrent) => ({
-                  ...currentCurrent,
-                  [userId]:
-                    nextList.includes(currentCurrent[userId])
-                      ? currentCurrent[userId]
-                      : nextList[0] ?? '',
+                setManagedUserCurrentRestaurantDrafts((currentRestaurantDrafts) => ({
+                  ...currentRestaurantDrafts,
+                  [userId]: nextList.includes(currentRestaurantDrafts[userId] ?? '')
+                    ? currentRestaurantDrafts[userId] ?? ''
+                    : nextList[0] ?? '',
                 }))
 
                 return {
@@ -1474,9 +1470,7 @@ export default function HomePage() {
                 [userId]: restaurantId,
               }))
             }
-            onSaveRestaurants={(userId, label) =>
-              void updateManagedUserRestaurants(userId, label)
-            }
+            onSaveRestaurants={(userId, label) => void updateManagedUserRestaurants(userId, label)}
             onSaveRestaurant={(restaurantId) => void saveManagedRestaurant(restaurantId)}
           />
         )}
@@ -1533,11 +1527,8 @@ export default function HomePage() {
         userRoleLabel={userRoleLabel}
         restaurantScopeLabel={restaurantScopeLabel}
         restaurantScopeDetail={restaurantScopeDetail}
-        accessibleRestaurants={accessibleRestaurants.map((restaurant) => ({
-          id: restaurant.id,
-          nombre: restaurant.nombre,
-        }))}
-        activeRestaurantId={normalizedActiveRestaurantId}
+        accessibleRestaurants={accessibleRestaurants}
+        activeRestaurantId={activeRestaurantId ?? ''}
         switchingRestaurant={switchingRestaurant}
         savingProfile={savingProfile}
         currentPasswordDraft={currentPasswordDraft}
@@ -1553,9 +1544,9 @@ export default function HomePage() {
         onCurrentPasswordChange={setCurrentPasswordDraft}
         onNewPasswordChange={setNewPasswordDraft}
         onConfirmPasswordChange={setConfirmPasswordDraft}
+        onRestaurantChange={(restaurantId) => void activateRestaurant(restaurantId)}
         onSaveProfile={() => void updateOwnProfile()}
         onUpdatePassword={() => void updateOwnPassword()}
-        onRestaurantChange={(restaurantId) => void activateRestaurant(restaurantId)}
       />
 
       <ProductModal

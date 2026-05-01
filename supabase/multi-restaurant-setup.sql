@@ -47,6 +47,44 @@ where not exists (
   select 1 from public.restaurantes where slug = 'principal'
 );
 
+insert into public.usuario_restaurantes (user_id, restaurant_id, role, is_default)
+select distinct
+  auth_user.id,
+  candidate.restaurant_id,
+  case lower(coalesce(auth_user.raw_app_meta_data ->> 'role', auth_user.raw_user_meta_data ->> 'role', 'empleado'))
+    when 'master' then 'master'
+    when 'administrador' then 'administrador'
+    when 'admin' then 'administrador'
+    when 'encargado' then 'encargado'
+    else 'empleado'
+  end as role,
+  candidate.restaurant_id =
+    coalesce(
+      nullif(auth_user.raw_app_meta_data ->> 'current_restaurant_id', '')::uuid,
+      nullif(auth_user.raw_app_meta_data -> 'restaurant_ids' ->> 0, '')::uuid
+    ) as is_default
+from auth.users auth_user
+cross join lateral (
+  select distinct value::uuid as restaurant_id
+  from (
+    select jsonb_array_elements_text(
+      coalesce(auth_user.raw_app_meta_data -> 'restaurant_ids', '[]'::jsonb)
+    ) as value
+    union all
+    select nullif(auth_user.raw_app_meta_data ->> 'current_restaurant_id', '')
+  ) raw_ids
+  where value is not null and value <> ''
+) candidate
+where exists (
+  select 1
+  from public.restaurantes restaurant
+  where restaurant.id = candidate.restaurant_id
+)
+on conflict (user_id, restaurant_id) do update
+set
+  role = excluded.role,
+  is_default = excluded.is_default;
+
 alter table if exists public.productos add column if not exists restaurant_id uuid references public.restaurantes(id) on delete restrict;
 alter table if exists public.proveedores add column if not exists restaurant_id uuid references public.restaurantes(id) on delete restrict;
 alter table if exists public.movimientos_stock add column if not exists restaurant_id uuid references public.restaurantes(id) on delete restrict;
@@ -489,3 +527,34 @@ with check (
 
 comment on table public.restaurantes is 'Entidad multi-tenant principal de Nexo.';
 comment on table public.usuario_restaurantes is 'Relación entre usuarios autenticados y restaurantes accesibles.';
+
+drop policy if exists "authenticated read albaranes bucket" on storage.objects;
+drop policy if exists "encargado plus write albaranes bucket" on storage.objects;
+
+create policy "authenticated read albaranes bucket by restaurant folder"
+on storage.objects
+for select
+to authenticated
+using (
+  bucket_id = 'albaranes'
+  and array_length(storage.foldername(name), 1) >= 1
+  and public.user_has_restaurant_access(((storage.foldername(name))[1])::uuid)
+  and public.has_any_app_role(array['encargado', 'administrador', 'master'])
+);
+
+create policy "encargado plus write albaranes bucket by restaurant folder"
+on storage.objects
+for all
+to authenticated
+using (
+  bucket_id = 'albaranes'
+  and array_length(storage.foldername(name), 1) >= 1
+  and public.user_has_restaurant_access(((storage.foldername(name))[1])::uuid)
+  and public.has_any_app_role(array['encargado', 'administrador', 'master'])
+)
+with check (
+  bucket_id = 'albaranes'
+  and array_length(storage.foldername(name), 1) >= 1
+  and public.user_has_restaurant_access(((storage.foldername(name))[1])::uuid)
+  and public.has_any_app_role(array['encargado', 'administrador', 'master'])
+);
