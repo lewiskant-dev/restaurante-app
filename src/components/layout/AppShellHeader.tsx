@@ -280,7 +280,7 @@ export function AppShellHeader({
     () => (canAccessTab(currentUserRole, 'usuarios') ? (['usuarios'] as TabKey[]) : []),
     [currentUserRole]
   )
-  const showRestaurantSelector = accessibleRestaurants.length > 1
+  const showRestaurantSelector = accessibleRestaurants.length > 0
 
   const handleGroupTabChange = (group: MainTab, tab: TabKey) => {
     onMainTabChange(group)
@@ -306,6 +306,25 @@ export function AppShellHeader({
             </div>
           </div>
         </button>
+
+        {showRestaurantSelector ? (
+          <select
+            value={activeRestaurantId}
+            onChange={(e) => onRestaurantChange(e.target.value)}
+            disabled={switchingRestaurant || accessibleRestaurants.length <= 1}
+            className="mt-3 w-full rounded-[15px] border border-slate-200 bg-slate-50 px-3 py-2.5 text-[12px] font-medium text-slate-700 outline-none disabled:opacity-60"
+          >
+            {accessibleRestaurants.map((restaurant) => (
+              <option key={restaurant.id} value={restaurant.id} disabled={!restaurant.activo}>
+                {switchingRestaurant && activeRestaurantId === restaurant.id
+                  ? `${restaurant.nombre} · cambiando...`
+                  : restaurant.activo
+                    ? restaurant.nombre
+                    : `${restaurant.nombre} · inactivo`}
+              </option>
+            ))}
+          </select>
+        ) : null}
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto px-3 py-3.5">
@@ -418,7 +437,7 @@ export function AppShellHeader({
               <select
                 value={activeRestaurantId}
                 onChange={(e) => onRestaurantChange(e.target.value)}
-                disabled={switchingRestaurant}
+                disabled={switchingRestaurant || accessibleRestaurants.length <= 1}
                 className="w-full rounded-[16px] border border-slate-200 bg-white px-3 py-2.5 text-[12px] font-medium text-slate-700 outline-none shadow-[0_6px_14px_rgba(15,23,42,0.028)] disabled:opacity-60"
               >
                 {accessibleRestaurants.map((restaurant) => (

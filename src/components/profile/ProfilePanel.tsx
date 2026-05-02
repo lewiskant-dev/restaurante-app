@@ -127,11 +127,11 @@ export function ProfilePanel({
                 </div>
                 <div className="mt-1 text-sm font-medium text-slate-800">{restaurantScopeLabel}</div>
                 <div className="mt-1 text-xs text-slate-500">{restaurantScopeDetail}</div>
-                {accessibleRestaurants.length > 1 ? (
+                {accessibleRestaurants.length > 0 ? (
                   <select
                     value={activeRestaurantId}
                     onChange={(e) => onRestaurantChange(e.target.value)}
-                    disabled={switchingRestaurant}
+                    disabled={switchingRestaurant || accessibleRestaurants.length <= 1}
                     className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none disabled:opacity-60"
                   >
                     {accessibleRestaurants.map((restaurant) => (

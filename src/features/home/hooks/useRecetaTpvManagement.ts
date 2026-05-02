@@ -513,9 +513,19 @@ export function useRecetaTpvManagement({
 
       setTpvImportacionId(importacion.id)
 
-      const { data: recetasData } = await supabase.from('recetas').select('*')
-      const { data: lineasData } = await supabase.from('recetas_lineas').select('*')
-      const { data: productosActuales } = await supabase.from('productos').select('*')
+      let recetasQuery = supabase.from('recetas').select('*')
+      let lineasQuery = supabase.from('recetas_lineas').select('*')
+      let productosQuery = supabase.from('productos').select('*')
+
+      if (currentRestaurantId) {
+        recetasQuery = recetasQuery.eq('restaurant_id', currentRestaurantId)
+        lineasQuery = lineasQuery.eq('restaurant_id', currentRestaurantId)
+        productosQuery = productosQuery.eq('restaurant_id', currentRestaurantId)
+      }
+
+      const { data: recetasData } = await recetasQuery
+      const { data: lineasData } = await lineasQuery
+      const { data: productosActuales } = await productosQuery
 
       const recetasMap = new Map<string, Receta>()
       ;((recetasData ?? []) as Receta[]).forEach((r) => {

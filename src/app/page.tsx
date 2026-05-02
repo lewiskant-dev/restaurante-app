@@ -569,6 +569,7 @@ export default function HomePage() {
     registrarConsumo,
     resetStockState,
   } = useStockManagement({
+    currentRestaurantId: activeRestaurantId,
     onError: setError,
     onToast: setToast,
     requirePermission,
@@ -597,6 +598,7 @@ export default function HomePage() {
     reactivarProveedor,
     resetProveedorState,
   } = useProveedorManagement({
+    currentRestaurantId: activeRestaurantId,
     onError: setError,
     onToast: setToast,
     requirePermission,
@@ -654,6 +656,7 @@ export default function HomePage() {
     getOCRStatusClasses,
     resetAlbaranState,
   } = useAlbaranManagement({
+    currentRestaurantId: activeRestaurantId,
     productos,
     proveedores,
     mapeosProductos,
@@ -703,6 +706,7 @@ export default function HomePage() {
     aplicarImportacionTPV,
     resetRecetaTpvState,
   } = useRecetaTpvManagement({
+    currentRestaurantId: activeRestaurantId,
     onError: setError,
     onToast: setToast,
     requirePermission,
@@ -721,10 +725,13 @@ export default function HomePage() {
   async function loadAuditoria() {
     setLoadingAuditoria(true)
 
-    const { data, error } = await supabase
-      .from('auditoria')
-      .select('*')
-      .order('created_at', { ascending: false })
+    let query = supabase.from('auditoria').select('*').order('created_at', { ascending: false })
+
+    if (activeRestaurantId) {
+      query = query.eq('restaurant_id', activeRestaurantId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       setError(error.message)
@@ -737,10 +744,16 @@ export default function HomePage() {
   }
 
   async function loadMapeosProductos() {
-    const { data, error } = await supabase
+    let query = supabase
       .from('mapeos_productos')
       .select('*')
       .order('created_at', { ascending: false })
+
+    if (activeRestaurantId) {
+      query = query.eq('restaurant_id', activeRestaurantId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       console.warn('No se pudieron cargar mapeos_productos:', error.message)
@@ -914,8 +927,14 @@ export default function HomePage() {
   )
   const userDisplayName = getUserDisplayName(currentUser)
   const userRoleLabel = getUserRoleLabel(currentUser)
-  const restaurantScopeLabel = getRestaurantScopeLabel(currentRestaurantScope)
-  const restaurantScopeDetail = getRestaurantScopeDetail(currentRestaurantScope)
+  const restaurantScopeLabel = getRestaurantScopeLabel(
+    currentRestaurantScope,
+    accessibleRestaurants
+  )
+  const restaurantScopeDetail = getRestaurantScopeDetail(
+    currentRestaurantScope,
+    accessibleRestaurants
+  )
   const hasAnyAssignedRestaurant = accessibleRestaurants.length > 0
   const hasAnyActiveRestaurant = accessibleRestaurants.some((restaurant) => restaurant.activo)
   const userInitials = getInitials(userDisplayName || 'Usuario')

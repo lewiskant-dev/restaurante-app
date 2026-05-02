@@ -343,11 +343,17 @@ export function useAlbaranManagement({
     setLoadingAlbaranDetalle(true)
     setAlbaranLineasDetalle([])
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('albaran_lineas')
       .select('*')
       .eq('albaran_id', albaran.id)
       .order('created_at', { ascending: true })
+
+    if (currentRestaurantId) {
+      query = query.eq('restaurant_id', currentRestaurantId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       onError(error.message)
@@ -451,11 +457,17 @@ export function useAlbaranManagement({
   async function cargarAlbaranParaEditar(albaran: Albaran) {
     onError('')
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('albaran_lineas')
       .select('*')
       .eq('albaran_id', albaran.id)
       .order('created_at', { ascending: true })
+
+    if (currentRestaurantId) {
+      query = query.eq('restaurant_id', currentRestaurantId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       onError(error.message)
@@ -490,10 +502,13 @@ export function useAlbaranManagement({
   }
 
   async function revertirAlbaranExistente(albaranId: string) {
-    const { data: lineas, error: lineasError } = await supabase
-      .from('albaran_lineas')
-      .select('*')
-      .eq('albaran_id', albaranId)
+    let query = supabase.from('albaran_lineas').select('*').eq('albaran_id', albaranId)
+
+    if (currentRestaurantId) {
+      query = query.eq('restaurant_id', currentRestaurantId)
+    }
+
+    const { data: lineas, error: lineasError } = await query
 
     if (lineasError) {
       throw new Error(lineasError.message)

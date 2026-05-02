@@ -3,6 +3,12 @@ export type RestaurantScope = {
   restaurantIds: string[]
 }
 
+type RestaurantLike = {
+  id: string
+  nombre: string
+  activo: boolean
+}
+
 function normalizeRestaurantId(value: unknown) {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
@@ -47,13 +53,54 @@ export function buildInheritedRestaurantAppMetadata(
   }
 }
 
-export function getRestaurantScopeLabel(scope: RestaurantScope) {
+export function getRestaurantScopeLabel(
+  scope: RestaurantScope,
+  restaurants: RestaurantLike[] = []
+) {
+  if (restaurants.length > 0) {
+    if (restaurants.length === 1) {
+      return restaurants[0].activo ? restaurants[0].nombre : `${restaurants[0].nombre} · inactivo`
+    }
+
+    return restaurants
+      .map((restaurant) =>
+        restaurant.activo ? restaurant.nombre : `${restaurant.nombre} · inactivo`
+      )
+      .join(', ')
+  }
+
   if (scope.restaurantIds.length === 0) return 'Sin restaurante asignado'
   if (scope.restaurantIds.length === 1) return '1 restaurante asignado'
   return `${scope.restaurantIds.length} restaurantes asignados`
 }
 
-export function getRestaurantScopeDetail(scope: RestaurantScope) {
+export function getRestaurantScopeDetail(
+  scope: RestaurantScope,
+  restaurants: RestaurantLike[] = []
+) {
+  if (restaurants.length > 0) {
+    const activeRestaurant =
+      restaurants.find((restaurant) => restaurant.id === scope.currentRestaurantId) ?? null
+
+    if (restaurants.length === 1) {
+      return activeRestaurant
+        ? 'Tu cuenta opera únicamente sobre este restaurante.'
+        : 'Tu cuenta está ligada a un único restaurante.'
+    }
+
+    const otherRestaurants = restaurants
+      .filter((restaurant) => restaurant.id !== activeRestaurant?.id)
+      .map((restaurant) => restaurant.nombre)
+
+    if (activeRestaurant) {
+      return otherRestaurants.length
+        ? `Restaurante activo: ${activeRestaurant.nombre}. También tienes acceso a ${otherRestaurants.join(', ')}.`
+        : `Restaurante activo: ${activeRestaurant.nombre}.`
+    }
+
+    return `Tienes acceso a ${restaurants.map((restaurant) => restaurant.nombre).join(', ')}.`
+  }
+
   if (scope.restaurantIds.length === 0) {
     return 'La cuenta todavía no tiene un restaurante activo definido.'
   }
