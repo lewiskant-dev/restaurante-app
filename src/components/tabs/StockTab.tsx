@@ -530,8 +530,11 @@ export default function StockTab({
                           : 'text-emerald-600'
 
                     return (
-                      <tr key={producto.id} className="border-b border-slate-100 last:border-b-0">
-                        <td className="px-4 py-3">
+                      <tr
+                        key={producto.id}
+                        className="relative border-b border-slate-100 last:border-b-0 focus-within:z-20 hover:z-10"
+                      >
+                        <td className="relative px-4 py-3">
                           <button
                             type="button"
                             onClick={() => !producto.archivado && onOpenConsumo(producto)}

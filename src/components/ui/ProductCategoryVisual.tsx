@@ -37,14 +37,16 @@ export function getCategoryVisual(category: string) {
 
   if (normalized === 'Frutas y verduras') {
     return {
-      hue: 'from-stone-100 to-slate-50',
+      hue: 'from-emerald-100 to-lime-50',
       art: (
         <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <ellipse cx="18" cy="28" rx="8" ry="10" fill="#F4F1EC" />
-          <ellipse cx="24" cy="26" rx="8" ry="11" fill="#FCFAF7" />
-          <ellipse cx="30" cy="28" rx="8" ry="10" fill="#F0ECE6" />
-          <path d="M23 12c2-4 5-6 8-7-1 4-4 8-8 10" fill="#A2B273" />
-          <path d="M16 29c4-2 12-2 16 0" stroke="#D5CEC3" strokeWidth="1.2" />
+          <rect x="10" y="17" width="28" height="17" rx="5" fill="#A7F3D0" />
+          <path d="M14 21h20" stroke="#34D399" strokeWidth="1.7" />
+          <path d="M14 26h20" stroke="#34D399" strokeWidth="1.7" />
+          <path d="M18 14c2-3 5-5 8-5 2 0 4 1 5 2-4 1-8 4-10 8" fill="#16A34A" />
+          <circle cx="19" cy="27" r="2.3" fill="#F97316" />
+          <circle cx="26" cy="25" r="2.1" fill="#FACC15" />
+          <circle cx="31" cy="28" r="2.4" fill="#22C55E" />
         </svg>
       ),
     }
@@ -52,14 +54,14 @@ export function getCategoryVisual(category: string) {
 
   if (normalized === 'Bebidas') {
     return {
-      hue: 'from-red-100 to-rose-50',
+      hue: 'from-sky-100 to-blue-50',
       art: (
         <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <rect x="16" y="6" width="16" height="36" rx="5" fill="#D92128" />
-          <rect x="18" y="9" width="12" height="30" rx="4" fill="#EF4047" />
-          <path d="M20 16c4-1 8 1 12 0" stroke="#F9D6D9" strokeWidth="1.5" />
-          <path d="M20 24c4-1 8 1 12 0" stroke="#F9D6D9" strokeWidth="1.5" />
-          <path d="M20 32c4-1 8 1 12 0" stroke="#F9D6D9" strokeWidth="1.5" />
+          <path d="M18 8h12l-2 12a6 6 0 0 1-6 5 6 6 0 0 1-6-5L18 8Z" fill="#60A5FA" />
+          <path d="M20 8h8" stroke="#1D4ED8" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M24 25v10" stroke="#1D4ED8" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M19 35h10" stroke="#1D4ED8" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M30 11c3 0 5 2 5 5 0 2-1 4-3 5" stroke="#93C5FD" strokeWidth="1.6" strokeLinecap="round" />
         </svg>
       ),
     }
@@ -95,12 +97,12 @@ export function getCategoryVisual(category: string) {
 
   if (normalized === 'Carnes') {
     return {
-      hue: 'from-rose-100 to-red-50',
+      hue: 'from-rose-100 to-orange-50',
       art: (
         <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <path d="M10 26c0-8 6-14 14-14 4 0 7 1 10 4s4 6 4 10c0 8-6 13-15 13-8 0-13-5-13-13Z" fill="#D9636B" />
-          <path d="M19 22c0-3 2-5 5-5 2 0 3 0 5 2 1 1 2 3 2 5 0 3-2 5-5 5-4 0-7-3-7-7Z" fill="#F9D9DC" />
-          <circle cx="31" cy="17" r="2.2" fill="#F3B8BE" />
+          <path d="M11 27c0-7 6-12 13-12 6 0 9 2 12 5s4 6 4 10c0 5-4 9-10 9-2 0-4-1-6-2-2 1-4 2-6 2-4 0-7-2-7-6 0-2 1-4 3-6Z" fill="#FB7185" />
+          <circle cx="29" cy="20" r="3.1" fill="#FFE4E6" />
+          <circle cx="29" cy="20" r="1.4" fill="#FDB4BE" />
         </svg>
       ),
     }
@@ -121,12 +123,13 @@ export function getCategoryVisual(category: string) {
 
   if (normalized === 'Despensa') {
     return {
-      hue: 'from-stone-100 to-zinc-50',
+      hue: 'from-amber-100 to-yellow-50',
       art: (
         <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <path d="m24 8 12 7v17l-12 8-12-8V15Z" fill="#C9D4E3" />
-          <path d="m12 15 12 7 12-7" stroke="#64748B" strokeWidth="1.5" />
-          <path d="M24 22v18" stroke="#64748B" strokeWidth="1.5" />
+          <rect x="14" y="10" width="20" height="28" rx="5" fill="#F59E0B" />
+          <rect x="17" y="15" width="14" height="16" rx="3" fill="#FEF3C7" />
+          <path d="M20 21h8" stroke="#D97706" strokeWidth="1.6" strokeLinecap="round" />
+          <path d="M19 10h10" stroke="#92400E" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       ),
     }
@@ -150,12 +153,12 @@ export function getCategoryVisual(category: string) {
 
   if (normalized === 'Limpieza') {
     return {
-      hue: 'from-violet-100 to-fuchsia-50',
+      hue: 'from-cyan-100 to-sky-50',
       art: (
         <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <path d="M20 9h10v4l-2 2v4h4v19H16V19h4v-4l-2-2Z" fill="#8B5CF6" />
-          <rect x="19" y="22" width="10" height="9" rx="2" fill="#DDD6FE" />
-          <path d="M18 19h12" stroke="#6D28D9" strokeWidth="1.5" />
+          <path d="M18 9h12v5l-3 3v4h5v17H16V21h5v-4l-3-3Z" fill="#38BDF8" />
+          <rect x="19" y="23" width="10" height="8" rx="2" fill="#E0F2FE" />
+          <path d="M18 20h12" stroke="#0284C7" strokeWidth="1.5" />
         </svg>
       ),
     }

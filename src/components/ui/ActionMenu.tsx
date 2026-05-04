@@ -21,7 +21,7 @@ export function ActionMenu({ children, label = 'Acciones' }: ActionMenuProps) {
       >
         {label}
       </summary>
-      <div className="absolute right-0 top-[calc(100%+0.5rem)] z-30 min-w-[170px] rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_18px_40px_rgba(15,23,42,0.18)]">
+      <div className="absolute right-0 top-[calc(100%+0.5rem)] z-30 min-w-[170px] rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_18px_40px_rgba(15,23,42,0.18)] lg:bottom-[calc(100%+0.5rem)] lg:top-auto">
         <div className="flex flex-col gap-2">{children}</div>
       </div>
     </details>
