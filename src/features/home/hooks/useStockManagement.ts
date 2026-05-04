@@ -54,6 +54,12 @@ export function useStockManagement({
   const [ajusteMotivo, setAjusteMotivo] = useState('Recuento manual')
   const [ajusteSaving, setAjusteSaving] = useState(false)
 
+  function requireActiveRestaurant() {
+    if (currentRestaurantId) return currentRestaurantId
+    onError('Selecciona un restaurante activo para continuar')
+    return null
+  }
+
   const productosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
     return productos
@@ -232,12 +238,13 @@ export function useStockManagement({
 
     try {
       if (productoEditId) {
-        const { data, error } = await supabase
-          .from('productos')
-          .update(payload)
-          .eq('id', productoEditId)
-          .select()
-          .single()
+        let query = supabase.from('productos').update(payload).eq('id', productoEditId)
+
+        if (currentRestaurantId) {
+          query = query.eq('restaurant_id', currentRestaurantId)
+        }
+
+        const { data, error } = await query.select().single()
 
         if (error) {
           throw new Error(error.message)
@@ -254,12 +261,16 @@ export function useStockManagement({
 
         onToast('Producto actualizado')
       } else {
+        const restaurantId = requireActiveRestaurant()
+        if (!restaurantId) return
+
         const { data, error } = await supabase
           .from('productos')
           .insert({
             ...payload,
             activo: true,
             archivado: false,
+            restaurant_id: restaurantId,
           })
           .select()
           .single()
@@ -299,13 +310,19 @@ export function useStockManagement({
     onError('')
     const payloadAntes = { ...producto }
 
-    const { error } = await supabase
+    let query = supabase
       .from('productos')
       .update({
         activo: false,
         archivado: true,
       })
       .eq('id', producto.id)
+
+    if (currentRestaurantId) {
+      query = query.eq('restaurant_id', currentRestaurantId)
+    }
+
+    const { error } = await query
 
     if (error) {
       onError(error.message)
@@ -337,13 +354,19 @@ export function useStockManagement({
     onError('')
     const payloadAntes = { ...producto }
 
-    const { error } = await supabase
+    let query = supabase
       .from('productos')
       .update({
         activo: true,
         archivado: false,
       })
       .eq('id', producto.id)
+
+    if (currentRestaurantId) {
+      query = query.eq('restaurant_id', currentRestaurantId)
+    }
+
+    const { error } = await query
 
     if (error) {
       onError(error.message)
@@ -407,12 +430,23 @@ export function useStockManagement({
     const stockAntes = Number(ajusteProducto.stock_actual)
     const stockDespues = nuevoStock
     const diferencia = stockDespues - stockAntes
+    const restaurantId = requireActiveRestaurant()
+    if (!restaurantId) {
+      setAjusteSaving(false)
+      return
+    }
 
     try {
-      const { error: updateError } = await supabase
+      let updateQuery = supabase
         .from('productos')
         .update({ stock_actual: stockDespues })
         .eq('id', ajusteProducto.id)
+
+      if (currentRestaurantId) {
+        updateQuery = updateQuery.eq('restaurant_id', currentRestaurantId)
+      }
+
+      const { error: updateError } = await updateQuery
 
       if (updateError) {
         throw new Error(updateError.message)
@@ -420,6 +454,7 @@ export function useStockManagement({
 
       const { error: movError } = await supabase.from('movimientos_stock').insert({
         producto_id: ajusteProducto.id,
+        restaurant_id: restaurantId,
         tipo: 'ajuste',
         cantidad: Math.abs(diferencia),
         motivo: ajusteMotivo,
@@ -502,11 +537,22 @@ export function useStockManagement({
 
     const stockAntes = Number(consumoProducto.stock_actual)
     const stockDespues = stockAntes - cantidad
+    const restaurantId = requireActiveRestaurant()
+    if (!restaurantId) {
+      setConsumoSaving(false)
+      return
+    }
 
-    const { error: updateError } = await supabase
+    let updateQuery = supabase
       .from('productos')
       .update({ stock_actual: stockDespues })
       .eq('id', consumoProducto.id)
+
+    if (currentRestaurantId) {
+      updateQuery = updateQuery.eq('restaurant_id', currentRestaurantId)
+    }
+
+    const { error: updateError } = await updateQuery
 
     if (updateError) {
       onError(updateError.message)
@@ -516,6 +562,7 @@ export function useStockManagement({
 
     const { error: movError } = await supabase.from('movimientos_stock').insert({
       producto_id: consumoProducto.id,
+      restaurant_id: restaurantId,
       tipo: 'consumo',
       cantidad,
       motivo: consumoMotivo,

@@ -41,6 +41,12 @@ export function useProveedorManagement({
   const [proveedorEditId, setProveedorEditId] = useState<string | null>(null)
   const [proveedorForm, setProveedorForm] = useState<ProveedorForm>(initialProveedorForm)
 
+  function requireActiveRestaurant() {
+    if (currentRestaurantId) return currentRestaurantId
+    onError('Selecciona un restaurante activo para continuar')
+    return null
+  }
+
   const proveedoresFiltrados = useMemo(() => {
     const q = busquedaProveedor.trim().toLowerCase()
     return proveedores
@@ -152,12 +158,13 @@ export function useProveedorManagement({
       if (proveedorEditId) {
         const proveedorAntes = proveedores.find((p) => p.id === proveedorEditId) || null
 
-        const { data, error } = await supabase
-          .from('proveedores')
-          .update(payload)
-          .eq('id', proveedorEditId)
-          .select()
-          .single()
+        let query = supabase.from('proveedores').update(payload).eq('id', proveedorEditId)
+
+        if (currentRestaurantId) {
+          query = query.eq('restaurant_id', currentRestaurantId)
+        }
+
+        const { data, error } = await query.select().single()
 
         if (error) {
           throw new Error(error.message)
@@ -174,12 +181,16 @@ export function useProveedorManagement({
 
         onToast('Proveedor actualizado')
       } else {
+        const restaurantId = requireActiveRestaurant()
+        if (!restaurantId) return
+
         const { data, error } = await supabase
           .from('proveedores')
           .insert({
             ...payload,
             activo: true,
             archivado: false,
+            restaurant_id: restaurantId,
           })
           .select()
           .single()
@@ -223,13 +234,19 @@ export function useProveedorManagement({
     onError('')
     const payloadAntes = { ...proveedor }
 
-    const { error } = await supabase
+    let query = supabase
       .from('proveedores')
       .update({
         activo: false,
         archivado: true,
       })
       .eq('id', proveedor.id)
+
+    if (currentRestaurantId) {
+      query = query.eq('restaurant_id', currentRestaurantId)
+    }
+
+    const { error } = await query
 
     if (error) {
       onError(error.message)
@@ -261,13 +278,19 @@ export function useProveedorManagement({
     onError('')
     const payloadAntes = { ...proveedor }
 
-    const { error } = await supabase
+    let query = supabase
       .from('proveedores')
       .update({
         activo: true,
         archivado: false,
       })
       .eq('id', proveedor.id)
+
+    if (currentRestaurantId) {
+      query = query.eq('restaurant_id', currentRestaurantId)
+    }
+
+    const { error } = await query
 
     if (error) {
       onError(error.message)

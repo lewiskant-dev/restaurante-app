@@ -60,6 +60,12 @@ export function useRecetaTpvManagement({
   )
   const [tpvGuardandoMapeo, setTpvGuardandoMapeo] = useState('')
 
+  function requireActiveRestaurant() {
+    if (currentRestaurantId) return currentRestaurantId
+    onError('Selecciona un restaurante activo para continuar')
+    return null
+  }
+
   const tpvPendientesMapeo = useMemo(() => {
     const recetasActivas = recetas.filter((receta) => receta.activo !== false)
     const recetasMap = new Map(
@@ -230,6 +236,9 @@ export function useRecetaTpvManagement({
     onError('')
 
     try {
+      const restaurantId = requireActiveRestaurant()
+      if (!restaurantId) return
+
       let recetaId = recetaEditId
 
       if (recetaEditId) {
@@ -243,6 +252,7 @@ export function useRecetaTpvManagement({
             activo: recetaActiva,
           })
           .eq('id', recetaEditId)
+          .eq('restaurant_id', restaurantId)
 
         if (updateError) throw new Error(updateError.message)
 
@@ -250,6 +260,7 @@ export function useRecetaTpvManagement({
           .from('recetas_lineas')
           .delete()
           .eq('receta_id', recetaEditId)
+          .eq('restaurant_id', restaurantId)
 
         if (deleteLinesError) throw new Error(deleteLinesError.message)
 
@@ -273,6 +284,7 @@ export function useRecetaTpvManagement({
             nombre: recetaNombre.trim(),
             nombre_tpv: recetaNombreTPV.trim() || null,
             activo: recetaActiva,
+            restaurant_id: restaurantId,
           })
           .select()
           .single()
@@ -303,6 +315,7 @@ export function useRecetaTpvManagement({
 
       const payloadLineas = lineasPreparadas.map((linea) => ({
         receta_id: recetaId,
+        restaurant_id: restaurantId,
         producto_id: linea.producto_id,
         cantidad: linea.cantidad,
       }))
@@ -328,7 +341,13 @@ export function useRecetaTpvManagement({
     onError('')
     const nuevoEstado = receta.activo === false
 
-    const { error } = await supabase.from('recetas').update({ activo: nuevoEstado }).eq('id', receta.id)
+    let query = supabase.from('recetas').update({ activo: nuevoEstado }).eq('id', receta.id)
+
+    if (currentRestaurantId) {
+      query = query.eq('restaurant_id', currentRestaurantId)
+    }
+
+    const { error } = await query
     if (error) {
       onError(error.message)
       return
@@ -361,12 +380,16 @@ export function useRecetaTpvManagement({
     onError('')
 
     try {
+      const restaurantId = requireActiveRestaurant()
+      if (!restaurantId) return
+
       const recetaAntes = recetas.find((r) => r.id === recetaId) || null
 
       const { error } = await supabase
         .from('recetas')
         .update({ nombre_tpv: productoExterno.trim() })
         .eq('id', recetaId)
+        .eq('restaurant_id', restaurantId)
 
       if (error) throw new Error(error.message)
 
@@ -482,6 +505,12 @@ export function useRecetaTpvManagement({
     onError('')
 
     try {
+      const restaurantId = requireActiveRestaurant()
+      if (!restaurantId) {
+        setTpvAplicando(false)
+        return
+      }
+
       const ventas = tpvVentasCrudas
 
       const { data: importacion, error: importError } = await supabase
@@ -489,6 +518,7 @@ export function useRecetaTpvManagement({
         .insert({
           nombre_archivo: tpvFile.name,
           procesado: false,
+          restaurant_id: restaurantId,
         })
         .select()
         .single()
@@ -499,6 +529,7 @@ export function useRecetaTpvManagement({
 
       const payload = ventas.map((venta) => ({
         importacion_id: importacion.id,
+        restaurant_id: restaurantId,
         producto_externo: venta.producto_externo,
         cantidad: venta.cantidad,
         fecha: venta.fecha,
@@ -565,11 +596,13 @@ export function useRecetaTpvManagement({
             .from('productos')
             .update({ stock_actual: stockDespues })
             .eq('id', producto.id)
+            .eq('restaurant_id', restaurantId)
 
           if (updateProductoError) throw new Error(updateProductoError.message)
 
           const { error: movError } = await supabase.from('movimientos_stock').insert({
             producto_id: producto.id,
+            restaurant_id: restaurantId,
             tipo: 'consumo',
             cantidad: consumo,
             motivo: `TPV: ${venta.producto_externo}`,

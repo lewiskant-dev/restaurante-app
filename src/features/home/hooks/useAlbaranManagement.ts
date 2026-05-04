@@ -70,6 +70,12 @@ export function useAlbaranManagement({
   const [detalleAlbaranOpen, setDetalleAlbaranOpen] = useState(false)
   const [detalleAlbaran, setDetalleAlbaran] = useState<Albaran | null>(null)
 
+  function requireActiveRestaurant() {
+    if (currentRestaurantId) return currentRestaurantId
+    onError('Selecciona un restaurante activo para continuar')
+    return null
+  }
+
   const albaranesFiltrados = useMemo(() => {
     const q = busquedaAlbaran.trim().toLowerCase()
 
@@ -226,9 +232,13 @@ export function useAlbaranManagement({
         return
       }
     } else {
+      const restaurantId = requireActiveRestaurant()
+      if (!restaurantId) return
+
       const { error } = await supabase.from('mapeos_productos').insert({
         nombre_externo: nombreExterno,
         producto_id: productoId,
+        restaurant_id: restaurantId,
       })
 
       if (error) {
@@ -377,11 +387,14 @@ export function useAlbaranManagement({
 
     try {
       const payloadAntes = { ...albaran }
+      const restaurantId = requireActiveRestaurant()
+      if (!restaurantId) return
 
       const { data: lineas, error: lineasError } = await supabase
         .from('albaran_lineas')
         .select('*')
         .eq('albaran_id', albaran.id)
+        .eq('restaurant_id', restaurantId)
 
       if (lineasError) {
         throw new Error(lineasError.message)
@@ -402,6 +415,7 @@ export function useAlbaranManagement({
           .from('productos')
           .update({ stock_actual: nuevoStock < 0 ? 0 : nuevoStock })
           .eq('id', producto.id)
+          .eq('restaurant_id', restaurantId)
 
         if (updateError) {
           throw new Error(updateError.message)
@@ -411,6 +425,7 @@ export function useAlbaranManagement({
       const { error: deleteMovError } = await supabase
         .from('movimientos_stock')
         .delete()
+        .eq('restaurant_id', restaurantId)
         .eq('origen_tipo', 'albaran')
         .eq('origen_id', albaran.id)
 
@@ -425,6 +440,7 @@ export function useAlbaranManagement({
           anulado_motivo: motivo || 'Sin motivo',
         })
         .eq('id', albaran.id)
+        .eq('restaurant_id', restaurantId)
 
       if (updateAlbError) {
         throw new Error(updateAlbError.message)
@@ -515,6 +531,8 @@ export function useAlbaranManagement({
     }
 
     const lineasExistentes = (lineas ?? []) as AlbaranLinea[]
+    const restaurantId = requireActiveRestaurant()
+    if (!restaurantId) return
 
     for (const linea of lineasExistentes) {
       if (!linea.producto_id) continue
@@ -529,6 +547,7 @@ export function useAlbaranManagement({
         .from('productos')
         .update({ stock_actual: nuevoStock < 0 ? 0 : nuevoStock })
         .eq('id', producto.id)
+        .eq('restaurant_id', restaurantId)
 
       if (updateError) {
         throw new Error(updateError.message)
@@ -538,6 +557,7 @@ export function useAlbaranManagement({
     const { error: deleteMovError } = await supabase
       .from('movimientos_stock')
       .delete()
+      .eq('restaurant_id', restaurantId)
       .eq('origen_tipo', 'albaran')
       .eq('origen_id', albaranId)
 
@@ -549,6 +569,7 @@ export function useAlbaranManagement({
       .from('albaran_lineas')
       .delete()
       .eq('albaran_id', albaranId)
+      .eq('restaurant_id', restaurantId)
 
     if (deleteLineasError) {
       throw new Error(deleteLineasError.message)
@@ -636,14 +657,15 @@ export function useAlbaranManagement({
 
     try {
       let fotoUrl = ''
+      const restaurantId = requireActiveRestaurant()
+      if (!restaurantId) {
+        setAlbaranSaving(false)
+        return
+      }
 
       if (albaranFoto) {
-        if (!currentRestaurantId) {
-          throw new Error('Falta el restaurante activo para guardar la imagen del albarán')
-        }
-
         const safeName = albaranFoto.name.replace(/\s+/g, '_')
-        const fileName = `${currentRestaurantId}/${Date.now()}_${safeName}`
+        const fileName = `${restaurantId}/${Date.now()}_${safeName}`
 
         const { error: uploadError } = await supabase.storage.from('albaranes').upload(fileName, albaranFoto)
 
@@ -678,6 +700,7 @@ export function useAlbaranManagement({
           .from('albaranes')
           .update(updatePayload)
           .eq('id', editingAlbaranId)
+          .eq('restaurant_id', restaurantId)
 
         if (updateAlbError) {
           throw new Error(updateAlbError.message)
@@ -695,6 +718,7 @@ export function useAlbaranManagement({
             foto_url: fotoUrl,
             anulado: false,
             anulado_motivo: '',
+            restaurant_id: restaurantId,
           })
           .select()
           .single()
@@ -712,6 +736,7 @@ export function useAlbaranManagement({
 
       const lineasPayload = lineasPreparadas.map((l) => ({
         albaran_id: albaranId,
+        restaurant_id: restaurantId,
         producto_id: l.producto_id,
         nombre_producto: l.producto!.nombre,
         cantidad: l.cantidad,
@@ -733,6 +758,7 @@ export function useAlbaranManagement({
           .from('productos')
           .update({ stock_actual: stockDespues })
           .eq('id', producto.id)
+          .eq('restaurant_id', restaurantId)
 
         if (updateError) {
           throw new Error(updateError.message)
@@ -740,6 +766,7 @@ export function useAlbaranManagement({
 
         const { error: movError } = await supabase.from('movimientos_stock').insert({
           producto_id: producto.id,
+          restaurant_id: restaurantId,
           tipo: 'entrada',
           cantidad: linea.cantidad,
           motivo: `Albarán ${albaranNumero.trim()}`,

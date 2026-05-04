@@ -807,13 +807,19 @@ export default function HomePage() {
 
     try {
       if (item.entidad === 'producto' && item.accion === 'archivar') {
-        const { error } = await supabase
+        let query = supabase
           .from('productos')
           .update({
             activo: true,
             archivado: false,
           })
           .eq('id', item.entidad_id)
+
+        if (activeRestaurantId) {
+          query = query.eq('restaurant_id', activeRestaurantId)
+        }
+
+        const { error } = await query
 
         if (error) {
           throw new Error(error.message)
@@ -840,13 +846,19 @@ export default function HomePage() {
       }
 
       if (item.entidad === 'proveedor' && item.accion === 'archivar') {
-        const { error } = await supabase
+        let query = supabase
           .from('proveedores')
           .update({
             activo: true,
             archivado: false,
           })
           .eq('id', item.entidad_id)
+
+        if (activeRestaurantId) {
+          query = query.eq('restaurant_id', activeRestaurantId)
+        }
+
+        const { error } = await query
 
         if (error) {
           throw new Error(error.message)
