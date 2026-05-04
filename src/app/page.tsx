@@ -6,6 +6,7 @@ import { UserManagementPanel } from '@/components/admin/UserManagementPanel'
 import { AuthScreen } from '@/components/auth/AuthScreen'
 import { AppShellHeader } from '@/components/layout/AppShellHeader'
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
+import { NotificationsBell } from '@/components/layout/NotificationsBell'
 import { AjusteStockModal } from '@/components/modals/AjusteStockModal'
 import { ConsumoModal } from '@/components/modals/ConsumoModal'
 import { DetalleAlbaranModal } from '@/components/modals/DetalleAlbaranModal'
@@ -51,7 +52,6 @@ import {
   hasPermission,
   mainTabConfig,
   todayLocalInputDate,
-  formatCantidad,
 } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
 import {
@@ -1327,80 +1327,15 @@ export default function HomePage() {
           </label>
 
           <div className="flex items-center gap-3">
-            <div className="group relative">
-              <button
-                type="button"
-                className="relative flex h-9 w-9 items-center justify-center rounded-[15px] border border-slate-200 bg-white text-slate-600 shadow-sm"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-5 w-5"
-                  aria-hidden="true"
-                >
-                  <path d="M7 9a5 5 0 0 1 10 0v4.2c0 .53.2 1.04.56 1.42L19 16H5l1.44-1.38c.36-.38.56-.9.56-1.42V9" />
-                  <path d="M10 19a2 2 0 0 0 4 0" />
-                </svg>
-                {productosStockBajo.length > 0 ? (
-                  <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-semibold text-white">
-                    {Math.min(productosStockBajo.length, 9)}
-                  </span>
-                ) : null}
-              </button>
-
-              <div className="invisible absolute right-0 top-[calc(100%+0.75rem)] z-[120] w-[320px] overflow-hidden rounded-[22px] border border-slate-200 bg-white opacity-0 shadow-[0_22px_48px_rgba(15,23,42,0.14)] transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
-                <div className="border-b border-slate-100 px-4 py-3.5">
-                  <div className="text-[14px] font-semibold text-slate-950">Notificaciones</div>
-                  <div className="mt-0.5 text-[12px] text-slate-500">
-                    {productosStockBajo.length > 0
-                      ? `${productosStockBajo.length} alerta${productosStockBajo.length === 1 ? '' : 's'} de stock`
-                      : 'Sin alertas importantes ahora mismo'}
-                  </div>
-                </div>
-
-                {productosStockBajo.length > 0 ? (
-                  <div className="max-h-[360px] space-y-2 overflow-y-auto p-3">
-                    {productosStockBajo.slice(0, 5).map((producto) => (
-                      <div
-                        key={producto.id}
-                        className="rounded-[18px] border border-amber-100 bg-amber-50/60 p-3"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="truncate text-[13px] font-semibold text-slate-900">
-                              {producto.nombre}
-                            </div>
-                            <div className="mt-1 text-[11px] text-slate-500">
-                              Actual {formatCantidad(producto.stock_actual)} · Mínimo{' '}
-                              {formatCantidad(producto.stock_minimo)}
-                            </div>
-                          </div>
-                          <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                            Stock bajo
-                          </span>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => reviewStockAlert(producto.id)}
-                          className="mt-3 inline-flex rounded-[12px] bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white"
-                        >
-                          Revisar producto
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="px-4 py-6 text-center text-[12px] text-slate-500">
-                    Todo está en orden. No hay productos por debajo del mínimo.
-                  </div>
-                )}
-              </div>
-            </div>
+            <NotificationsBell
+              alerts={productosStockBajo.map((producto) => ({
+                id: producto.id,
+                nombre: producto.nombre,
+                stock_actual: producto.stock_actual,
+                stock_minimo: producto.stock_minimo,
+              }))}
+              onReviewAlert={reviewStockAlert}
+            />
 
             <button
               type="button"
