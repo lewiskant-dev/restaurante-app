@@ -14,6 +14,7 @@ type StockTabProps = {
   totalCategorias: number
   canManageStock: boolean
   canAdjustStock: boolean
+  canConsumeStock: boolean
   busqueda: string
   categoriaFiltro: string
   unidadFiltro: string
@@ -116,6 +117,8 @@ function ProductActionMenu({
   producto,
   canManageStock,
   canAdjustStock,
+  canConsumeStock,
+  onOpenConsumo,
   onOpenEditarProducto,
   onOpenAjuste,
   onArchivar,
@@ -124,13 +127,18 @@ function ProductActionMenu({
   producto: Producto
   canManageStock: boolean
   canAdjustStock: boolean
+  canConsumeStock: boolean
+  onOpenConsumo: (producto: Producto) => void
   onOpenEditarProducto: (producto: Producto) => void
   onOpenAjuste: (producto: Producto) => void
   onArchivar: (producto: Producto) => void
   onReactivar: (producto: Producto) => void
 }) {
   if (
-    !((producto.archivado && canManageStock) || (!producto.archivado && (canManageStock || canAdjustStock)))
+    !(
+      (producto.archivado && canManageStock) ||
+      (!producto.archivado && (canManageStock || canAdjustStock || canConsumeStock))
+    )
   ) {
     return null
   }
@@ -149,6 +157,15 @@ function ProductActionMenu({
         ) : null
       ) : (
         <>
+          {canConsumeStock ? (
+            <button
+              type="button"
+              onClick={() => onOpenConsumo(producto)}
+              className="rounded-xl bg-emerald-50 px-3 py-2 text-left text-xs font-semibold text-emerald-700"
+            >
+              Registrar consumo
+            </button>
+          ) : null}
           {canManageStock ? (
             <button
               type="button"
@@ -189,6 +206,7 @@ export default function StockTab({
   totalCategorias,
   canManageStock,
   canAdjustStock,
+  canConsumeStock,
   busqueda,
   categoriaFiltro,
   unidadFiltro,
@@ -544,7 +562,11 @@ export default function StockTab({
                         <td className="relative px-4 py-3">
                           <button
                             type="button"
-                            onClick={() => !producto.archivado && onOpenConsumo(producto)}
+                            onClick={() =>
+                              !producto.archivado && canManageStock
+                                ? onOpenEditarProducto(producto)
+                                : undefined
+                            }
                             className="flex items-center gap-3 text-left"
                           >
                             <ProductCategoryBadge
@@ -588,6 +610,8 @@ export default function StockTab({
                               producto={producto}
                               canManageStock={canManageStock}
                               canAdjustStock={canAdjustStock}
+                              canConsumeStock={canConsumeStock}
+                              onOpenConsumo={onOpenConsumo}
                               onOpenEditarProducto={onOpenEditarProducto}
                               onOpenAjuste={onOpenAjuste}
                               onArchivar={onArchivar}
@@ -618,7 +642,11 @@ export default function StockTab({
                     <div className="grid grid-cols-[auto_1fr_auto_auto] items-start gap-2.5">
                       <button
                         type="button"
-                        onClick={() => !producto.archivado && onOpenConsumo(producto)}
+                        onClick={() =>
+                          !producto.archivado && canManageStock
+                            ? onOpenEditarProducto(producto)
+                            : undefined
+                        }
                         className="col-span-2 flex min-w-0 items-start gap-3 text-left"
                       >
                         <ProductCategoryBadge
@@ -658,6 +686,8 @@ export default function StockTab({
                           producto={producto}
                           canManageStock={canManageStock}
                           canAdjustStock={canAdjustStock}
+                          canConsumeStock={canConsumeStock}
+                          onOpenConsumo={onOpenConsumo}
                           onOpenEditarProducto={onOpenEditarProducto}
                           onOpenAjuste={onOpenAjuste}
                           onArchivar={onArchivar}

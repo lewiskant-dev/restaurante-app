@@ -70,11 +70,15 @@ export default function HomePage() {
   const currentRestaurantScope = getRestaurantScopeFromAppMetadata(
     (currentUser?.app_metadata as Record<string, unknown> | undefined) ?? undefined
   )
+  const currentUserId = currentUser?.id ?? null
   const activeRestaurantId = currentRestaurantScope.currentRestaurantId
   const currentUserRole = getUserRole(currentUser)
   const [accessibleRestaurants, setAccessibleRestaurants] = useState<ManagedRestaurant[]>([])
   const [loadingAccessibleRestaurants, setLoadingAccessibleRestaurants] = useState(false)
   const [switchingRestaurant, setSwitchingRestaurant] = useState(false)
+  const [restaurantsHydratedForUserId, setRestaurantsHydratedForUserId] = useState<string | null>(
+    null
+  )
 
   const [mapeosProductos, setMapeosProductos] = useState<MapeoProducto[]>([])
   const [auditoria, setAuditoria] = useState<Auditoria[]>([])
@@ -274,13 +278,16 @@ export default function HomePage() {
     }
   }
 
-  const loadAccessibleRestaurantsEvent = useEffectEvent(async () => {
+  const loadAccessibleRestaurantsEvent = useEffectEvent(async (silent = false) => {
     if (!session?.access_token) {
       setAccessibleRestaurants([])
+      setRestaurantsHydratedForUserId(null)
       return
     }
 
-    setLoadingAccessibleRestaurants(true)
+    if (!silent) {
+      setLoadingAccessibleRestaurants(true)
+    }
 
     try {
       const response = await fetch('/api/auth/restaurants', {
@@ -301,6 +308,7 @@ export default function HomePage() {
 
       const restaurants = payload.restaurants ?? []
       setAccessibleRestaurants(restaurants)
+      setRestaurantsHydratedForUserId(currentUser?.id ?? null)
 
       const activeRestaurants = restaurants.filter((restaurant) => restaurant.activo)
       const currentRestaurant = restaurants.find(
@@ -331,7 +339,9 @@ export default function HomePage() {
         err instanceof Error ? err.message : 'No se pudo cargar la asignación de restaurantes'
       )
     } finally {
-      setLoadingAccessibleRestaurants(false)
+      if (!silent) {
+        setLoadingAccessibleRestaurants(false)
+      }
     }
   })
 
@@ -385,13 +395,17 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-  if (!authReady || !currentUser) {
+    if (!authReady || !currentUser) {
       setAccessibleRestaurants([])
+      setRestaurantsHydratedForUserId(null)
       return
     }
 
-    void loadAccessibleRestaurantsEvent()
-  }, [authReady, currentUser])
+    const shouldLoadSilently =
+      restaurantsHydratedForUserId === currentUserId && accessibleRestaurants.length > 0
+
+    void loadAccessibleRestaurantsEvent(shouldLoadSilently)
+  }, [authReady, currentUser, currentUserId, restaurantsHydratedForUserId, accessibleRestaurants.length])
 
   const loadInitialDataEvent = useEffectEvent(async () => {
     const role = getUserRole(currentUser)
@@ -932,6 +946,7 @@ export default function HomePage() {
 
   const canManageStock = hasPermission(currentUserRole, 'stock_manage')
   const canAdjustStock = hasPermission(currentUserRole, 'stock_adjust')
+  const canConsumeStock = hasPermission(currentUserRole, 'stock_consume')
   const canManageProveedores = hasPermission(currentUserRole, 'proveedor_manage')
   const userCanManageUsers = hasPermission(currentUserRole, 'user_manage')
   const visibleTabsByGroup: Record<MainTab, TabKey[]> = {
@@ -1340,6 +1355,7 @@ export default function HomePage() {
               totalCategorias={totalCategorias}
               canManageStock={canManageStock}
               canAdjustStock={canAdjustStock}
+              canConsumeStock={canConsumeStock}
               busqueda={busqueda}
               categoriaFiltro={categoriaFiltro}
               unidadFiltro={unidadFiltro}
