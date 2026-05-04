@@ -107,6 +107,63 @@ async function loadRestaurantsCatalog(
   return (data ?? []) as ManagedRestaurant[]
 }
 
+async function validateAssignableRestaurants(
+  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
+  restaurantIds: string[],
+  currentRestaurantId: string | null
+) {
+  if (!restaurantIds.length) {
+    return {
+      valid: true as const,
+      restaurants: [] as ManagedRestaurant[],
+    }
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('restaurantes')
+    .select('id, nombre, slug, activo')
+    .in('id', restaurantIds)
+
+  if (error) {
+    throw error
+  }
+
+  const restaurants = (data ?? []) as ManagedRestaurant[]
+  const foundIds = new Set(restaurants.map((restaurant) => restaurant.id))
+  const missingIds = restaurantIds.filter((restaurantId) => !foundIds.has(restaurantId))
+
+  if (missingIds.length) {
+    return {
+      valid: false as const,
+      error: 'Hay restaurantes seleccionados que no existen o ya no están disponibles',
+    }
+  }
+
+  const inactiveRestaurants = restaurants.filter((restaurant) => !restaurant.activo)
+
+  if (inactiveRestaurants.length) {
+    return {
+      valid: false as const,
+      error:
+        inactiveRestaurants.length === 1
+          ? `No puedes asignar el restaurante inactivo "${inactiveRestaurants[0].nombre}".`
+          : 'No puedes asignar restaurantes inactivos a un usuario.',
+    }
+  }
+
+  if (currentRestaurantId && !restaurantIds.includes(currentRestaurantId)) {
+    return {
+      valid: false as const,
+      error: 'El restaurante activo debe estar dentro de la asignación seleccionada',
+    }
+  }
+
+  return {
+    valid: true as const,
+    restaurants,
+  }
+}
+
 async function syncUserRestaurantMemberships(
   supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
   params: {
@@ -469,6 +526,23 @@ export async function POST(request: Request) {
     )
   }
 
+  try {
+    const restaurantValidation = await validateAssignableRestaurants(
+      supabaseAdmin,
+      inheritedRestaurantIds,
+      inheritedCurrentRestaurantId
+    )
+
+    if (!restaurantValidation.valid) {
+      return NextResponse.json({ error: restaurantValidation.error }, { status: 400 })
+    }
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'No se pudieron validar los restaurantes' },
+      { status: 500 }
+    )
+  }
+
   if (
     !canManageRestaurantIds(
       authResult.role,
@@ -612,6 +686,28 @@ export async function PATCH(request: Request) {
       { error: 'El restaurante activo debe estar dentro de la asignación seleccionada' },
       { status: 400 }
     )
+  }
+
+  if (nextRestaurantIds !== null) {
+    try {
+      const restaurantValidation = await validateAssignableRestaurants(
+        supabaseAdmin,
+        nextRestaurantIds,
+        nextCurrentRestaurantId
+      )
+
+      if (!restaurantValidation.valid) {
+        return NextResponse.json({ error: restaurantValidation.error }, { status: 400 })
+      }
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error:
+            error instanceof Error ? error.message : 'No se pudieron validar los restaurantes',
+        },
+        { status: 500 }
+      )
+    }
   }
 
   if (

@@ -522,6 +522,7 @@ export default function HomePage() {
     loadingMovimientos,
     busqueda,
     categoriaFiltro,
+    unidadFiltro,
     busquedaMov,
     productoEstado,
     productoModalOpen,
@@ -545,9 +546,11 @@ export default function HomePage() {
     stockBajo,
     movimientosHoy,
     categoriasProducto,
+    unidadesProducto,
     productosStockBajo,
     setBusqueda,
     setCategoriaFiltro,
+    setUnidadFiltro,
     setBusquedaMov,
     setProductoEstado,
     setProductoForm,
@@ -1339,13 +1342,16 @@ export default function HomePage() {
               canAdjustStock={canAdjustStock}
               busqueda={busqueda}
               categoriaFiltro={categoriaFiltro}
+              unidadFiltro={unidadFiltro}
               categoriasProducto={categoriasProducto}
+              unidadesProducto={unidadesProducto}
               productoEstado={productoEstado}
               loadingProductos={loadingProductos}
               productosFiltrados={productosFiltrados}
               productosStockBajo={productosStockBajo}
               onBusquedaChange={setBusqueda}
               onCategoriaFiltroChange={setCategoriaFiltro}
+              onUnidadFiltroChange={setUnidadFiltro}
               onProductoEstadoChange={setProductoEstado}
               onNuevoProducto={openNuevoProducto}
               onOpenCategorias={openCategoriasModal}

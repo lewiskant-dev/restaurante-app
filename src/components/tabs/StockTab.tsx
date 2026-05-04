@@ -16,13 +16,16 @@ type StockTabProps = {
   canAdjustStock: boolean
   busqueda: string
   categoriaFiltro: string
+  unidadFiltro: string
   categoriasProducto: string[]
+  unidadesProducto: string[]
   productoEstado: 'activos' | 'archivados' | 'todos'
   loadingProductos: boolean
   productosFiltrados: Producto[]
   productosStockBajo: Producto[]
   onBusquedaChange: (value: string) => void
   onCategoriaFiltroChange: (value: string) => void
+  onUnidadFiltroChange: (value: string) => void
   onProductoEstadoChange: (value: 'activos' | 'archivados' | 'todos') => void
   onNuevoProducto: () => void
   onOpenCategorias: () => void
@@ -188,13 +191,16 @@ export default function StockTab({
   canAdjustStock,
   busqueda,
   categoriaFiltro,
+  unidadFiltro,
   categoriasProducto,
+  unidadesProducto,
   productoEstado,
   loadingProductos,
   productosFiltrados,
   productosStockBajo,
   onBusquedaChange,
   onCategoriaFiltroChange,
+  onUnidadFiltroChange,
   onProductoEstadoChange,
   onNuevoProducto,
   onOpenCategorias,
@@ -386,39 +392,29 @@ export default function StockTab({
               </select>
             </label>
 
+            <label className="rounded-[15px] border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              <div className="text-[11px] font-medium text-slate-400">Unidad</div>
+              <select
+                value={unidadFiltro}
+                onChange={(e) => onUnidadFiltroChange(e.target.value)}
+                className="mt-1 w-full bg-transparent text-[13px] font-medium text-slate-800 outline-none"
+              >
+                <option value="todas">Todas</option>
+                {unidadesProducto.map((unidad) => (
+                  <option key={unidad} value={unidad}>
+                    {unidad}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <button
               type="button"
-              className="flex items-center justify-between rounded-[15px] border border-slate-200 bg-white px-3 py-2 text-left shadow-sm"
+              onClick={onExportar}
+              className="rounded-[15px] border border-slate-200 bg-white px-3 py-2 text-[12.5px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
             >
-              <div>
-                <div className="text-[11px] font-medium text-slate-400">Unidad</div>
-                <div className="mt-1 text-[13px] font-medium text-slate-800">Todas</div>
-              </div>
-              <span className="text-slate-400">⌄</span>
+              Exportar
             </button>
-
-            <div className="flex gap-2">
-              <button className="flex items-center justify-center gap-2 rounded-[15px] border border-slate-200 bg-white px-3 py-2 text-[12.5px] font-semibold text-slate-700 shadow-sm">
-                <Icon
-                  className="h-[15px] w-[15px]"
-                  path={
-                    <>
-                      <path d="M4 6h16" />
-                      <path d="M7 12h10" />
-                      <path d="M10 18h4" />
-                    </>
-                  }
-                />
-                Filtros
-              </button>
-              <button
-                type="button"
-                onClick={onExportar}
-                className="flex-1 rounded-[15px] border border-slate-200 bg-white px-3 py-2 text-[12.5px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-              >
-                Exportar
-              </button>
-            </div>
           </div>
 
           <div className="space-y-3 xl:hidden">
@@ -486,9 +482,20 @@ export default function StockTab({
                   <option value="archivados">Archivados</option>
                 </select>
               </label>
-              <button className="rounded-[14px] border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-800 shadow-sm">
-                Unidad
-              </button>
+              <label className="rounded-[14px] border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-800 shadow-sm">
+                <select
+                  value={unidadFiltro}
+                  onChange={(e) => onUnidadFiltroChange(e.target.value)}
+                  className="bg-transparent outline-none"
+                >
+                  <option value="todas">Unidad</option>
+                  {unidadesProducto.map((unidad) => (
+                    <option key={unidad} value={unidad}>
+                      {unidad}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
           </div>
         </div>

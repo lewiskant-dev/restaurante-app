@@ -39,6 +39,7 @@ export function useStockManagement({
   const [loadingMovimientos, setLoadingMovimientos] = useState(true)
   const [busqueda, setBusqueda] = useState('')
   const [categoriaFiltro, setCategoriaFiltro] = useState('todas')
+  const [unidadFiltro, setUnidadFiltro] = useState('todas')
   const [busquedaMov, setBusquedaMov] = useState('')
   const [productoEstado, setProductoEstado] = useState<'activos' | 'archivados' | 'todos'>(
     'activos'
@@ -77,6 +78,9 @@ export function useStockManagement({
         ) {
           return false
         }
+        if (unidadFiltro !== 'todas' && (p.unidad || 'uds') !== unidadFiltro) {
+          return false
+        }
         return true
       })
       .filter((p) => {
@@ -88,7 +92,7 @@ export function useStockManagement({
 
         return nombre.includes(q) || categoria.includes(q) || referencia.includes(q)
       })
-  }, [productos, busqueda, productoEstado, categoriaFiltro])
+  }, [productos, busqueda, productoEstado, categoriaFiltro, unidadFiltro])
 
   const movimientosFiltrados = useMemo(() => {
     const q = busquedaMov.trim().toLowerCase()
@@ -119,6 +123,14 @@ export function useStockManagement({
         .filter(Boolean),
     ])
   )
+  const unidadesProducto = Array.from(
+    new Set(
+      productos
+        .filter((p) => !p.archivado)
+        .map((p) => p.unidad || 'uds')
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b, 'es'))
 
   const productosStockBajo = useMemo(() => {
     return productos
@@ -628,6 +640,7 @@ export function useStockManagement({
     setLoadingMovimientos(true)
     setBusqueda('')
     setCategoriaFiltro('todas')
+    setUnidadFiltro('todas')
     setBusquedaMov('')
     setProductoEstado('activos')
     closeCategoriasModal()
@@ -643,6 +656,7 @@ export function useStockManagement({
     loadingMovimientos,
     busqueda,
     categoriaFiltro,
+    unidadFiltro,
     busquedaMov,
     productoEstado,
     productoModalOpen,
@@ -666,9 +680,11 @@ export function useStockManagement({
     stockBajo,
     movimientosHoy,
     categoriasProducto,
+    unidadesProducto,
     productosStockBajo,
     setBusqueda,
     setCategoriaFiltro,
+    setUnidadFiltro,
     setBusquedaMov,
     setProductoEstado,
     setProductoForm,
