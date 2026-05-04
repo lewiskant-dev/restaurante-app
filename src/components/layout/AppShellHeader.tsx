@@ -16,6 +16,12 @@ type AppShellHeaderProps = {
     nombre: string
     activo: boolean
   }>
+  stockAlerts: Array<{
+    id: string
+    nombre: string
+    stock_actual: number
+    stock_minimo: number
+  }>
   switchingRestaurant: boolean
   currentUserRole: 'empleado' | 'encargado' | 'administrador' | 'master'
   currentMainTab: MainTab
@@ -24,6 +30,7 @@ type AppShellHeaderProps = {
   visibleTabsByGroup: Record<MainTab, TabKey[]>
   onOpenProfile: () => void
   onSignOut: () => void
+  onReviewStockAlert: (productId: string) => void
   onRestaurantChange: (restaurantId: string) => void
   onMainTabChange: (mainTab: MainTab) => void
   onTabChange: (tab: TabKey) => void
@@ -258,6 +265,7 @@ export function AppShellHeader({
   restaurantScopeLabel,
   activeRestaurantId,
   accessibleRestaurants,
+  stockAlerts,
   switchingRestaurant,
   currentUserRole,
   currentMainTab,
@@ -266,11 +274,13 @@ export function AppShellHeader({
   visibleTabsByGroup,
   onOpenProfile,
   onSignOut,
+  onReviewStockAlert,
   onRestaurantChange,
   onMainTabChange,
   onTabChange,
 }: AppShellHeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [mobileNotificationsOpen, setMobileNotificationsOpen] = useState(false)
 
   const mobileTabs = useMemo(
     () => visibleTabsByGroup[currentMainTab] ?? [],
@@ -281,12 +291,67 @@ export function AppShellHeader({
     [currentUserRole]
   )
   const showRestaurantSelector = accessibleRestaurants.length > 0
+  const visibleStockAlerts = stockAlerts.slice(0, 5)
+  const hasStockAlerts = visibleStockAlerts.length > 0
 
   const handleGroupTabChange = (group: MainTab, tab: TabKey) => {
     onMainTabChange(group)
     onTabChange(tab)
     setMobileMenuOpen(false)
   }
+
+  const mobileNotificationsPanel = (
+    <div className="absolute right-0 top-[calc(100%+0.75rem)] z-[120] w-[320px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_22px_48px_rgba(15,23,42,0.14)]">
+      <div className="border-b border-slate-100 px-4 py-3.5">
+        <div className="text-[14px] font-semibold text-slate-950">Notificaciones</div>
+        <div className="mt-0.5 text-[12px] text-slate-500">
+          {hasStockAlerts
+            ? `${visibleStockAlerts.length} alerta${visibleStockAlerts.length === 1 ? '' : 's'} de stock`
+            : 'Sin alertas importantes ahora mismo'}
+        </div>
+      </div>
+
+      {hasStockAlerts ? (
+        <div className="max-h-[360px] space-y-2 overflow-y-auto p-3">
+          {visibleStockAlerts.map((alert) => (
+            <div
+              key={alert.id}
+              className="rounded-[18px] border border-amber-100 bg-amber-50/60 p-3"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-[13px] font-semibold text-slate-900">
+                    {alert.nombre}
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-500">
+                    Actual {alert.stock_actual} · Mínimo {alert.stock_minimo}
+                  </div>
+                </div>
+                <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                  Stock bajo
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileNotificationsOpen(false)
+                  onReviewStockAlert(alert.id)
+                }}
+                className="mt-3 inline-flex rounded-[12px] bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white"
+              >
+                Revisar producto
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="px-4 py-6 text-center text-[12px] text-slate-500">
+          Todo está en orden. No hay productos por debajo del mínimo.
+        </div>
+      )}
+    </div>
+  )
 
   const desktopNav = (
     <div className="flex h-full flex-col">
@@ -407,21 +472,29 @@ export function AppShellHeader({
               <div className="mt-0.5 text-[10.5px] text-slate-500">{restaurantScopeLabel}</div>
             </button>
 
-            <button
-              type="button"
-              className="relative flex h-[44px] w-[44px] items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-600 shadow-[0_7px_14px_rgba(15,23,42,0.035)]"
-            >
-              <Icon
-                className="h-[17px] w-[17px]"
-                path={
-                  <>
-                    <path d="M15 17h5l-1.5-1.5A2 2 0 0 1 18 14.1V11a6 6 0 1 0-12 0v3.1a2 2 0 0 1-.5 1.4L4 17h5" />
-                    <path d="M10 19a2 2 0 0 0 4 0" />
-                  </>
-                }
-              />
-              <span className="absolute right-[11px] top-[11px] h-1.5 w-1.5 rounded-full bg-blue-500" />
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMobileNotificationsOpen((current) => !current)}
+                className="relative flex h-[44px] w-[44px] items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-600 shadow-[0_7px_14px_rgba(15,23,42,0.035)]"
+              >
+                <Icon
+                  className="h-[17px] w-[17px]"
+                  path={
+                    <>
+                      <path d="M7 9a5 5 0 0 1 10 0v4.2c0 .53.2 1.04.56 1.42L19 16H5l1.44-1.38c.36-.38.56-.9.56-1.42V9" />
+                      <path d="M10 19a2 2 0 0 0 4 0" />
+                    </>
+                  }
+                />
+                {hasStockAlerts ? (
+                  <span className="absolute right-[8px] top-[8px] flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-semibold text-white">
+                    {visibleStockAlerts.length}
+                  </span>
+                ) : null}
+              </button>
+              {mobileNotificationsOpen ? mobileNotificationsPanel : null}
+            </div>
 
             <button
               type="button"

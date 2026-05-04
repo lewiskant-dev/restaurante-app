@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nexo
 
-## Getting Started
+Aplicacion de control de stock, proveedores, albaranes, recetas, TPV y usuarios para restauracion, construida con Next.js y Supabase.
 
-First, run the development server:
+## Base actual
+
+- Login con Supabase Auth
+- Roles `empleado`, `encargado`, `administrador` y `master`
+- Panel multi-restaurante con selector de restaurante activo
+- Gestion interna de usuarios y restaurantes
+- Auditoria de acciones
+- Aislamiento por `restaurant_id` en lectura y escritura
+
+## Requisitos
+
+- Node.js 20+
+- Un proyecto de Supabase
+
+## Variables de entorno
+
+Duplica `.env.example` como `.env.local` y rellena:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+MASTER_LOGIN=master
+MASTER_EMAIL=master@interno.local
+NEXT_PUBLIC_ALLOW_SELF_REGISTER=false
+```
+
+Notas:
+- `SUPABASE_SERVICE_ROLE_KEY` solo se usa en servidor.
+- `MASTER_LOGIN` es el alias interno para acceder como cuenta master.
+- `MASTER_EMAIL` debe coincidir con el usuario real creado en Supabase Auth.
+- `NEXT_PUBLIC_ALLOW_SELF_REGISTER` mantiene cerrado el registro libre por defecto.
+
+## Scripts
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm run typecheck
+npm run build
+npm run verify
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`npm run verify` ejecuta `lint + typecheck + build`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Puesta en marcha de Supabase
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Orden recomendado:
 
-## Learn More
+1. Ejecutar [supabase/auth-setup.sql](supabase/auth-setup.sql)
+2. Ejecutar [supabase/multi-restaurant-setup.sql](supabase/multi-restaurant-setup.sql)
+3. Si quieres empezar de cero sin tocar funcionalidades, ejecutar [supabase/reset-operational-data.sql](supabase/reset-operational-data.sql)
+4. Si usas imagenes de producto, ejecutar [supabase/product-media-setup.sql](supabase/product-media-setup.sql)
 
-To learn more about Next.js, take a look at the following resources:
+Documentacion de apoyo:
+- [supabase/roles-setup.md](supabase/roles-setup.md)
+- [supabase/multi-restaurant-setup.md](supabase/multi-restaurant-setup.md)
+- [supabase/operacion-nexo.md](supabase/operacion-nexo.md)
+- [supabase/multi-restaurant-validation.sql](supabase/multi-restaurant-validation.sql)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Flujo multi-restaurante
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. `Master` crea un restaurante.
+2. La base genera automaticamente su `restaurant_id`.
+3. `Master` crea el primer administrador y le asigna ese restaurante.
+4. Ese administrador crea encargados y empleados dentro de su restaurante activo.
+5. Todo producto, proveedor, albaran, receta, movimiento y registro de auditoria queda ligado al `restaurant_id` activo.
 
-## Deploy on Vercel
+El modelo es multi-tenant:
+- una sola app
+- una sola base de datos
+- aislamiento por `restaurant_id`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Comprobaciones utiles
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Si quieres validar el aislamiento por restaurante en Supabase:
+
+```sql
+select id, nombre, slug, activo
+from public.restaurantes
+order by created_at asc;
+```
+
+```sql
+select user_id, restaurant_id, role, is_default
+from public.usuario_restaurantes
+order by created_at asc;
+```
+
+```sql
+select nombre, restaurant_id
+from public.productos
+order by created_at desc;
+```
+
+## Build y despliegue
+
+- La app usa Next.js App Router.
+- El proyecto ya fija `outputFileTracingRoot` en `next.config.ts` para evitar warnings por multiples lockfiles en el workspace.
+- Si despliegas en Vercel, recuerda configurar tambien alli las mismas variables de entorno sensibles.

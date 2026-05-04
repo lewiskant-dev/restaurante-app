@@ -23,7 +23,6 @@ type StockTabProps = {
   productoEstado: 'activos' | 'archivados' | 'todos'
   loadingProductos: boolean
   productosFiltrados: Producto[]
-  productosStockBajo: Producto[]
   onBusquedaChange: (value: string) => void
   onCategoriaFiltroChange: (value: string) => void
   onUnidadFiltroChange: (value: string) => void
@@ -215,7 +214,6 @@ export default function StockTab({
   productoEstado,
   loadingProductos,
   productosFiltrados,
-  productosStockBajo,
   onBusquedaChange,
   onCategoriaFiltroChange,
   onUnidadFiltroChange,
@@ -727,80 +725,6 @@ export default function StockTab({
             </div>
           </>
         )}
-      </div>
-
-      <div className="mt-6 hidden gap-4 xl:grid xl:grid-cols-[1.2fr_0.9fr]">
-        <div className="rounded-[28px] border border-white/80 bg-white px-5 py-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)] sm:px-6">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-              <Icon
-                path={
-                  <>
-                    <path d="M7 3v10" />
-                    <path d="M11 3v10" />
-                    <path d="M9 13v8" />
-                    <path d="M17 3v8" />
-                    <path d="M17 15v6" />
-                    <path d="M15 11h4" />
-                  </>
-                }
-                className="h-6 w-6"
-              />
-            </div>
-            <div>
-              <div className="text-xl font-semibold text-slate-900">Consejo del día</div>
-              <p className="mt-1 text-sm text-slate-500 sm:text-base">
-                Mantén tu stock actualizado para tener un mejor control de tu negocio.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-[28px] border border-white/80 bg-white px-5 py-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)] sm:px-6">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-              <Icon
-                path={
-                  <>
-                    <path d="M12 22s8-4 8-10V6l-8-3-8 3v6c0 6 8 10 8 10Z" />
-                    <path d="M9.5 12.5 11 14l3.5-4" />
-                  </>
-                }
-                className="h-6 w-6"
-              />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-xl font-semibold text-slate-900">Alertas de stock</div>
-              {productosStockBajo.length === 0 ? (
-                <p className="mt-1 text-sm text-slate-500 sm:text-base">
-                  No hay alertas ahora mismo.
-                </p>
-              ) : (
-                <div className="mt-3 space-y-2">
-                  {productosStockBajo.slice(0, 3).map((producto) => (
-                    <button
-                      key={producto.id}
-                      type="button"
-                      onClick={() => onOpenConsumo(producto)}
-                      className="flex w-full items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-3 text-left"
-                    >
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-slate-800">
-                          {producto.nombre}
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          Mínimo {formatCantidad(producto.stock_minimo)} · Actual{' '}
-                          {formatCantidad(producto.stock_actual)}
-                        </div>
-                      </div>
-                      <span className="text-xs font-semibold text-amber-600">Revisar</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       </div>
 
       {canManageStock ? (
