@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react'
 import type { MovimientoConProducto, NuevoProductoForm, PermissionKey } from '@/features/home/types'
-import { initialProductoForm } from '@/features/home/constants'
+import {
+  initialProductoForm,
+  normalizeProductCategory,
+  PRODUCT_CATEGORY_OPTIONS,
+} from '@/features/home/constants'
 import { todayLocalInputDate } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
 import type { Producto } from '@/types'
@@ -40,6 +44,7 @@ export function useStockManagement({
     'activos'
   )
   const [productoModalOpen, setProductoModalOpen] = useState(false)
+  const [categoriasModalOpen, setCategoriasModalOpen] = useState(false)
   const [productoSaving, setProductoSaving] = useState(false)
   const [productoEditId, setProductoEditId] = useState<string | null>(null)
   const [productoForm, setProductoForm] = useState<NuevoProductoForm>(initialProductoForm)
@@ -66,7 +71,10 @@ export function useStockManagement({
       .filter((p) => {
         if (productoEstado === 'activos' && p.archivado) return false
         if (productoEstado === 'archivados' && !p.archivado) return false
-        if (categoriaFiltro !== 'todas' && (p.categoria || 'Sin categoría') !== categoriaFiltro) {
+        if (
+          categoriaFiltro !== 'todas' &&
+          normalizeProductCategory(p.categoria || 'Otros') !== categoriaFiltro
+        ) {
           return false
         }
         return true
@@ -75,7 +83,7 @@ export function useStockManagement({
         if (!q) return true
 
         const nombre = p.nombre?.toLowerCase() ?? ''
-        const categoria = p.categoria?.toLowerCase() ?? ''
+        const categoria = normalizeProductCategory(p.categoria || 'Otros').toLowerCase()
         const referencia = p.referencia?.toLowerCase() ?? ''
 
         return nombre.includes(q) || categoria.includes(q) || referencia.includes(q)
@@ -103,13 +111,14 @@ export function useStockManagement({
     (m) => (m.created_at || '').slice(0, 10) === todayLocalInputDate()
   ).length
   const categoriasProducto = Array.from(
-    new Set(
-      productos
+    new Set([
+      ...PRODUCT_CATEGORY_OPTIONS,
+      ...productos
         .filter((p) => !p.archivado)
-        .map((p) => p.categoria || 'Sin categoría')
-        .filter(Boolean)
-    )
-  ).sort((a, b) => a.localeCompare(b, 'es'))
+        .map((p) => normalizeProductCategory(p.categoria || 'Otros'))
+        .filter(Boolean),
+    ])
+  )
 
   const productosStockBajo = useMemo(() => {
     return productos
@@ -186,6 +195,14 @@ export function useStockManagement({
     onError('')
   }
 
+  function openCategoriasModal() {
+    setCategoriasModalOpen(true)
+  }
+
+  function closeCategoriasModal() {
+    setCategoriasModalOpen(false)
+  }
+
   function openEditarProducto(producto: Producto) {
     if (!requirePermission('stock_manage', 'No tienes permisos para editar productos')) {
       return
@@ -194,7 +211,7 @@ export function useStockManagement({
     setProductoEditId(producto.id)
     setProductoForm({
       nombre: producto.nombre || '',
-      categoria: producto.categoria || '',
+      categoria: normalizeProductCategory(producto.categoria || 'Otros'),
       unidad: producto.unidad || 'uds',
       stock_actual: String(producto.stock_actual ?? ''),
       stock_minimo: String(producto.stock_minimo ?? ''),
@@ -216,6 +233,11 @@ export function useStockManagement({
       return
     }
 
+    if (!productoForm.categoria.trim()) {
+      onError('Selecciona una categoría para el producto')
+      return
+    }
+
     setProductoSaving(true)
     onError('')
 
@@ -223,7 +245,7 @@ export function useStockManagement({
 
     const payload: Record<string, string | number | boolean | null> = {
       nombre: productoForm.nombre.trim(),
-      categoria: productoForm.categoria.trim(),
+      categoria: normalizeProductCategory(productoForm.categoria),
       unidad: productoForm.unidad.trim() || 'uds',
       stock_actual: productoForm.stock_actual === '' ? 0 : Number(productoForm.stock_actual),
       stock_minimo: productoForm.stock_minimo === '' ? 0 : Number(productoForm.stock_minimo),
@@ -608,6 +630,7 @@ export function useStockManagement({
     setCategoriaFiltro('todas')
     setBusquedaMov('')
     setProductoEstado('activos')
+    closeCategoriasModal()
     closeProductoModal()
     closeConsumoModal()
     closeAjusteModal()
@@ -623,6 +646,7 @@ export function useStockManagement({
     busquedaMov,
     productoEstado,
     productoModalOpen,
+    categoriasModalOpen,
     productoSaving,
     productoEditId,
     productoForm,
@@ -655,6 +679,8 @@ export function useStockManagement({
     loadProductos,
     loadMovimientos,
     openNuevoProducto,
+    openCategoriasModal,
+    closeCategoriasModal,
     closeProductoModal,
     openEditarProducto,
     guardarProducto,

@@ -2,12 +2,15 @@
 
 import Image from 'next/image'
 import type { NuevoProductoForm } from '@/features/home/types'
+import { PRODUCT_CATEGORY_OPTIONS } from '@/features/home/constants'
+import { ProductCategoryBadge } from '@/components/ui/ProductCategoryVisual'
 
 type ProductModalProps = {
   open: boolean
   productoEditId: string | null
   productoForm: NuevoProductoForm
   productoSaving: boolean
+  categoriasProducto?: string[]
   onClose: () => void
   onFormChange: (next: NuevoProductoForm) => void
   onGuardar: () => void
@@ -18,11 +21,14 @@ export function ProductModal({
   productoEditId,
   productoForm,
   productoSaving,
+  categoriasProducto = [],
   onClose,
   onFormChange,
   onGuardar,
 }: ProductModalProps) {
   if (!open) return null
+
+  const categoryOptions = Array.from(new Set([...PRODUCT_CATEGORY_OPTIONS, ...categoriasProducto]))
 
   async function handleImageFile(file: File | null) {
     if (!file) return
@@ -94,12 +100,18 @@ export function ProductModal({
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
           />
 
-          <input
-            placeholder="Categoría"
+          <select
             value={productoForm.categoria}
             onChange={(e) => onFormChange({ ...productoForm, categoria: e.target.value })}
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
-          />
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+          >
+            <option value="">Selecciona una categoría</option>
+            {categoryOptions.map((categoria) => (
+              <option key={categoria} value={categoria}>
+                {categoria}
+              </option>
+            ))}
+          </select>
 
           <select
             value={productoForm.unidad}
@@ -142,7 +154,7 @@ export function ProductModal({
             <div className="mb-3">
               <h4 className="text-sm font-semibold text-slate-900">Imagen del producto</h4>
               <p className="mt-1 text-sm text-slate-500">
-                Puedes subir una imagen para personalizar el producto.
+                Si no subes una imagen, Nexo asignará un icono visual según la categoría.
               </p>
             </div>
 
@@ -158,7 +170,11 @@ export function ProductModal({
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <span className="text-xs font-medium text-slate-400">Sin visual</span>
+                  <ProductCategoryBadge
+                    category={productoForm.categoria || 'Otros'}
+                    productName={productoForm.nombre || 'Producto'}
+                    size="lg"
+                  />
                 )}
               </div>
 

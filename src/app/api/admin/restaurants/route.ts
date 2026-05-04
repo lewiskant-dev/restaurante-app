@@ -34,6 +34,66 @@ function slugifyRestaurantName(value: string) {
     .replace(/^-+|-+$/g, '')
 }
 
+async function canDeactivateRestaurant(
+  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
+  restaurantId: string
+) {
+  const { data: memberships, error: membershipsError } = await supabaseAdmin
+    .from('usuario_restaurantes')
+    .select('user_id')
+    .eq('restaurant_id', restaurantId)
+
+  if (membershipsError) {
+    return { error: membershipsError }
+  }
+
+  const userIds = [...new Set((memberships ?? []).map((item) => item.user_id).filter(Boolean))]
+
+  if (!userIds.length) {
+    return { canDeactivate: true as const }
+  }
+
+  const { data: activeRestaurants, error: activeRestaurantsError } = await supabaseAdmin
+    .from('restaurantes')
+    .select('id')
+    .neq('id', restaurantId)
+    .eq('activo', true)
+
+  if (activeRestaurantsError) {
+    return { error: activeRestaurantsError }
+  }
+
+  const activeRestaurantIds = (activeRestaurants ?? []).map((item) => item.id)
+
+  if (!activeRestaurantIds.length) {
+    return {
+      canDeactivate: false as const,
+      blockedUsersCount: userIds.length,
+    }
+  }
+
+  const { data: alternativeMemberships, error: alternativesError } = await supabaseAdmin
+    .from('usuario_restaurantes')
+    .select('user_id, restaurant_id')
+    .in('user_id', userIds)
+    .in('restaurant_id', activeRestaurantIds)
+
+  if (alternativesError) {
+    return { error: alternativesError }
+  }
+
+  const activeAlternativeUsers = new Set(
+    (alternativeMemberships ?? []).map((item) => item.user_id)
+  )
+
+  const blockedUsers = userIds.filter((userId) => !activeAlternativeUsers.has(userId))
+
+  return {
+    canDeactivate: blockedUsers.length === 0,
+    blockedUsersCount: blockedUsers.length,
+  }
+}
+
 async function getRequestUser(request: Request) {
   const supabaseAdmin = createSupabaseAdminClient()
   const authHeader = request.headers.get('authorization') || ''
@@ -212,6 +272,35 @@ export async function PATCH(request: Request) {
     }
 
     return NextResponse.json({ error: beforeError.message }, { status: 500 })
+  }
+
+  if (beforeRestaurant.activo && !activo) {
+    const deactivationCheck = await canDeactivateRestaurant(supabaseAdmin, id)
+
+    if ('error' in deactivationCheck) {
+      const deactivationError = deactivationCheck.error
+
+      if (isMissingRelationError(deactivationError)) {
+        return NextResponse.json({
+          error:
+            'La tabla usuario_restaurantes todavía no existe. Ejecuta multi-restaurant-setup.sql en Supabase.',
+        }, { status: 409 })
+      }
+
+      return NextResponse.json(
+        { error: deactivationError?.message || 'No se pudo validar la desactivación del restaurante' },
+        { status: 500 }
+      )
+    }
+
+    if (!deactivationCheck.canDeactivate) {
+      return NextResponse.json({
+        error:
+          deactivationCheck.blockedUsersCount === 1
+            ? 'No puedes desactivar este restaurante porque dejaría a 1 usuario sin ningún restaurante activo.'
+            : `No puedes desactivar este restaurante porque dejaría a ${deactivationCheck.blockedUsersCount} usuarios sin ningún restaurante activo.`,
+      }, { status: 409 })
+    }
   }
 
   const { data, error } = await supabaseAdmin

@@ -5,6 +5,71 @@ import type {
   RecetaLineaForm,
 } from '@/features/home/types'
 
+export const PRODUCT_CATEGORY_OPTIONS = [
+  'Bebidas',
+  'Carnes',
+  'Pescados y mariscos',
+  'Frutas y verduras',
+  'Lácteos',
+  'Panadería',
+  'Despensa',
+  'Aceites y salsas',
+  'Congelados',
+  'Limpieza',
+  'Otros',
+] as const
+
+const PRODUCT_CATEGORY_ALIASES: Record<string, (typeof PRODUCT_CATEGORY_OPTIONS)[number]> = {
+  bebida: 'Bebidas',
+  bebidas: 'Bebidas',
+  refrescos: 'Bebidas',
+  vinos: 'Bebidas',
+  bodega: 'Bebidas',
+  carne: 'Carnes',
+  carnes: 'Carnes',
+  pescado: 'Pescados y mariscos',
+  pescados: 'Pescados y mariscos',
+  marisco: 'Pescados y mariscos',
+  mariscos: 'Pescados y mariscos',
+  fruta: 'Frutas y verduras',
+  frutas: 'Frutas y verduras',
+  verdura: 'Frutas y verduras',
+  verduras: 'Frutas y verduras',
+  lacteo: 'Lácteos',
+  lacteos: 'Lácteos',
+  'lácteo': 'Lácteos',
+  'lácteos': 'Lácteos',
+  queso: 'Lácteos',
+  quesos: 'Lácteos',
+  pan: 'Panadería',
+  panaderia: 'Panadería',
+  panadería: 'Panadería',
+  despensa: 'Despensa',
+  secos: 'Despensa',
+  aceite: 'Aceites y salsas',
+  aceites: 'Aceites y salsas',
+  salsa: 'Aceites y salsas',
+  salsas: 'Aceites y salsas',
+  congelado: 'Congelados',
+  congelados: 'Congelados',
+  limpieza: 'Limpieza',
+  higiene: 'Limpieza',
+  otro: 'Otros',
+  otros: 'Otros',
+}
+
+export function normalizeProductCategory(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return 'Otros'
+
+  const normalized = trimmed
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+
+  return PRODUCT_CATEGORY_ALIASES[normalized] ?? trimmed
+}
+
 export const initialProductoForm: NuevoProductoForm = {
   nombre: '',
   categoria: '',

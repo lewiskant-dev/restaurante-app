@@ -1,8 +1,9 @@
 'use client'
 
-import Image from 'next/image'
 import type { ReactNode } from 'react'
 import { ActionMenu } from '@/components/ui/ActionMenu'
+import { normalizeProductCategory } from '@/features/home/constants'
+import { ProductCategoryBadge } from '@/components/ui/ProductCategoryVisual'
 import type { Producto } from '@/types'
 import { formatCantidad, getNivel } from '@/features/home/utils'
 
@@ -24,6 +25,7 @@ type StockTabProps = {
   onCategoriaFiltroChange: (value: string) => void
   onProductoEstadoChange: (value: 'activos' | 'archivados' | 'todos') => void
   onNuevoProducto: () => void
+  onOpenCategorias: () => void
   onExportar: () => void
   onOpenConsumo: (producto: Producto) => void
   onOpenEditarProducto: (producto: Producto) => void
@@ -77,104 +79,6 @@ function getMetricTone(tone: 'emerald' | 'blue' | 'amber' | 'violet') {
   return {
     badge: 'bg-blue-50 text-blue-600',
     value: 'text-blue-600',
-  }
-}
-
-function getProductVisual(producto: Producto) {
-  if (producto.imagen_url) {
-    return {
-      hue: 'from-slate-100 to-white',
-      art: (
-        <Image
-          src={producto.imagen_url}
-          alt={producto.nombre}
-          width={40}
-          height={40}
-          unoptimized
-          className="h-10 w-10 rounded-xl object-cover"
-        />
-      ),
-    }
-  }
-
-  const text = `${producto.categoria} ${producto.nombre}`.toLowerCase()
-  if (text.includes('vino') || text.includes('aceite')) {
-    return {
-      hue: 'from-amber-100 to-amber-50',
-      art: (
-        <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <rect x="20" y="5" width="8" height="7" rx="2" fill="#5B4636" />
-          <rect x="18" y="11" width="12" height="9" rx="3" fill="#6B5644" />
-          <rect x="16" y="18" width="16" height="23" rx="6" fill="#3E2F28" />
-          <rect x="18" y="21" width="12" height="13" rx="2" fill="#F0E4B6" />
-          <rect x="19" y="22" width="10" height="4" rx="1.5" fill="#D9C37A" />
-        </svg>
-      ),
-    }
-  }
-  if (text.includes('ajo')) {
-    return {
-      hue: 'from-stone-100 to-slate-50',
-      art: (
-        <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <ellipse cx="18" cy="28" rx="8" ry="10" fill="#F4F1EC" />
-          <ellipse cx="24" cy="26" rx="8" ry="11" fill="#FCFAF7" />
-          <ellipse cx="30" cy="28" rx="8" ry="10" fill="#F0ECE6" />
-          <path d="M23 12c2-4 5-6 8-7-1 4-4 8-8 10" fill="#A2B273" />
-          <path d="M16 29c4-2 12-2 16 0" stroke="#D5CEC3" strokeWidth="1.2" />
-        </svg>
-      ),
-    }
-  }
-  if (text.includes('coca') || text.includes('bebida') || text.includes('cola')) {
-    return {
-      hue: 'from-red-100 to-rose-50',
-      art: (
-        <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <rect x="16" y="6" width="16" height="36" rx="5" fill="#D92128" />
-          <rect x="18" y="9" width="12" height="30" rx="4" fill="#EF4047" />
-          <path d="M20 16c4-1 8 1 12 0" stroke="#F9D6D9" strokeWidth="1.5" />
-          <path d="M20 24c4-1 8 1 12 0" stroke="#F9D6D9" strokeWidth="1.5" />
-          <path d="M20 32c4-1 8 1 12 0" stroke="#F9D6D9" strokeWidth="1.5" />
-        </svg>
-      ),
-    }
-  }
-  if (text.includes('queso') || text.includes('mozza') || text.includes('lácteo')) {
-    return {
-      hue: 'from-yellow-100 to-amber-50',
-      art: (
-        <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <ellipse cx="17" cy="28" rx="8" ry="6" fill="#FBF8F0" />
-          <ellipse cx="24" cy="24" rx="9" ry="7" fill="#FFFDF8" />
-          <ellipse cx="31" cy="28" rx="8" ry="6" fill="#F4EFE3" />
-          <ellipse cx="24" cy="34" rx="11" ry="6" fill="#EEE5D4" />
-        </svg>
-      ),
-    }
-  }
-  if (text.includes('pan')) {
-    return {
-      hue: 'from-orange-100 to-amber-50',
-      art: (
-        <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <path d="M10 28c0-7 7-13 16-13s12 6 12 10-3 11-14 11S10 34 10 28Z" fill="#D4873F" />
-          <path d="M18 19c-1 3-1 6 0 9" stroke="#F2C27B" strokeWidth="1.5" />
-          <path d="M25 18c-1 3-1 7 0 10" stroke="#F2C27B" strokeWidth="1.5" />
-          <path d="M31 20c-1 3-1 5 0 8" stroke="#F2C27B" strokeWidth="1.5" />
-        </svg>
-      ),
-    }
-  }
-  return {
-    hue: 'from-slate-100 to-white',
-    art: (
-      <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-        <path d="m24 7 14 8v18l-14 8-14-8V15Z" fill="#E2E8F0" />
-        <path d="m10 15 14 8 14-8" stroke="#94A3B8" strokeWidth="1.5" />
-        <path d="M24 23v18" stroke="#94A3B8" strokeWidth="1.5" />
-      </svg>
-    ),
   }
 }
 
@@ -293,6 +197,7 @@ export default function StockTab({
   onCategoriaFiltroChange,
   onProductoEstadoChange,
   onNuevoProducto,
+  onOpenCategorias,
   onExportar,
   onOpenConsumo,
   onOpenEditarProducto,
@@ -372,14 +277,23 @@ export default function StockTab({
         </div>
 
         {canManageStock ? (
-          <button
-            type="button"
-            onClick={onNuevoProducto}
-            className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-[15px] bg-[linear-gradient(135deg,#1482ff_0%,#4d54ff_48%,#8c2eff_100%)] px-3.5 py-2 text-[12px] font-semibold text-white shadow-[0_12px_20px_rgba(92,88,255,0.16)] transition hover:scale-[1.01] lg:min-h-0 lg:rounded-[16px] lg:px-4 lg:py-2.5 lg:text-sm"
-          >
-            <span className="text-[13px] leading-none">＋</span>
-            <span>Nuevo producto</span>
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={onOpenCategorias}
+              className="hidden lg:inline-flex items-center justify-center rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            >
+              Categorías
+            </button>
+            <button
+              type="button"
+              onClick={onNuevoProducto}
+              className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-[15px] bg-[linear-gradient(135deg,#1482ff_0%,#4d54ff_48%,#8c2eff_100%)] px-3.5 py-2 text-[12px] font-semibold text-white shadow-[0_12px_20px_rgba(92,88,255,0.16)] transition hover:scale-[1.01] lg:min-h-0 lg:rounded-[16px] lg:px-4 lg:py-2.5 lg:text-sm"
+            >
+              <span className="text-[13px] leading-none">＋</span>
+              <span>Nuevo producto</span>
+            </button>
+          </div>
         ) : null}
       </div>
 
@@ -591,7 +505,7 @@ export default function StockTab({
 
         {!loadingProductos && productosFiltrados.length > 0 && (
           <>
-            <div className="hidden overflow-x-auto lg:block">
+            <div className="hidden overflow-x-auto overflow-y-visible lg:block">
               <table className="min-w-full text-left">
                 <thead>
                   <tr className="border-b border-slate-100 text-[12px] text-slate-500">
@@ -607,7 +521,6 @@ export default function StockTab({
                 <tbody>
                   {productosFiltrados.map((producto) => {
                     const nivel = getNivel(producto)
-                    const visual = getProductVisual(producto)
                     const status = getProductStatus(producto)
                     const stockClass =
                       nivel === 'critico'
@@ -624,25 +537,26 @@ export default function StockTab({
                             onClick={() => !producto.archivado && onOpenConsumo(producto)}
                             className="flex items-center gap-3 text-left"
                           >
-                            <div
-                              className={`flex h-10 w-10 items-center justify-center rounded-[14px] bg-gradient-to-br ${visual.hue} text-2xl shadow-inner ring-1 ring-slate-100`}
-                            >
-                              {visual.art}
-                            </div>
+                            <ProductCategoryBadge
+                              category={producto.categoria || 'Otros'}
+                              imageUrl={producto.imagen_url}
+                              productName={producto.nombre}
+                              size="md"
+                            />
                             <div className="min-w-0">
                               <div className="truncate text-[13px] font-semibold text-slate-900">
                                 {producto.nombre}
                               </div>
-                              <div className="truncate text-[12px] text-slate-500">
-                                {producto.referencia || 'Sin referencia'}
+                          <div className="truncate text-[12px] text-slate-500">
+                            {producto.referencia || 'Sin referencia'}
                                 {producto.archivado ? ' · Archivado' : ''}
-                              </div>
-                            </div>
-                          </button>
-                        </td>
-                        <td className="px-4 py-3 text-[12.5px] text-slate-700">
-                          {producto.categoria || 'Sin categoría'}
-                        </td>
+                          </div>
+                        </div>
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-[12.5px] text-slate-700">
+                          {normalizeProductCategory(producto.categoria || 'Otros')}
+                    </td>
                         <td className={`px-4 py-3 text-[1.45rem] font-semibold ${stockClass}`}>
                           {formatCantidad(producto.stock_actual)}
                         </td>
@@ -681,7 +595,6 @@ export default function StockTab({
             <div className="space-y-2.5 p-2.5 lg:hidden">
               {productosFiltrados.map((producto) => {
                 const nivel = getNivel(producto)
-                const visual = getProductVisual(producto)
                 const status = getProductStatus(producto)
                 const stockClass =
                   nivel === 'critico'
@@ -691,24 +604,25 @@ export default function StockTab({
                       : 'text-emerald-600'
 
                 return (
-                  <div key={producto.id} className="rounded-[20px] border border-slate-200 bg-white p-3.5 shadow-[0_7px_16px_rgba(15,23,42,0.035)]">
+                  <div key={producto.id} className="overflow-visible rounded-[20px] border border-slate-200 bg-white p-3.5 shadow-[0_7px_16px_rgba(15,23,42,0.035)]">
                     <div className="grid grid-cols-[auto_1fr_auto_auto] items-start gap-2.5">
                       <button
                         type="button"
                         onClick={() => !producto.archivado && onOpenConsumo(producto)}
                         className="col-span-2 flex min-w-0 items-start gap-3 text-left"
                       >
-                        <div
-                          className={`flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-[15px] bg-gradient-to-br ${visual.hue} text-3xl shadow-inner ring-1 ring-slate-100`}
-                        >
-                          {visual.art}
-                        </div>
+                        <ProductCategoryBadge
+                          category={producto.categoria || 'Otros'}
+                          imageUrl={producto.imagen_url}
+                          productName={producto.nombre}
+                          size="lg"
+                        />
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-[0.94rem] font-semibold text-slate-900">
                             {producto.nombre}
                           </div>
                           <div className="truncate text-[12px] text-slate-500">
-                            {producto.categoria || 'Sin categoría'}
+                            {normalizeProductCategory(producto.categoria || 'Otros')}
                           </div>
                           <div className="mt-0.5 truncate text-[12px] text-slate-400">
                             {producto.referencia || 'Sin referencia'}

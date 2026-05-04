@@ -9,6 +9,7 @@ import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 import { AjusteStockModal } from '@/components/modals/AjusteStockModal'
 import { ConsumoModal } from '@/components/modals/ConsumoModal'
 import { DetalleAlbaranModal } from '@/components/modals/DetalleAlbaranModal'
+import { ProductCategoriesModal } from '@/components/modals/ProductCategoriesModal'
 import { ProductModal } from '@/components/modals/ProductModal'
 import { ProveedorModal } from '@/components/modals/ProveedorModal'
 import { RecetaModal } from '@/components/modals/RecetaModal'
@@ -524,6 +525,7 @@ export default function HomePage() {
     busquedaMov,
     productoEstado,
     productoModalOpen,
+    categoriasModalOpen,
     productoSaving,
     productoEditId,
     productoForm,
@@ -556,6 +558,8 @@ export default function HomePage() {
     loadProductos,
     loadMovimientos,
     openNuevoProducto,
+    openCategoriasModal,
+    closeCategoriasModal,
     closeProductoModal,
     openEditarProducto,
     guardarProducto,
@@ -1344,6 +1348,7 @@ export default function HomePage() {
               onCategoriaFiltroChange={setCategoriaFiltro}
               onProductoEstadoChange={setProductoEstado}
               onNuevoProducto={openNuevoProducto}
+              onOpenCategorias={openCategoriasModal}
               onExportar={exportarProductosCSV}
               onOpenConsumo={openConsumoModal}
               onOpenEditarProducto={openEditarProducto}
@@ -1664,10 +1669,13 @@ export default function HomePage() {
         productoEditId={productoEditId}
         productoForm={productoForm}
         productoSaving={productoSaving}
+        categoriasProducto={categoriasProducto}
         onClose={closeProductoModal}
         onFormChange={setProductoForm}
         onGuardar={() => void guardarProducto()}
       />
+
+      <ProductCategoriesModal open={categoriasModalOpen} onClose={closeCategoriasModal} />
 
       <ConsumoModal
         open={consumoModalOpen}
