@@ -84,7 +84,26 @@ export type TpvAnaliticaProducto = {
   desviacion: number
 }
 
+export type TpvAnaliticaReceta = {
+  receta_id: string
+  receta_nombre: string
+  unidades_vendidas: number
+  ventas_estimadas: number
+  coste_teorico_vendido: number
+  margen_estimado: number
+}
+
+export type TpvAnaliticaCompra = {
+  producto_id: string
+  producto_nombre: string
+  proveedor_nombre: string
+  cantidad_comprada: number
+  coste_total: number
+  ultimo_precio_unitario: number
+}
+
 export type TpvAnaliticaResumen = {
+  range_key: '7d' | '30d' | '90d'
   periodo_label: string
   ventas_estimadas_total: number
   coste_teorico_vendido_total: number
@@ -94,6 +113,12 @@ export type TpvAnaliticaResumen = {
   desviacion_total: number
   productos_con_desviacion: number
   productos: TpvAnaliticaProducto[]
+  recetas_rentables: TpvAnaliticaReceta[]
+  compras_periodo: {
+    total_coste: number
+    total_lineas: number
+    productos: TpvAnaliticaCompra[]
+  }
 }
 
 export type OCRAlbaranLinea = {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useEffectEvent, useMemo, useState } from 'react'
 import { initialRecetaLinea } from '@/features/home/constants'
 import type {
   PermissionKey,
@@ -7,6 +7,7 @@ import type {
   RecetaLineaForm,
   TpvAnaliticaResumen,
   VentaTPVCruda,
+  ProductoPrecioHistorial,
 } from '@/features/home/types'
 import { formatOCRDateToInput, normalizeText, scoreRecipeMatch } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
@@ -65,7 +66,9 @@ export function useRecetaTpvManagement({
     {}
   )
   const [tpvGuardandoMapeo, setTpvGuardandoMapeo] = useState('')
+  const [tpvAnaliticaRange, setTpvAnaliticaRange] = useState<'7d' | '30d' | '90d'>('30d')
   const [tpvAnalitica, setTpvAnalitica] = useState<TpvAnaliticaResumen>({
+    range_key: '30d',
     periodo_label: 'Últimos 30 días',
     ventas_estimadas_total: 0,
     coste_teorico_vendido_total: 0,
@@ -75,6 +78,12 @@ export function useRecetaTpvManagement({
     desviacion_total: 0,
     productos_con_desviacion: 0,
     productos: [],
+    recetas_rentables: [],
+    compras_periodo: {
+      total_coste: 0,
+      total_lineas: 0,
+      productos: [],
+    },
   })
 
   function requireActiveRestaurant() {
@@ -198,9 +207,13 @@ export function useRecetaTpvManagement({
   }
 
   async function loadTpvAnalitica(recetasBase: Receta[], lineasBase: RecetaLinea[]) {
+    const days = tpvAnaliticaRange === '7d' ? 7 : tpvAnaliticaRange === '90d' ? 90 : 30
+    const periodLabel = days === 7 ? 'Últimos 7 días' : days === 90 ? 'Últimos 90 días' : 'Últimos 30 días'
+
     if (!currentRestaurantId) {
       setTpvAnalitica({
-        periodo_label: 'Últimos 30 días',
+        range_key: tpvAnaliticaRange,
+        periodo_label: periodLabel,
         ventas_estimadas_total: 0,
         coste_teorico_vendido_total: 0,
         margen_estimado_total: 0,
@@ -209,16 +222,26 @@ export function useRecetaTpvManagement({
         desviacion_total: 0,
         productos_con_desviacion: 0,
         productos: [],
+        recetas_rentables: [],
+        compras_periodo: {
+          total_coste: 0,
+          total_lineas: 0,
+          productos: [],
+        },
       })
       return
     }
 
     const cutoff = new Date()
-    cutoff.setDate(cutoff.getDate() - 30)
+    cutoff.setDate(cutoff.getDate() - days)
     const cutoffIso = cutoff.toISOString()
     const cutoffDate = cutoffIso.slice(0, 10)
 
-    const [{ data: ventasData, error: ventasError }, { data: movimientosData, error: movimientosError }] =
+    const [
+      { data: ventasData, error: ventasError },
+      { data: movimientosData, error: movimientosError },
+      { data: comprasData, error: comprasError },
+    ] =
       await Promise.all([
         supabase
           .from('tpv_ventas_crudas')
@@ -230,6 +253,11 @@ export function useRecetaTpvManagement({
           .eq('restaurant_id', currentRestaurantId)
           .eq('tipo', 'consumo')
           .gte('created_at', cutoffIso),
+        supabase
+          .from('productos_precios_historial')
+          .select('producto_id,proveedor_nombre,fecha_compra,cantidad,precio_unitario,productos(nombre)')
+          .eq('restaurant_id', currentRestaurantId)
+          .gte('fecha_compra', cutoffDate),
       ])
 
     if (ventasError) {
@@ -239,6 +267,16 @@ export function useRecetaTpvManagement({
 
     if (movimientosError) {
       onError(movimientosError.message)
+      return
+    }
+
+    if (
+      comprasError &&
+      !/productos_precios_historial|relation .* does not exist|could not find the table/i.test(
+        comprasError.message
+      )
+    ) {
+      onError(comprasError.message)
       return
     }
 
@@ -259,6 +297,14 @@ export function useRecetaTpvManagement({
     const productosMap = new Map(productos.map((producto) => [producto.id, producto]))
     const theoreticalByProduct = new Map<string, number>()
     const actualByProduct = new Map<string, number>()
+    const recipePerformance = new Map<string, {
+      receta_id: string
+      receta_nombre: string
+      unidades_vendidas: number
+      ventas_estimadas: number
+      coste_teorico_vendido: number
+      margen_estimado: number
+    }>()
     let ventasEstimadasTotal = 0
     let costeTeoricoVendidoTotal = 0
 
@@ -271,8 +317,25 @@ export function useRecetaTpvManagement({
         const unidadesVendidas = Number(venta.cantidad || 0)
         const costePorRacion =
           Number(receta.coste_teorico || 0) / Math.max(Number(receta.raciones || 1), 1)
-        ventasEstimadasTotal += Number(receta.precio_venta || 0) * unidadesVendidas
-        costeTeoricoVendidoTotal += costePorRacion * unidadesVendidas
+        const ventasReceta = Number(receta.precio_venta || 0) * unidadesVendidas
+        const costeReceta = costePorRacion * unidadesVendidas
+        ventasEstimadasTotal += ventasReceta
+        costeTeoricoVendidoTotal += costeReceta
+
+        const currentRecipe = recipePerformance.get(receta.id) ?? {
+          receta_id: receta.id,
+          receta_nombre: receta.nombre,
+          unidades_vendidas: 0,
+          ventas_estimadas: 0,
+          coste_teorico_vendido: 0,
+          margen_estimado: 0,
+        }
+        currentRecipe.unidades_vendidas += unidadesVendidas
+        currentRecipe.ventas_estimadas += ventasReceta
+        currentRecipe.coste_teorico_vendido += costeReceta
+        currentRecipe.margen_estimado =
+          currentRecipe.ventas_estimadas - currentRecipe.coste_teorico_vendido
+        recipePerformance.set(receta.id, currentRecipe)
 
         const lineas = lineasMap.get(receta.id) ?? []
         lineas.forEach((linea) => {
@@ -334,8 +397,65 @@ export function useRecetaTpvManagement({
       (item) => Math.abs(item.desviacion) > 0.01
     ).length
 
+    const recetasRentables = Array.from(recipePerformance.values())
+      .sort((a, b) => b.margen_estimado - a.margen_estimado)
+      .slice(0, 6)
+
+    const comprasAgrupadas = new Map<string, {
+      producto_id: string
+      producto_nombre: string
+      proveedor_nombre: string
+      cantidad_comprada: number
+      coste_total: number
+      ultimo_precio_unitario: number
+      fecha_compra: string
+    }>()
+
+    ;((comprasData ?? []) as Array<
+      Pick<ProductoPrecioHistorial, 'producto_id' | 'proveedor_nombre' | 'fecha_compra' | 'cantidad' | 'precio_unitario'> & {
+        productos?: { nombre?: string | null } | null
+      }
+    >).forEach((compra) => {
+      const current = comprasAgrupadas.get(compra.producto_id) ?? {
+        producto_id: compra.producto_id,
+        producto_nombre: compra.productos?.nombre || 'Producto',
+        proveedor_nombre: compra.proveedor_nombre || 'Proveedor no disponible',
+        cantidad_comprada: 0,
+        coste_total: 0,
+        ultimo_precio_unitario: Number(compra.precio_unitario || 0),
+        fecha_compra: compra.fecha_compra,
+      }
+
+      current.cantidad_comprada += Number(compra.cantidad || 0)
+      current.coste_total += Number(compra.cantidad || 0) * Number(compra.precio_unitario || 0)
+      if (compra.fecha_compra >= current.fecha_compra) {
+        current.fecha_compra = compra.fecha_compra
+        current.ultimo_precio_unitario = Number(compra.precio_unitario || 0)
+        current.proveedor_nombre = compra.proveedor_nombre || current.proveedor_nombre
+      }
+      comprasAgrupadas.set(compra.producto_id, current)
+    })
+
+    const comprasPeriodoProductos = Array.from(comprasAgrupadas.values())
+      .sort((a, b) => b.coste_total - a.coste_total)
+      .slice(0, 6)
+      .map((item) => ({
+        producto_id: item.producto_id,
+        producto_nombre: item.producto_nombre,
+        proveedor_nombre: item.proveedor_nombre,
+        cantidad_comprada: item.cantidad_comprada,
+        coste_total: item.coste_total,
+        ultimo_precio_unitario: item.ultimo_precio_unitario,
+      }))
+
+    const comprasTotalCoste = Array.from(comprasAgrupadas.values()).reduce(
+      (acc, item) => acc + item.coste_total,
+      0
+    )
+
     setTpvAnalitica({
-      periodo_label: 'Últimos 30 días',
+      range_key: tpvAnaliticaRange,
+      periodo_label: periodLabel,
       ventas_estimadas_total: ventasEstimadasTotal,
       coste_teorico_vendido_total: costeTeoricoVendidoTotal,
       margen_estimado_total: ventasEstimadasTotal - costeTeoricoVendidoTotal,
@@ -344,8 +464,23 @@ export function useRecetaTpvManagement({
       desviacion_total: consumoRealTotal - consumoTeoricoTotal,
       productos_con_desviacion: productosConDesviacion,
       productos: productosAnalitica,
+      recetas_rentables: recetasRentables,
+      compras_periodo: {
+        total_coste: comprasTotalCoste,
+        total_lineas: (comprasData ?? []).length,
+        productos: comprasPeriodoProductos,
+      },
     })
   }
+
+  const reloadTpvAnalitica = useEffectEvent(async () => {
+    if (!recetas.length && !recetasLineas.length) return
+    void loadTpvAnalitica(recetas, recetasLineas)
+  })
+
+  useEffect(() => {
+    void reloadTpvAnalitica()
+  }, [tpvAnaliticaRange, currentRestaurantId, recetas, recetasLineas])
 
   function resetRecetaForm() {
     setRecetaEditId(null)
@@ -940,6 +1075,7 @@ export function useRecetaTpvManagement({
     tpvImportacionId,
     tpvMapeosSeleccionados,
     tpvGuardandoMapeo,
+    tpvAnaliticaRange,
     tpvPendientesMapeo,
     tpvAnalitica,
     setRecetaNombre,
@@ -948,6 +1084,7 @@ export function useRecetaTpvManagement({
     setRecetaPrecioVenta,
     setRecetaActiva,
     setTpvFile,
+    setTpvAnaliticaRange,
     setTpvMapeosSeleccionados,
     loadRecetas,
     closeRecetaModal,

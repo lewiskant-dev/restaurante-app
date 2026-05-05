@@ -712,6 +712,7 @@ export default function HomePage() {
     tpvImportacionId,
     tpvMapeosSeleccionados,
     tpvGuardandoMapeo,
+    tpvAnaliticaRange,
     tpvPendientesMapeo,
     tpvAnalitica,
     setRecetaNombre,
@@ -720,6 +721,7 @@ export default function HomePage() {
     setRecetaPrecioVenta,
     setRecetaActiva,
     setTpvFile,
+    setTpvAnaliticaRange,
     setTpvMapeosSeleccionados,
     loadRecetas,
     closeRecetaModal,
@@ -1646,11 +1648,13 @@ export default function HomePage() {
             tpvPendientesMapeo={tpvPendientesMapeo}
             tpvMapeosSeleccionados={tpvMapeosSeleccionados}
             tpvGuardandoMapeo={tpvGuardandoMapeo}
+            tpvAnaliticaRange={tpvAnaliticaRange}
             tpvAnalitica={tpvAnalitica}
             recetas={recetas}
             onFileChange={setTpvFile}
             onImportarCsv={() => void importarCSVTPV()}
             onAplicarImportacion={() => void aplicarImportacionTPV()}
+            onAnaliticaRangeChange={setTpvAnaliticaRange}
             onMapeoSeleccionadoChange={(productoExterno, recetaId) =>
               setTpvMapeosSeleccionados((prev) => ({
                 ...prev,

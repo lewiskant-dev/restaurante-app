@@ -17,11 +17,13 @@ type TpvTabProps = {
   tpvPendientesMapeo: PendienteMapeo[]
   tpvMapeosSeleccionados: Record<string, string>
   tpvGuardandoMapeo: string
+  tpvAnaliticaRange: '7d' | '30d' | '90d'
   tpvAnalitica: TpvAnaliticaResumen
   recetas: Receta[]
   onFileChange: (file: File | null) => void
   onImportarCsv: () => void
   onAplicarImportacion: () => void
+  onAnaliticaRangeChange: (value: '7d' | '30d' | '90d') => void
   onMapeoSeleccionadoChange: (productoExterno: string, recetaId: string) => void
   onGuardarMapeo: (productoExterno: string, recetaId: string) => void
 }
@@ -34,11 +36,13 @@ export function TpvTab({
   tpvPendientesMapeo,
   tpvMapeosSeleccionados,
   tpvGuardandoMapeo,
+  tpvAnaliticaRange,
   tpvAnalitica,
   recetas,
   onFileChange,
   onImportarCsv,
   onAplicarImportacion,
+  onAnaliticaRangeChange,
   onMapeoSeleccionadoChange,
   onGuardarMapeo,
 }: TpvTabProps) {
@@ -55,12 +59,25 @@ export function TpvTab({
 
       <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_10px_22px_rgba(15,23,42,0.045)] sm:rounded-[24px] sm:p-5">
         <div className="mb-4">
-          <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
-            Consumo teórico vs real
-          </h3>
-          <p className="mt-1 text-[12px] text-slate-500 sm:text-[13px]">
-            Comparativa operativa en {tpvAnalitica.periodo_label.toLowerCase()} según TPV, recetas y movimientos de stock.
-          </p>
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
+                Consumo teórico vs real
+              </h3>
+              <p className="mt-1 text-[12px] text-slate-500 sm:text-[13px]">
+                Comparativa operativa en {tpvAnalitica.periodo_label.toLowerCase()} según TPV, recetas y movimientos de stock.
+              </p>
+            </div>
+            <select
+              value={tpvAnaliticaRange}
+              onChange={(e) => onAnaliticaRangeChange(e.target.value as '7d' | '30d' | '90d')}
+              className="w-full rounded-[16px] border border-slate-200 bg-white px-3.5 py-2.5 text-[12px] text-slate-900 md:w-[180px] sm:text-[13px]"
+            >
+              <option value="7d">Últimos 7 días</option>
+              <option value="30d">Últimos 30 días</option>
+              <option value="90d">Últimos 90 días</option>
+            </select>
+          </div>
         </div>
 
         <div className="grid gap-3 md:grid-cols-4">
@@ -202,6 +219,115 @@ export function TpvTab({
               </div>
             ))
           )}
+        </div>
+
+        <div className="mt-5 grid gap-4 xl:grid-cols-2">
+          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+            <div className="mb-3">
+              <h4 className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
+                Recetas más rentables
+              </h4>
+              <p className="mt-1 text-[11px] text-slate-500 sm:text-[12px]">
+                Ranking estimado del periodo según precio de venta y coste teórico.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {tpvAnalitica.recetas_rentables.length === 0 ? (
+                <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-400">
+                  Aún no hay ventas suficientes para estimar rentabilidad.
+                </div>
+              ) : (
+                tpvAnalitica.recetas_rentables.map((item) => (
+                  <div
+                    key={item.receta_id}
+                    className="grid gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-3 md:grid-cols-[1fr_auto]"
+                  >
+                    <div>
+                      <div className="text-[13px] font-semibold text-slate-900">{item.receta_nombre}</div>
+                      <div className="mt-1 text-[11px] text-slate-500">
+                        Vendidas: {formatCantidad(item.unidades_vendidas)} · Ventas: {item.ventas_estimadas.toLocaleString('es-ES', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })} €
+                      </div>
+                    </div>
+                    <div className="text-left md:text-right">
+                      <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Margen</div>
+                      <div className="mt-1 text-sm font-semibold text-emerald-600">
+                        {item.margen_estimado.toLocaleString('es-ES', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })} €
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+            <div className="mb-3">
+              <h4 className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
+                Compras y evolución de costes
+              </h4>
+              <p className="mt-1 text-[11px] text-slate-500 sm:text-[12px]">
+                Top de productos comprados en el periodo y coste acumulado.
+              </p>
+            </div>
+
+            <div className="mb-3 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+                <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Coste total compras</div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">
+                  {tpvAnalitica.compras_periodo.total_coste.toLocaleString('es-ES', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })} €
+                </div>
+              </div>
+              <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+                <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Líneas de compra</div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">
+                  {tpvAnalitica.compras_periodo.total_lineas}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {tpvAnalitica.compras_periodo.productos.length === 0 ? (
+                <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-400">
+                  Aún no hay histórico de compras en este periodo.
+                </div>
+              ) : (
+                tpvAnalitica.compras_periodo.productos.map((item) => (
+                  <div
+                    key={item.producto_id}
+                    className="grid gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-3 md:grid-cols-[1fr_auto]"
+                  >
+                    <div>
+                      <div className="text-[13px] font-semibold text-slate-900">{item.producto_nombre}</div>
+                      <div className="mt-1 text-[11px] text-slate-500">
+                        {item.proveedor_nombre} · Cantidad: {formatCantidad(item.cantidad_comprada)}
+                      </div>
+                    </div>
+                    <div className="text-left md:text-right">
+                      <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Coste / último precio</div>
+                      <div className="mt-1 text-sm font-semibold text-slate-900">
+                        {item.coste_total.toLocaleString('es-ES', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })} € · {item.ultimo_precio_unitario.toLocaleString('es-ES', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })} €
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
