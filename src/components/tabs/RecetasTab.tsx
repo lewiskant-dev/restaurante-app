@@ -25,6 +25,10 @@ export function RecetasTab({
     recetas.length === 0
       ? 0
       : recetas.reduce((acc, receta) => acc + Number(receta.coste_por_racion || 0), 0) / recetas.length
+  const margenEstimadoMedio =
+    recetas.length === 0
+      ? 0
+      : recetas.reduce((acc, receta) => acc + Number(receta.margen_estimado || 0), 0) / recetas.length
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -47,7 +51,7 @@ export function RecetasTab({
         </button>
       </div>
 
-      <div className="grid gap-2 md:grid-cols-5 md:gap-3">
+      <div className="grid gap-2 md:grid-cols-6 md:gap-3">
         <div className="rounded-[18px] border border-white/80 bg-white p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.05)] sm:rounded-[20px] sm:p-4 sm:shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Total</div>
           <div className="mt-1.5 text-[1.6rem] font-semibold text-slate-950 sm:mt-2 sm:text-[2rem]">
@@ -93,6 +97,15 @@ export function RecetasTab({
             Media visible según raciones estimadas de cada receta.
           </div>
         </div>
+        <div className="rounded-[18px] border border-white/80 bg-white p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.05)] sm:rounded-[20px] sm:p-4 sm:shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
+          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Margen estimado</div>
+          <div className="mt-1.5 text-[1.6rem] font-semibold text-emerald-600 sm:mt-2 sm:text-[2rem]">
+            {formatEuro(margenEstimadoMedio)}
+          </div>
+          <div className="mt-1.5 text-[12px] text-slate-500 sm:mt-2 sm:text-[13px]">
+            Media por ración según el precio de venta configurado.
+          </div>
+        </div>
       </div>
 
       <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_12px_28px_rgba(15,23,42,0.06)] sm:rounded-[24px] sm:p-5 sm:shadow-[0_16px_40px_rgba(15,23,42,0.07)]">
@@ -129,7 +142,7 @@ export function RecetasTab({
                     </span>
                   </div>
                   <div className="mt-1.5 text-[11px] text-slate-500 sm:mt-2 sm:text-[13px]">
-                    TPV: {receta.nombre_tpv || 'Sin vincular'}
+                    TPV: {receta.nombre_tpv || 'Sin vincular'} · Venta: {formatEuro(Number(receta.precio_venta || 0))}
                   </div>
                   <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-slate-400 sm:text-xs">
                     <span>{receta.ingredientes_count ?? 0} ingredientes</span>
@@ -139,6 +152,8 @@ export function RecetasTab({
                     <span>{Number(receta.raciones || 1)} raciones</span>
                     <span>·</span>
                     <span>Coste/ración: {formatEuro(Number(receta.coste_por_racion || 0))}</span>
+                    <span>·</span>
+                    <span>Margen: {formatEuro(Number(receta.margen_estimado || 0))}</span>
                   </div>
                 </div>
 

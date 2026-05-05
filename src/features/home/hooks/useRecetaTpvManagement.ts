@@ -5,9 +5,10 @@ import type {
   Receta,
   RecetaLinea,
   RecetaLineaForm,
+  TpvAnaliticaResumen,
   VentaTPVCruda,
 } from '@/features/home/types'
-import { normalizeText, scoreRecipeMatch } from '@/features/home/utils'
+import { formatOCRDateToInput, normalizeText, scoreRecipeMatch } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
 import type { Producto } from '@/types'
 
@@ -52,6 +53,7 @@ export function useRecetaTpvManagement({
   const [recetaNombre, setRecetaNombre] = useState('')
   const [recetaNombreTPV, setRecetaNombreTPV] = useState('')
   const [recetaRaciones, setRecetaRaciones] = useState('1')
+  const [recetaPrecioVenta, setRecetaPrecioVenta] = useState('')
   const [recetaActiva, setRecetaActiva] = useState(true)
   const [recetaLineas, setRecetaLineas] = useState<RecetaLineaForm[]>([{ ...initialRecetaLinea }])
   const [tpvFile, setTpvFile] = useState<File | null>(null)
@@ -63,6 +65,17 @@ export function useRecetaTpvManagement({
     {}
   )
   const [tpvGuardandoMapeo, setTpvGuardandoMapeo] = useState('')
+  const [tpvAnalitica, setTpvAnalitica] = useState<TpvAnaliticaResumen>({
+    periodo_label: 'Últimos 30 días',
+    ventas_estimadas_total: 0,
+    coste_teorico_vendido_total: 0,
+    margen_estimado_total: 0,
+    consumo_teorico_total: 0,
+    consumo_real_total: 0,
+    desviacion_total: 0,
+    productos_con_desviacion: 0,
+    productos: [],
+  })
 
   function requireActiveRestaurant() {
     if (currentRestaurantId) return currentRestaurantId
@@ -133,6 +146,9 @@ export function useRecetaTpvManagement({
         raciones: Number(receta.raciones || 1),
         coste_teorico: costeTeorico,
         coste_por_racion: costeTeorico / Math.max(Number(receta.raciones || 1), 1),
+        margen_estimado:
+          Number(receta.precio_venta || 0) -
+          costeTeorico / Math.max(Number(receta.raciones || 1), 1),
         ingredientes_count: lineas.length,
       }
     })
@@ -177,6 +193,158 @@ export function useRecetaTpvManagement({
     setRecetas((data ?? []) as Receta[])
     setRecetasLineas((lineasData ?? []) as RecetaLinea[])
     setLoadingRecetas(false)
+
+    await loadTpvAnalitica((data ?? []) as Receta[], (lineasData ?? []) as RecetaLinea[])
+  }
+
+  async function loadTpvAnalitica(recetasBase: Receta[], lineasBase: RecetaLinea[]) {
+    if (!currentRestaurantId) {
+      setTpvAnalitica({
+        periodo_label: 'Últimos 30 días',
+        ventas_estimadas_total: 0,
+        coste_teorico_vendido_total: 0,
+        margen_estimado_total: 0,
+        consumo_teorico_total: 0,
+        consumo_real_total: 0,
+        desviacion_total: 0,
+        productos_con_desviacion: 0,
+        productos: [],
+      })
+      return
+    }
+
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - 30)
+    const cutoffIso = cutoff.toISOString()
+    const cutoffDate = cutoffIso.slice(0, 10)
+
+    const [{ data: ventasData, error: ventasError }, { data: movimientosData, error: movimientosError }] =
+      await Promise.all([
+        supabase
+          .from('tpv_ventas_crudas')
+          .select('producto_externo,cantidad,fecha')
+          .eq('restaurant_id', currentRestaurantId),
+        supabase
+          .from('movimientos_stock')
+          .select('producto_id,cantidad,created_at,tipo')
+          .eq('restaurant_id', currentRestaurantId)
+          .eq('tipo', 'consumo')
+          .gte('created_at', cutoffIso),
+      ])
+
+    if (ventasError) {
+      onError(ventasError.message)
+      return
+    }
+
+    if (movimientosError) {
+      onError(movimientosError.message)
+      return
+    }
+
+    const recetasMap = new Map<string, Receta>()
+    recetasBase.forEach((receta) => {
+      if (receta.nombre_tpv && receta.activo !== false) {
+        recetasMap.set(normalizeText(receta.nombre_tpv), receta)
+      }
+    })
+
+    const lineasMap = new Map<string, RecetaLinea[]>()
+    lineasBase.forEach((linea) => {
+      const current = lineasMap.get(linea.receta_id) ?? []
+      current.push(linea)
+      lineasMap.set(linea.receta_id, current)
+    })
+
+    const productosMap = new Map(productos.map((producto) => [producto.id, producto]))
+    const theoreticalByProduct = new Map<string, number>()
+    const actualByProduct = new Map<string, number>()
+    let ventasEstimadasTotal = 0
+    let costeTeoricoVendidoTotal = 0
+
+    ;((ventasData ?? []) as VentaTPVCruda[])
+      .filter((venta) => formatOCRDateToInput(venta.fecha) >= cutoffDate)
+      .forEach((venta) => {
+        const receta = recetasMap.get(normalizeText(venta.producto_externo))
+        if (!receta) return
+
+        const unidadesVendidas = Number(venta.cantidad || 0)
+        const costePorRacion =
+          Number(receta.coste_teorico || 0) / Math.max(Number(receta.raciones || 1), 1)
+        ventasEstimadasTotal += Number(receta.precio_venta || 0) * unidadesVendidas
+        costeTeoricoVendidoTotal += costePorRacion * unidadesVendidas
+
+        const lineas = lineasMap.get(receta.id) ?? []
+        lineas.forEach((linea) => {
+          const consumo = Number(linea.cantidad || 0) * unidadesVendidas
+          if (!linea.producto_id || consumo <= 0) return
+          theoreticalByProduct.set(
+            linea.producto_id,
+            Number(theoreticalByProduct.get(linea.producto_id) || 0) + consumo
+          )
+        })
+      })
+
+    ;((movimientosData ?? []) as Array<{
+      producto_id: string
+      cantidad: number
+      created_at: string
+      tipo: 'consumo'
+    }>).forEach((movimiento) => {
+      actualByProduct.set(
+        movimiento.producto_id,
+        Number(actualByProduct.get(movimiento.producto_id) || 0) + Number(movimiento.cantidad || 0)
+      )
+    })
+
+    const productIds = new Set<string>([
+      ...Array.from(theoreticalByProduct.keys()),
+      ...Array.from(actualByProduct.keys()),
+    ])
+
+    const productosAnalitica = Array.from(productIds)
+      .map((productoId) => {
+        const producto = productosMap.get(productoId)
+        const consumoTeorico = Number(theoreticalByProduct.get(productoId) || 0)
+        const consumoReal = Number(actualByProduct.get(productoId) || 0)
+        const desviacion = consumoReal - consumoTeorico
+
+        return {
+          producto_id: productoId,
+          producto_nombre: producto?.nombre || 'Producto eliminado',
+          unidad: producto?.unidad || 'uds',
+          consumo_teorico: consumoTeorico,
+          consumo_real: consumoReal,
+          desviacion,
+        }
+      })
+      .filter((item) => item.consumo_teorico > 0 || item.consumo_real > 0)
+      .sort((a, b) => Math.abs(b.desviacion) - Math.abs(a.desviacion))
+      .slice(0, 8)
+
+    const consumoTeoricoTotal = Array.from(theoreticalByProduct.values()).reduce(
+      (acc, value) => acc + Number(value || 0),
+      0
+    )
+    const consumoRealTotal = Array.from(actualByProduct.values()).reduce(
+      (acc, value) => acc + Number(value || 0),
+      0
+    )
+    const productosConDesviacion = productosAnalitica.filter(
+      (item) => Math.abs(item.desviacion) > 0.01
+    ).length
+
+    setTpvAnalitica({
+      periodo_label: 'Últimos 30 días',
+      ventas_estimadas_total: ventasEstimadasTotal,
+      coste_teorico_vendido_total: costeTeoricoVendidoTotal,
+      margen_estimado_total: ventasEstimadasTotal - costeTeoricoVendidoTotal,
+      consumo_teorico_total: consumoTeoricoTotal,
+      consumo_real_total: consumoRealTotal,
+      desviacion_total: consumoRealTotal - consumoTeoricoTotal,
+      productos_con_desviacion: productosConDesviacion,
+      productos: productosAnalitica,
+    })
   }
 
   function resetRecetaForm() {
@@ -184,6 +352,7 @@ export function useRecetaTpvManagement({
     setRecetaNombre('')
     setRecetaNombreTPV('')
     setRecetaRaciones('1')
+    setRecetaPrecioVenta('')
     setRecetaActiva(true)
     setRecetaLineas([{ ...initialRecetaLinea }])
   }
@@ -228,6 +397,11 @@ export function useRecetaTpvManagement({
     setRecetaNombre(receta.nombre || '')
     setRecetaNombreTPV(receta.nombre_tpv || '')
     setRecetaRaciones(String(receta.raciones || 1))
+    setRecetaPrecioVenta(
+      receta.precio_venta === undefined || receta.precio_venta === null
+        ? ''
+        : String(receta.precio_venta)
+    )
     setRecetaActiva(receta.activo !== false)
 
     let query = supabase
@@ -283,9 +457,15 @@ export function useRecetaTpvManagement({
     }
 
     const raciones = Number(recetaRaciones)
+    const precioVenta = recetaPrecioVenta === '' ? 0 : Number(recetaPrecioVenta)
 
     if (!raciones || raciones <= 0) {
       onError('Indica un número válido de raciones para la receta')
+      return
+    }
+
+    if (precioVenta < 0) {
+      onError('El precio de venta no puede ser negativo')
       return
     }
 
@@ -307,6 +487,7 @@ export function useRecetaTpvManagement({
             nombre: recetaNombre.trim(),
             nombre_tpv: recetaNombreTPV.trim() || null,
             raciones,
+            precio_venta: precioVenta,
             activo: recetaActiva,
           })
           .eq('id', recetaEditId)
@@ -332,6 +513,7 @@ export function useRecetaTpvManagement({
             nombre: recetaNombre.trim(),
             nombre_tpv: recetaNombreTPV.trim() || null,
             raciones,
+            precio_venta: precioVenta,
             activo: recetaActiva,
             lineas: lineasPreparadas,
           },
@@ -343,6 +525,7 @@ export function useRecetaTpvManagement({
             nombre: recetaNombre.trim(),
             nombre_tpv: recetaNombreTPV.trim() || null,
             raciones,
+            precio_venta: precioVenta,
             activo: recetaActiva,
             restaurant_id: restaurantId,
           })
@@ -364,6 +547,7 @@ export function useRecetaTpvManagement({
             nombre: recetaNombre.trim(),
             nombre_tpv: recetaNombreTPV.trim() || null,
             raciones,
+            precio_venta: precioVenta,
             activo: recetaActiva,
             lineas: lineasPreparadas,
           },
@@ -713,6 +897,7 @@ export function useRecetaTpvManagement({
       })
 
       await Promise.all([loadProductos(), loadMovimientos(), loadAuditoria()])
+      await loadTpvAnalitica((recetasData ?? []) as Receta[], (lineasData ?? []) as RecetaLinea[])
       onToast(
         `Importación aplicada · Recetas: ${ventasConReceta} · Sin receta: ${ventasSinReceta}`
       )
@@ -745,6 +930,7 @@ export function useRecetaTpvManagement({
     recetaNombre,
     recetaNombreTPV,
     recetaRaciones,
+    recetaPrecioVenta,
     recetaActiva,
     recetaLineas,
     tpvFile,
@@ -755,9 +941,11 @@ export function useRecetaTpvManagement({
     tpvMapeosSeleccionados,
     tpvGuardandoMapeo,
     tpvPendientesMapeo,
+    tpvAnalitica,
     setRecetaNombre,
     setRecetaNombreTPV,
     setRecetaRaciones,
+    setRecetaPrecioVenta,
     setRecetaActiva,
     setTpvFile,
     setTpvMapeosSeleccionados,

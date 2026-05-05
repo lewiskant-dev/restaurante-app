@@ -703,6 +703,7 @@ export default function HomePage() {
     recetaNombre,
     recetaNombreTPV,
     recetaRaciones,
+    recetaPrecioVenta,
     recetaActiva,
     recetaLineas,
     tpvImportando,
@@ -712,9 +713,11 @@ export default function HomePage() {
     tpvMapeosSeleccionados,
     tpvGuardandoMapeo,
     tpvPendientesMapeo,
+    tpvAnalitica,
     setRecetaNombre,
     setRecetaNombreTPV,
     setRecetaRaciones,
+    setRecetaPrecioVenta,
     setRecetaActiva,
     setTpvFile,
     setTpvMapeosSeleccionados,
@@ -1643,6 +1646,7 @@ export default function HomePage() {
             tpvPendientesMapeo={tpvPendientesMapeo}
             tpvMapeosSeleccionados={tpvMapeosSeleccionados}
             tpvGuardandoMapeo={tpvGuardandoMapeo}
+            tpvAnalitica={tpvAnalitica}
             recetas={recetas}
             onFileChange={setTpvFile}
             onImportarCsv={() => void importarCSVTPV()}
@@ -1764,6 +1768,7 @@ export default function HomePage() {
         recetaNombre={recetaNombre}
         recetaNombreTPV={recetaNombreTPV}
         recetaRaciones={recetaRaciones}
+        recetaPrecioVenta={recetaPrecioVenta}
         recetaActiva={recetaActiva}
         recetaLineas={recetaLineas}
         productos={productos}
@@ -1772,6 +1777,7 @@ export default function HomePage() {
         onNombreChange={setRecetaNombre}
         onNombreTpvChange={setRecetaNombreTPV}
         onRacionesChange={setRecetaRaciones}
+        onPrecioVentaChange={setRecetaPrecioVenta}
         onActivaChange={setRecetaActiva}
         onAddLinea={addRecetaLinea}
         onLineaChange={updateRecetaLinea}

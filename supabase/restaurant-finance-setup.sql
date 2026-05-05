@@ -25,6 +25,9 @@ create index if not exists productos_ultimo_proveedor_id_idx
 alter table if exists public.recetas
   add column if not exists raciones numeric(10,2) not null default 1;
 
+alter table if exists public.recetas
+  add column if not exists precio_venta numeric(12,2) not null default 0;
+
 create table if not exists public.productos_precios_historial (
   id uuid primary key default gen_random_uuid(),
   restaurant_id uuid not null references public.restaurantes(id) on delete cascade,

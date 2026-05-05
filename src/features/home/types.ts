@@ -75,6 +75,27 @@ export type VentaTPVCruda = {
   raw: string
 }
 
+export type TpvAnaliticaProducto = {
+  producto_id: string
+  producto_nombre: string
+  unidad: string
+  consumo_teorico: number
+  consumo_real: number
+  desviacion: number
+}
+
+export type TpvAnaliticaResumen = {
+  periodo_label: string
+  ventas_estimadas_total: number
+  coste_teorico_vendido_total: number
+  margen_estimado_total: number
+  consumo_teorico_total: number
+  consumo_real_total: number
+  desviacion_total: number
+  productos_con_desviacion: number
+  productos: TpvAnaliticaProducto[]
+}
+
 export type OCRAlbaranLinea = {
   nombre: string
   cantidad: number
@@ -103,8 +124,10 @@ export type Receta = {
   activo: boolean | null
   created_at: string
   raciones?: number | null
+  precio_venta?: number | null
   coste_teorico?: number
   coste_por_racion?: number
+  margen_estimado?: number
   ingredientes_count?: number
 }
 

@@ -1,7 +1,7 @@
 'use client'
 
-import type { Receta, VentaTPVCruda } from '@/features/home/types'
-import { formatFechaHora } from '@/features/home/utils'
+import type { Receta, TpvAnaliticaResumen, VentaTPVCruda } from '@/features/home/types'
+import { formatCantidad, formatFechaHora } from '@/features/home/utils'
 
 type PendienteMapeo = {
   producto_externo: string
@@ -17,6 +17,7 @@ type TpvTabProps = {
   tpvPendientesMapeo: PendienteMapeo[]
   tpvMapeosSeleccionados: Record<string, string>
   tpvGuardandoMapeo: string
+  tpvAnalitica: TpvAnaliticaResumen
   recetas: Receta[]
   onFileChange: (file: File | null) => void
   onImportarCsv: () => void
@@ -33,6 +34,7 @@ export function TpvTab({
   tpvPendientesMapeo,
   tpvMapeosSeleccionados,
   tpvGuardandoMapeo,
+  tpvAnalitica,
   recetas,
   onFileChange,
   onImportarCsv,
@@ -49,6 +51,158 @@ export function TpvTab({
         <p className="mt-0.5 text-[12px] text-slate-500 sm:mt-1.5 sm:text-[15px]">
           Importa ventas, mapea artículos y descuenta stock de forma controlada.
         </p>
+      </div>
+
+      <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_10px_22px_rgba(15,23,42,0.045)] sm:rounded-[24px] sm:p-5">
+        <div className="mb-4">
+          <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
+            Consumo teórico vs real
+          </h3>
+          <p className="mt-1 text-[12px] text-slate-500 sm:text-[13px]">
+            Comparativa operativa en {tpvAnalitica.periodo_label.toLowerCase()} según TPV, recetas y movimientos de stock.
+          </p>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-4">
+          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Ventas estimadas
+            </div>
+            <div className="mt-1 text-[1.5rem] font-semibold text-emerald-600">
+              {tpvAnalitica.ventas_estimadas_total.toLocaleString('es-ES', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}{' '}
+              €
+            </div>
+          </div>
+          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Coste teórico vendido
+            </div>
+            <div className="mt-1 text-[1.5rem] font-semibold text-blue-600">
+              {tpvAnalitica.coste_teorico_vendido_total.toLocaleString('es-ES', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}{' '}
+              €
+            </div>
+          </div>
+          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Margen estimado
+            </div>
+            <div
+              className={`mt-1 text-[1.5rem] font-semibold ${
+                tpvAnalitica.margen_estimado_total >= 0 ? 'text-emerald-600' : 'text-red-600'
+              }`}
+            >
+              {tpvAnalitica.margen_estimado_total.toLocaleString('es-ES', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}{' '}
+              €
+            </div>
+          </div>
+          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Teórico
+            </div>
+            <div className="mt-1 text-[1.5rem] font-semibold text-blue-600">
+              {formatCantidad(tpvAnalitica.consumo_teorico_total)}
+            </div>
+          </div>
+          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3 md:col-span-2">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Real
+            </div>
+            <div className="mt-1 text-[1.5rem] font-semibold text-slate-900">
+              {formatCantidad(tpvAnalitica.consumo_real_total)}
+            </div>
+          </div>
+          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3 md:col-span-2">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Desviación
+            </div>
+            <div
+              className={`mt-1 text-[1.5rem] font-semibold ${
+                tpvAnalitica.desviacion_total > 0.01
+                  ? 'text-red-600'
+                  : tpvAnalitica.desviacion_total < -0.01
+                    ? 'text-amber-600'
+                    : 'text-emerald-600'
+              }`}
+            >
+              {tpvAnalitica.desviacion_total > 0 ? '+' : ''}
+              {formatCantidad(tpvAnalitica.desviacion_total)}
+            </div>
+          </div>
+          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3 md:col-span-2">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Productos a revisar
+            </div>
+            <div className="mt-1 text-[1.5rem] font-semibold text-violet-600">
+              {tpvAnalitica.productos_con_desviacion}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {tpvAnalitica.productos.length === 0 ? (
+            <div className="rounded-[18px] border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-400">
+              Aún no hay base suficiente para calcular desviaciones operativas.
+            </div>
+          ) : (
+            tpvAnalitica.productos.map((item) => (
+              <div
+                key={item.producto_id}
+                className="grid gap-3 rounded-[18px] border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1.2fr_repeat(3,0.7fr)]"
+              >
+                <div>
+                  <div className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
+                    {item.producto_nombre}
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-500 sm:text-[12px]">
+                    Unidad: {item.unidad}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Teórico
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-blue-600">
+                    {formatCantidad(item.consumo_teorico)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Real
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">
+                    {formatCantidad(item.consumo_real)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Desviación
+                  </div>
+                  <div
+                    className={`mt-1 text-sm font-semibold ${
+                      item.desviacion > 0.01
+                        ? 'text-red-600'
+                        : item.desviacion < -0.01
+                          ? 'text-amber-600'
+                          : 'text-emerald-600'
+                    }`}
+                  >
+                    {item.desviacion > 0 ? '+' : ''}
+                    {formatCantidad(item.desviacion)}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_10px_22px_rgba(15,23,42,0.045)] sm:rounded-[24px] sm:p-5">
