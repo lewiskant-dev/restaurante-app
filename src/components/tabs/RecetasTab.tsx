@@ -2,6 +2,7 @@
 
 import { ActionMenu } from '@/components/ui/ActionMenu'
 import type { Receta } from '@/features/home/types'
+import { formatEuro } from '@/features/home/utils'
 
 type RecetasTabProps = {
   loadingRecetas: boolean
@@ -19,6 +20,11 @@ export function RecetasTab({
   onToggleActivaReceta,
 }: RecetasTabProps) {
   const activas = recetas.filter((item) => item.activo !== false).length
+  const costeTeoricoTotal = recetas.reduce((acc, receta) => acc + Number(receta.coste_teorico || 0), 0)
+  const costePorRacionMedio =
+    recetas.length === 0
+      ? 0
+      : recetas.reduce((acc, receta) => acc + Number(receta.coste_por_racion || 0), 0) / recetas.length
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -41,7 +47,7 @@ export function RecetasTab({
         </button>
       </div>
 
-      <div className="grid gap-2 md:grid-cols-3 md:gap-3">
+      <div className="grid gap-2 md:grid-cols-5 md:gap-3">
         <div className="rounded-[18px] border border-white/80 bg-white p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.05)] sm:rounded-[20px] sm:p-4 sm:shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Total</div>
           <div className="mt-1.5 text-[1.6rem] font-semibold text-slate-950 sm:mt-2 sm:text-[2rem]">
@@ -67,6 +73,24 @@ export function RecetasTab({
           </div>
           <div className="mt-1.5 text-[12px] text-slate-500 sm:mt-2 sm:text-[13px]">
             Recetas inactivas o por revisar.
+          </div>
+        </div>
+        <div className="rounded-[18px] border border-white/80 bg-white p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.05)] sm:rounded-[20px] sm:p-4 sm:shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
+          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Coste teórico</div>
+          <div className="mt-1.5 text-[1.6rem] font-semibold text-blue-600 sm:mt-2 sm:text-[2rem]">
+            {formatEuro(costeTeoricoTotal)}
+          </div>
+          <div className="mt-1.5 text-[12px] text-slate-500 sm:mt-2 sm:text-[13px]">
+            Suma actual del coste teórico de las recetas visibles.
+          </div>
+        </div>
+        <div className="rounded-[18px] border border-white/80 bg-white p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.05)] sm:rounded-[20px] sm:p-4 sm:shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
+          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Coste / ración</div>
+          <div className="mt-1.5 text-[1.6rem] font-semibold text-violet-600 sm:mt-2 sm:text-[2rem]">
+            {formatEuro(costePorRacionMedio)}
+          </div>
+          <div className="mt-1.5 text-[12px] text-slate-500 sm:mt-2 sm:text-[13px]">
+            Media visible según raciones estimadas de cada receta.
           </div>
         </div>
       </div>
@@ -107,8 +131,14 @@ export function RecetasTab({
                   <div className="mt-1.5 text-[11px] text-slate-500 sm:mt-2 sm:text-[13px]">
                     TPV: {receta.nombre_tpv || 'Sin vincular'}
                   </div>
-                  <div className="mt-1 text-[10px] text-slate-400 sm:text-xs">
-                    Lista para edición y sincronización con catálogo.
+                  <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-slate-400 sm:text-xs">
+                    <span>{receta.ingredientes_count ?? 0} ingredientes</span>
+                    <span>·</span>
+                    <span>Coste teórico: {formatEuro(Number(receta.coste_teorico || 0))}</span>
+                    <span>·</span>
+                    <span>{Number(receta.raciones || 1)} raciones</span>
+                    <span>·</span>
+                    <span>Coste/ración: {formatEuro(Number(receta.coste_por_racion || 0))}</span>
                   </div>
                 </div>
 

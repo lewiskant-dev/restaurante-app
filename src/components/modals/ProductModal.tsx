@@ -1,9 +1,11 @@
 'use client'
 
 import Image from 'next/image'
-import type { NuevoProductoForm } from '@/features/home/types'
+import type { NuevoProductoForm, ProductoPrecioHistorial } from '@/features/home/types'
 import { PRODUCT_CATEGORY_OPTIONS } from '@/features/home/constants'
 import { ProductCategoryBadge } from '@/components/ui/ProductCategoryVisual'
+import { formatEuro } from '@/features/home/utils'
+import type { Producto } from '@/types'
 
 type ProductModalProps = {
   open: boolean
@@ -11,6 +13,9 @@ type ProductModalProps = {
   productoForm: NuevoProductoForm
   productoSaving: boolean
   categoriasProducto?: string[]
+  productoActual?: Producto | null
+  historialPrecios?: ProductoPrecioHistorial[]
+  historialPreciosLoading?: boolean
   onClose: () => void
   onFormChange: (next: NuevoProductoForm) => void
   onGuardar: () => void
@@ -22,6 +27,9 @@ export function ProductModal({
   productoForm,
   productoSaving,
   categoriasProducto = [],
+  productoActual = null,
+  historialPrecios = [],
+  historialPreciosLoading = false,
   onClose,
   onFormChange,
   onGuardar,
@@ -144,6 +152,55 @@ export function ProductModal({
           </div>
 
           <input
+            type="number"
+            step="0.01"
+            placeholder="Coste unitario actual"
+            value={productoForm.coste_unitario}
+            onChange={(e) => onFormChange({ ...productoForm, coste_unitario: e.target.value })}
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+          />
+
+          {productoEditId && productoActual ? (
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <div className="mb-3">
+                <h4 className="text-sm font-semibold text-slate-900">Contexto financiero</h4>
+                <p className="mt-1 text-sm text-slate-500">
+                  Referencia rápida del último coste y proveedor registrados.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Último coste
+                  </div>
+                  <div className="mt-1 text-base font-semibold text-slate-900">
+                    {formatEuro(
+                      Number(productoActual.ultimo_precio_compra ?? productoActual.coste_unitario ?? 0)
+                    )}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Última compra
+                  </div>
+                  <div className="mt-1 text-base font-semibold text-slate-900">
+                    {productoActual.ultima_compra_at || 'Sin compras registradas'}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:col-span-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Último proveedor
+                  </div>
+                  <div className="mt-1 text-base font-semibold text-slate-900">
+                    {productoActual.ultimo_proveedor_nombre || 'Sin proveedor asociado'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <input
             placeholder="Referencia"
             value={productoForm.referencia}
             onChange={(e) => onFormChange({ ...productoForm, referencia: e.target.value })}
@@ -211,6 +268,48 @@ export function ProductModal({
               </div>
             </div>
           </div>
+
+          {productoEditId ? (
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-3">
+                <h4 className="text-sm font-semibold text-slate-900">Histórico reciente de compras</h4>
+                <p className="mt-1 text-sm text-slate-500">
+                  Últimos precios registrados para este producto.
+                </p>
+              </div>
+
+              {historialPreciosLoading ? (
+                <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-5 text-sm text-slate-400">
+                  Cargando histórico...
+                </div>
+              ) : historialPrecios.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-5 text-sm text-slate-400">
+                  Todavía no hay compras registradas para este producto.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {historialPrecios.map((item) => (
+                    <div
+                      key={item.id}
+                      className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 sm:grid-cols-[1fr_auto]"
+                    >
+                      <div>
+                        <div className="text-sm font-semibold text-slate-900">
+                          {item.proveedor_nombre || 'Proveedor no disponible'}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {item.fecha_compra} · {item.cantidad} unidades
+                        </div>
+                      </div>
+                      <div className="text-sm font-semibold text-slate-900 sm:text-right">
+                        {formatEuro(Number(item.precio_unitario || 0))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
 
           <button
             type="button"

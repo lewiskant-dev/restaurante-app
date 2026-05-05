@@ -756,12 +756,39 @@ export function useAlbaranManagement({
 
         const { error: updateError } = await supabase
           .from('productos')
-          .update({ stock_actual: stockDespues })
+          .update({
+            stock_actual: stockDespues,
+            coste_unitario: linea.precio_unitario,
+            ultimo_precio_compra: linea.precio_unitario,
+            ultima_compra_at: albaranFecha,
+            ultimo_proveedor_id: proveedor.id,
+            ultimo_proveedor_nombre: proveedor.nombre,
+          })
           .eq('id', producto.id)
           .eq('restaurant_id', restaurantId)
 
         if (updateError) {
           throw new Error(updateError.message)
+        }
+
+        const { error: historyError } = await supabase.from('productos_precios_historial').insert({
+          restaurant_id: restaurantId,
+          producto_id: producto.id,
+          proveedor_id: proveedor.id,
+          albaran_id: albaranId,
+          proveedor_nombre: proveedor.nombre,
+          fecha_compra: albaranFecha,
+          cantidad: linea.cantidad,
+          precio_unitario: linea.precio_unitario,
+        })
+
+        if (
+          historyError &&
+          !/productos_precios_historial|relation .* does not exist|could not find the table/i.test(
+            historyError.message
+          )
+        ) {
+          throw new Error(historyError.message)
         }
 
         const { error: movError } = await supabase.from('movimientos_stock').insert({

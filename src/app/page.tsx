@@ -545,6 +545,8 @@ export default function HomePage() {
     productoSaving,
     productoEditId,
     productoForm,
+    productoHistorialPrecios,
+    productoHistorialLoading,
     consumoModalOpen,
     consumoProducto,
     consumoCantidad,
@@ -700,6 +702,7 @@ export default function HomePage() {
     recetaEditId,
     recetaNombre,
     recetaNombreTPV,
+    recetaRaciones,
     recetaActiva,
     recetaLineas,
     tpvImportando,
@@ -711,6 +714,7 @@ export default function HomePage() {
     tpvPendientesMapeo,
     setRecetaNombre,
     setRecetaNombreTPV,
+    setRecetaRaciones,
     setRecetaActiva,
     setTpvFile,
     setTpvMapeosSeleccionados,
@@ -729,6 +733,7 @@ export default function HomePage() {
     resetRecetaTpvState,
   } = useRecetaTpvManagement({
     currentRestaurantId: activeRestaurantId,
+    productos,
     onError: setError,
     onToast: setToast,
     requirePermission,
@@ -1699,6 +1704,9 @@ export default function HomePage() {
         productoForm={productoForm}
         productoSaving={productoSaving}
         categoriasProducto={categoriasProducto}
+        productoActual={productoEditId ? productos.find((producto) => producto.id === productoEditId) || null : null}
+        historialPrecios={productoHistorialPrecios}
+        historialPreciosLoading={productoHistorialLoading}
         onClose={closeProductoModal}
         onFormChange={setProductoForm}
         onGuardar={() => void guardarProducto()}
@@ -1755,6 +1763,7 @@ export default function HomePage() {
         recetaEditId={recetaEditId}
         recetaNombre={recetaNombre}
         recetaNombreTPV={recetaNombreTPV}
+        recetaRaciones={recetaRaciones}
         recetaActiva={recetaActiva}
         recetaLineas={recetaLineas}
         productos={productos}
@@ -1762,6 +1771,7 @@ export default function HomePage() {
         onClose={closeRecetaModal}
         onNombreChange={setRecetaNombre}
         onNombreTpvChange={setRecetaNombreTPV}
+        onRacionesChange={setRecetaRaciones}
         onActivaChange={setRecetaActiva}
         onAddLinea={addRecetaLinea}
         onLineaChange={updateRecetaLinea}

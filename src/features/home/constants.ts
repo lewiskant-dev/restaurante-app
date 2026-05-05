@@ -76,6 +76,7 @@ export const initialProductoForm: NuevoProductoForm = {
   unidad: 'uds',
   stock_actual: '',
   stock_minimo: '',
+  coste_unitario: '',
   referencia: '',
   imagen_url: '',
   icono: '',

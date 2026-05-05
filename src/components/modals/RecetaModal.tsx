@@ -8,6 +8,7 @@ type RecetaModalProps = {
   recetaEditId: string | null
   recetaNombre: string
   recetaNombreTPV: string
+  recetaRaciones: string
   recetaActiva: boolean
   recetaLineas: RecetaLineaForm[]
   productos: Producto[]
@@ -15,6 +16,7 @@ type RecetaModalProps = {
   onClose: () => void
   onNombreChange: (value: string) => void
   onNombreTpvChange: (value: string) => void
+  onRacionesChange: (value: string) => void
   onActivaChange: (value: boolean) => void
   onAddLinea: () => void
   onLineaChange: (index: number, field: keyof RecetaLineaForm, value: string) => void
@@ -27,6 +29,7 @@ export function RecetaModal({
   recetaEditId,
   recetaNombre,
   recetaNombreTPV,
+  recetaRaciones,
   recetaActiva,
   recetaLineas,
   productos,
@@ -34,6 +37,7 @@ export function RecetaModal({
   onClose,
   onNombreChange,
   onNombreTpvChange,
+  onRacionesChange,
   onActivaChange,
   onAddLinea,
   onLineaChange,
@@ -79,6 +83,16 @@ export function RecetaModal({
                 value={recetaNombreTPV}
                 onChange={(e) => onNombreTpvChange(e.target.value)}
                 placeholder="Nombre del producto en TPV"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+              />
+
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={recetaRaciones}
+                onChange={(e) => onRacionesChange(e.target.value)}
+                placeholder="Raciones estimadas"
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
               />
 

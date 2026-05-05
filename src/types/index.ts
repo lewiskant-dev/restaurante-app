@@ -6,6 +6,11 @@ export type Producto = {
   unidad: string
   stock_actual: number
   stock_minimo: number
+  coste_unitario?: number
+  ultimo_precio_compra?: number | null
+  ultima_compra_at?: string | null
+  ultimo_proveedor_id?: string | null
+  ultimo_proveedor_nombre?: string | null
   referencia: string
   imagen_url?: string | null
   icono?: string | null

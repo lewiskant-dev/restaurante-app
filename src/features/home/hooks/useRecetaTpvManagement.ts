@@ -22,6 +22,7 @@ type AuditoriaParams = {
 
 type UseRecetaTpvManagementOptions = {
   currentRestaurantId?: string | null
+  productos: Producto[]
   onError: (message: string) => void
   onToast: (message: string) => void
   requirePermission: (permission: PermissionKey, message: string) => boolean
@@ -33,6 +34,7 @@ type UseRecetaTpvManagementOptions = {
 
 export function useRecetaTpvManagement({
   currentRestaurantId,
+  productos,
   onError,
   onToast,
   requirePermission,
@@ -42,12 +44,14 @@ export function useRecetaTpvManagement({
   loadAuditoria,
 }: UseRecetaTpvManagementOptions) {
   const [recetas, setRecetas] = useState<Receta[]>([])
+  const [recetasLineas, setRecetasLineas] = useState<RecetaLinea[]>([])
   const [loadingRecetas, setLoadingRecetas] = useState(true)
   const [recetaModalOpen, setRecetaModalOpen] = useState(false)
   const [recetaSaving, setRecetaSaving] = useState(false)
   const [recetaEditId, setRecetaEditId] = useState<string | null>(null)
   const [recetaNombre, setRecetaNombre] = useState('')
   const [recetaNombreTPV, setRecetaNombreTPV] = useState('')
+  const [recetaRaciones, setRecetaRaciones] = useState('1')
   const [recetaActiva, setRecetaActiva] = useState(true)
   const [recetaLineas, setRecetaLineas] = useState<RecetaLineaForm[]>([{ ...initialRecetaLinea }])
   const [tpvFile, setTpvFile] = useState<File | null>(null)
@@ -107,6 +111,33 @@ export function useRecetaTpvManagement({
     )
   }, [tpvVentasCrudas, recetas])
 
+  const recetasEnriquecidas = useMemo(() => {
+    const productosMap = new Map(productos.map((producto) => [producto.id, producto]))
+    const linesByRecipe = new Map<string, RecetaLinea[]>()
+
+    recetasLineas.forEach((linea) => {
+      const current = linesByRecipe.get(linea.receta_id) ?? []
+      current.push(linea)
+      linesByRecipe.set(linea.receta_id, current)
+    })
+
+    return recetas.map((receta) => {
+      const lineas = linesByRecipe.get(receta.id) ?? []
+      const costeTeorico = lineas.reduce((acc, linea) => {
+        const producto = productosMap.get(linea.producto_id)
+        return acc + Number(linea.cantidad || 0) * Number(producto?.coste_unitario || 0)
+      }, 0)
+
+      return {
+        ...receta,
+        raciones: Number(receta.raciones || 1),
+        coste_teorico: costeTeorico,
+        coste_por_racion: costeTeorico / Math.max(Number(receta.raciones || 1), 1),
+        ingredientes_count: lineas.length,
+      }
+    })
+  }, [productos, recetas, recetasLineas])
+
   async function loadRecetas() {
     setLoadingRecetas(true)
 
@@ -127,7 +158,24 @@ export function useRecetaTpvManagement({
       return
     }
 
+    let lineasQuery = supabase.from('recetas_lineas').select('*').order('created_at', {
+      ascending: true,
+    })
+
+    if (currentRestaurantId) {
+      lineasQuery = lineasQuery.eq('restaurant_id', currentRestaurantId)
+    }
+
+    const { data: lineasData, error: lineasError } = await lineasQuery
+
+    if (lineasError) {
+      onError(lineasError.message)
+      setLoadingRecetas(false)
+      return
+    }
+
     setRecetas((data ?? []) as Receta[])
+    setRecetasLineas((lineasData ?? []) as RecetaLinea[])
     setLoadingRecetas(false)
   }
 
@@ -135,6 +183,7 @@ export function useRecetaTpvManagement({
     setRecetaEditId(null)
     setRecetaNombre('')
     setRecetaNombreTPV('')
+    setRecetaRaciones('1')
     setRecetaActiva(true)
     setRecetaLineas([{ ...initialRecetaLinea }])
   }
@@ -178,6 +227,7 @@ export function useRecetaTpvManagement({
     setRecetaEditId(receta.id)
     setRecetaNombre(receta.nombre || '')
     setRecetaNombreTPV(receta.nombre_tpv || '')
+    setRecetaRaciones(String(receta.raciones || 1))
     setRecetaActiva(receta.activo !== false)
 
     let query = supabase
@@ -232,6 +282,13 @@ export function useRecetaTpvManagement({
       return
     }
 
+    const raciones = Number(recetaRaciones)
+
+    if (!raciones || raciones <= 0) {
+      onError('Indica un número válido de raciones para la receta')
+      return
+    }
+
     setRecetaSaving(true)
     onError('')
 
@@ -249,6 +306,7 @@ export function useRecetaTpvManagement({
           .update({
             nombre: recetaNombre.trim(),
             nombre_tpv: recetaNombreTPV.trim() || null,
+            raciones,
             activo: recetaActiva,
           })
           .eq('id', recetaEditId)
@@ -273,6 +331,7 @@ export function useRecetaTpvManagement({
           payload_despues: {
             nombre: recetaNombre.trim(),
             nombre_tpv: recetaNombreTPV.trim() || null,
+            raciones,
             activo: recetaActiva,
             lineas: lineasPreparadas,
           },
@@ -283,6 +342,7 @@ export function useRecetaTpvManagement({
           .insert({
             nombre: recetaNombre.trim(),
             nombre_tpv: recetaNombreTPV.trim() || null,
+            raciones,
             activo: recetaActiva,
             restaurant_id: restaurantId,
           })
@@ -303,6 +363,7 @@ export function useRecetaTpvManagement({
           payload_despues: {
             nombre: recetaNombre.trim(),
             nombre_tpv: recetaNombreTPV.trim() || null,
+            raciones,
             activo: recetaActiva,
             lineas: lineasPreparadas,
           },
@@ -676,13 +737,14 @@ export function useRecetaTpvManagement({
   }
 
   return {
-    recetas,
+    recetas: recetasEnriquecidas,
     loadingRecetas,
     recetaModalOpen,
     recetaSaving,
     recetaEditId,
     recetaNombre,
     recetaNombreTPV,
+    recetaRaciones,
     recetaActiva,
     recetaLineas,
     tpvFile,
@@ -695,6 +757,7 @@ export function useRecetaTpvManagement({
     tpvPendientesMapeo,
     setRecetaNombre,
     setRecetaNombreTPV,
+    setRecetaRaciones,
     setRecetaActiva,
     setTpvFile,
     setTpvMapeosSeleccionados,

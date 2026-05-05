@@ -39,6 +39,7 @@ export type NuevoProductoForm = {
   unidad: string
   stock_actual: string
   stock_minimo: string
+  coste_unitario: string
   referencia: string
   imagen_url: string
   icono: string
@@ -101,6 +102,10 @@ export type Receta = {
   nombre_tpv: string | null
   activo: boolean | null
   created_at: string
+  raciones?: number | null
+  coste_teorico?: number
+  coste_por_racion?: number
+  ingredientes_count?: number
 }
 
 export type RecetaLinea = {
@@ -144,6 +149,19 @@ export type ManagedUserAccessFilter =
   | 'con_acceso'
   | 'acceso_reciente'
   | 'requiere_revision'
+
+export type ProductoPrecioHistorial = {
+  id: string
+  restaurant_id: string
+  producto_id: string
+  proveedor_id: string | null
+  albaran_id: string | null
+  proveedor_nombre: string | null
+  fecha_compra: string
+  cantidad: number
+  precio_unitario: number
+  created_at: string
+}
 
 export type HomeDataEntities = {
   albaran: Albaran

@@ -1,5 +1,10 @@
 import { useMemo, useState } from 'react'
-import type { MovimientoConProducto, NuevoProductoForm, PermissionKey } from '@/features/home/types'
+import type {
+  MovimientoConProducto,
+  NuevoProductoForm,
+  PermissionKey,
+  ProductoPrecioHistorial,
+} from '@/features/home/types'
 import {
   initialProductoForm,
   normalizeProductCategory,
@@ -49,6 +54,10 @@ export function useStockManagement({
   const [productoSaving, setProductoSaving] = useState(false)
   const [productoEditId, setProductoEditId] = useState<string | null>(null)
   const [productoForm, setProductoForm] = useState<NuevoProductoForm>(initialProductoForm)
+  const [productoHistorialPrecios, setProductoHistorialPrecios] = useState<ProductoPrecioHistorial[]>(
+    []
+  )
+  const [productoHistorialLoading, setProductoHistorialLoading] = useState(false)
   const [consumoModalOpen, setConsumoModalOpen] = useState(false)
   const [consumoProducto, setConsumoProducto] = useState<Producto | null>(null)
   const [consumoCantidad, setConsumoCantidad] = useState('')
@@ -196,6 +205,8 @@ export function useStockManagement({
   function openNuevoProducto() {
     setProductoEditId(null)
     setProductoForm(initialProductoForm)
+    setProductoHistorialPrecios([])
+    setProductoHistorialLoading(false)
     onError('')
     setProductoModalOpen(true)
   }
@@ -204,6 +215,8 @@ export function useStockManagement({
     setProductoModalOpen(false)
     setProductoEditId(null)
     setProductoForm(initialProductoForm)
+    setProductoHistorialPrecios([])
+    setProductoHistorialLoading(false)
     onError('')
   }
 
@@ -213,6 +226,44 @@ export function useStockManagement({
 
   function closeCategoriasModal() {
     setCategoriasModalOpen(false)
+  }
+
+  async function loadProductoHistorial(productoId: string) {
+    if (!currentRestaurantId) {
+      setProductoHistorialPrecios([])
+      setProductoHistorialLoading(false)
+      return
+    }
+
+    setProductoHistorialLoading(true)
+
+    const { data, error } = await supabase
+      .from('productos_precios_historial')
+      .select('*')
+      .eq('restaurant_id', currentRestaurantId)
+      .eq('producto_id', productoId)
+      .order('fecha_compra', { ascending: false })
+      .limit(6)
+
+    if (error) {
+      if (
+        /productos_precios_historial|relation .* does not exist|could not find the table/i.test(
+          error.message
+        )
+      ) {
+        setProductoHistorialPrecios([])
+        setProductoHistorialLoading(false)
+        return
+      }
+
+      onError(error.message)
+      setProductoHistorialPrecios([])
+      setProductoHistorialLoading(false)
+      return
+    }
+
+    setProductoHistorialPrecios((data ?? []) as ProductoPrecioHistorial[])
+    setProductoHistorialLoading(false)
   }
 
   function openEditarProducto(producto: Producto) {
@@ -227,12 +278,17 @@ export function useStockManagement({
       unidad: producto.unidad || 'uds',
       stock_actual: String(producto.stock_actual ?? ''),
       stock_minimo: String(producto.stock_minimo ?? ''),
+      coste_unitario:
+        producto.coste_unitario === undefined || producto.coste_unitario === null
+          ? ''
+          : String(producto.coste_unitario),
       referencia: producto.referencia || '',
       imagen_url: producto.imagen_url || '',
       icono: '',
     })
     onError('')
     setProductoModalOpen(true)
+    void loadProductoHistorial(producto.id)
   }
 
   async function guardarProducto() {
@@ -261,6 +317,8 @@ export function useStockManagement({
       unidad: productoForm.unidad.trim() || 'uds',
       stock_actual: productoForm.stock_actual === '' ? 0 : Number(productoForm.stock_actual),
       stock_minimo: productoForm.stock_minimo === '' ? 0 : Number(productoForm.stock_minimo),
+      coste_unitario:
+        productoForm.coste_unitario === '' ? 0 : Number(productoForm.coste_unitario),
       referencia: productoForm.referencia.trim(),
     }
 
@@ -664,6 +722,8 @@ export function useStockManagement({
     productoSaving,
     productoEditId,
     productoForm,
+    productoHistorialPrecios,
+    productoHistorialLoading,
     consumoModalOpen,
     consumoProducto,
     consumoCantidad,
