@@ -7,8 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --test --experimental-strip-types tests/**/*.test.mts",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run lint && npm run typecheck && npx next build --webpack"
+    "verify": "npm run lint && npm run test && npm run typecheck && npx next build --webpack"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.1",

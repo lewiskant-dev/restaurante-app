@@ -133,6 +133,9 @@ export type ManagedRestaurant = {
   nombre: string
   slug: string
   activo: boolean
+  usuarios_asignados?: number
+  registros_operativos?: number
+  tiene_datos?: boolean
 }
 
 export type ManagedUserAccessFilter =

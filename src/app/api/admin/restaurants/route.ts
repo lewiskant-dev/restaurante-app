@@ -1,5 +1,6 @@
 import { PostgrestError } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { isValidRestaurantSlug, slugifyRestaurantName } from '@/lib/restaurantCatalog'
 import { getRestaurantScopeFromAppMetadata } from '@/lib/restaurantMetadata'
 import { createSupabaseAdminClient } from '@/lib/supabaseAdmin'
 
@@ -25,19 +26,65 @@ function isMissingRelationError(error: unknown) {
   return error instanceof PostgrestError && error.code === '42P01'
 }
 
-function slugifyRestaurantName(value: string) {
-  return value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+async function ensureRestaurantUniqueness(
+  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
+  params: { nombre: string; slug: string; excludeId?: string }
+) {
+  const { nombre, slug, excludeId } = params
+
+  let query = supabaseAdmin
+    .from('restaurantes')
+    .select('id, nombre, slug')
+    .or(`nombre.eq.${nombre},slug.eq.${slug}`)
+
+  if (excludeId) {
+    query = query.neq('id', excludeId)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    return { error }
+  }
+
+  const duplicateName = (data ?? []).find((item) => item.nombre === nombre)
+  if (duplicateName) {
+    return {
+      duplicateError: `Ya existe un restaurante con el nombre "${nombre}".`,
+    }
+  }
+
+  const duplicateSlug = (data ?? []).find((item) => item.slug === slug)
+  if (duplicateSlug) {
+    return {
+      duplicateError: `El slug "${slug}" ya está en uso por otro restaurante.`,
+    }
+  }
+
+  return {}
 }
 
 async function canDeactivateRestaurant(
   supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
   restaurantId: string
 ) {
+  const { count: activeCount, error: activeCountError } = await supabaseAdmin
+    .from('restaurantes')
+    .select('id', { count: 'exact', head: true })
+    .eq('activo', true)
+
+  if (activeCountError) {
+    return { error: activeCountError }
+  }
+
+  if ((activeCount ?? 0) <= 1) {
+    return {
+      canDeactivate: false as const,
+      blockedUsersCount: 0,
+      reason: 'last_active_restaurant' as const,
+    }
+  }
+
   const { data: memberships, error: membershipsError } = await supabaseAdmin
     .from('usuario_restaurantes')
     .select('user_id')
@@ -91,6 +138,48 @@ async function canDeactivateRestaurant(
   return {
     canDeactivate: blockedUsers.length === 0,
     blockedUsersCount: blockedUsers.length,
+  }
+}
+
+async function countOperationalRows(
+  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
+  table: string,
+  restaurantId: string
+) {
+  const { count, error } = await supabaseAdmin
+    .from(table)
+    .select('id', { count: 'exact', head: true })
+    .eq('restaurant_id', restaurantId)
+
+  if (error) {
+    return { error }
+  }
+
+  return { count: count ?? 0 }
+}
+
+async function getRestaurantOperationalUsage(
+  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
+  restaurantId: string
+) {
+  const tables = ['productos', 'proveedores', 'albaranes', 'movimientos_stock', 'recetas']
+  const results = await Promise.all(
+    tables.map((table) => countOperationalRows(supabaseAdmin, table, restaurantId))
+  )
+
+  const errorResult = results.find((result) => 'error' in result)
+  if (errorResult && 'error' in errorResult) {
+    return { error: errorResult.error }
+  }
+
+  const total = results.reduce(
+    (sum, result) => sum + ('count' in result ? (result.count ?? 0) : 0),
+    0
+  )
+
+  return {
+    registros_operativos: total,
+    tiene_datos: total > 0,
   }
 }
 
@@ -154,7 +243,71 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ restaurants: data ?? [] })
+  const restaurants = (data ?? []) as Array<{
+    id: string
+    nombre: string
+    slug: string
+    activo: boolean
+  }>
+
+  if (!restaurants.length) {
+    return NextResponse.json({ restaurants: [] })
+  }
+
+  const restaurantIds = restaurants.map((item) => item.id)
+  const { data: memberships, error: membershipsError } = await supabaseAdmin
+    .from('usuario_restaurantes')
+    .select('restaurant_id')
+    .in('restaurant_id', restaurantIds)
+
+  if (membershipsError) {
+    if (isMissingRelationError(membershipsError)) {
+      return NextResponse.json({
+        error:
+          'La tabla usuario_restaurantes todavía no existe. Ejecuta multi-restaurant-setup.sql en Supabase.',
+      }, { status: 409 })
+    }
+
+    return NextResponse.json({ error: membershipsError.message }, { status: 500 })
+  }
+
+  const membershipCountByRestaurant = new Map<string, number>()
+  ;(memberships ?? []).forEach((item) => {
+    membershipCountByRestaurant.set(
+      item.restaurant_id,
+      (membershipCountByRestaurant.get(item.restaurant_id) ?? 0) + 1
+    )
+  })
+
+  const operationalUsageResults = await Promise.all(
+    restaurants.map((restaurant) => getRestaurantOperationalUsage(supabaseAdmin, restaurant.id))
+  )
+
+  const operationalError = operationalUsageResults.find((result) => 'error' in result)
+  if (operationalError && 'error' in operationalError) {
+    if (isMissingRelationError(operationalError.error)) {
+      return NextResponse.json({
+        error:
+          'Faltan tablas operativas multi-restaurante. Revisa multi-restaurant-setup.sql en Supabase.',
+      }, { status: 409 })
+    }
+
+    return NextResponse.json(
+      { error: operationalError.error?.message || 'No se pudo cargar el uso operativo de restaurantes' },
+      { status: 500 }
+    )
+  }
+
+  return NextResponse.json({
+    restaurants: restaurants.map((restaurant, index) => ({
+      ...restaurant,
+      usuarios_asignados: membershipCountByRestaurant.get(restaurant.id) ?? 0,
+      ...(operationalUsageResults[index] as {
+        registros_operativos: number
+        tiene_datos: boolean
+      }),
+    })),
+  })
 }
 
 export async function POST(request: Request) {
@@ -185,6 +338,30 @@ export async function POST(request: Request) {
 
   if (!slug) {
     return NextResponse.json({ error: 'No se pudo generar un slug válido' }, { status: 400 })
+  }
+
+  if (!isValidRestaurantSlug(slug)) {
+    return NextResponse.json({
+      error:
+        'El slug solo puede contener letras minúsculas, números y guiones intermedios.',
+    }, { status: 400 })
+  }
+
+  const uniquenessCheck = await ensureRestaurantUniqueness(supabaseAdmin, { nombre, slug })
+  if (uniquenessCheck.error) {
+    const uniquenessError = uniquenessCheck.error
+    if (isMissingRelationError(uniquenessError)) {
+      return NextResponse.json({
+        error:
+          'La tabla restaurantes todavía no existe. Ejecuta multi-restaurant-setup.sql en Supabase.',
+      }, { status: 409 })
+    }
+
+    return NextResponse.json({ error: uniquenessError.message }, { status: 500 })
+  }
+
+  if ('duplicateError' in uniquenessCheck) {
+    return NextResponse.json({ error: uniquenessCheck.duplicateError }, { status: 409 })
   }
 
   const { data, error } = await supabaseAdmin
@@ -257,6 +434,13 @@ export async function PATCH(request: Request) {
     )
   }
 
+  if (!isValidRestaurantSlug(slug)) {
+    return NextResponse.json({
+      error:
+        'El slug solo puede contener letras minúsculas, números y guiones intermedios.',
+    }, { status: 400 })
+  }
+
   const { data: beforeRestaurant, error: beforeError } = await supabaseAdmin
     .from('restaurantes')
     .select('id, nombre, slug, activo')
@@ -294,6 +478,12 @@ export async function PATCH(request: Request) {
     }
 
     if (!deactivationCheck.canDeactivate) {
+      if (deactivationCheck.reason === 'last_active_restaurant') {
+        return NextResponse.json({
+          error: 'Nexo debe conservar al menos un restaurante activo en el catálogo.',
+        }, { status: 409 })
+      }
+
       return NextResponse.json({
         error:
           deactivationCheck.blockedUsersCount === 1
@@ -301,6 +491,53 @@ export async function PATCH(request: Request) {
             : `No puedes desactivar este restaurante porque dejaría a ${deactivationCheck.blockedUsersCount} usuarios sin ningún restaurante activo.`,
       }, { status: 409 })
     }
+  }
+
+  const operationalUsage = await getRestaurantOperationalUsage(supabaseAdmin, id)
+  if ('error' in operationalUsage) {
+    if (isMissingRelationError(operationalUsage.error)) {
+      return NextResponse.json({
+        error:
+          'Faltan tablas operativas multi-restaurante. Revisa multi-restaurant-setup.sql en Supabase.',
+      }, { status: 409 })
+    }
+
+    return NextResponse.json(
+      {
+        error:
+          operationalUsage.error?.message ||
+          'No se pudo validar el uso operativo del restaurante',
+      },
+      { status: 500 }
+    )
+  }
+
+  if (beforeRestaurant.slug !== slug && operationalUsage.tiene_datos) {
+    return NextResponse.json({
+      error:
+        'No puedes cambiar el slug de un restaurante que ya tiene datos operativos. Si necesitas renombrarlo, cambia solo el nombre visible.',
+    }, { status: 409 })
+  }
+
+  const uniquenessCheck = await ensureRestaurantUniqueness(supabaseAdmin, {
+    nombre,
+    slug,
+    excludeId: id,
+  })
+  if (uniquenessCheck.error) {
+    const uniquenessError = uniquenessCheck.error
+    if (isMissingRelationError(uniquenessError)) {
+      return NextResponse.json({
+        error:
+          'La tabla restaurantes todavía no existe. Ejecuta multi-restaurant-setup.sql en Supabase.',
+      }, { status: 409 })
+    }
+
+    return NextResponse.json({ error: uniquenessError.message }, { status: 500 })
+  }
+
+  if ('duplicateError' in uniquenessCheck) {
+    return NextResponse.json({ error: uniquenessCheck.duplicateError }, { status: 409 })
   }
 
   const { data, error } = await supabaseAdmin
