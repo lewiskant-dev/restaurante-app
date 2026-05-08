@@ -232,38 +232,48 @@ export function ProductCategoryVisual({
   productName?: string
   size?: 'sm' | 'md' | 'lg'
 }) {
-  const dimensionClass = size === 'sm' ? 'h-8 w-8' : size === 'lg' ? 'h-14 w-14' : 'h-10 w-10'
+  const slotClass =
+    size === 'sm'
+      ? 'h-[30px] w-[30px]'
+      : size === 'lg'
+        ? 'h-[46px] w-[46px]'
+        : 'h-[38px] w-[38px]'
   const [failedAssetPath, setFailedAssetPath] = useState<string | null>(null)
   const categoryAssetPath = getCategoryAssetPath(category)
   const assetAvailable = failedAssetPath !== categoryAssetPath
 
   if (imageUrl) {
     return (
-      <Image
-        src={imageUrl}
-        alt={productName || category}
-        width={size === 'lg' ? 56 : size === 'sm' ? 32 : 40}
-        height={size === 'lg' ? 56 : size === 'sm' ? 32 : 40}
-        unoptimized
-        className={`${dimensionClass} rounded-xl object-cover`}
-      />
+      <div className={`flex items-center justify-center overflow-hidden ${slotClass}`}>
+        <Image
+          src={imageUrl}
+          alt={productName || category}
+          width={size === 'lg' ? 46 : size === 'sm' ? 30 : 38}
+          height={size === 'lg' ? 46 : size === 'sm' ? 30 : 38}
+          unoptimized
+          className="h-full w-full rounded-xl object-cover"
+        />
+      </div>
     )
   }
 
   if (assetAvailable && categoryAssetPath) {
     return (
-      <img
-        src={categoryAssetPath}
-        alt={productName || category}
-        className={`${dimensionClass} object-contain`}
-        loading="lazy"
-        onError={() => setFailedAssetPath(categoryAssetPath)}
-      />
+      <div className={`flex items-center justify-center overflow-hidden ${slotClass}`}>
+        <img
+          src={categoryAssetPath}
+          alt={productName || category}
+          className="h-full w-full object-contain"
+          loading="lazy"
+          draggable={false}
+          onError={() => setFailedAssetPath(categoryAssetPath)}
+        />
+      </div>
     )
   }
 
   const visual = getCategoryVisual(category)
-  return <div className={dimensionClass}>{visual.art}</div>
+  return <div className={`flex items-center justify-center overflow-hidden ${slotClass}`}>{visual.art}</div>
 }
 
 export function ProductCategoryBadge({
@@ -288,7 +298,7 @@ export function ProductCategoryBadge({
 
   return (
     <div
-      className={`flex items-center justify-center bg-gradient-to-br ${visual.hue} shadow-inner ring-1 ring-slate-100 ${wrapperClass}`}
+      className={`flex items-center justify-center overflow-hidden bg-gradient-to-br ${visual.hue} shadow-inner ring-1 ring-slate-100 ${wrapperClass}`}
     >
       <ProductCategoryVisual
         category={category}
