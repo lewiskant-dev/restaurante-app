@@ -228,6 +228,117 @@ export function InformesTab({
             </div>
           </div>
         </div>
+
+        <div className="mt-4 rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+          <div className="mb-3">
+            <h4 className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
+              Evolución reciente de costes
+            </h4>
+            <p className="mt-1 text-[11px] text-slate-500 sm:text-[12px]">
+              Variación del último precio unitario reciente frente al anterior disponible en el periodo.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            {tpvAnalitica.compras_periodo.productos.length === 0 ? (
+              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-400">
+                Aún no hay histórico suficiente de compras para evaluar costes.
+              </div>
+            ) : (
+              tpvAnalitica.compras_periodo.productos.map((item) => (
+                <div
+                  key={item.producto_id}
+                  className="grid gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-3 lg:grid-cols-[1fr_auto]"
+                >
+                  <div>
+                    <div className="text-[13px] font-semibold text-slate-900">{item.producto_nombre}</div>
+                    <div className="mt-1 text-[11px] text-slate-500">
+                      Último precio: {formatEuro(item.ultimo_precio_unitario)} €
+                      {item.precio_anterior_unitario !== null
+                        ? ` · Antes: ${formatEuro(item.precio_anterior_unitario)} €`
+                        : ' · Sin referencia previa'}
+                    </div>
+                  </div>
+                  <div className="text-left lg:text-right">
+                    <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
+                      Variación
+                    </div>
+                    <div
+                      className={`mt-1 text-sm font-semibold ${
+                        item.variacion_precio_pct === null
+                          ? 'text-slate-500'
+                          : item.variacion_precio_pct > 0
+                            ? 'text-red-600'
+                            : item.variacion_precio_pct < 0
+                              ? 'text-emerald-600'
+                              : 'text-slate-600'
+                      }`}
+                    >
+                      {item.variacion_precio_pct === null
+                        ? 'Sin base comparable'
+                        : formatVariation(item.variacion_precio_pct)}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+          <div className="mb-3">
+            <h4 className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
+              Rentabilidad por categoría
+            </h4>
+            <p className="mt-1 text-[11px] text-slate-500 sm:text-[12px]">
+              Agrupación de ventas y margen por categoría dominante de receta en el periodo.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            {tpvAnalitica.categorias_rentables.length === 0 ? (
+              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-400">
+                Aún no hay ventas suficientes para agrupar rentabilidad por categoría.
+              </div>
+            ) : (
+              tpvAnalitica.categorias_rentables.map((item) => {
+                const marginRatio = item.ventas_estimadas > 0 ? (item.margen_estimado / item.ventas_estimadas) * 100 : null
+                return (
+                  <div
+                    key={item.categoria}
+                    className="grid gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-3 lg:grid-cols-[1fr_auto]"
+                  >
+                    <div>
+                      <div className="text-[13px] font-semibold text-slate-900">{item.categoria}</div>
+                      <div className="mt-1 text-[11px] text-slate-500">
+                        Recetas: {item.recetas_count} · Vendidas: {item.unidades_vendidas.toLocaleString('es-ES')}
+                      </div>
+                    </div>
+                    <div className="text-left lg:text-right">
+                      <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Ventas / margen</div>
+                      <div className="mt-1 text-sm font-semibold text-slate-900">
+                        {formatEuro(item.ventas_estimadas)} € · {formatEuro(item.margen_estimado)} €
+                      </div>
+                      <div
+                        className={`mt-1 text-[11px] ${
+                          marginRatio === null
+                            ? 'text-slate-400'
+                            : marginRatio < 0
+                              ? 'text-red-600'
+                              : marginRatio < 12
+                                ? 'text-amber-600'
+                                : 'text-emerald-600'
+                        }`}
+                      >
+                        {marginRatio === null ? 'Sin margen comparable' : `${marginRatio.toFixed(1)}% de margen`}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )

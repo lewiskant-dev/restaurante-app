@@ -80,6 +80,7 @@ export function useRecetaTpvManagement({
     productos_con_desviacion: 0,
     productos: [],
     recetas_rentables: [],
+    categorias_rentables: [],
     recetas_sin_precio_venta: 0,
     alertas: [],
     comparativa: {
@@ -236,6 +237,7 @@ export function useRecetaTpvManagement({
         productos_con_desviacion: 0,
         productos: [],
         recetas_rentables: [],
+        categorias_rentables: [],
         recetas_sin_precio_venta: 0,
         alertas: [],
         comparativa: {
@@ -306,6 +308,7 @@ export function useRecetaTpvManagement({
           margen_estimado: number
         }
       >()
+      const recipeDominantCategory = new Map<string, string>()
       let ventasEstimadasTotal = 0
       let costeTeoricoVendidoTotal = 0
 
@@ -377,9 +380,19 @@ export function useRecetaTpvManagement({
           recipePerformance.set(receta.id, currentRecipe)
 
           const lineas = lineasMap.get(receta.id) ?? []
+          let dominantCategory = recipeDominantCategory.get(receta.id) ?? ''
+          let dominantCategoryWeight = -1
           lineas.forEach((linea) => {
             const consumo = Number(linea.cantidad || 0) * unidadesVendidas
             if (!linea.producto_id || consumo <= 0) return
+            const producto = productosMap.get(linea.producto_id)
+            const categoryWeight =
+              Number(linea.cantidad || 0) * Number(producto?.coste_unitario || 0)
+            if (categoryWeight > dominantCategoryWeight) {
+              dominantCategoryWeight = categoryWeight
+              dominantCategory = producto?.categoria?.trim() || 'Sin categoría'
+              recipeDominantCategory.set(receta.id, dominantCategory)
+            }
             theoreticalByProduct.set(
               linea.producto_id,
               Number(theoreticalByProduct.get(linea.producto_id) || 0) + consumo
@@ -441,6 +454,48 @@ export function useRecetaTpvManagement({
         .sort((a, b) => b.margen_estimado - a.margen_estimado)
         .slice(0, 6)
 
+      const categoriasMap = new Map<
+        string,
+        {
+          categoria: string
+          recetas: Set<string>
+          unidades_vendidas: number
+          ventas_estimadas: number
+          coste_teorico_vendido: number
+          margen_estimado: number
+        }
+      >()
+
+      recipePerformance.forEach((recetaMetricas, recetaId) => {
+        const categoria = recipeDominantCategory.get(recetaId) || 'Sin categoría'
+        const current = categoriasMap.get(categoria) ?? {
+          categoria,
+          recetas: new Set<string>(),
+          unidades_vendidas: 0,
+          ventas_estimadas: 0,
+          coste_teorico_vendido: 0,
+          margen_estimado: 0,
+        }
+        current.recetas.add(recetaId)
+        current.unidades_vendidas += recetaMetricas.unidades_vendidas
+        current.ventas_estimadas += recetaMetricas.ventas_estimadas
+        current.coste_teorico_vendido += recetaMetricas.coste_teorico_vendido
+        current.margen_estimado += recetaMetricas.margen_estimado
+        categoriasMap.set(categoria, current)
+      })
+
+      const categoriasRentables = Array.from(categoriasMap.values())
+        .map((item) => ({
+          categoria: item.categoria,
+          recetas_count: item.recetas.size,
+          unidades_vendidas: item.unidades_vendidas,
+          ventas_estimadas: item.ventas_estimadas,
+          coste_teorico_vendido: item.coste_teorico_vendido,
+          margen_estimado: item.margen_estimado,
+        }))
+        .sort((a, b) => b.margen_estimado - a.margen_estimado)
+        .slice(0, 6)
+
       const recetasSinPrecioVenta = recetasMapeadasActivas.filter(
         (receta) => Number(receta.precio_venta || 0) <= 0
       ).length
@@ -454,7 +509,10 @@ export function useRecetaTpvManagement({
           cantidad_comprada: number
           coste_total: number
           ultimo_precio_unitario: number
+          precio_anterior_unitario: number | null
+          variacion_precio_pct: number | null
           fecha_compra: string
+          historial_precios: Array<{ fecha_compra: string; precio_unitario: number }>
         }
       >()
 
@@ -473,17 +531,38 @@ export function useRecetaTpvManagement({
           cantidad_comprada: 0,
           coste_total: 0,
           ultimo_precio_unitario: Number(compra.precio_unitario || 0),
+          precio_anterior_unitario: null,
+          variacion_precio_pct: null,
           fecha_compra: compra.fecha_compra,
+          historial_precios: [],
         }
 
         current.cantidad_comprada += Number(compra.cantidad || 0)
         current.coste_total += Number(compra.cantidad || 0) * Number(compra.precio_unitario || 0)
+        current.historial_precios.push({
+          fecha_compra: compra.fecha_compra,
+          precio_unitario: Number(compra.precio_unitario || 0),
+        })
         if (compra.fecha_compra >= current.fecha_compra) {
           current.fecha_compra = compra.fecha_compra
           current.ultimo_precio_unitario = Number(compra.precio_unitario || 0)
           current.proveedor_nombre = compra.proveedor_nombre || current.proveedor_nombre
         }
         comprasAgrupadas.set(compra.producto_id, current)
+      })
+
+      comprasAgrupadas.forEach((item) => {
+        const orderedHistory = [...item.historial_precios].sort((a, b) =>
+          b.fecha_compra.localeCompare(a.fecha_compra)
+        )
+        const latest = orderedHistory[0]?.precio_unitario ?? item.ultimo_precio_unitario
+        const previous = orderedHistory.find(
+          (entry) => Math.abs(entry.precio_unitario - latest) > 0.00001 || entry.fecha_compra !== orderedHistory[0]?.fecha_compra
+        )?.precio_unitario
+
+        item.precio_anterior_unitario = previous ?? null
+        item.variacion_precio_pct =
+          previous && previous > 0 ? ((latest - previous) / previous) * 100 : null
       })
 
       return {
@@ -494,6 +573,7 @@ export function useRecetaTpvManagement({
         productosConDesviacion,
         productos: productosAnalitica,
         recetas_rentables: recetasRentables,
+        categorias_rentables: categoriasRentables,
         recetas_sin_precio_venta: recetasSinPrecioVenta,
         compras_periodo: {
           total_coste: Array.from(comprasAgrupadas.values()).reduce(
@@ -511,6 +591,8 @@ export function useRecetaTpvManagement({
               cantidad_comprada: item.cantidad_comprada,
               coste_total: item.coste_total,
               ultimo_precio_unitario: item.ultimo_precio_unitario,
+              precio_anterior_unitario: item.precio_anterior_unitario,
+              variacion_precio_pct: item.variacion_precio_pct,
             })),
         },
       }
@@ -586,6 +668,61 @@ export function useRecetaTpvManagement({
       })
     }
 
+    const mayorSubidaCoste = currentWindow.compras_periodo.productos
+      .filter((item) => item.variacion_precio_pct !== null)
+      .sort((a, b) => Number(b.variacion_precio_pct || 0) - Number(a.variacion_precio_pct || 0))[0]
+
+    if (mayorSubidaCoste && Number(mayorSubidaCoste.variacion_precio_pct || 0) >= 15) {
+      alertas.push({
+        id: `subida-coste-${mayorSubidaCoste.producto_id}`,
+        severidad: Number(mayorSubidaCoste.variacion_precio_pct || 0) >= 30 ? 'alta' : 'media',
+        titulo: 'Subida relevante de coste de compra',
+        detalle: `${mayorSubidaCoste.producto_nombre} ha subido un ${Number(
+          mayorSubidaCoste.variacion_precio_pct || 0
+        ).toFixed(1)}% frente a su precio anterior reciente.`,
+      })
+    }
+
+    const previousRecipesById = new Map(previousWindow.recetas_rentables.map((item) => [item.receta_id, item]))
+    const recetaDegradada = currentWindow.recetas_rentables
+      .map((item) => {
+        const previous = previousRecipesById.get(item.receta_id)
+        const delta = previous ? item.margen_estimado - previous.margen_estimado : 0
+        return { item, previous, delta }
+      })
+      .filter((entry) => entry.previous && entry.delta < 0)
+      .sort((a, b) => a.delta - b.delta)[0]
+
+    if (recetaDegradada && Math.abs(recetaDegradada.delta) >= 5) {
+      alertas.push({
+        id: `receta-degradada-${recetaDegradada.item.receta_id}`,
+        severidad: Math.abs(recetaDegradada.delta) >= 15 ? 'alta' : 'media',
+        titulo: 'Receta con margen degradado',
+        detalle: `${recetaDegradada.item.receta_nombre} empeora ${Math.abs(
+          recetaDegradada.delta
+        ).toFixed(2)} € frente al periodo anterior.`,
+      })
+    }
+
+    const categoriaPeorMargen = currentWindow.categorias_rentables
+      .filter((item) => item.ventas_estimadas > 0)
+      .map((item) => ({
+        ...item,
+        margenRatio: item.margen_estimado / item.ventas_estimadas,
+      }))
+      .sort((a, b) => a.margenRatio - b.margenRatio)[0]
+
+    if (categoriaPeorMargen && categoriaPeorMargen.margenRatio < 0.12) {
+      alertas.push({
+        id: `categoria-bajo-margen-${categoriaPeorMargen.categoria}`,
+        severidad: categoriaPeorMargen.margenRatio < 0 ? 'alta' : 'media',
+        titulo: 'Categoría con margen débil',
+        detalle: `${categoriaPeorMargen.categoria} se queda en un margen estimado del ${(
+          categoriaPeorMargen.margenRatio * 100
+        ).toFixed(1)}% en el periodo.`,
+      })
+    }
+
     setTpvAnalitica({
       range_key: tpvAnaliticaRange,
       periodo_label: periodLabel,
@@ -599,6 +736,7 @@ export function useRecetaTpvManagement({
       productos_con_desviacion: currentWindow.productosConDesviacion,
       productos: currentWindow.productos,
       recetas_rentables: currentWindow.recetas_rentables,
+      categorias_rentables: currentWindow.categorias_rentables,
       recetas_sin_precio_venta: currentWindow.recetas_sin_precio_venta,
       alertas,
       comparativa: {

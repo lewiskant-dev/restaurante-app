@@ -363,6 +363,24 @@ export function TpvTab({
                           maximumFractionDigits: 2,
                         })} €
                       </div>
+                      <div
+                        className={`mt-1 text-[11px] ${
+                          item.variacion_precio_pct === null
+                            ? 'text-slate-400'
+                            : item.variacion_precio_pct > 0
+                              ? 'text-red-600'
+                              : item.variacion_precio_pct < 0
+                                ? 'text-emerald-600'
+                                : 'text-slate-500'
+                        }`}
+                      >
+                        {item.variacion_precio_pct === null
+                          ? 'Sin comparación reciente'
+                          : `${item.variacion_precio_pct > 0 ? '+' : ''}${item.variacion_precio_pct.toLocaleString('es-ES', {
+                              minimumFractionDigits: 1,
+                              maximumFractionDigits: 1,
+                            })}% frente al precio anterior`}
+                      </div>
                     </div>
                   </div>
                 ))

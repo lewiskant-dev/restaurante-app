@@ -94,6 +94,15 @@ export type TpvAnaliticaReceta = {
   margen_estimado: number
 }
 
+export type TpvAnaliticaCategoria = {
+  categoria: string
+  recetas_count: number
+  unidades_vendidas: number
+  ventas_estimadas: number
+  coste_teorico_vendido: number
+  margen_estimado: number
+}
+
 export type TpvAnaliticaCompra = {
   producto_id: string
   producto_nombre: string
@@ -101,6 +110,8 @@ export type TpvAnaliticaCompra = {
   cantidad_comprada: number
   coste_total: number
   ultimo_precio_unitario: number
+  precio_anterior_unitario: number | null
+  variacion_precio_pct: number | null
 }
 
 export type TpvAnaliticaAlerta = {
@@ -138,6 +149,7 @@ export type TpvAnaliticaResumen = {
   productos_con_desviacion: number
   productos: TpvAnaliticaProducto[]
   recetas_rentables: TpvAnaliticaReceta[]
+  categorias_rentables: TpvAnaliticaCategoria[]
   recetas_sin_precio_venta: number
   alertas: TpvAnaliticaAlerta[]
   comparativa: TpvAnaliticaComparativa
