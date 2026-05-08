@@ -5,12 +5,17 @@ import type {
   Receta,
   RecetaLinea,
   RecetaLineaForm,
-  TpvAnaliticaComparativaMetrica,
   TpvAnaliticaResumen,
   VentaTPVCruda,
   ProductoPrecioHistorial,
 } from '@/features/home/types'
 import { formatOCRDateToInput, normalizeText, scoreRecipeMatch } from '@/features/home/utils'
+import {
+  buildComparativaMetrica,
+  calculatePriceVariationPct,
+  getDominantCategory,
+  getMarginRatio,
+} from '@/lib/financialAnalytics'
 import { supabase } from '@/lib/supabase'
 import type { Producto } from '@/types'
 
@@ -279,17 +284,6 @@ export function useRecetaTpvManagement({
 
     const productosMap = new Map(productos.map((producto) => [producto.id, producto]))
 
-    const buildComparativa = (
-      actual: number,
-      anterior: number
-    ): TpvAnaliticaComparativaMetrica => ({
-      actual,
-      anterior,
-      delta: actual - anterior,
-      variacion_pct:
-        anterior === 0 ? (actual === 0 ? 0 : null) : ((actual - anterior) / anterior) * 100,
-    })
-
     async function buildAnaliticaWindow(start: Date, end: Date) {
       const startIso = start.toISOString()
       const endIso = end.toISOString()
@@ -380,24 +374,26 @@ export function useRecetaTpvManagement({
           recipePerformance.set(receta.id, currentRecipe)
 
           const lineas = lineasMap.get(receta.id) ?? []
-          let dominantCategory = recipeDominantCategory.get(receta.id) ?? ''
-          let dominantCategoryWeight = -1
+          const categoryCandidates: Array<{
+            categoria: string | null | undefined
+            cantidad: number
+            costeUnitario: number
+          }> = []
           lineas.forEach((linea) => {
             const consumo = Number(linea.cantidad || 0) * unidadesVendidas
             if (!linea.producto_id || consumo <= 0) return
             const producto = productosMap.get(linea.producto_id)
-            const categoryWeight =
-              Number(linea.cantidad || 0) * Number(producto?.coste_unitario || 0)
-            if (categoryWeight > dominantCategoryWeight) {
-              dominantCategoryWeight = categoryWeight
-              dominantCategory = producto?.categoria?.trim() || 'Sin categoría'
-              recipeDominantCategory.set(receta.id, dominantCategory)
-            }
+            categoryCandidates.push({
+              categoria: producto?.categoria,
+              cantidad: Number(linea.cantidad || 0),
+              costeUnitario: Number(producto?.coste_unitario || 0),
+            })
             theoreticalByProduct.set(
               linea.producto_id,
               Number(theoreticalByProduct.get(linea.producto_id) || 0) + consumo
             )
           })
+          recipeDominantCategory.set(receta.id, getDominantCategory(categoryCandidates))
         })
 
       ;((movimientosData ?? []) as Array<{
@@ -561,8 +557,7 @@ export function useRecetaTpvManagement({
         )?.precio_unitario
 
         item.precio_anterior_unitario = previous ?? null
-        item.variacion_precio_pct =
-          previous && previous > 0 ? ((latest - previous) / previous) * 100 : null
+        item.variacion_precio_pct = calculatePriceVariationPct(latest, previous ?? null)
       })
 
       return {
@@ -623,10 +618,13 @@ export function useRecetaTpvManagement({
     }
 
     if (currentWindow.ventasEstimadasTotal > 0) {
-      const margenRatio =
-        (currentWindow.ventasEstimadasTotal - currentWindow.costeTeoricoVendidoTotal) /
-        currentWindow.ventasEstimadasTotal
-      if (margenRatio < 0) {
+      const margenRatio = getMarginRatio(
+        currentWindow.ventasEstimadasTotal,
+        currentWindow.ventasEstimadasTotal - currentWindow.costeTeoricoVendidoTotal
+      )
+      if (margenRatio === null) {
+        // no-op
+      } else if (margenRatio < 0) {
         alertas.push({
           id: 'margen-negativo',
           severidad: 'alta',
@@ -741,23 +739,23 @@ export function useRecetaTpvManagement({
       alertas,
       comparativa: {
         periodo_anterior_label: previousLabel,
-        ventas_estimadas: buildComparativa(
+        ventas_estimadas: buildComparativaMetrica(
           currentWindow.ventasEstimadasTotal,
           previousWindow.ventasEstimadasTotal
         ),
-        coste_teorico_vendido: buildComparativa(
+        coste_teorico_vendido: buildComparativaMetrica(
           currentWindow.costeTeoricoVendidoTotal,
           previousWindow.costeTeoricoVendidoTotal
         ),
-        margen_estimado: buildComparativa(
+        margen_estimado: buildComparativaMetrica(
           currentWindow.ventasEstimadasTotal - currentWindow.costeTeoricoVendidoTotal,
           previousWindow.ventasEstimadasTotal - previousWindow.costeTeoricoVendidoTotal
         ),
-        desviacion_total: buildComparativa(
+        desviacion_total: buildComparativaMetrica(
           currentWindow.consumoRealTotal - currentWindow.consumoTeoricoTotal,
           previousWindow.consumoRealTotal - previousWindow.consumoTeoricoTotal
         ),
-        compras_total_coste: buildComparativa(
+        compras_total_coste: buildComparativaMetrica(
           currentWindow.compras_periodo.total_coste,
           previousWindow.compras_periodo.total_coste
         ),

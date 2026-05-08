@@ -25,12 +25,11 @@ export function getCategoryVisual(category: string) {
       hue: 'from-amber-100 to-amber-50',
       art: (
         <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <rect x="21" y="6" width="6" height="7" rx="2" fill="#7C5A34" />
-          <rect x="18" y="12" width="12" height="8" rx="3" fill="#8B6A42" />
-          <rect x="16" y="19" width="16" height="21" rx="6" fill="#6B4E2E" />
-          <rect x="18.5" y="23" width="11" height="10" rx="2" fill="#F4E2A1" />
-          <path d="M36 13c0 4-3 6-5 9-2-3-5-5-5-9a5 5 0 1 1 10 0Z" fill="#F59E0B" />
-          <circle cx="31" cy="13" r="1.8" fill="#FDE68A" />
+          <rect x="17.5" y="7" width="6" height="5" rx="1.8" fill="#7C4A03" />
+          <path d="M16 12h9v6h-9z" fill="#84CC16" />
+          <path d="M15 18c0-1.7 1.3-3 3-3h5c1.7 0 3 1.3 3 3v17c0 2.2-1.8 4-4 4h-3c-2.2 0-4-1.8-4-4V18Z" fill="#A3E635" stroke="#365314" strokeWidth="1.2" />
+          <path d="M28 28c0-3.8 3.2-6.5 7.3-6.5 3.4 0 5.7 1.8 6.7 4.3-.8 3.8-4 7.2-8.8 7.2-2.7 0-5.1-.7-5.2-5Z" fill="#FACC15" stroke="#A16207" strokeWidth="1.2" />
+          <path d="M27.8 28.4c1.8-1.4 4.2-2.3 6.7-2.3 2.5 0 4.8.8 6.4 2.2" stroke="#FDE68A" strokeWidth="1.2" strokeLinecap="round" />
         </svg>
       ),
     }
@@ -41,12 +40,15 @@ export function getCategoryVisual(category: string) {
       hue: 'from-emerald-100 to-lime-50',
       art: (
         <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <path d="M12 19h24l-2 14H14l-2-14Z" fill="#16A34A" />
-          <path d="M15 22h18" stroke="#A7F3D0" strokeWidth="1.6" />
-          <path d="M18 17c3-4 7-6 12-6 1.5 0 3 .2 4 .8-4.5 1.3-8 4.2-10.4 8.2" fill="#15803D" />
-          <circle cx="18.5" cy="27" r="3" fill="#FB923C" />
-          <circle cx="25" cy="25" r="2.8" fill="#FACC15" />
-          <circle cx="30.5" cy="28" r="3" fill="#4ADE80" />
+          <path d="M13 20h22c1.7 0 3 1.3 3 3v9c0 2.8-2.2 5-5 5H15c-2.8 0-5-2.2-5-5v-9c0-1.7 1.3-3 3-3Z" fill="#84CC16" stroke="#4D7C0F" strokeWidth="1.2" />
+          <path d="M18 15c1.5-3 4-5 7-6 1.8 1 2.8 3 2.8 5.6V20h-4.6c-2.9 0-5.2-2.4-5.2-5.3Z" fill="#22C55E" />
+          <path d="M14 19c-1.2-2.9-.7-5.8 1.7-8 3.7 1 5.7 3.5 5.9 7.6" fill="#16A34A" />
+          <path d="M30.5 13.5c1.8-1.8 3.8-2.6 6-2.5-.1 3.1-1.7 5.6-4.8 7.3" fill="#16A34A" />
+          <rect x="15.2" y="24.4" width="7.5" height="4" rx="1.8" fill="#F8FAFC" />
+          <path d="M31.5 23.5 35 17l3.5 6.5" stroke="#FB923C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M34.4 17h2" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round" />
+          <circle cx="26.2" cy="28" r="3.2" fill="#EF4444" />
+          <circle cx="27.4" cy="26.8" r="0.9" fill="#FCA5A5" />
         </svg>
       ),
     }
@@ -57,10 +59,12 @@ export function getCategoryVisual(category: string) {
       hue: 'from-sky-100 to-blue-50',
       art: (
         <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <rect x="18" y="7" width="12" height="7" rx="2" fill="#2563EB" />
-          <path d="M18 14h12l-1.7 18a5 5 0 0 1-5 4.5h-.6a5 5 0 0 1-5-4.5L18 14Z" fill="#60A5FA" />
-          <rect x="20" y="19" width="8" height="9" rx="2" fill="#DBEAFE" />
-          <path d="M31 16c2.8 0 5 2.2 5 5s-2.2 5-5 5" stroke="#93C5FD" strokeWidth="1.8" strokeLinecap="round" />
+          <rect x="12" y="6.5" width="10" height="4.2" rx="1.8" fill="#1D4ED8" />
+          <path d="M11.5 10.5h11l2.2 4.5v17.8c0 2.5-2 4.5-4.5 4.5h-6.4c-2.5 0-4.5-2-4.5-4.5V15l2.2-4.5Z" fill="#60A5FA" stroke="#1D4ED8" strokeWidth="1.2" />
+          <path d="M12.8 19h9.4" stroke="#DBEAFE" strokeWidth="1.5" />
+          <path d="M12.8 24h9.4" stroke="#DBEAFE" strokeWidth="1.5" />
+          <path d="M12.8 29h9.4" stroke="#DBEAFE" strokeWidth="1.5" />
+          <path d="M31.5 17h7l-1.4 15.5c-.1 1.5-1.4 2.7-3 2.7h-1.2c-1.5 0-2.8-1.2-3-2.7L28.5 17h3Z" fill="#F8FAFC" stroke="#1D4ED8" strokeWidth="1.2" />
         </svg>
       ),
     }
@@ -71,11 +75,12 @@ export function getCategoryVisual(category: string) {
       hue: 'from-yellow-100 to-amber-50',
       art: (
         <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <path d="M16 11h12l4 5v21H16V11Z" fill="#FFF7ED" />
-          <path d="M28 11v6h6" fill="#FDE68A" />
-          <path d="M16 11h12l6 6" stroke="#D97706" strokeWidth="1.6" strokeLinejoin="round" />
-          <rect x="19" y="22" width="10" height="9" rx="2" fill="#FACC15" />
-          <circle cx="24" cy="26.5" r="1.5" fill="#FFF7ED" />
+          <path d="M26 10h8l2.5 5.8v18.5c0 2.1-1.7 3.8-3.8 3.8H29.8c-2.1 0-3.8-1.7-3.8-3.8V15.8L26 10Z" fill="#EFF6FF" stroke="#3B82F6" strokeWidth="1.2" />
+          <path d="M26.5 10h7" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" />
+          <path d="M10 29.5c0-6 5-11 11-11 4.6 0 7.7 2.6 9.6 6.5l-3.4 10H15.5c-3.1 0-5.5-2.2-5.5-5.5Z" fill="#FACC15" stroke="#B45309" strokeWidth="1.2" />
+          <circle cx="18" cy="27.5" r="1.3" fill="#FFF7ED" />
+          <circle cx="22.4" cy="24.6" r="1.1" fill="#FFF7ED" />
+          <circle cx="24.8" cy="29.7" r="1" fill="#FFF7ED" />
         </svg>
       ),
     }
@@ -86,10 +91,10 @@ export function getCategoryVisual(category: string) {
       hue: 'from-orange-100 to-amber-50',
       art: (
         <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <path d="M10 28c0-8 6-13 14-13h2c8 0 12 5 12 11 0 7-5 11-14 11h-1c-8 0-13-3.5-13-9Z" fill="#D97706" />
-          <path d="M17 19c-1 3-1 6 0 9" stroke="#FCD34D" strokeWidth="1.6" />
-          <path d="M24 18c-1 3-1 7 0 10" stroke="#FCD34D" strokeWidth="1.6" />
-          <path d="M31 20c-1 3-1 5.5 0 8" stroke="#FCD34D" strokeWidth="1.6" />
+          <path d="M9.5 28c0-7.7 5.9-13 14.4-13H26c7.7 0 12.5 4.8 12.5 11 0 7.4-5.5 11.8-14.8 11.8h-1.2C14.6 37.8 9.5 34.2 9.5 28Z" fill="#F59E0B" stroke="#92400E" strokeWidth="1.2" />
+          <path d="M18 20.2c-.8 2.1-1.1 4.4-.7 6.9" stroke="#FEF3C7" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M24.8 18.8c-.9 2.3-1.2 5-.7 8" stroke="#FEF3C7" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M31.5 20.5c-.9 2-1.1 4.1-.8 6.4" stroke="#FEF3C7" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       ),
     }
@@ -100,9 +105,9 @@ export function getCategoryVisual(category: string) {
       hue: 'from-rose-100 to-orange-50',
       art: (
         <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <path d="M12 29c0-7 5-13 13-13 6 0 10 2.2 12.5 5.5C39 23.3 40 26 40 29c0 6-4.5 10-11 10-2.3 0-4.6-.6-6.5-1.8A13.4 13.4 0 0 1 16 39c-4.2 0-7-2.4-7-6 0-1.8 1-3.2 3-4Z" fill="#F87171" />
-          <circle cx="28.5" cy="22.5" r="4" fill="#FFE4E6" />
-          <circle cx="28.5" cy="22.5" r="1.7" fill="#FDA4AF" />
+          <path d="M8.5 27c0-8 6.3-13.8 16.1-13.8 7.4 0 13.6 3.1 16.9 8.1-.5 8.8-6.4 15.2-16.6 15.2-8.8 0-16.4-3.8-16.4-9.5Z" fill="#EF4444" stroke="#B91C1C" strokeWidth="1.2" />
+          <ellipse cx="28.6" cy="20.8" rx="5.2" ry="4.4" fill="#FFF1F2" stroke="#DC2626" strokeWidth="0.8" />
+          <circle cx="28.6" cy="20.8" r="1.8" fill="#FBCFE8" />
         </svg>
       ),
     }
@@ -113,9 +118,11 @@ export function getCategoryVisual(category: string) {
       hue: 'from-sky-100 to-cyan-50',
       art: (
         <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <path d="M10 24c4-6.5 10.5-10.5 18-10.5 4 0 7.5 1.2 10 3.5l-4.5 4 4.5 4c-2.5 2.3-6 3.5-10 3.5-7.5 0-14-4-18-10.5Z" fill="#38BDF8" />
-          <circle cx="19" cy="21" r="1.7" fill="#0F172A" />
-          <path d="M10 22 5.5 18v12l4.5-4" fill="#7DD3FC" />
+          <path d="M8 24c4.4-5.8 11.2-9.6 18.4-9.6 5.3 0 10.2 1.7 13.6 5l-4.6 3.6 4.6 3.6c-3.4 3.3-8.3 5-13.6 5-7.2 0-14-3.8-18.4-9.6Z" fill="#38BDF8" stroke="#1D4ED8" strokeWidth="1.2" />
+          <circle cx="18.5" cy="20.7" r="1.7" fill="#0F172A" />
+          <path d="M10 20.8 5 16v16l5-4.8" fill="#93C5FD" stroke="#1D4ED8" strokeWidth="1" strokeLinejoin="round" />
+          <path d="M23 15.5c1.1-2.3 3.4-4 6.4-4.5" stroke="#0EA5E9" strokeWidth="1.2" strokeLinecap="round" />
+          <path d="M22.2 32c.6 2 2 3.8 4.2 4.8" stroke="#0EA5E9" strokeWidth="1.2" strokeLinecap="round" />
         </svg>
       ),
     }
@@ -126,11 +133,16 @@ export function getCategoryVisual(category: string) {
       hue: 'from-amber-100 to-yellow-50',
       art: (
         <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <rect x="15" y="9" width="18" height="30" rx="5" fill="#F59E0B" />
-          <rect x="18" y="15" width="12" height="14" rx="2" fill="#FEF3C7" />
-          <path d="M19 9h10" stroke="#92400E" strokeWidth="1.8" strokeLinecap="round" />
-          <path d="M21 22h6" stroke="#B45309" strokeWidth="1.7" strokeLinecap="round" />
-          <path d="M20 33h8" stroke="#FDE68A" strokeWidth="1.6" strokeLinecap="round" />
+          <rect x="10.5" y="9" width="14" height="27" rx="4" fill="#F8FAFC" stroke="#B45309" strokeWidth="1.2" />
+          <rect x="12.5" y="12.5" width="10" height="2.6" rx="1.3" fill="#F97316" />
+          <circle cx="18" cy="23" r="2.1" fill="#F59E0B" />
+          <circle cx="15" cy="27.5" r="1.7" fill="#FCD34D" />
+          <circle cx="21.2" cy="28.3" r="1.5" fill="#FBBF24" />
+          <rect x="24" y="16" width="13.5" height="20" rx="3.5" fill="#E5E7EB" stroke="#94A3B8" strokeWidth="1.2" />
+          <rect x="25.8" y="19.2" width="9.8" height="1.9" rx="1" fill="#94A3B8" />
+          <circle cx="28.8" cy="28" r="2" fill="#DC2626" />
+          <circle cx="32.8" cy="28.6" r="1.8" fill="#EF4444" />
+          <circle cx="30.7" cy="31.8" r="1.6" fill="#F97316" />
         </svg>
       ),
     }
@@ -141,12 +153,18 @@ export function getCategoryVisual(category: string) {
       hue: 'from-cyan-100 to-blue-50',
       art: (
         <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <path d="M24 9v30" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" />
-          <path d="m16 14 8 5 8-5" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="m16 34 8-5 8 5" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M11 24h26" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" />
-          <path d="m14 16 5 8-5 8" stroke="#93C5FD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="m34 16-5 8 5 8" stroke="#93C5FD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M24 8v32" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" />
+          <path d="M24 8 19 15" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" />
+          <path d="M24 8 29 15" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" />
+          <path d="M24 40 19 33" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" />
+          <path d="M24 40 29 33" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" />
+          <path d="M8 24h32" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" />
+          <path d="M8 24l7-5" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" />
+          <path d="M8 24l7 5" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" />
+          <path d="M40 24l-7-5" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" />
+          <path d="M40 24l-7 5" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" />
+          <path d="M13 13l22 22" stroke="#3B82F6" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M35 13 13 35" stroke="#3B82F6" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       ),
     }
@@ -157,10 +175,11 @@ export function getCategoryVisual(category: string) {
       hue: 'from-cyan-100 to-sky-50',
       art: (
         <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <path d="M21 8h8v5l4 3v4h-3v17H18V20h-3v-4l6-3V8Z" fill="#0EA5E9" />
-          <rect x="20" y="23" width="8" height="8" rx="2" fill="#E0F2FE" />
-          <path d="M19 20h10" stroke="#0369A1" strokeWidth="1.6" />
-          <circle cx="31.5" cy="14.5" r="2" fill="#BAE6FD" />
+          <path d="M12 15c0-1.3 1.1-2.4 2.4-2.4h5.2l2.8 4.2v19.7H11.6V15Z" fill="#F8FAFC" stroke="#0F766E" strokeWidth="1.2" />
+          <rect x="14.4" y="23.5" width="5.7" height="6.5" rx="1.4" fill="#22D3EE" />
+          <path d="M28 18h7.5c1.9 0 3.5 1.6 3.5 3.5v14.8H24.5V21.5c0-1.9 1.6-3.5 3.5-3.5Z" fill="#67E8F9" stroke="#0F766E" strokeWidth="1.2" />
+          <path d="M31 18v-4.2h2.6V18" stroke="#0F766E" strokeWidth="1.2" strokeLinecap="round" />
+          <rect x="27.6" y="23.6" width="8.3" height="6" rx="1.5" fill="#0EA5E9" opacity="0.9" />
         </svg>
       ),
     }
@@ -170,13 +189,15 @@ export function getCategoryVisual(category: string) {
     hue: 'from-slate-100 to-white',
     art: (
       <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-        <path d="m24 7 14 8v18l-14 8-14-8V15Z" fill="#E2E8F0" />
-        <path d="m10 15 14 8 14-8" stroke="#94A3B8" strokeWidth="1.5" />
-        <path d="M24 23v18" stroke="#94A3B8" strokeWidth="1.5" />
-      </svg>
-    ),
+        <path d="M12 14.5 24 9l12 5.5v16L24 39 12 30.5v-16Z" fill="#D6D3D1" stroke="#78716C" strokeWidth="1.2" />
+        <path d="m12 14.5 12 7 12-7" stroke="#A8A29E" strokeWidth="1.2" />
+        <path d="M24 21.5v17.5" stroke="#A8A29E" strokeWidth="1.2" />
+        <path d="M19 12.2h10" stroke="#F5F5F4" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M17.5 24.8h4" stroke="#78716C" strokeWidth="1.2" strokeLinecap="round" />
+        </svg>
+      ),
+    }
   }
-}
 
 export function ProductCategoryVisual({
   category,
