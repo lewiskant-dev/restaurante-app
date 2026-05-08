@@ -260,10 +260,10 @@ export function ProductCategoryVisual({
 }) {
   const slotClass =
     size === 'sm'
-      ? 'h-[30px] w-[30px]'
+      ? 'h-[30px] w-[30px] min-w-[30px] shrink-0'
       : size === 'lg'
-        ? 'h-[46px] w-[46px]'
-        : 'h-[38px] w-[38px]'
+        ? 'h-[46px] w-[46px] min-w-[46px] shrink-0'
+        : 'h-[38px] w-[38px] min-w-[38px] shrink-0'
   const [failedAssetPath, setFailedAssetPath] = useState<string | null>(null)
   const categoryAssetPath = getCategoryAssetPath(category)
   const assetTransform = getCategoryAssetTransform(category)
@@ -322,10 +322,10 @@ export function ProductCategoryBadge({
 
   const wrapperClass =
     size === 'lg'
-      ? 'h-[60px] w-[60px] rounded-[18px]'
+      ? 'h-[60px] w-[60px] min-w-[60px] shrink-0 rounded-[18px]'
       : size === 'sm'
-        ? 'h-[40px] w-[40px] rounded-[12px]'
-        : 'h-[54px] w-[54px] rounded-[15px]'
+        ? 'h-[40px] w-[40px] min-w-[40px] shrink-0 rounded-[12px]'
+        : 'h-[54px] w-[54px] min-w-[54px] shrink-0 rounded-[15px]'
 
   return (
     <div
