@@ -18,9 +18,35 @@ const CATEGORY_ICON_PATHS: Record<string, string> = {
   Otros: '/category-icons/otros.svg',
 }
 
+const CATEGORY_ICON_TRANSFORMS: Record<
+  string,
+  {
+    scale: number
+    x?: string
+    y?: string
+  }
+> = {
+  Bebidas: { scale: 1.02, x: '0%', y: '0%' },
+  Carnes: { scale: 1.16, x: '0%', y: '2%' },
+  'Pescados y mariscos': { scale: 1.05, x: '0%', y: '0%' },
+  'Frutas y verduras': { scale: 1.08, x: '0%', y: '0%' },
+  'Lácteos': { scale: 1.08, x: '0%', y: '0%' },
+  Panadería: { scale: 1.24, x: '0%', y: '2%' },
+  Despensa: { scale: 1.1, x: '0%', y: '0%' },
+  'Aceites y salsas': { scale: 1.12, x: '0%', y: '1%' },
+  Congelados: { scale: 1.06, x: '0%', y: '0%' },
+  Limpieza: { scale: 1.08, x: '0%', y: '0%' },
+  Otros: { scale: 1.02, x: '0%', y: '0%' },
+}
+
 export function getCategoryAssetPath(category: string) {
   const normalized = normalizeProductCategory(category)
   return CATEGORY_ICON_PATHS[normalized] ?? CATEGORY_ICON_PATHS.Otros
+}
+
+function getCategoryAssetTransform(category: string) {
+  const normalized = normalizeProductCategory(category)
+  return CATEGORY_ICON_TRANSFORMS[normalized] ?? CATEGORY_ICON_TRANSFORMS.Otros
 }
 
 export function getCategoryDescription(category: string) {
@@ -240,6 +266,7 @@ export function ProductCategoryVisual({
         : 'h-[38px] w-[38px]'
   const [failedAssetPath, setFailedAssetPath] = useState<string | null>(null)
   const categoryAssetPath = getCategoryAssetPath(category)
+  const assetTransform = getCategoryAssetTransform(category)
   const assetAvailable = failedAssetPath !== categoryAssetPath
 
   if (imageUrl) {
@@ -266,6 +293,10 @@ export function ProductCategoryVisual({
           className="h-full w-full object-contain"
           loading="lazy"
           draggable={false}
+          style={{
+            transform: `translate(${assetTransform.x ?? '0%'}, ${assetTransform.y ?? '0%'}) scale(${assetTransform.scale})`,
+            transformOrigin: 'center center',
+          }}
           onError={() => setFailedAssetPath(categoryAssetPath)}
         />
       </div>
