@@ -27,11 +27,11 @@ const CATEGORY_ICON_TRANSFORMS: Record<
   }
 > = {
   Bebidas: { scale: 1.18, x: '0%', y: '0%' },
-  Carnes: { scale: 1.38, x: '0%', y: '1%' },
+  Carnes: { scale: 1.2, x: '0%', y: '0%' },
   'Pescados y mariscos': { scale: 1.22, x: '0%', y: '0%' },
   'Frutas y verduras': { scale: 1.18, x: '0%', y: '0%' },
   'Lácteos': { scale: 1.26, x: '0%', y: '0%' },
-  Panadería: { scale: 1.56, x: '0%', y: '1%' },
+  Panadería: { scale: 1.24, x: '0%', y: '0%' },
   Despensa: { scale: 1.24, x: '0%', y: '0%' },
   'Aceites y salsas': { scale: 1.26, x: '0%', y: '0%' },
   Congelados: { scale: 1.18, x: '0%', y: '0%' },
