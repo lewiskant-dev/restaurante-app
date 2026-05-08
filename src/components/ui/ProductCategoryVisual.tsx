@@ -1,5 +1,27 @@
+'use client'
+
+import { useState } from 'react'
 import Image from 'next/image'
 import { normalizeProductCategory } from '@/features/home/constants'
+
+const CATEGORY_ICON_PATHS: Record<string, string> = {
+  Bebidas: '/category-icons/bebidas.svg',
+  Carnes: '/category-icons/carnes.svg',
+  'Pescados y mariscos': '/category-icons/pescados-mariscos.svg',
+  'Frutas y verduras': '/category-icons/frutas-verduras.svg',
+  'Lácteos': '/category-icons/lacteos.svg',
+  Panadería: '/category-icons/panaderia.svg',
+  Despensa: '/category-icons/despensa.svg',
+  'Aceites y salsas': '/category-icons/aceites-salsas.svg',
+  Congelados: '/category-icons/congelados.svg',
+  Limpieza: '/category-icons/limpieza.svg',
+  Otros: '/category-icons/otros.svg',
+}
+
+export function getCategoryAssetPath(category: string) {
+  const normalized = normalizeProductCategory(category)
+  return CATEGORY_ICON_PATHS[normalized] ?? CATEGORY_ICON_PATHS.Otros
+}
 
 export function getCategoryDescription(category: string) {
   const normalized = normalizeProductCategory(category)
@@ -211,6 +233,9 @@ export function ProductCategoryVisual({
   size?: 'sm' | 'md' | 'lg'
 }) {
   const dimensionClass = size === 'sm' ? 'h-8 w-8' : size === 'lg' ? 'h-14 w-14' : 'h-10 w-10'
+  const [failedAssetPath, setFailedAssetPath] = useState<string | null>(null)
+  const categoryAssetPath = getCategoryAssetPath(category)
+  const assetAvailable = failedAssetPath !== categoryAssetPath
 
   if (imageUrl) {
     return (
@@ -221,6 +246,18 @@ export function ProductCategoryVisual({
         height={size === 'lg' ? 56 : size === 'sm' ? 32 : 40}
         unoptimized
         className={`${dimensionClass} rounded-xl object-cover`}
+      />
+    )
+  }
+
+  if (assetAvailable && categoryAssetPath) {
+    return (
+      <img
+        src={categoryAssetPath}
+        alt={productName || category}
+        className={`${dimensionClass} object-contain`}
+        loading="lazy"
+        onError={() => setFailedAssetPath(categoryAssetPath)}
       />
     )
   }
