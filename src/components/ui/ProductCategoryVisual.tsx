@@ -26,17 +26,17 @@ const CATEGORY_ICON_TRANSFORMS: Record<
     y?: string
   }
 > = {
-  Bebidas: { scale: 1.02, x: '0%', y: '0%' },
-  Carnes: { scale: 1.16, x: '0%', y: '2%' },
-  'Pescados y mariscos': { scale: 1.05, x: '0%', y: '0%' },
-  'Frutas y verduras': { scale: 1.08, x: '0%', y: '0%' },
-  'Lácteos': { scale: 1.08, x: '0%', y: '0%' },
-  Panadería: { scale: 1.24, x: '0%', y: '2%' },
-  Despensa: { scale: 1.1, x: '0%', y: '0%' },
-  'Aceites y salsas': { scale: 1.12, x: '0%', y: '1%' },
-  Congelados: { scale: 1.06, x: '0%', y: '0%' },
-  Limpieza: { scale: 1.08, x: '0%', y: '0%' },
-  Otros: { scale: 1.02, x: '0%', y: '0%' },
+  Bebidas: { scale: 1.18, x: '0%', y: '0%' },
+  Carnes: { scale: 1.38, x: '0%', y: '1%' },
+  'Pescados y mariscos': { scale: 1.22, x: '0%', y: '0%' },
+  'Frutas y verduras': { scale: 1.18, x: '0%', y: '0%' },
+  'Lácteos': { scale: 1.26, x: '0%', y: '0%' },
+  Panadería: { scale: 1.56, x: '0%', y: '1%' },
+  Despensa: { scale: 1.24, x: '0%', y: '0%' },
+  'Aceites y salsas': { scale: 1.26, x: '0%', y: '0%' },
+  Congelados: { scale: 1.18, x: '0%', y: '0%' },
+  Limpieza: { scale: 1.22, x: '0%', y: '0%' },
+  Otros: { scale: 1.18, x: '0%', y: '0%' },
 }
 
 export function getCategoryAssetPath(category: string) {
