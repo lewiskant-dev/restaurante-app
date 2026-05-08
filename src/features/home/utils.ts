@@ -10,6 +10,7 @@ export const tabKeys: TabKey[] = [
   'proveedores',
   'usuarios',
   'auditoria',
+  'informes',
   'tpv',
   'recetas',
 ]
@@ -35,7 +36,7 @@ export const mainTabConfig: Record<
   control: {
     label: 'Control',
     subtitle: 'Seguimiento y trazabilidad',
-    tabs: ['historial', 'auditoria'],
+    tabs: ['historial', 'auditoria', 'informes'],
   },
 }
 
@@ -353,6 +354,7 @@ export function canAccessTab(role: UserRole, tab: TabKey) {
   if (tab === 'recetas') return hasPermission(role, 'receta_manage')
   if (tab === 'tpv') return hasPermission(role, 'tpv_manage')
   if (tab === 'auditoria') return hasPermission(role, 'auditoria_view')
+  if (tab === 'informes') return hasPermission(role, 'tpv_manage')
   if (tab === 'usuarios') return hasPermission(role, 'user_manage')
   return false
 }
@@ -437,5 +439,6 @@ export function getTabLabel(tab: TabKey) {
   if (tab === 'recetas') return 'Recetas'
   if (tab === 'usuarios') return 'Usuarios'
   if (tab === 'historial') return 'Historial'
+  if (tab === 'informes') return 'Informes'
   return 'Auditoría'
 }

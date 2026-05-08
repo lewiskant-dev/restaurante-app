@@ -15,6 +15,7 @@ export type TabKey =
   | 'proveedores'
   | 'usuarios'
   | 'auditoria'
+  | 'informes'
   | 'tpv'
   | 'recetas'
 
@@ -102,6 +103,29 @@ export type TpvAnaliticaCompra = {
   ultimo_precio_unitario: number
 }
 
+export type TpvAnaliticaAlerta = {
+  id: string
+  severidad: 'alta' | 'media' | 'info'
+  titulo: string
+  detalle: string
+}
+
+export type TpvAnaliticaComparativaMetrica = {
+  actual: number
+  anterior: number
+  delta: number
+  variacion_pct: number | null
+}
+
+export type TpvAnaliticaComparativa = {
+  periodo_anterior_label: string
+  ventas_estimadas: TpvAnaliticaComparativaMetrica
+  coste_teorico_vendido: TpvAnaliticaComparativaMetrica
+  margen_estimado: TpvAnaliticaComparativaMetrica
+  desviacion_total: TpvAnaliticaComparativaMetrica
+  compras_total_coste: TpvAnaliticaComparativaMetrica
+}
+
 export type TpvAnaliticaResumen = {
   range_key: '7d' | '30d' | '90d'
   periodo_label: string
@@ -114,6 +138,9 @@ export type TpvAnaliticaResumen = {
   productos_con_desviacion: number
   productos: TpvAnaliticaProducto[]
   recetas_rentables: TpvAnaliticaReceta[]
+  recetas_sin_precio_venta: number
+  alertas: TpvAnaliticaAlerta[]
+  comparativa: TpvAnaliticaComparativa
   compras_periodo: {
     total_coste: number
     total_lineas: number

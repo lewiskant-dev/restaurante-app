@@ -5,6 +5,7 @@ import type {
   Receta,
   RecetaLinea,
   RecetaLineaForm,
+  TpvAnaliticaComparativaMetrica,
   TpvAnaliticaResumen,
   VentaTPVCruda,
   ProductoPrecioHistorial,
@@ -79,6 +80,16 @@ export function useRecetaTpvManagement({
     productos_con_desviacion: 0,
     productos: [],
     recetas_rentables: [],
+    recetas_sin_precio_venta: 0,
+    alertas: [],
+    comparativa: {
+      periodo_anterior_label: 'Periodo anterior',
+      ventas_estimadas: { actual: 0, anterior: 0, delta: 0, variacion_pct: null },
+      coste_teorico_vendido: { actual: 0, anterior: 0, delta: 0, variacion_pct: null },
+      margen_estimado: { actual: 0, anterior: 0, delta: 0, variacion_pct: null },
+      desviacion_total: { actual: 0, anterior: 0, delta: 0, variacion_pct: null },
+      compras_total_coste: { actual: 0, anterior: 0, delta: 0, variacion_pct: null },
+    },
     compras_periodo: {
       total_coste: 0,
       total_lineas: 0,
@@ -209,6 +220,8 @@ export function useRecetaTpvManagement({
   async function loadTpvAnalitica(recetasBase: Receta[], lineasBase: RecetaLinea[]) {
     const days = tpvAnaliticaRange === '7d' ? 7 : tpvAnaliticaRange === '90d' ? 90 : 30
     const periodLabel = days === 7 ? 'Últimos 7 días' : days === 90 ? 'Últimos 90 días' : 'Últimos 30 días'
+    const previousLabel =
+      days === 7 ? '7 días anteriores' : days === 90 ? '90 días anteriores' : '30 días anteriores'
 
     if (!currentRestaurantId) {
       setTpvAnalitica({
@@ -223,6 +236,16 @@ export function useRecetaTpvManagement({
         productos_con_desviacion: 0,
         productos: [],
         recetas_rentables: [],
+        recetas_sin_precio_venta: 0,
+        alertas: [],
+        comparativa: {
+          periodo_anterior_label: previousLabel,
+          ventas_estimadas: { actual: 0, anterior: 0, delta: 0, variacion_pct: null },
+          coste_teorico_vendido: { actual: 0, anterior: 0, delta: 0, variacion_pct: null },
+          margen_estimado: { actual: 0, anterior: 0, delta: 0, variacion_pct: null },
+          desviacion_total: { actual: 0, anterior: 0, delta: 0, variacion_pct: null },
+          compras_total_coste: { actual: 0, anterior: 0, delta: 0, variacion_pct: null },
+        },
         compras_periodo: {
           total_coste: 0,
           total_lineas: 0,
@@ -234,53 +257,11 @@ export function useRecetaTpvManagement({
 
     const cutoff = new Date()
     cutoff.setDate(cutoff.getDate() - days)
-    const cutoffIso = cutoff.toISOString()
-    const cutoffDate = cutoffIso.slice(0, 10)
-
-    const [
-      { data: ventasData, error: ventasError },
-      { data: movimientosData, error: movimientosError },
-      { data: comprasData, error: comprasError },
-    ] =
-      await Promise.all([
-        supabase
-          .from('tpv_ventas_crudas')
-          .select('producto_externo,cantidad,fecha')
-          .eq('restaurant_id', currentRestaurantId),
-        supabase
-          .from('movimientos_stock')
-          .select('producto_id,cantidad,created_at,tipo')
-          .eq('restaurant_id', currentRestaurantId)
-          .eq('tipo', 'consumo')
-          .gte('created_at', cutoffIso),
-        supabase
-          .from('productos_precios_historial')
-          .select('producto_id,proveedor_nombre,fecha_compra,cantidad,precio_unitario,productos(nombre)')
-          .eq('restaurant_id', currentRestaurantId)
-          .gte('fecha_compra', cutoffDate),
-      ])
-
-    if (ventasError) {
-      onError(ventasError.message)
-      return
-    }
-
-    if (movimientosError) {
-      onError(movimientosError.message)
-      return
-    }
-
-    if (
-      comprasError &&
-      !/productos_precios_historial|relation .* does not exist|could not find the table/i.test(
-        comprasError.message
-      )
-    ) {
-      onError(comprasError.message)
-      return
-    }
 
     const recetasMap = new Map<string, Receta>()
+    const recetasMapeadasActivas = recetasBase.filter(
+      (receta) => receta.activo !== false && receta.nombre_tpv
+    )
     recetasBase.forEach((receta) => {
       if (receta.nombre_tpv && receta.activo !== false) {
         recetasMap.set(normalizeText(receta.nombre_tpv), receta)
@@ -295,180 +276,358 @@ export function useRecetaTpvManagement({
     })
 
     const productosMap = new Map(productos.map((producto) => [producto.id, producto]))
-    const theoreticalByProduct = new Map<string, number>()
-    const actualByProduct = new Map<string, number>()
-    const recipePerformance = new Map<string, {
-      receta_id: string
-      receta_nombre: string
-      unidades_vendidas: number
-      ventas_estimadas: number
-      coste_teorico_vendido: number
-      margen_estimado: number
-    }>()
-    let ventasEstimadasTotal = 0
-    let costeTeoricoVendidoTotal = 0
 
-    ;((ventasData ?? []) as VentaTPVCruda[])
-      .filter((venta) => formatOCRDateToInput(venta.fecha) >= cutoffDate)
-      .forEach((venta) => {
-        const receta = recetasMap.get(normalizeText(venta.producto_externo))
-        if (!receta) return
+    const buildComparativa = (
+      actual: number,
+      anterior: number
+    ): TpvAnaliticaComparativaMetrica => ({
+      actual,
+      anterior,
+      delta: actual - anterior,
+      variacion_pct:
+        anterior === 0 ? (actual === 0 ? 0 : null) : ((actual - anterior) / anterior) * 100,
+    })
 
-        const unidadesVendidas = Number(venta.cantidad || 0)
-        const costePorRacion =
-          Number(receta.coste_teorico || 0) / Math.max(Number(receta.raciones || 1), 1)
-        const ventasReceta = Number(receta.precio_venta || 0) * unidadesVendidas
-        const costeReceta = costePorRacion * unidadesVendidas
-        ventasEstimadasTotal += ventasReceta
-        costeTeoricoVendidoTotal += costeReceta
-
-        const currentRecipe = recipePerformance.get(receta.id) ?? {
-          receta_id: receta.id,
-          receta_nombre: receta.nombre,
-          unidades_vendidas: 0,
-          ventas_estimadas: 0,
-          coste_teorico_vendido: 0,
-          margen_estimado: 0,
+    async function buildAnaliticaWindow(start: Date, end: Date) {
+      const startIso = start.toISOString()
+      const endIso = end.toISOString()
+      const startDate = startIso.slice(0, 10)
+      const endDate = endIso.slice(0, 10)
+      const theoreticalByProduct = new Map<string, number>()
+      const actualByProduct = new Map<string, number>()
+      const recipePerformance = new Map<
+        string,
+        {
+          receta_id: string
+          receta_nombre: string
+          unidades_vendidas: number
+          ventas_estimadas: number
+          coste_teorico_vendido: number
+          margen_estimado: number
         }
-        currentRecipe.unidades_vendidas += unidadesVendidas
-        currentRecipe.ventas_estimadas += ventasReceta
-        currentRecipe.coste_teorico_vendido += costeReceta
-        currentRecipe.margen_estimado =
-          currentRecipe.ventas_estimadas - currentRecipe.coste_teorico_vendido
-        recipePerformance.set(receta.id, currentRecipe)
+      >()
+      let ventasEstimadasTotal = 0
+      let costeTeoricoVendidoTotal = 0
 
-        const lineas = lineasMap.get(receta.id) ?? []
-        lineas.forEach((linea) => {
-          const consumo = Number(linea.cantidad || 0) * unidadesVendidas
-          if (!linea.producto_id || consumo <= 0) return
-          theoreticalByProduct.set(
-            linea.producto_id,
-            Number(theoreticalByProduct.get(linea.producto_id) || 0) + consumo
-          )
+      const [
+        { data: ventasData, error: ventasError },
+        { data: movimientosData, error: movimientosError },
+        { data: comprasData, error: comprasError },
+      ] = await Promise.all([
+        supabase
+          .from('tpv_ventas_crudas')
+          .select('producto_externo,cantidad,fecha')
+          .eq('restaurant_id', currentRestaurantId),
+        supabase
+          .from('movimientos_stock')
+          .select('producto_id,cantidad,created_at,tipo')
+          .eq('restaurant_id', currentRestaurantId)
+          .eq('tipo', 'consumo')
+          .gte('created_at', startIso)
+          .lt('created_at', endIso),
+        supabase
+          .from('productos_precios_historial')
+          .select('producto_id,proveedor_nombre,fecha_compra,cantidad,precio_unitario,productos(nombre)')
+          .eq('restaurant_id', currentRestaurantId)
+          .gte('fecha_compra', startDate)
+          .lt('fecha_compra', endDate),
+      ])
+
+      if (ventasError) throw ventasError
+      if (movimientosError) throw movimientosError
+      if (
+        comprasError &&
+        !/productos_precios_historial|relation .* does not exist|could not find the table/i.test(
+          comprasError.message
+        )
+      ) {
+        throw comprasError
+      }
+
+      ;((ventasData ?? []) as VentaTPVCruda[])
+        .filter((venta) => {
+          const ventaDate = formatOCRDateToInput(venta.fecha)
+          return ventaDate >= startDate && ventaDate < endDate
         })
+        .forEach((venta) => {
+          const receta = recetasMap.get(normalizeText(venta.producto_externo))
+          if (!receta) return
+
+          const unidadesVendidas = Number(venta.cantidad || 0)
+          const costePorRacion =
+            Number(receta.coste_teorico || 0) / Math.max(Number(receta.raciones || 1), 1)
+          const ventasReceta = Number(receta.precio_venta || 0) * unidadesVendidas
+          const costeReceta = costePorRacion * unidadesVendidas
+          ventasEstimadasTotal += ventasReceta
+          costeTeoricoVendidoTotal += costeReceta
+
+          const currentRecipe = recipePerformance.get(receta.id) ?? {
+            receta_id: receta.id,
+            receta_nombre: receta.nombre,
+            unidades_vendidas: 0,
+            ventas_estimadas: 0,
+            coste_teorico_vendido: 0,
+            margen_estimado: 0,
+          }
+          currentRecipe.unidades_vendidas += unidadesVendidas
+          currentRecipe.ventas_estimadas += ventasReceta
+          currentRecipe.coste_teorico_vendido += costeReceta
+          currentRecipe.margen_estimado =
+            currentRecipe.ventas_estimadas - currentRecipe.coste_teorico_vendido
+          recipePerformance.set(receta.id, currentRecipe)
+
+          const lineas = lineasMap.get(receta.id) ?? []
+          lineas.forEach((linea) => {
+            const consumo = Number(linea.cantidad || 0) * unidadesVendidas
+            if (!linea.producto_id || consumo <= 0) return
+            theoreticalByProduct.set(
+              linea.producto_id,
+              Number(theoreticalByProduct.get(linea.producto_id) || 0) + consumo
+            )
+          })
+        })
+
+      ;((movimientosData ?? []) as Array<{
+        producto_id: string
+        cantidad: number
+        created_at: string
+        tipo: 'consumo'
+      }>).forEach((movimiento) => {
+        actualByProduct.set(
+          movimiento.producto_id,
+          Number(actualByProduct.get(movimiento.producto_id) || 0) +
+            Number(movimiento.cantidad || 0)
+        )
       })
 
-    ;((movimientosData ?? []) as Array<{
-      producto_id: string
-      cantidad: number
-      created_at: string
-      tipo: 'consumo'
-    }>).forEach((movimiento) => {
-      actualByProduct.set(
-        movimiento.producto_id,
-        Number(actualByProduct.get(movimiento.producto_id) || 0) + Number(movimiento.cantidad || 0)
+      const productIds = new Set<string>([
+        ...Array.from(theoreticalByProduct.keys()),
+        ...Array.from(actualByProduct.keys()),
+      ])
+
+      const productosAnalitica = Array.from(productIds)
+        .map((productoId) => {
+          const producto = productosMap.get(productoId)
+          const consumoTeorico = Number(theoreticalByProduct.get(productoId) || 0)
+          const consumoReal = Number(actualByProduct.get(productoId) || 0)
+          const desviacion = consumoReal - consumoTeorico
+
+          return {
+            producto_id: productoId,
+            producto_nombre: producto?.nombre || 'Producto eliminado',
+            unidad: producto?.unidad || 'uds',
+            consumo_teorico: consumoTeorico,
+            consumo_real: consumoReal,
+            desviacion,
+          }
+        })
+        .filter((item) => item.consumo_teorico > 0 || item.consumo_real > 0)
+        .sort((a, b) => Math.abs(b.desviacion) - Math.abs(a.desviacion))
+        .slice(0, 8)
+
+      const consumoTeoricoTotal = Array.from(theoreticalByProduct.values()).reduce(
+        (acc, value) => acc + Number(value || 0),
+        0
       )
-    })
+      const consumoRealTotal = Array.from(actualByProduct.values()).reduce(
+        (acc, value) => acc + Number(value || 0),
+        0
+      )
+      const productosConDesviacion = productosAnalitica.filter(
+        (item) => Math.abs(item.desviacion) > 0.01
+      ).length
 
-    const productIds = new Set<string>([
-      ...Array.from(theoreticalByProduct.keys()),
-      ...Array.from(actualByProduct.keys()),
-    ])
+      const recetasRentables = Array.from(recipePerformance.values())
+        .sort((a, b) => b.margen_estimado - a.margen_estimado)
+        .slice(0, 6)
 
-    const productosAnalitica = Array.from(productIds)
-      .map((productoId) => {
-        const producto = productosMap.get(productoId)
-        const consumoTeorico = Number(theoreticalByProduct.get(productoId) || 0)
-        const consumoReal = Number(actualByProduct.get(productoId) || 0)
-        const desviacion = consumoReal - consumoTeorico
+      const recetasSinPrecioVenta = recetasMapeadasActivas.filter(
+        (receta) => Number(receta.precio_venta || 0) <= 0
+      ).length
 
-        return {
-          producto_id: productoId,
-          producto_nombre: producto?.nombre || 'Producto eliminado',
-          unidad: producto?.unidad || 'uds',
-          consumo_teorico: consumoTeorico,
-          consumo_real: consumoReal,
-          desviacion,
+      const comprasAgrupadas = new Map<
+        string,
+        {
+          producto_id: string
+          producto_nombre: string
+          proveedor_nombre: string
+          cantidad_comprada: number
+          coste_total: number
+          ultimo_precio_unitario: number
+          fecha_compra: string
         }
+      >()
+
+      ;((comprasData ?? []) as Array<
+        Pick<
+          ProductoPrecioHistorial,
+          'producto_id' | 'proveedor_nombre' | 'fecha_compra' | 'cantidad' | 'precio_unitario'
+        > & {
+          productos?: { nombre?: string | null } | null
+        }
+      >).forEach((compra) => {
+        const current = comprasAgrupadas.get(compra.producto_id) ?? {
+          producto_id: compra.producto_id,
+          producto_nombre: compra.productos?.nombre || 'Producto',
+          proveedor_nombre: compra.proveedor_nombre || 'Proveedor no disponible',
+          cantidad_comprada: 0,
+          coste_total: 0,
+          ultimo_precio_unitario: Number(compra.precio_unitario || 0),
+          fecha_compra: compra.fecha_compra,
+        }
+
+        current.cantidad_comprada += Number(compra.cantidad || 0)
+        current.coste_total += Number(compra.cantidad || 0) * Number(compra.precio_unitario || 0)
+        if (compra.fecha_compra >= current.fecha_compra) {
+          current.fecha_compra = compra.fecha_compra
+          current.ultimo_precio_unitario = Number(compra.precio_unitario || 0)
+          current.proveedor_nombre = compra.proveedor_nombre || current.proveedor_nombre
+        }
+        comprasAgrupadas.set(compra.producto_id, current)
       })
-      .filter((item) => item.consumo_teorico > 0 || item.consumo_real > 0)
-      .sort((a, b) => Math.abs(b.desviacion) - Math.abs(a.desviacion))
-      .slice(0, 8)
 
-    const consumoTeoricoTotal = Array.from(theoreticalByProduct.values()).reduce(
-      (acc, value) => acc + Number(value || 0),
-      0
-    )
-    const consumoRealTotal = Array.from(actualByProduct.values()).reduce(
-      (acc, value) => acc + Number(value || 0),
-      0
-    )
-    const productosConDesviacion = productosAnalitica.filter(
-      (item) => Math.abs(item.desviacion) > 0.01
-    ).length
-
-    const recetasRentables = Array.from(recipePerformance.values())
-      .sort((a, b) => b.margen_estimado - a.margen_estimado)
-      .slice(0, 6)
-
-    const comprasAgrupadas = new Map<string, {
-      producto_id: string
-      producto_nombre: string
-      proveedor_nombre: string
-      cantidad_comprada: number
-      coste_total: number
-      ultimo_precio_unitario: number
-      fecha_compra: string
-    }>()
-
-    ;((comprasData ?? []) as Array<
-      Pick<ProductoPrecioHistorial, 'producto_id' | 'proveedor_nombre' | 'fecha_compra' | 'cantidad' | 'precio_unitario'> & {
-        productos?: { nombre?: string | null } | null
+      return {
+        ventasEstimadasTotal,
+        costeTeoricoVendidoTotal,
+        consumoTeoricoTotal,
+        consumoRealTotal,
+        productosConDesviacion,
+        productos: productosAnalitica,
+        recetas_rentables: recetasRentables,
+        recetas_sin_precio_venta: recetasSinPrecioVenta,
+        compras_periodo: {
+          total_coste: Array.from(comprasAgrupadas.values()).reduce(
+            (acc, item) => acc + item.coste_total,
+            0
+          ),
+          total_lineas: (comprasData ?? []).length,
+          productos: Array.from(comprasAgrupadas.values())
+            .sort((a, b) => b.coste_total - a.coste_total)
+            .slice(0, 6)
+            .map((item) => ({
+              producto_id: item.producto_id,
+              producto_nombre: item.producto_nombre,
+              proveedor_nombre: item.proveedor_nombre,
+              cantidad_comprada: item.cantidad_comprada,
+              coste_total: item.coste_total,
+              ultimo_precio_unitario: item.ultimo_precio_unitario,
+            })),
+        },
       }
-    >).forEach((compra) => {
-      const current = comprasAgrupadas.get(compra.producto_id) ?? {
-        producto_id: compra.producto_id,
-        producto_nombre: compra.productos?.nombre || 'Producto',
-        proveedor_nombre: compra.proveedor_nombre || 'Proveedor no disponible',
-        cantidad_comprada: 0,
-        coste_total: 0,
-        ultimo_precio_unitario: Number(compra.precio_unitario || 0),
-        fecha_compra: compra.fecha_compra,
+    }
+
+    let currentWindow
+    let previousWindow
+    try {
+      currentWindow = await buildAnaliticaWindow(cutoff, new Date())
+      const previousEnd = new Date(cutoff)
+      const previousStart = new Date(previousEnd)
+      previousStart.setDate(previousStart.getDate() - days)
+      previousWindow = await buildAnaliticaWindow(previousStart, previousEnd)
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'No se pudo cargar la analítica del TPV')
+      return
+    }
+
+    const alertas: TpvAnaliticaResumen['alertas'] = []
+
+    if (currentWindow.recetas_sin_precio_venta > 0) {
+      alertas.push({
+        id: 'recetas-sin-precio',
+        severidad: 'media',
+        titulo: 'Recetas sin precio de venta',
+        detalle: `${currentWindow.recetas_sin_precio_venta} receta(s) activas del TPV siguen sin precio de venta configurado.`,
+      })
+    }
+
+    if (currentWindow.ventasEstimadasTotal > 0) {
+      const margenRatio =
+        (currentWindow.ventasEstimadasTotal - currentWindow.costeTeoricoVendidoTotal) /
+        currentWindow.ventasEstimadasTotal
+      if (margenRatio < 0) {
+        alertas.push({
+          id: 'margen-negativo',
+          severidad: 'alta',
+          titulo: 'Margen operativo negativo',
+          detalle: `El margen estimado del periodo es negativo (${((margenRatio || 0) * 100).toFixed(1)}%).`,
+        })
+      } else if (margenRatio < 0.15) {
+        alertas.push({
+          id: 'margen-bajo',
+          severidad: 'media',
+          titulo: 'Margen estimado bajo',
+          detalle: `El margen estimado del periodo está por debajo del 15% (${(margenRatio * 100).toFixed(1)}%).`,
+        })
       }
+    }
 
-      current.cantidad_comprada += Number(compra.cantidad || 0)
-      current.coste_total += Number(compra.cantidad || 0) * Number(compra.precio_unitario || 0)
-      if (compra.fecha_compra >= current.fecha_compra) {
-        current.fecha_compra = compra.fecha_compra
-        current.ultimo_precio_unitario = Number(compra.precio_unitario || 0)
-        current.proveedor_nombre = compra.proveedor_nombre || current.proveedor_nombre
+    const worstProduct = currentWindow.productos[0]
+    if (worstProduct && worstProduct.consumo_teorico > 0) {
+      const worstDeviationRatio = Math.abs(worstProduct.desviacion) / worstProduct.consumo_teorico
+      if (worstDeviationRatio >= 0.15) {
+        alertas.push({
+          id: `desviacion-${worstProduct.producto_id}`,
+          severidad: worstDeviationRatio >= 0.3 ? 'alta' : 'media',
+          titulo: 'Desviación operativa relevante',
+          detalle: `${worstProduct.producto_nombre} presenta una desviación del ${(worstDeviationRatio * 100).toFixed(1)}% respecto al consumo teórico.`,
+        })
       }
-      comprasAgrupadas.set(compra.producto_id, current)
-    })
+    }
 
-    const comprasPeriodoProductos = Array.from(comprasAgrupadas.values())
-      .sort((a, b) => b.coste_total - a.coste_total)
-      .slice(0, 6)
-      .map((item) => ({
-        producto_id: item.producto_id,
-        producto_nombre: item.producto_nombre,
-        proveedor_nombre: item.proveedor_nombre,
-        cantidad_comprada: item.cantidad_comprada,
-        coste_total: item.coste_total,
-        ultimo_precio_unitario: item.ultimo_precio_unitario,
-      }))
-
-    const comprasTotalCoste = Array.from(comprasAgrupadas.values()).reduce(
-      (acc, item) => acc + item.coste_total,
-      0
-    )
+    if (
+      currentWindow.ventasEstimadasTotal > 0 &&
+      currentWindow.compras_periodo.total_coste > currentWindow.ventasEstimadasTotal
+    ) {
+      alertas.push({
+        id: 'compras-superan-ventas',
+        severidad: 'media',
+        titulo: 'Compras por encima de ventas estimadas',
+        detalle: `El coste acumulado de compras del periodo supera las ventas estimadas (${currentWindow.compras_periodo.total_coste.toFixed(2)} € frente a ${currentWindow.ventasEstimadasTotal.toFixed(2)} €).`,
+      })
+    }
 
     setTpvAnalitica({
       range_key: tpvAnaliticaRange,
       periodo_label: periodLabel,
-      ventas_estimadas_total: ventasEstimadasTotal,
-      coste_teorico_vendido_total: costeTeoricoVendidoTotal,
-      margen_estimado_total: ventasEstimadasTotal - costeTeoricoVendidoTotal,
-      consumo_teorico_total: consumoTeoricoTotal,
-      consumo_real_total: consumoRealTotal,
-      desviacion_total: consumoRealTotal - consumoTeoricoTotal,
-      productos_con_desviacion: productosConDesviacion,
-      productos: productosAnalitica,
-      recetas_rentables: recetasRentables,
+      ventas_estimadas_total: currentWindow.ventasEstimadasTotal,
+      coste_teorico_vendido_total: currentWindow.costeTeoricoVendidoTotal,
+      margen_estimado_total:
+        currentWindow.ventasEstimadasTotal - currentWindow.costeTeoricoVendidoTotal,
+      consumo_teorico_total: currentWindow.consumoTeoricoTotal,
+      consumo_real_total: currentWindow.consumoRealTotal,
+      desviacion_total: currentWindow.consumoRealTotal - currentWindow.consumoTeoricoTotal,
+      productos_con_desviacion: currentWindow.productosConDesviacion,
+      productos: currentWindow.productos,
+      recetas_rentables: currentWindow.recetas_rentables,
+      recetas_sin_precio_venta: currentWindow.recetas_sin_precio_venta,
+      alertas,
+      comparativa: {
+        periodo_anterior_label: previousLabel,
+        ventas_estimadas: buildComparativa(
+          currentWindow.ventasEstimadasTotal,
+          previousWindow.ventasEstimadasTotal
+        ),
+        coste_teorico_vendido: buildComparativa(
+          currentWindow.costeTeoricoVendidoTotal,
+          previousWindow.costeTeoricoVendidoTotal
+        ),
+        margen_estimado: buildComparativa(
+          currentWindow.ventasEstimadasTotal - currentWindow.costeTeoricoVendidoTotal,
+          previousWindow.ventasEstimadasTotal - previousWindow.costeTeoricoVendidoTotal
+        ),
+        desviacion_total: buildComparativa(
+          currentWindow.consumoRealTotal - currentWindow.consumoTeoricoTotal,
+          previousWindow.consumoRealTotal - previousWindow.consumoTeoricoTotal
+        ),
+        compras_total_coste: buildComparativa(
+          currentWindow.compras_periodo.total_coste,
+          previousWindow.compras_periodo.total_coste
+        ),
+      },
       compras_periodo: {
-        total_coste: comprasTotalCoste,
-        total_lineas: (comprasData ?? []).length,
-        productos: comprasPeriodoProductos,
+        total_coste: currentWindow.compras_periodo.total_coste,
+        total_lineas: currentWindow.compras_periodo.total_lineas,
+        productos: currentWindow.compras_periodo.productos,
       },
     })
   }

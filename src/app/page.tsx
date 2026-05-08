@@ -19,6 +19,7 @@ import { AlbaranFormTab } from '@/components/tabs/AlbaranFormTab'
 import { AlbaranesTab } from '@/components/tabs/AlbaranesTab'
 import { AuditoriaTab } from '@/components/tabs/AuditoriaTab'
 import HistorialTab from '@/components/tabs/HistorialTab'
+import { InformesTab } from '@/components/tabs/InformesTab'
 import { ProveedoresTab } from '@/components/tabs/ProveedoresTab'
 import { RecetasTab } from '@/components/tabs/RecetasTab'
 import StockTab from '@/components/tabs/StockTab'
@@ -1144,6 +1145,153 @@ export default function HomePage() {
     )
   }
 
+  function exportarAnaliticaTpvCSV() {
+    const filasResumen = getFilasResumenAnalitica()
+    const filasProductos = getFilasDesviacionesAnalitica()
+    const filasRecetas = getFilasRentabilidadAnalitica()
+    const filasCompras = getFilasComprasAnalitica()
+
+    descargarCSV(
+      `tpv_analitica_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
+      [...filasResumen, ...filasProductos, ...filasRecetas, ...filasCompras]
+    )
+  }
+
+  function getFilasResumenAnalitica() {
+    return [
+      {
+        bloque: 'resumen',
+        periodo: tpvAnalitica.periodo_label,
+        concepto: 'ventas_estimadas_total',
+        valor: tpvAnalitica.ventas_estimadas_total,
+      },
+      {
+        bloque: 'resumen',
+        periodo: tpvAnalitica.periodo_label,
+        concepto: 'coste_teorico_vendido_total',
+        valor: tpvAnalitica.coste_teorico_vendido_total,
+      },
+      {
+        bloque: 'resumen',
+        periodo: tpvAnalitica.periodo_label,
+        concepto: 'margen_estimado_total',
+        valor: tpvAnalitica.margen_estimado_total,
+      },
+      {
+        bloque: 'resumen',
+        periodo: tpvAnalitica.periodo_label,
+        concepto: 'consumo_teorico_total',
+        valor: tpvAnalitica.consumo_teorico_total,
+      },
+      {
+        bloque: 'resumen',
+        periodo: tpvAnalitica.periodo_label,
+        concepto: 'consumo_real_total',
+        valor: tpvAnalitica.consumo_real_total,
+      },
+      {
+        bloque: 'resumen',
+        periodo: tpvAnalitica.periodo_label,
+        concepto: 'desviacion_total',
+        valor: tpvAnalitica.desviacion_total,
+      },
+      {
+        bloque: 'comparativa',
+        periodo: tpvAnalitica.comparativa.periodo_anterior_label,
+        concepto: 'ventas_estimadas_total_anterior',
+        valor: tpvAnalitica.comparativa.ventas_estimadas.anterior,
+      },
+      {
+        bloque: 'comparativa',
+        periodo: tpvAnalitica.comparativa.periodo_anterior_label,
+        concepto: 'margen_estimado_total_anterior',
+        valor: tpvAnalitica.comparativa.margen_estimado.anterior,
+      },
+      {
+        bloque: 'comparativa',
+        periodo: tpvAnalitica.comparativa.periodo_anterior_label,
+        concepto: 'compras_total_coste_anterior',
+        valor: tpvAnalitica.comparativa.compras_total_coste.anterior,
+      },
+      {
+        bloque: 'comparativa',
+        periodo: tpvAnalitica.periodo_label,
+        concepto: 'variacion_ventas_pct',
+        valor: tpvAnalitica.comparativa.ventas_estimadas.variacion_pct ?? '',
+      },
+      {
+        bloque: 'comparativa',
+        periodo: tpvAnalitica.periodo_label,
+        concepto: 'variacion_margen_pct',
+        valor: tpvAnalitica.comparativa.margen_estimado.variacion_pct ?? '',
+      },
+    ]
+  }
+
+  function getFilasDesviacionesAnalitica() {
+    return tpvAnalitica.productos.map((item) => ({
+      bloque: 'desviacion_producto',
+      periodo: tpvAnalitica.periodo_label,
+      producto: item.producto_nombre,
+      unidad: item.unidad,
+      consumo_teorico: item.consumo_teorico,
+      consumo_real: item.consumo_real,
+      desviacion: item.desviacion,
+    }))
+  }
+
+  function getFilasRentabilidadAnalitica() {
+    return tpvAnalitica.recetas_rentables.map((item) => ({
+      bloque: 'receta_rentable',
+      periodo: tpvAnalitica.periodo_label,
+      receta: item.receta_nombre,
+      unidades_vendidas: item.unidades_vendidas,
+      ventas_estimadas: item.ventas_estimadas,
+      coste_teorico_vendido: item.coste_teorico_vendido,
+      margen_estimado: item.margen_estimado,
+    }))
+  }
+
+  function getFilasComprasAnalitica() {
+    return tpvAnalitica.compras_periodo.productos.map((item) => ({
+      bloque: 'compra_periodo',
+      periodo: tpvAnalitica.periodo_label,
+      producto: item.producto_nombre,
+      proveedor: item.proveedor_nombre,
+      cantidad_comprada: item.cantidad_comprada,
+      coste_total: item.coste_total,
+      ultimo_precio_unitario: item.ultimo_precio_unitario,
+    }))
+  }
+
+  function exportarResumenFinancieroCSV() {
+    descargarCSV(
+      `informe_resumen_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
+      getFilasResumenAnalitica()
+    )
+  }
+
+  function exportarDesviacionesFinancierasCSV() {
+    descargarCSV(
+      `informe_desviaciones_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
+      getFilasDesviacionesAnalitica()
+    )
+  }
+
+  function exportarRentabilidadFinancieraCSV() {
+    descargarCSV(
+      `informe_rentabilidad_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
+      getFilasRentabilidadAnalitica()
+    )
+  }
+
+  function exportarComprasFinancierasCSV() {
+    descargarCSV(
+      `informe_compras_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
+      getFilasComprasAnalitica()
+    )
+  }
+
   function resetAuditoriaFilters() {
     setBusquedaAuditoria('')
     setAuditoriaDesde('')
@@ -1487,6 +1635,19 @@ export default function HomePage() {
           />
         )}
 
+        {tab === 'informes' && (
+          <InformesTab
+            tpvAnaliticaRange={tpvAnaliticaRange}
+            tpvAnalitica={tpvAnalitica}
+            onAnaliticaRangeChange={setTpvAnaliticaRange}
+            onExportarGlobal={exportarAnaliticaTpvCSV}
+            onExportarResumen={exportarResumenFinancieroCSV}
+            onExportarDesviaciones={exportarDesviacionesFinancierasCSV}
+            onExportarRentabilidad={exportarRentabilidadFinancieraCSV}
+            onExportarCompras={exportarComprasFinancierasCSV}
+          />
+        )}
+
         {tab === 'proveedores' && (
           <ProveedoresTab
             busquedaProveedor={busquedaProveedor}
@@ -1654,6 +1815,7 @@ export default function HomePage() {
             onFileChange={setTpvFile}
             onImportarCsv={() => void importarCSVTPV()}
             onAplicarImportacion={() => void aplicarImportacionTPV()}
+            onExportarAnalitica={exportarAnaliticaTpvCSV}
             onAnaliticaRangeChange={setTpvAnaliticaRange}
             onMapeoSeleccionadoChange={(productoExterno, recetaId) =>
               setTpvMapeosSeleccionados((prev) => ({

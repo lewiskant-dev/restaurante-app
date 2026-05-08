@@ -44,6 +44,7 @@ export function MobileBottomNav({
     : 'albaran'
   const moreTarget: TabKey =
     visibleTabsByGroup.gestion.find((tab) => tab === 'usuarios') ||
+    visibleTabsByGroup.control.find((tab) => tab === 'informes') ||
     visibleTabsByGroup.control.find((tab) => tab === 'auditoria') ||
     visibleTabsByGroup.control.find((tab) => tab === 'historial') ||
     visibleTabsByGroup.gestion.find((tab) => tab === 'proveedores') ||
@@ -56,6 +57,7 @@ export function MobileBottomNav({
     'usuarios',
     'historial',
     'auditoria',
+    'informes',
     'proveedores',
     'recetas',
   ])

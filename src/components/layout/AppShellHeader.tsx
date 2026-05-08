@@ -162,6 +162,21 @@ function getTabIcon(tab: TabKey, className = 'h-[18px] w-[18px]') {
       />
     )
   }
+  if (tab === 'informes') {
+    return (
+      <Icon
+        path={
+          <>
+            <path d="M4 19h16" />
+            <path d="M7 16V9" />
+            <path d="M12 16V5" />
+            <path d="M17 16v-7" />
+          </>
+        }
+        className={className}
+      />
+    )
+  }
   if (tab === 'usuarios') {
     return (
       <Icon

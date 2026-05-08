@@ -23,6 +23,7 @@ type TpvTabProps = {
   onFileChange: (file: File | null) => void
   onImportarCsv: () => void
   onAplicarImportacion: () => void
+  onExportarAnalitica: () => void
   onAnaliticaRangeChange: (value: '7d' | '30d' | '90d') => void
   onMapeoSeleccionadoChange: (productoExterno: string, recetaId: string) => void
   onGuardarMapeo: (productoExterno: string, recetaId: string) => void
@@ -42,6 +43,7 @@ export function TpvTab({
   onFileChange,
   onImportarCsv,
   onAplicarImportacion,
+  onExportarAnalitica,
   onAnaliticaRangeChange,
   onMapeoSeleccionadoChange,
   onGuardarMapeo,
@@ -77,6 +79,15 @@ export function TpvTab({
               <option value="30d">Últimos 30 días</option>
               <option value="90d">Últimos 90 días</option>
             </select>
+          </div>
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              onClick={onExportarAnalitica}
+              className="rounded-[16px] border border-slate-200 bg-white px-3.5 py-2.5 text-[12px] font-semibold text-slate-700 shadow-sm sm:text-[13px]"
+            >
+              Exportar analítica CSV
+            </button>
           </div>
         </div>
 
@@ -165,6 +176,36 @@ export function TpvTab({
         </div>
 
         <div className="mt-4 space-y-3">
+          {tpvAnalitica.alertas.length > 0 ? (
+            <div className="space-y-2">
+              {tpvAnalitica.alertas.map((alerta) => (
+                <div
+                  key={alerta.id}
+                  className={`rounded-[18px] border px-4 py-3 ${
+                    alerta.severidad === 'alta'
+                      ? 'border-red-200 bg-red-50'
+                      : alerta.severidad === 'media'
+                        ? 'border-amber-200 bg-amber-50'
+                        : 'border-sky-200 bg-sky-50'
+                  }`}
+                >
+                  <div
+                    className={`text-[12px] font-semibold ${
+                      alerta.severidad === 'alta'
+                        ? 'text-red-700'
+                        : alerta.severidad === 'media'
+                          ? 'text-amber-700'
+                          : 'text-sky-700'
+                    }`}
+                  >
+                    {alerta.titulo}
+                  </div>
+                  <div className="mt-1 text-[12px] text-slate-700">{alerta.detalle}</div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
           {tpvAnalitica.productos.length === 0 ? (
             <div className="rounded-[18px] border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-400">
               Aún no hay base suficiente para calcular desviaciones operativas.
