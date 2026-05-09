@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { NotificationsBell } from '@/components/layout/NotificationsBell'
+import { NexoBrandMark } from '@/components/ui/NexoBrandMark'
 import type { MainTab, TabKey } from '@/features/home/types'
 import { getTabLabel, canAccessTab } from '@/features/home/utils'
 
@@ -212,22 +213,6 @@ function getSectionLabel(group: MainTab) {
   return 'Control'
 }
 
-function BrandMark({ className = 'h-5 w-5' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <path
-        d="M6 17V7.5c0-.9.73-1.5 1.56-1.5.46 0 .9.2 1.2.56L12 10.35l3.24-3.8A1.57 1.57 0 0 1 16.44 6c.83 0 1.56.6 1.56 1.5V17"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M9.5 17V11.2" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
-      <path d="M14.5 17V11.2" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
-    </svg>
-  )
-}
-
 function NavGroup({
   label,
   tabs,
@@ -322,7 +307,7 @@ export function AppShellHeader({
           className="flex items-center gap-3.5 text-left"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-[linear-gradient(135deg,#1b86ff_0%,#4956ff_50%,#812dff_100%)] text-white shadow-[0_14px_20px_rgba(89,88,255,0.2)]">
-            <BrandMark className="h-[18px] w-[18px]" />
+            <NexoBrandMark className="h-[18px] w-[18px]" />
           </div>
           <div>
             <div className="text-[1.08rem] font-semibold tracking-tight text-slate-950">Nexo</div>
