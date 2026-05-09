@@ -306,10 +306,10 @@ export function AppShellHeader({
           onClick={() => handleGroupTabChange('operativa', 'stock')}
           className="flex items-center gap-3.5 text-left"
         >
-          <div className="flex h-10 w-10 min-w-10 shrink-0 items-center justify-center overflow-hidden rounded-[16px]">
+          <div className="flex h-10 w-10 min-w-10 shrink-0 items-center justify-center overflow-hidden rounded-[16px] border border-slate-200/80 bg-slate-50">
             <NexoBrandMark
               className="h-full w-full"
-              fallbackClassName="h-[18px] w-[18px] text-white"
+              fallbackClassName="h-[18px] w-[18px] text-slate-700"
             />
           </div>
           <div>
