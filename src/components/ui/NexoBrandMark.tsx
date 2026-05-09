@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 const NEXO_BRAND_ASSET_PATH = '/brand/nexo-logo.svg?v=2026-05-09'
 
@@ -11,45 +11,7 @@ export function NexoBrandMark({
   className?: string
   alt?: string
 }) {
-  const [svgMarkup, setSvgMarkup] = useState<string | null>(null)
   const [assetFailed, setAssetFailed] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function loadLogo() {
-      try {
-        const response = await fetch(NEXO_BRAND_ASSET_PATH, { cache: 'no-store' })
-        if (!response.ok) {
-          throw new Error(`Logo request failed: ${response.status}`)
-        }
-
-        const rawSvg = await response.text()
-        const cleanedSvg = rawSvg
-          .replace(/<\?xml[\s\S]*?\?>/i, '')
-          .replace(
-            /<svg\b([^>]*)>/i,
-            '<svg$1 class="h-full w-full block" preserveAspectRatio="xMidYMid meet">'
-          )
-
-        if (!cancelled) {
-          setSvgMarkup(cleanedSvg)
-          setAssetFailed(false)
-        }
-      } catch {
-        if (!cancelled) {
-          setSvgMarkup(null)
-          setAssetFailed(true)
-        }
-      }
-    }
-
-    void loadLogo()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   return (
     <span
@@ -57,13 +19,18 @@ export function NexoBrandMark({
       aria-label={alt}
       aria-hidden={alt ? undefined : true}
     >
-      {svgMarkup ? (
-        <span
-          className="block h-full w-full [&>svg]:h-full [&>svg]:w-full"
-          dangerouslySetInnerHTML={{ __html: svgMarkup }}
-        />
-      ) : assetFailed ? (
+      {assetFailed ? (
         <span className="block h-full w-full" aria-hidden="true" />
+      ) : null}
+      {!assetFailed ? (
+        <object
+          key={NEXO_BRAND_ASSET_PATH}
+          data={NEXO_BRAND_ASSET_PATH}
+          type="image/svg+xml"
+          aria-label={alt}
+          className="block h-full w-full pointer-events-none"
+          onError={() => setAssetFailed(true)}
+        />
       ) : null}
     </span>
   )
