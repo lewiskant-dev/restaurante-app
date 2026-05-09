@@ -19,6 +19,7 @@ import { AlbaranFormTab } from '@/components/tabs/AlbaranFormTab'
 import { AlbaranesTab } from '@/components/tabs/AlbaranesTab'
 import { AuditoriaTab } from '@/components/tabs/AuditoriaTab'
 import HistorialTab from '@/components/tabs/HistorialTab'
+import { InformesTab } from '@/components/tabs/InformesTab'
 import { ProveedoresTab } from '@/components/tabs/ProveedoresTab'
 import { RecetasTab } from '@/components/tabs/RecetasTab'
 import StockTab from '@/components/tabs/StockTab'
@@ -1145,7 +1146,19 @@ export default function HomePage() {
   }
 
   function exportarAnaliticaTpvCSV() {
-    const filasResumen = [
+    const filasResumen = getFilasResumenAnalitica()
+    const filasProductos = getFilasDesviacionesAnalitica()
+    const filasRentabilidad = getFilasRentabilidadAnalitica()
+    const filasCompras = getFilasComprasAnalitica()
+
+    descargarCSV(
+      `tpv_analitica_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
+      [...filasResumen, ...filasProductos, ...filasRentabilidad, ...filasCompras]
+    )
+  }
+
+  function getFilasResumenAnalitica() {
+    return [
       {
         bloque: 'resumen',
         periodo: tpvAnalitica.periodo_label,
@@ -1183,8 +1196,10 @@ export default function HomePage() {
         valor: tpvAnalitica.desviacion_total,
       },
     ]
+  }
 
-    const filasProductos = tpvAnalitica.productos.map((item) => ({
+  function getFilasDesviacionesAnalitica() {
+    return tpvAnalitica.productos.map((item) => ({
       bloque: 'desviacion_producto',
       periodo: tpvAnalitica.periodo_label,
       producto: item.producto_nombre,
@@ -1193,7 +1208,9 @@ export default function HomePage() {
       consumo_real: item.consumo_real,
       desviacion: item.desviacion,
     }))
+  }
 
+  function getFilasRentabilidadAnalitica() {
     const filasRecetas = tpvAnalitica.recetas_rentables.map((item) => ({
       bloque: 'receta_rentable',
       periodo: tpvAnalitica.periodo_label,
@@ -1204,7 +1221,21 @@ export default function HomePage() {
       margen_estimado: item.margen_estimado,
     }))
 
-    const filasCompras = tpvAnalitica.compras_periodo.productos.map((item) => ({
+    const filasCategorias = tpvAnalitica.categorias_rentables.map((item) => ({
+      bloque: 'categoria_rentable',
+      periodo: tpvAnalitica.periodo_label,
+      categoria: item.categoria,
+      unidades_vendidas: item.unidades_vendidas,
+      ventas_estimadas: item.ventas_estimadas,
+      coste_teorico_vendido: item.coste_teorico_vendido,
+      margen_estimado: item.margen_estimado,
+    }))
+
+    return [...filasRecetas, ...filasCategorias]
+  }
+
+  function getFilasComprasAnalitica() {
+    return tpvAnalitica.compras_periodo.productos.map((item) => ({
       bloque: 'compra_periodo',
       periodo: tpvAnalitica.periodo_label,
       producto: item.producto_nombre,
@@ -1212,11 +1243,36 @@ export default function HomePage() {
       cantidad_comprada: item.cantidad_comprada,
       coste_total: item.coste_total,
       ultimo_precio_unitario: item.ultimo_precio_unitario,
+      precio_anterior_unitario: item.precio_anterior_unitario,
+      variacion_precio_pct: item.variacion_precio_pct,
     }))
+  }
 
+  function exportarResumenAnaliticaCSV() {
     descargarCSV(
-      `tpv_analitica_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
-      [...filasResumen, ...filasProductos, ...filasRecetas, ...filasCompras]
+      `informe_resumen_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
+      getFilasResumenAnalitica()
+    )
+  }
+
+  function exportarDesviacionesAnaliticaCSV() {
+    descargarCSV(
+      `informe_desviaciones_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
+      getFilasDesviacionesAnalitica()
+    )
+  }
+
+  function exportarRentabilidadAnaliticaCSV() {
+    descargarCSV(
+      `informe_rentabilidad_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
+      getFilasRentabilidadAnalitica()
+    )
+  }
+
+  function exportarComprasAnaliticaCSV() {
+    descargarCSV(
+      `informe_compras_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
+      getFilasComprasAnalitica()
     )
   }
 
@@ -1741,6 +1797,19 @@ export default function HomePage() {
             onGuardarMapeo={(productoExterno, recetaId) =>
               void guardarMapeoTPV(productoExterno, recetaId)
             }
+          />
+        )}
+
+        {tab === 'informes' && (
+          <InformesTab
+            tpvAnaliticaRange={tpvAnaliticaRange}
+            tpvAnalitica={tpvAnalitica}
+            onAnaliticaRangeChange={setTpvAnaliticaRange}
+            onExportarGlobal={exportarAnaliticaTpvCSV}
+            onExportarResumen={exportarResumenAnaliticaCSV}
+            onExportarDesviaciones={exportarDesviacionesAnaliticaCSV}
+            onExportarRentabilidad={exportarRentabilidadAnaliticaCSV}
+            onExportarCompras={exportarComprasAnaliticaCSV}
           />
         )}
 
