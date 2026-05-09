@@ -309,7 +309,6 @@ export function AppShellHeader({
           <div className="flex h-10 w-10 min-w-10 shrink-0 items-center justify-center overflow-hidden rounded-[16px] border border-slate-200/80 bg-slate-50">
             <NexoBrandMark
               className="h-full w-full"
-              fallbackClassName="h-[18px] w-[18px] text-slate-700"
             />
           </div>
           <div>
