@@ -1,9 +1,8 @@
 'use client'
 
-import Image from 'next/image'
 import { useState } from 'react'
 
-const NEXO_BRAND_ASSET_PATH = '/brand/nexo-logo.svg'
+const NEXO_BRAND_ASSET_PATH = '/brand/nexo-logo.svg?v=2026-05-09'
 
 function NexoBrandFallback({ className = 'h-5 w-5' }: { className?: string }) {
   return (
@@ -36,13 +35,12 @@ export function NexoBrandMark({
 
   return (
     <span className={`relative block overflow-hidden ${className}`}>
-      <Image
+      <img
+        key={NEXO_BRAND_ASSET_PATH}
         src={NEXO_BRAND_ASSET_PATH}
         alt={alt}
-        fill
-        unoptimized
-        className="object-contain"
-        sizes="32px"
+        className="h-full w-full object-contain"
+        draggable={false}
         onError={() => setAssetFailed(true)}
       />
     </span>
