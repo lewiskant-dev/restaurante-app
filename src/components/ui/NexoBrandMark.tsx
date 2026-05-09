@@ -23,14 +23,16 @@ function NexoBrandFallback({ className = 'h-5 w-5' }: { className?: string }) {
 export function NexoBrandMark({
   className = 'h-5 w-5',
   alt = 'Nexo',
+  fallbackClassName,
 }: {
   className?: string
   alt?: string
+  fallbackClassName?: string
 }) {
   const [assetFailed, setAssetFailed] = useState(false)
 
   if (assetFailed) {
-    return <NexoBrandFallback className={className} />
+    return <NexoBrandFallback className={fallbackClassName ?? className} />
   }
 
   return (
