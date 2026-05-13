@@ -304,15 +304,11 @@ export function AppShellHeader({
         <button
           type="button"
           onClick={() => handleGroupTabChange('operativa', 'stock')}
-          className="flex items-center gap-3.5 text-left"
+          className="flex items-start gap-3 text-left"
         >
-          <div className="flex h-10 w-10 min-w-10 shrink-0 items-center justify-center overflow-hidden rounded-[16px] border border-slate-200/80 bg-slate-50">
-            <NexoBrandMark
-              className="h-full w-full"
-            />
-          </div>
+          <NexoBrandMark className="mt-0.5 h-8 w-8 shrink-0" />
           <div>
-            <div className="text-[1.08rem] font-semibold tracking-tight text-slate-950">Nexo</div>
+            <div className="text-[1.12rem] font-bold tracking-normal text-slate-950">Nexo</div>
             <div className="mt-0.5 text-[12px] text-slate-500">
               {restaurantScopeLabel}
             </div>
@@ -413,10 +409,13 @@ export function AppShellHeader({
             <button
               type="button"
               onClick={() => handleGroupTabChange('operativa', 'stock')}
-              className="min-w-0 flex-1 text-left"
+              className="flex min-w-0 flex-1 items-start gap-2.5 text-left"
             >
-              <div className="text-[1.42rem] font-semibold tracking-tight text-slate-950">Nexo</div>
-              <div className="mt-0.5 text-[10.5px] text-slate-500">{restaurantScopeLabel}</div>
+              <NexoBrandMark className="mt-0.5 h-7 w-7 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-[1.42rem] font-bold tracking-normal text-slate-950">Nexo</div>
+                <div className="mt-0.5 text-[10.5px] text-slate-500">{restaurantScopeLabel}</div>
+              </div>
             </button>
 
             <NotificationsBell
