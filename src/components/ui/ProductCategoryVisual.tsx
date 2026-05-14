@@ -287,6 +287,7 @@ export function ProductCategoryVisual({
   if (assetAvailable && categoryAssetPath) {
     return (
       <div className={`flex items-center justify-center overflow-hidden ${slotClass}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={categoryAssetPath}
           alt={productName || category}

@@ -10,6 +10,7 @@ export function NexoBrandMark({
   alt?: string
 }) {
   return (
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={NEXO_BRAND_ASSET_PATH}
       alt={alt}
