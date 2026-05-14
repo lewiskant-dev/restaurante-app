@@ -1,6 +1,7 @@
 'use client'
 
-import type { FormEvent, ReactNode } from 'react'
+import type { FormEvent } from 'react'
+import { NexoBrandMark } from '@/components/ui/NexoBrandMark'
 
 type AuthScreenProps = {
   authReady: boolean
@@ -29,26 +30,14 @@ type AuthScreenProps = {
   onCancelRecovery: () => void
 }
 
-function Icon({
-  path,
-  className = 'h-8 w-8',
-}: {
-  path: ReactNode
-  className?: string
-}) {
+function BrandLockup({ compact = false }: { compact?: boolean }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      {path}
-    </svg>
+    <div className={`flex items-center ${compact ? 'justify-center gap-2.5' : 'gap-3'}`}>
+      <NexoBrandMark className={compact ? 'h-8 w-8' : 'h-9 w-9'} />
+      <span className={`${compact ? 'text-2xl' : 'text-3xl'} font-bold tracking-normal text-slate-950`}>
+        Nexo
+      </span>
+    </div>
   )
 }
 
@@ -78,25 +67,12 @@ export function AuthScreen({
   onCompleteRecovery,
   onCancelRecovery,
 }: AuthScreenProps) {
-  const brandIcon = (
-    <>
-      <path d="M7 3v10" />
-      <path d="M11 3v10" />
-      <path d="M9 13v8" />
-      <path d="M17 3v8" />
-      <path d="M17 15v6" />
-      <path d="M15 11h4" />
-    </>
-  )
-
   if (!authReady) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f8fbff_0%,#f3f6fb_42%,#eef3f9_100%)] px-4">
         <div className="w-full max-w-md rounded-[32px] border border-white/80 bg-white/95 p-8 text-center shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-50 text-blue-600">
-            <Icon className="h-8 w-8" path={brandIcon} />
-          </div>
-          <h1 className="mt-6 text-2xl font-semibold text-slate-950">Control Restaurante</h1>
+          <BrandLockup compact />
+          <h1 className="mt-6 text-2xl font-semibold text-slate-950">Preparando tu acceso</h1>
           <p className="mt-2 text-sm text-slate-500">Comprobando tu sesión...</p>
         </div>
       </main>
@@ -107,9 +83,7 @@ export function AuthScreen({
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#dbeafe_0%,transparent_28%),linear-gradient(180deg,#f8fbff_0%,#f3f6fb_42%,#eef3f9_100%)] px-4 py-10 text-slate-900">
       <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <section className="rounded-[36px] border border-white/80 bg-white/80 p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur sm:p-10">
-          <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-50 text-blue-600 shadow-inner">
-            <Icon className="h-8 w-8" path={brandIcon} />
-          </div>
+          <BrandLockup />
           <h1 className="mt-8 text-4xl font-semibold tracking-tight text-slate-950">
             Acceso para el equipo del restaurante
           </h1>

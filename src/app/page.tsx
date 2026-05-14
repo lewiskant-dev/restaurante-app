@@ -7,6 +7,7 @@ import { AuthScreen } from '@/components/auth/AuthScreen'
 import { AppShellHeader } from '@/components/layout/AppShellHeader'
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 import { NotificationsBell } from '@/components/layout/NotificationsBell'
+import { NexoBrandMark } from '@/components/ui/NexoBrandMark'
 import { AjusteStockModal } from '@/components/modals/AjusteStockModal'
 import { ConsumoModal } from '@/components/modals/ConsumoModal'
 import { DetalleAlbaranModal } from '@/components/modals/DetalleAlbaranModal'
@@ -1325,6 +1326,10 @@ export default function HomePage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f6f8fc] px-4 text-slate-900">
         <div className="w-full max-w-lg rounded-[32px] border border-white/80 bg-white/95 p-8 text-center shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+          <div className="mx-auto mb-6 flex items-center justify-center gap-2.5">
+            <NexoBrandMark className="h-8 w-8" />
+            <span className="text-2xl font-bold tracking-normal text-slate-950">Nexo</span>
+          </div>
           <h1 className="text-2xl font-semibold text-slate-950">Preparando tu acceso</h1>
           <p className="mt-3 text-sm text-slate-500">
             Estamos comprobando qué restaurante te corresponde dentro de Nexo.
