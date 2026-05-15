@@ -7,6 +7,7 @@ import type {
 
 export const PRODUCT_CATEGORY_OPTIONS = [
   'Bebidas',
+  'Vinos',
   'Carnes',
   'Pescados y mariscos',
   'Frutas y verduras',
@@ -23,8 +24,9 @@ const PRODUCT_CATEGORY_ALIASES: Record<string, (typeof PRODUCT_CATEGORY_OPTIONS)
   bebida: 'Bebidas',
   bebidas: 'Bebidas',
   refrescos: 'Bebidas',
-  vinos: 'Bebidas',
-  bodega: 'Bebidas',
+  vino: 'Vinos',
+  vinos: 'Vinos',
+  bodega: 'Vinos',
   carne: 'Carnes',
   carnes: 'Carnes',
   pescado: 'Pescados y mariscos',

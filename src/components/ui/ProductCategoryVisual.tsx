@@ -6,6 +6,7 @@ import { normalizeProductCategory } from '@/features/home/constants'
 
 const CATEGORY_ICON_PATHS: Record<string, string> = {
   Bebidas: '/category-icons/bebidas.svg',
+  Vinos: '/category-icons/vinos.svg',
   Carnes: '/category-icons/carnes.svg',
   'Pescados y mariscos': '/category-icons/pescados-mariscos.svg',
   'Frutas y verduras': '/category-icons/frutas-verduras.svg',
@@ -27,6 +28,7 @@ const CATEGORY_ICON_TRANSFORMS: Record<
   }
 > = {
   Bebidas: { scale: 1.18, x: '0%', y: '0%' },
+  Vinos: { scale: 1.18, x: '0%', y: '0%' },
   Carnes: { scale: 1.2, x: '0%', y: '0%' },
   'Pescados y mariscos': { scale: 1.22, x: '0%', y: '0%' },
   'Frutas y verduras': { scale: 1.18, x: '0%', y: '0%' },
@@ -52,7 +54,8 @@ function getCategoryAssetTransform(category: string) {
 export function getCategoryDescription(category: string) {
   const normalized = normalizeProductCategory(category)
 
-  if (normalized === 'Bebidas') return 'Refrescos, vinos, aguas y bebidas en general.'
+  if (normalized === 'Bebidas') return 'Refrescos, aguas y bebidas en general.'
+  if (normalized === 'Vinos') return 'Vinos, espumosos y bodega.'
   if (normalized === 'Carnes') return 'Carnes frescas, elaboradas y cortes para cocina.'
   if (normalized === 'Pescados y mariscos') return 'Pescados frescos, congelados y marisco.'
   if (normalized === 'Frutas y verduras') return 'Fruta, verdura, hortaliza y productos frescos.'
@@ -113,6 +116,23 @@ export function getCategoryVisual(category: string) {
           <path d="M12.8 24h9.4" stroke="#DBEAFE" strokeWidth="1.5" />
           <path d="M12.8 29h9.4" stroke="#DBEAFE" strokeWidth="1.5" />
           <path d="M31.5 17h7l-1.4 15.5c-.1 1.5-1.4 2.7-3 2.7h-1.2c-1.5 0-2.8-1.2-3-2.7L28.5 17h3Z" fill="#F8FAFC" stroke="#1D4ED8" strokeWidth="1.2" />
+        </svg>
+      ),
+    }
+  }
+
+  if (normalized === 'Vinos') {
+    return {
+      hue: 'from-rose-100 to-red-50',
+      art: (
+        <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
+          <path d="M18.5 7.5h8.2v7.8c0 1.5.5 2.9 1.5 4l1.7 2c1.1 1.3 1.7 2.9 1.7 4.6v10.3c0 2.4-2 4.4-4.4 4.4h-9.1c-2.4 0-4.4-2-4.4-4.4V25.9c0-1.7.6-3.3 1.7-4.6l1.7-2c1-1.1 1.5-2.5 1.5-4V7.5Z" fill="#7F1D1D" stroke="#450A0A" strokeWidth="1.4" />
+          <path d="M19.2 7.5H26" stroke="#FCA5A5" strokeWidth="2" strokeLinecap="round" />
+          <path d="M16.5 26h12.4v9.5c0 1.4-1.1 2.5-2.5 2.5h-7.4c-1.4 0-2.5-1.1-2.5-2.5V26Z" fill="#DC2626" />
+          <path d="M19.3 29.5h6.8M19.3 33.4h6.8" stroke="#FECACA" strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M35 18h5.5l-1.1 12.3c-.1 1.2-1.1 2.1-2.3 2.1h-1c-1.2 0-2.2-.9-2.3-2.1L32.7 18H35Z" fill="#FDF2F8" stroke="#BE123C" strokeWidth="1.3" />
+          <path d="M34.2 25.4h5.3" stroke="#E11D48" strokeWidth="2.2" strokeLinecap="round" />
+          <path d="M36.6 32.4v6.2M33.8 38.6h5.7" stroke="#BE123C" strokeWidth="1.3" strokeLinecap="round" />
         </svg>
       ),
     }

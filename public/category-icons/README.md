@@ -1,6 +1,7 @@
 Coloca aquí los SVG de categorías con estos nombres:
 
 - `bebidas.svg`
+- `vinos.svg`
 - `carnes.svg`
 - `pescados-mariscos.svg`
 - `frutas-verduras.svg`
