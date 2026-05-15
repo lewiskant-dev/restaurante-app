@@ -7,6 +7,7 @@ import { normalizeProductCategory } from '@/features/home/constants'
 const CATEGORY_ICON_PATHS: Record<string, string> = {
   Bebidas: '/category-icons/bebidas.svg',
   Vinos: '/category-icons/vinos.svg',
+  Licores: '/category-icons/licores.svg',
   Carnes: '/category-icons/carnes.svg',
   'Pescados y mariscos': '/category-icons/pescados-mariscos.svg',
   'Frutas y verduras': '/category-icons/frutas-verduras.svg',
@@ -29,6 +30,7 @@ const CATEGORY_ICON_TRANSFORMS: Record<
 > = {
   Bebidas: { scale: 1.18, x: '0%', y: '0%' },
   Vinos: { scale: 1.18, x: '0%', y: '0%' },
+  Licores: { scale: 1.18, x: '0%', y: '0%' },
   Carnes: { scale: 1.2, x: '0%', y: '0%' },
   'Pescados y mariscos': { scale: 1.22, x: '0%', y: '0%' },
   'Frutas y verduras': { scale: 1.18, x: '0%', y: '0%' },
@@ -56,6 +58,7 @@ export function getCategoryDescription(category: string) {
 
   if (normalized === 'Bebidas') return 'Refrescos, aguas y bebidas en general.'
   if (normalized === 'Vinos') return 'Vinos, espumosos y bodega.'
+  if (normalized === 'Licores') return 'Destilados, licores y bebidas espirituosas.'
   if (normalized === 'Carnes') return 'Carnes frescas, elaboradas y cortes para cocina.'
   if (normalized === 'Pescados y mariscos') return 'Pescados frescos, congelados y marisco.'
   if (normalized === 'Frutas y verduras') return 'Fruta, verdura, hortaliza y productos frescos.'
@@ -133,6 +136,23 @@ export function getCategoryVisual(category: string) {
           <path d="M35 18h5.5l-1.1 12.3c-.1 1.2-1.1 2.1-2.3 2.1h-1c-1.2 0-2.2-.9-2.3-2.1L32.7 18H35Z" fill="#FDF2F8" stroke="#BE123C" strokeWidth="1.3" />
           <path d="M34.2 25.4h5.3" stroke="#E11D48" strokeWidth="2.2" strokeLinecap="round" />
           <path d="M36.6 32.4v6.2M33.8 38.6h5.7" stroke="#BE123C" strokeWidth="1.3" strokeLinecap="round" />
+        </svg>
+      ),
+    }
+  }
+
+  if (normalized === 'Licores') {
+    return {
+      hue: 'from-violet-100 to-fuchsia-50',
+      art: (
+        <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
+          <path d="M16.5 8h10v8.5c0 1.7.7 3.3 1.9 4.5l1.1 1.1c1.3 1.3 2 3.1 2 4.9v9.4c0 2.4-2 4.4-4.4 4.4H15.9c-2.4 0-4.4-2-4.4-4.4V27c0-1.8.7-3.6 2-4.9l1.1-1.1c1.2-1.2 1.9-2.8 1.9-4.5V8Z" fill="#6D28D9" stroke="#3B0764" strokeWidth="1.4" />
+          <path d="M17.2 8h8.6" stroke="#DDD6FE" strokeWidth="2" strokeLinecap="round" />
+          <path d="M14.2 27.5h14.6v8.2c0 1.2-1 2.2-2.2 2.2H16.4c-1.2 0-2.2-1-2.2-2.2v-8.2Z" fill="#A855F7" />
+          <path d="M18.1 31.1h6.8M18.1 34.7h6.8" stroke="#F5D0FE" strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M36 20h6l-1.2 12.7c-.1 1.4-1.3 2.5-2.7 2.5h-1.2c-1.4 0-2.6-1.1-2.7-2.5L33 20h3Z" fill="#FAF5FF" stroke="#7E22CE" strokeWidth="1.3" />
+          <path d="M35 27.2h6" stroke="#C084FC" strokeWidth="2.2" strokeLinecap="round" />
+          <path d="M38 35.2v4.7M35.6 39.9h4.8" stroke="#7E22CE" strokeWidth="1.3" strokeLinecap="round" />
         </svg>
       ),
     }
