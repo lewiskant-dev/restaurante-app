@@ -1,11 +1,13 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { ActionMenu } from '@/components/ui/ActionMenu'
 import { normalizeProductCategory } from '@/features/home/constants'
 import { ProductCategoryBadge } from '@/components/ui/ProductCategoryVisual'
 import type { Producto } from '@/types'
 import { formatCantidad, getNivel } from '@/features/home/utils'
+
+const STOCK_PAGE_SIZE = 12
 
 type StockTabProps = {
   totalProductos: number
@@ -227,6 +229,30 @@ export default function StockTab({
   onArchivar,
   onReactivar,
 }: StockTabProps) {
+  const [currentPage, setCurrentPage] = useState(1)
+  const totalPages = Math.max(1, Math.ceil(productosFiltrados.length / STOCK_PAGE_SIZE))
+  const effectiveCurrentPage = Math.min(currentPage, totalPages)
+  const visibleProducts = useMemo(() => {
+    const startIndex = (effectiveCurrentPage - 1) * STOCK_PAGE_SIZE
+    return productosFiltrados.slice(startIndex, startIndex + STOCK_PAGE_SIZE)
+  }, [effectiveCurrentPage, productosFiltrados])
+  const firstVisibleProduct =
+    productosFiltrados.length === 0 ? 0 : (effectiveCurrentPage - 1) * STOCK_PAGE_SIZE + 1
+  const lastVisibleProduct = Math.min(effectiveCurrentPage * STOCK_PAGE_SIZE, productosFiltrados.length)
+  const pageNumbers = useMemo(() => {
+    const pages = new Set([
+      1,
+      totalPages,
+      effectiveCurrentPage - 1,
+      effectiveCurrentPage,
+      effectiveCurrentPage + 1,
+    ])
+
+    return Array.from(pages)
+      .filter((page) => page >= 1 && page <= totalPages)
+      .sort((a, b) => a - b)
+  }, [effectiveCurrentPage, totalPages])
+
   const metricCards = [
     {
       key: 'productos',
@@ -371,7 +397,10 @@ export default function StockTab({
               <input
                 type="search"
                 value={busqueda}
-                onChange={(e) => onBusquedaChange(e.target.value)}
+                onChange={(e) => {
+                  setCurrentPage(1)
+                  onBusquedaChange(e.target.value)
+                }}
                 placeholder="Buscar producto..."
                 className="w-full bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
               />
@@ -381,7 +410,10 @@ export default function StockTab({
               <div className="text-[11px] font-medium text-slate-400">Categoría</div>
               <select
                 value={categoriaFiltro}
-                onChange={(e) => onCategoriaFiltroChange(e.target.value)}
+                onChange={(e) => {
+                  setCurrentPage(1)
+                  onCategoriaFiltroChange(e.target.value)
+                }}
                 className="mt-1 w-full bg-transparent text-[13px] font-medium text-slate-800 outline-none"
               >
                 <option value="todas">Todas</option>
@@ -397,9 +429,10 @@ export default function StockTab({
               <div className="text-[11px] font-medium text-slate-400">Estado</div>
               <select
                 value={productoEstado}
-                onChange={(e) =>
+                onChange={(e) => {
+                  setCurrentPage(1)
                   onProductoEstadoChange(e.target.value as 'activos' | 'archivados' | 'todos')
-                }
+                }}
                 className="mt-1 w-full bg-transparent text-[13px] font-medium capitalize text-slate-800 outline-none"
               >
                 <option value="activos">Activos</option>
@@ -412,7 +445,10 @@ export default function StockTab({
               <div className="text-[11px] font-medium text-slate-400">Unidad</div>
               <select
                 value={unidadFiltro}
-                onChange={(e) => onUnidadFiltroChange(e.target.value)}
+                onChange={(e) => {
+                  setCurrentPage(1)
+                  onUnidadFiltroChange(e.target.value)
+                }}
                 className="mt-1 w-full bg-transparent text-[13px] font-medium text-slate-800 outline-none"
               >
                 <option value="todas">Todas</option>
@@ -448,7 +484,10 @@ export default function StockTab({
                 <input
                   type="search"
                   value={busqueda}
-                  onChange={(e) => onBusquedaChange(e.target.value)}
+                  onChange={(e) => {
+                    setCurrentPage(1)
+                    onBusquedaChange(e.target.value)
+                  }}
                   placeholder="Buscar producto..."
                   className="w-full bg-transparent text-[12px] text-slate-800 outline-none placeholder:text-slate-400"
                 />
@@ -474,7 +513,10 @@ export default function StockTab({
               <label className="rounded-[14px] border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-800 shadow-sm">
                 <select
                   value={categoriaFiltro}
-                  onChange={(e) => onCategoriaFiltroChange(e.target.value)}
+                  onChange={(e) => {
+                    setCurrentPage(1)
+                    onCategoriaFiltroChange(e.target.value)
+                  }}
                   className="bg-transparent outline-none"
                 >
                   <option value="todas">Categoría</option>
@@ -488,9 +530,10 @@ export default function StockTab({
               <label className="rounded-[14px] border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-800 shadow-sm">
                 <select
                   value={productoEstado}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    setCurrentPage(1)
                     onProductoEstadoChange(e.target.value as 'activos' | 'archivados' | 'todos')
-                  }
+                  }}
                   className="bg-transparent outline-none"
                 >
                   <option value="todos">Estado</option>
@@ -501,7 +544,10 @@ export default function StockTab({
               <label className="rounded-[14px] border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-800 shadow-sm">
                 <select
                   value={unidadFiltro}
-                  onChange={(e) => onUnidadFiltroChange(e.target.value)}
+                  onChange={(e) => {
+                    setCurrentPage(1)
+                    onUnidadFiltroChange(e.target.value)
+                  }}
                   className="bg-transparent outline-none"
                 >
                   <option value="todas">Unidad</option>
@@ -528,21 +574,30 @@ export default function StockTab({
 
         {!loadingProductos && productosFiltrados.length > 0 && (
           <>
-            <div className="hidden overflow-x-auto overflow-y-visible lg:block">
-              <table className="min-w-full text-left">
+            <div className="hidden overflow-x-visible overflow-y-visible lg:block">
+              <table className="w-full table-fixed text-left">
+                <colgroup>
+                  <col className="w-[36%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[9%]" />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-slate-100 text-[12px] text-slate-500">
                     <th className="px-4 py-3 font-semibold">Producto</th>
-                    <th className="px-4 py-3 font-semibold">Categoría</th>
-                    <th className="px-4 py-3 font-semibold">Stock actual</th>
-                    <th className="px-4 py-3 font-semibold">Stock min.</th>
-                    <th className="px-4 py-3 font-semibold">U. medida</th>
-                    <th className="px-4 py-3 font-semibold">Estado</th>
-                    <th className="px-4 py-3 text-right font-semibold">Acciones</th>
+                    <th className="px-2 py-3 font-semibold">Categoría</th>
+                    <th className="px-2 py-3 font-semibold">Stock</th>
+                    <th className="px-2 py-3 font-semibold">Mín.</th>
+                    <th className="px-2 py-3 font-semibold">Unidad</th>
+                    <th className="px-2 py-3 font-semibold">Estado</th>
+                    <th className="px-3 py-3 text-right font-semibold">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {productosFiltrados.map((producto) => {
+                  {visibleProducts.map((producto) => {
                     const nivel = getNivel(producto)
                     const status = getProductStatus(producto)
                     const stockClass =
@@ -557,7 +612,7 @@ export default function StockTab({
                         key={producto.id}
                         className="relative border-b border-slate-100 last:border-b-0 focus-within:z-20 hover:z-10"
                       >
-                        <td className="relative px-4 py-3">
+                        <td className="relative min-w-0 px-4 py-3">
                           <button
                             type="button"
                             onClick={() =>
@@ -565,7 +620,7 @@ export default function StockTab({
                                 ? onOpenEditarProducto(producto)
                                 : undefined
                             }
-                            className="flex items-center gap-3 text-left"
+                            className="flex min-w-0 items-center gap-3 text-left"
                           >
                             <ProductCategoryBadge
                               category={producto.categoria || 'Otros'}
@@ -573,7 +628,7 @@ export default function StockTab({
                               productName={producto.nombre}
                               size="md"
                             />
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <div className="truncate text-[13px] font-semibold text-slate-900">
                                 {producto.nombre}
                               </div>
@@ -584,17 +639,17 @@ export default function StockTab({
                         </div>
                       </button>
                     </td>
-                    <td className="px-4 py-3 text-[12.5px] text-slate-700">
+                    <td className="truncate px-2 py-3 text-[12.5px] text-slate-700">
                           {normalizeProductCategory(producto.categoria || 'Otros')}
                     </td>
-                        <td className={`px-4 py-3 text-[1.45rem] font-semibold ${stockClass}`}>
+                        <td className={`px-2 py-3 text-[1.45rem] font-semibold ${stockClass}`}>
                           {formatCantidad(producto.stock_actual)}
                         </td>
-                        <td className="px-4 py-3 text-[12.5px] text-slate-700">
+                        <td className="px-2 py-3 text-[12.5px] text-slate-700">
                           {formatCantidad(producto.stock_minimo)}
                         </td>
-                        <td className="px-4 py-3 text-[12.5px] text-slate-700">{producto.unidad}</td>
-                        <td className="px-4 py-3">
+                        <td className="truncate px-2 py-3 text-[12.5px] text-slate-700">{producto.unidad}</td>
+                        <td className="px-2 py-3">
                           <span
                             className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[12px] font-semibold ${status.className}`}
                           >
@@ -602,7 +657,7 @@ export default function StockTab({
                             {status.label}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-3">
                           <div className="flex justify-end">
                             <ProductActionMenu
                               producto={producto}
@@ -625,7 +680,7 @@ export default function StockTab({
             </div>
 
             <div className="space-y-2.5 p-2.5 lg:hidden">
-              {productosFiltrados.map((producto) => {
+              {visibleProducts.map((producto) => {
                 const nivel = getNivel(producto)
                 const status = getProductStatus(producto)
                 const stockClass =
@@ -709,16 +764,73 @@ export default function StockTab({
 
             <div className="hidden flex-col gap-4 border-t border-slate-100 px-4 py-3 text-[12.5px] text-slate-600 sm:flex-row sm:items-center sm:justify-between lg:flex">
               <div>
-                Mostrando 1 a {productosFiltrados.length} de {productosFiltrados.length} productos
+                Mostrando {firstVisibleProduct} a {lastVisibleProduct} de{' '}
+                {productosFiltrados.length} productos
               </div>
               <div className="flex items-center gap-3">
-                <button className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  disabled={effectiveCurrentPage === 1}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:opacity-60"
+                >
                   ‹
                 </button>
-                <button className="flex h-10 min-w-10 items-center justify-center rounded-xl border border-blue-500 bg-white px-4 font-semibold text-blue-600 shadow-sm">
-                  1
+                {pageNumbers.map((page, index) => {
+                  const previousPage = pageNumbers[index - 1]
+                  return (
+                    <div key={page} className="flex items-center gap-3">
+                      {previousPage && page - previousPage > 1 ? (
+                        <span className="text-slate-300">...</span>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(page)}
+                        aria-current={effectiveCurrentPage === page ? 'page' : undefined}
+                        className={`flex h-10 min-w-10 items-center justify-center rounded-xl border px-4 font-semibold shadow-sm transition ${
+                          effectiveCurrentPage === page
+                            ? 'border-blue-500 bg-white text-blue-600'
+                            : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    </div>
+                  )
+                })}
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  disabled={effectiveCurrentPage === totalPages}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:opacity-60"
+                >
+                  ›
                 </button>
-                <button className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm">
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[12px] text-slate-500 lg:hidden">
+              <span>
+                {firstVisibleProduct}-{lastVisibleProduct} de {productosFiltrados.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  disabled={effectiveCurrentPage === 1}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm disabled:cursor-not-allowed disabled:text-slate-300 disabled:opacity-60"
+                >
+                  ‹
+                </button>
+                <span className="font-semibold text-slate-700">
+                  {effectiveCurrentPage}/{totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  disabled={effectiveCurrentPage === totalPages}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm disabled:cursor-not-allowed disabled:text-slate-300 disabled:opacity-60"
+                >
                   ›
                 </button>
               </div>
