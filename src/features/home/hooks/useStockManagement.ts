@@ -144,7 +144,11 @@ export function useStockManagement({
   const productosStockBajo = useMemo(() => {
     return productos
       .filter((p) => !p.archivado && p.stock_minimo > 0 && p.stock_actual <= p.stock_minimo)
-      .slice(0, 5)
+      .sort((a, b) => {
+        const aGap = Number(a.stock_minimo || 0) - Number(a.stock_actual || 0)
+        const bGap = Number(b.stock_minimo || 0) - Number(b.stock_actual || 0)
+        return bGap - aGap
+      })
   }, [productos])
 
   async function loadProductos() {

@@ -44,8 +44,7 @@ export function NotificationsBell({
   const menuRef = useRef<HTMLDivElement | null>(null)
   const [open, setOpen] = useState(false)
   const [menuStyle, setMenuStyle] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
-  const visibleAlerts = alerts.slice(0, 5)
-  const hasAlerts = visibleAlerts.length > 0
+  const hasAlerts = alerts.length > 0
 
   useEffect(() => {
     if (!open) return
@@ -133,7 +132,7 @@ export function NotificationsBell({
                 : 'absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-semibold text-white ring-2 ring-white'
             }
           >
-            {Math.min(visibleAlerts.length, 9)}
+            {alerts.length > 9 ? '9+' : alerts.length}
           </span>
         ) : null}
       </button>
@@ -155,14 +154,14 @@ export function NotificationsBell({
                 <div className="text-[14px] font-semibold text-slate-950">Notificaciones</div>
                 <div className="mt-0.5 text-[12px] text-slate-500">
                   {hasAlerts
-                    ? `${visibleAlerts.length} alerta${visibleAlerts.length === 1 ? '' : 's'} de stock`
+                    ? `${alerts.length} alerta${alerts.length === 1 ? '' : 's'} de stock`
                     : 'Sin alertas importantes ahora mismo'}
                 </div>
               </div>
 
               {hasAlerts ? (
-                <div className="max-h-[360px] space-y-2 overflow-y-auto p-3">
-                  {visibleAlerts.map((alert) => (
+                <div className="max-h-[420px] space-y-2 overflow-y-auto p-3">
+                  {alerts.map((alert) => (
                     <div
                       key={alert.id}
                       className="rounded-[18px] border border-amber-100 bg-amber-50/60 p-3"
