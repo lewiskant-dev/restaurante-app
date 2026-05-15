@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   buildComparativaMetrica,
+  buildFinancialHealthSummary,
   calculatePriceVariationPct,
   getDominantCategory,
   getMarginRatio,
@@ -34,6 +35,53 @@ test('calculatePriceVariationPct calcula subidas y bajadas de precio', () => {
 test('getMarginRatio devuelve null si no hay ventas', () => {
   assert.equal(getMarginRatio(0, 10), null)
   assert.equal(getMarginRatio(100, 25), 0.25)
+})
+
+test('buildFinancialHealthSummary marca sin datos si no hay ventas ni compras', () => {
+  assert.deepEqual(
+    buildFinancialHealthSummary({
+      ventasEstimadas: 0,
+      margenEstimado: 0,
+      comprasCoste: 0,
+      desviacionTotal: 0,
+      alertasCount: 0,
+    }),
+    {
+      score: 0,
+      label: 'Sin datos',
+      tone: 'slate',
+      reasons: ['Importa ventas TPV o registra compras para activar el diagnóstico.'],
+    }
+  )
+})
+
+test('buildFinancialHealthSummary penaliza margen bajo, compras y alertas', () => {
+  const summary = buildFinancialHealthSummary({
+    ventasEstimadas: 100,
+    margenEstimado: 8,
+    comprasCoste: 130,
+    desviacionTotal: 4,
+    alertasCount: 3,
+  })
+
+  assert.equal(summary.label, 'Crítico')
+  assert.equal(summary.tone, 'red')
+  assert.equal(summary.score, 30)
+  assert.equal(summary.reasons.length, 4)
+})
+
+test('buildFinancialHealthSummary reconoce un periodo saludable', () => {
+  const summary = buildFinancialHealthSummary({
+    ventasEstimadas: 1000,
+    margenEstimado: 320,
+    comprasCoste: 350,
+    desviacionTotal: 0,
+    alertasCount: 0,
+  })
+
+  assert.equal(summary.label, 'Saludable')
+  assert.equal(summary.tone, 'emerald')
+  assert.equal(summary.score, 100)
 })
 
 test('getDominantCategory elige la categoria con mayor peso de coste', () => {

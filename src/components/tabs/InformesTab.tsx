@@ -1,6 +1,7 @@
 'use client'
 
 import type { TpvAnaliticaResumen } from '@/features/home/types'
+import { buildFinancialHealthSummary } from '@/lib/financialAnalytics'
 
 function formatEuro(value: number) {
   return value.toLocaleString('es-ES', {
@@ -28,6 +29,42 @@ function getDeltaClass(value: number, inverted = false) {
   if (Math.abs(value) < 0.01) return 'text-slate-500'
   if (inverted) return value > 0 ? 'text-red-600' : 'text-emerald-600'
   return value > 0 ? 'text-emerald-600' : 'text-red-600'
+}
+
+function getHealthToneClasses(tone: 'emerald' | 'amber' | 'red' | 'slate') {
+  if (tone === 'emerald') {
+    return {
+      card: 'border-emerald-100 bg-emerald-50/70',
+      badge: 'bg-emerald-600 text-white',
+      score: 'text-emerald-700',
+      bar: 'bg-emerald-500',
+    }
+  }
+
+  if (tone === 'amber') {
+    return {
+      card: 'border-amber-100 bg-amber-50/70',
+      badge: 'bg-amber-500 text-white',
+      score: 'text-amber-700',
+      bar: 'bg-amber-500',
+    }
+  }
+
+  if (tone === 'red') {
+    return {
+      card: 'border-red-100 bg-red-50/70',
+      badge: 'bg-red-600 text-white',
+      score: 'text-red-700',
+      bar: 'bg-red-500',
+    }
+  }
+
+  return {
+    card: 'border-slate-200 bg-slate-50',
+    badge: 'bg-slate-700 text-white',
+    score: 'text-slate-700',
+    bar: 'bg-slate-400',
+  }
 }
 
 type InformesTabProps = {
@@ -59,6 +96,14 @@ export function InformesTab({
   onExportarRentabilidad,
   onExportarCompras,
 }: InformesTabProps) {
+  const healthSummary = buildFinancialHealthSummary({
+    ventasEstimadas: tpvAnalitica.ventas_estimadas_total,
+    margenEstimado: tpvAnalitica.margen_estimado_total,
+    comprasCoste: tpvAnalitica.compras_periodo.total_coste,
+    desviacionTotal: tpvAnalitica.desviacion_total,
+    alertasCount: tpvAnalitica.alertas.length,
+  })
+  const healthTone = getHealthToneClasses(healthSummary.tone)
   const comparisonCards: ComparisonCard[] = [
     {
       key: 'ventas',
@@ -125,6 +170,42 @@ export function InformesTab({
             >
               Exportar informe completo
             </button>
+          </div>
+        </div>
+
+        <div className={`mt-4 rounded-[20px] border p-4 ${healthTone.card}`}>
+          <div className="grid gap-4 xl:grid-cols-[0.7fr_1.3fr] xl:items-center">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${healthTone.badge}`}>
+                  {healthSummary.label}
+                </span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  Salud financiera
+                </span>
+              </div>
+              <div className={`mt-3 text-[2.35rem] font-semibold leading-none ${healthTone.score}`}>
+                {healthSummary.score}
+                <span className="text-[1.1rem] text-slate-400">/100</span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/80">
+                <div
+                  className={`h-full rounded-full ${healthTone.bar}`}
+                  style={{ width: `${healthSummary.score}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              {healthSummary.reasons.slice(0, 4).map((reason) => (
+                <div
+                  key={reason}
+                  className="rounded-[16px] border border-white/80 bg-white/75 px-4 py-3 text-[12px] font-medium text-slate-700 shadow-sm"
+                >
+                  {reason}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
