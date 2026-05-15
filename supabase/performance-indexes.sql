@@ -37,6 +37,9 @@ create index if not exists precios_historial_restaurant_fecha_idx
 create index if not exists precios_historial_restaurant_producto_fecha_idx
   on public.productos_precios_historial (restaurant_id, producto_id, fecha_compra desc);
 
+create index if not exists precios_historial_restaurant_proveedor_fecha_idx
+  on public.productos_precios_historial (restaurant_id, proveedor_id, fecha_compra desc);
+
 create index if not exists auditoria_restaurant_created_at_idx
   on public.auditoria (restaurant_id, created_at desc);
 

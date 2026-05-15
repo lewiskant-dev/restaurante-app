@@ -46,3 +46,43 @@ create index if not exists productos_precios_historial_restaurant_idx
 
 create index if not exists productos_precios_historial_producto_idx
   on public.productos_precios_historial(producto_id, fecha_compra desc);
+
+create index if not exists productos_precios_historial_restaurant_producto_idx
+  on public.productos_precios_historial(restaurant_id, producto_id, fecha_compra desc);
+
+drop trigger if exists productos_precios_historial_assign_restaurant_id on public.productos_precios_historial;
+create trigger productos_precios_historial_assign_restaurant_id
+before insert on public.productos_precios_historial
+for each row
+execute function public.assign_current_restaurant_id();
+
+alter table if exists public.productos_precios_historial enable row level security;
+
+drop policy if exists "precios historial read by admin plus" on public.productos_precios_historial;
+drop policy if exists "precios historial write by encargado plus" on public.productos_precios_historial;
+drop policy if exists "precios historial read by restaurant admin plus" on public.productos_precios_historial;
+drop policy if exists "precios historial write by restaurant encargado plus" on public.productos_precios_historial;
+
+create policy "precios historial read by restaurant admin plus"
+on public.productos_precios_historial
+for select
+to authenticated
+using (
+  public.user_has_restaurant_access(restaurant_id)
+  and public.has_any_app_role(array['administrador', 'master'])
+);
+
+create policy "precios historial write by restaurant encargado plus"
+on public.productos_precios_historial
+for all
+to authenticated
+using (
+  public.user_has_restaurant_access(restaurant_id)
+  and public.has_any_app_role(array['encargado', 'administrador', 'master'])
+)
+with check (
+  public.user_has_restaurant_access(restaurant_id)
+  and public.has_any_app_role(array['encargado', 'administrador', 'master'])
+);
+
+comment on table public.productos_precios_historial is 'Histórico financiero de precios de compra por restaurante y producto.';

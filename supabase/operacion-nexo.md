@@ -58,6 +58,21 @@ Ese archivo revisa:
 - restaurantes activos inválidos
 - conteos operativos por restaurante
 - registros huérfanos sin `restaurant_id`
+- históricos financieros sin restaurante o cruzados entre restaurantes
+
+## Validación de seguridad en Supabase
+
+Después de aplicar migraciones o tocar RLS:
+
+1. Abre `SQL Editor`.
+2. Ejecuta [security-validation.sql](/Users/jorge/restaurante-app/supabase/security-validation.sql:1).
+
+Ese archivo revisa:
+
+- tablas críticas sin RLS activo
+- tablas críticas sin políticas
+- políticas existentes por tabla
+- policies de storage para albaranes por carpeta de restaurante
 
 ## Checklist funcional rápido
 

@@ -61,6 +61,7 @@ Documentacion de apoyo:
 - [supabase/multi-restaurant-setup.md](supabase/multi-restaurant-setup.md)
 - [supabase/operacion-nexo.md](supabase/operacion-nexo.md)
 - [supabase/multi-restaurant-validation.sql](supabase/multi-restaurant-validation.sql)
+- [supabase/security-validation.sql](supabase/security-validation.sql)
 
 ## Flujo multi-restaurante
 

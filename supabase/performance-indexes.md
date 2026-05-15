@@ -7,6 +7,7 @@ Qué mejora:
 - listados de stock, proveedores y albaranes
 - informes TPV por rango de fechas
 - histórico de precios de compra
+- comparativas de compras por proveedor
 - auditoría por restaurante
 
 Orden recomendado:

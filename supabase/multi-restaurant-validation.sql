@@ -198,4 +198,22 @@ union all
 
 select 'tpv_ventas_crudas', count(*)::bigint
 from public.tpv_ventas_crudas
+where restaurant_id is null
+
+union all
+
+select 'productos_precios_historial', count(*)::bigint
+from public.productos_precios_historial
 where restaurant_id is null;
+
+-- 9. Comprobación financiera de históricos cruzados entre restaurantes
+select
+  h.id,
+  h.restaurant_id as historial_restaurant_id,
+  p.restaurant_id as producto_restaurant_id,
+  h.producto_id,
+  h.fecha_compra
+from public.productos_precios_historial h
+join public.productos p on p.id = h.producto_id
+where h.restaurant_id <> p.restaurant_id
+order by h.fecha_compra desc;
