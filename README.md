@@ -78,6 +78,14 @@ El modelo es multi-tenant:
 
 ## Comprobaciones utiles
 
+Para comprobar que el despliegue tiene la configuración crítica cargada:
+
+```bash
+curl https://tu-dominio.com/api/health
+```
+
+La respuesta no expone secretos; solo indica qué variables obligatorias están configuradas.
+
 Si quieres validar el aislamiento por restaurante en Supabase:
 
 ```sql

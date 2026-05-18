@@ -16,6 +16,20 @@ Este comando ejecuta:
 - `tsc --noEmit`
 - `next build --webpack`
 
+## Verificación del despliegue
+
+Después de desplegar, abre:
+
+```text
+https://tu-dominio.com/api/health
+```
+
+La ruta devuelve:
+
+- `200` si la configuración crítica está completa
+- `503` si faltan variables necesarias
+- nombres de variables ausentes sin exponer valores ni secretos
+
 ## Alta de un restaurante nuevo
 
 1. Entrar como `Master`.
