@@ -1,6 +1,12 @@
 import { PostgrestError } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { validatePasswordStrength } from '@/lib/passwordPolicy'
+import {
+  normalizeEmailAddress,
+  sanitizeSingleLine,
+  validateDisplayName,
+  validateEmailAddress,
+} from '@/lib/userInputPolicy'
 import { createSupabaseAdminClient } from '@/lib/supabaseAdmin'
 import {
   buildInheritedRestaurantAppMetadata,
@@ -462,9 +468,9 @@ export async function POST(request: Request) {
     })
   }
 
-  const email = body?.email?.trim().toLowerCase() || ''
+  const email = normalizeEmailAddress(body?.email || '')
   const password = body?.password || ''
-  const fullName = body?.fullName?.trim() || ''
+  const fullName = sanitizeSingleLine(body?.fullName || '')
   const role = normalizeRole(body?.role)
   const requestedRestaurantIds = Array.isArray(body?.restaurantIds)
     ? Array.from(
@@ -488,11 +494,14 @@ export async function POST(request: Request) {
       ? requestedCurrentRestaurantId || inheritedRestaurantIds[0] || null
       : authResult.restaurantScope.currentRestaurantId ?? null
 
-  if (!email || !password || !fullName) {
-    return NextResponse.json(
-      { error: 'Nombre, email y contraseña son obligatorios' },
-      { status: 400 }
-    )
+  const nameError = validateDisplayName(fullName)
+  if (nameError) {
+    return NextResponse.json({ error: nameError }, { status: 400 })
+  }
+
+  const emailError = validateEmailAddress(email)
+  if (emailError) {
+    return NextResponse.json({ error: emailError }, { status: 400 })
   }
 
   const passwordError = validatePasswordStrength(password)

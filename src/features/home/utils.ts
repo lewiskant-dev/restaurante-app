@@ -2,6 +2,12 @@ import type { User } from '@supabase/supabase-js'
 import type { Auditoria, Producto } from '@/types'
 import type { MainTab, PermissionKey, TabKey, UserRole } from './types'
 export { validatePasswordStrength } from '@/lib/passwordPolicy'
+export {
+  normalizeEmailAddress,
+  sanitizeSingleLine,
+  validateDisplayName,
+  validateEmailAddress,
+} from '@/lib/userInputPolicy'
 
 export const tabKeys: TabKey[] = [
   'stock',
@@ -358,30 +364,6 @@ export function canAccessTab(role: UserRole, tab: TabKey) {
   if (tab === 'informes') return hasPermission(role, 'tpv_manage')
   if (tab === 'usuarios') return hasPermission(role, 'user_manage')
   return false
-}
-
-export function sanitizeSingleLine(value: string) {
-  return value.replace(/\s+/g, ' ').trim()
-}
-
-export function validateDisplayName(value: string) {
-  const normalized = sanitizeSingleLine(value)
-
-  if (!normalized) return 'El nombre visible es obligatorio'
-  if (normalized.length < 2) return 'Usa al menos 2 caracteres'
-  if (normalized.length > 60) return 'Usa como maximo 60 caracteres'
-  return ''
-}
-
-export function validateEmailAddress(value: string) {
-  const normalized = value.trim().toLowerCase()
-
-  if (!normalized) return 'El correo es obligatorio'
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
-    return 'Introduce un correo valido'
-  }
-
-  return ''
 }
 
 export function tokenSet(value: string) {
