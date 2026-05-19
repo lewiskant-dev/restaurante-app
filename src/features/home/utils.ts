@@ -1,6 +1,7 @@
 import type { User } from '@supabase/supabase-js'
 import type { Auditoria, Producto } from '@/types'
 import type { MainTab, PermissionKey, TabKey, UserRole } from './types'
+export { validatePasswordStrength } from '@/lib/passwordPolicy'
 
 export const tabKeys: TabKey[] = [
   'stock',
@@ -380,14 +381,6 @@ export function validateEmailAddress(value: string) {
     return 'Introduce un correo valido'
   }
 
-  return ''
-}
-
-export function validatePasswordStrength(value: string) {
-  if (!value) return 'La contraseña es obligatoria'
-  if (value.length < 8) return 'Debe tener al menos 8 caracteres'
-  if (!/[A-Za-z]/.test(value)) return 'Incluye al menos una letra'
-  if (!/\d/.test(value)) return 'Incluye al menos un numero'
   return ''
 }
 

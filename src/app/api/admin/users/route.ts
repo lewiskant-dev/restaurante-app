@@ -1,5 +1,6 @@
 import { PostgrestError } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { validatePasswordStrength } from '@/lib/passwordPolicy'
 import { createSupabaseAdminClient } from '@/lib/supabaseAdmin'
 import {
   buildInheritedRestaurantAppMetadata,
@@ -494,11 +495,9 @@ export async function POST(request: Request) {
     )
   }
 
-  if (password.length < 6) {
-    return NextResponse.json(
-      { error: 'La contraseña debe tener al menos 6 caracteres' },
-      { status: 400 }
-    )
+  const passwordError = validatePasswordStrength(password)
+  if (passwordError) {
+    return NextResponse.json({ error: passwordError }, { status: 400 })
   }
 
   if (authResult.role !== 'master' && role === 'master') {
@@ -724,11 +723,11 @@ export async function PATCH(request: Request) {
     )
   }
 
-  if (nextPassword && nextPassword.length < 6) {
-    return NextResponse.json(
-      { error: 'La nueva contraseña debe tener al menos 6 caracteres' },
-      { status: 400 }
-    )
+  if (nextPassword) {
+    const passwordError = validatePasswordStrength(nextPassword)
+    if (passwordError) {
+      return NextResponse.json({ error: passwordError }, { status: 400 })
+    }
   }
 
   if (nextRole === 'master' && authResult.role !== 'master') {
