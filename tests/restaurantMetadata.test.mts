@@ -30,6 +30,18 @@ test('getRestaurantScopeFromAppMetadata hereda current_restaurant_id si no hay l
   })
 })
 
+test('getRestaurantScopeFromAppMetadata corrige restaurante activo fuera del alcance', () => {
+  const scope = getRestaurantScopeFromAppMetadata({
+    current_restaurant_id: 'rest-x',
+    restaurant_ids: ['rest-a', 'rest-b'],
+  })
+
+  assert.deepEqual(scope, {
+    currentRestaurantId: 'rest-a',
+    restaurantIds: ['rest-a', 'rest-b'],
+  })
+})
+
 test('buildInheritedRestaurantAppMetadata conserva metadata previa y activa el primer restaurante', () => {
   const metadata = buildInheritedRestaurantAppMetadata(
     { role: 'encargado', theme: 'light' },

@@ -16,11 +16,11 @@ function normalizeRestaurantId(value: unknown) {
 }
 
 export function getRestaurantScopeFromAppMetadata(appMetadata?: Record<string, unknown>): RestaurantScope {
-  const currentRestaurantId = normalizeRestaurantId(appMetadata?.current_restaurant_id)
+  const rawCurrentRestaurantId = normalizeRestaurantId(appMetadata?.current_restaurant_id)
   const restaurantIdsSource = Array.isArray(appMetadata?.restaurant_ids)
     ? appMetadata?.restaurant_ids
-    : currentRestaurantId
-      ? [currentRestaurantId]
+    : rawCurrentRestaurantId
+      ? [rawCurrentRestaurantId]
       : []
 
   const restaurantIds = Array.from(
@@ -30,6 +30,10 @@ export function getRestaurantScopeFromAppMetadata(appMetadata?: Record<string, u
         .filter((value): value is string => Boolean(value))
     )
   )
+  const currentRestaurantId =
+    rawCurrentRestaurantId && restaurantIds.includes(rawCurrentRestaurantId)
+      ? rawCurrentRestaurantId
+      : restaurantIds[0] ?? null
 
   return {
     currentRestaurantId,
