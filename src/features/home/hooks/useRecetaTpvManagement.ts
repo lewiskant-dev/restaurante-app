@@ -15,6 +15,7 @@ import {
   calculatePriceVariationPct,
   getDominantCategory,
   getMarginRatio,
+  sortByMarginRisk,
 } from '@/lib/financialAnalytics'
 import { supabase } from '@/lib/supabase'
 import type { Producto } from '@/types'
@@ -85,6 +86,7 @@ export function useRecetaTpvManagement({
     productos_con_desviacion: 0,
     productos: [],
     recetas_rentables: [],
+    recetas_riesgo: [],
     categorias_rentables: [],
     recetas_sin_precio_venta: 0,
     alertas: [],
@@ -242,6 +244,7 @@ export function useRecetaTpvManagement({
         productos_con_desviacion: 0,
         productos: [],
         recetas_rentables: [],
+        recetas_riesgo: [],
         categorias_rentables: [],
         recetas_sin_precio_venta: 0,
         alertas: [],
@@ -449,6 +452,7 @@ export function useRecetaTpvManagement({
       const recetasRentables = Array.from(recipePerformance.values())
         .sort((a, b) => b.margen_estimado - a.margen_estimado)
         .slice(0, 6)
+      const recetasRiesgo = sortByMarginRisk(Array.from(recipePerformance.values())).slice(0, 6)
 
       const categoriasMap = new Map<
         string,
@@ -568,6 +572,7 @@ export function useRecetaTpvManagement({
         productosConDesviacion,
         productos: productosAnalitica,
         recetas_rentables: recetasRentables,
+        recetas_riesgo: recetasRiesgo,
         categorias_rentables: categoriasRentables,
         recetas_sin_precio_venta: recetasSinPrecioVenta,
         compras_periodo: {
@@ -734,6 +739,7 @@ export function useRecetaTpvManagement({
       productos_con_desviacion: currentWindow.productosConDesviacion,
       productos: currentWindow.productos,
       recetas_rentables: currentWindow.recetas_rentables,
+      recetas_riesgo: currentWindow.recetas_riesgo,
       categorias_rentables: currentWindow.categorias_rentables,
       recetas_sin_precio_venta: currentWindow.recetas_sin_precio_venta,
       alertas,

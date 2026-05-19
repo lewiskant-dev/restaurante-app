@@ -8,6 +8,7 @@ import {
   calculatePriceVariationPct,
   getDominantCategory,
   getMarginRatio,
+  sortByMarginRisk,
 } from '../src/lib/financialAnalytics.ts'
 
 test('buildComparativaMetrica calcula delta y variacion porcentual', () => {
@@ -36,6 +37,20 @@ test('calculatePriceVariationPct calcula subidas y bajadas de precio', () => {
 test('getMarginRatio devuelve null si no hay ventas', () => {
   assert.equal(getMarginRatio(0, 10), null)
   assert.equal(getMarginRatio(100, 25), 0.25)
+})
+
+test('sortByMarginRisk ordena recetas por peor porcentaje de margen', () => {
+  const recipes = sortByMarginRisk([
+    { receta_id: 'alta', ventas_estimadas: 100, margen_estimado: 35 },
+    { receta_id: 'negativa', ventas_estimadas: 80, margen_estimado: -4 },
+    { receta_id: 'baja', ventas_estimadas: 200, margen_estimado: 20 },
+    { receta_id: 'sin-ventas', ventas_estimadas: 0, margen_estimado: -10 },
+  ])
+
+  assert.deepEqual(
+    recipes.map((recipe) => recipe.receta_id),
+    ['negativa', 'baja', 'alta']
+  )
 })
 
 test('buildBreakEvenSummary calcula ventas necesarias para cubrir compras', () => {

@@ -23,6 +23,26 @@ export function getMarginRatio(ventas: number, margen: number) {
   return margen / ventas
 }
 
+type MarginRiskCandidate = {
+  ventas_estimadas: number
+  margen_estimado: number
+}
+
+export function sortByMarginRisk<T extends MarginRiskCandidate>(items: T[]) {
+  return [...items]
+    .filter((item) => item.ventas_estimadas > 0)
+    .sort((a, b) => {
+      const marginA = getMarginRatio(a.ventas_estimadas, a.margen_estimado)
+      const marginB = getMarginRatio(b.ventas_estimadas, b.margen_estimado)
+
+      if (marginA === null && marginB === null) return 0
+      if (marginA === null) return 1
+      if (marginB === null) return -1
+
+      return marginA - marginB
+    })
+}
+
 export type BreakEvenSummary = {
   margenRatio: number | null
   ventasNecesarias: number | null

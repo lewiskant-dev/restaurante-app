@@ -149,6 +149,7 @@ export type TpvAnaliticaResumen = {
   productos_con_desviacion: number
   productos: TpvAnaliticaProducto[]
   recetas_rentables: TpvAnaliticaReceta[]
+  recetas_riesgo: TpvAnaliticaReceta[]
   categorias_rentables: TpvAnaliticaCategoria[]
   recetas_sin_precio_venta: number
   alertas: TpvAnaliticaAlerta[]

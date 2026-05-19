@@ -1,7 +1,7 @@
 'use client'
 
 import type { TpvAnaliticaResumen } from '@/features/home/types'
-import { buildBreakEvenSummary, buildFinancialHealthSummary } from '@/lib/financialAnalytics'
+import { buildBreakEvenSummary, buildFinancialHealthSummary, getMarginRatio } from '@/lib/financialAnalytics'
 
 function formatEuro(value: number) {
   return value.toLocaleString('es-ES', {
@@ -72,6 +72,13 @@ function getBreakEvenCopy(status: 'sin_datos' | 'sin_margen' | 'cubierto' | 'pen
   if (status === 'pendiente') return 'Ventas adicionales estimadas para cubrir las compras del periodo.'
   if (status === 'sin_margen') return 'Necesitas margen positivo para estimar el punto muerto.'
   return 'Registra ventas o compras para calcular este indicador.'
+}
+
+function getMarginRiskClasses(marginRatio: number | null) {
+  if (marginRatio === null) return 'border-slate-200 bg-white text-slate-500'
+  if (marginRatio < 0) return 'border-red-200 bg-red-50 text-red-700'
+  if (marginRatio < 0.15) return 'border-amber-200 bg-amber-50 text-amber-700'
+  return 'border-emerald-100 bg-emerald-50 text-emerald-700'
 }
 
 type InformesTabProps = {
@@ -439,6 +446,60 @@ export function InformesTab({
                   </div>
                 </div>
               ))
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+          <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h4 className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
+                Recetas a vigilar
+              </h4>
+              <p className="mt-1 text-[11px] text-slate-500 sm:text-[12px]">
+                Ordenadas por menor porcentaje de margen sobre ventas estimadas.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {tpvAnalitica.recetas_riesgo.length === 0 ? (
+              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-400">
+                Aún no hay ventas suficientes para detectar recetas de riesgo.
+              </div>
+            ) : (
+              tpvAnalitica.recetas_riesgo.map((item) => {
+                const marginRatio = getMarginRatio(item.ventas_estimadas, item.margen_estimado)
+                return (
+                  <div
+                    key={item.receta_id}
+                    className="grid gap-3 rounded-[16px] border border-slate-200 bg-white px-4 py-3 lg:grid-cols-[1fr_auto]"
+                  >
+                    <div>
+                      <div className="text-[13px] font-semibold text-slate-900">{item.receta_nombre}</div>
+                      <div className="mt-1 text-[11px] text-slate-500">
+                        Vendidas: {item.unidades_vendidas.toLocaleString('es-ES')} · Coste teórico:{' '}
+                        {formatEuro(item.coste_teorico_vendido)} €
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold text-slate-700">
+                        Ventas {formatEuro(item.ventas_estimadas)} €
+                      </span>
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold text-slate-700">
+                        Margen {formatEuro(item.margen_estimado)} €
+                      </span>
+                      <span
+                        className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold ${getMarginRiskClasses(
+                          marginRatio
+                        )}`}
+                      >
+                        {marginRatio === null ? 'Sin base' : `${(marginRatio * 100).toFixed(1)}%`}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })
             )}
           </div>
         </div>
