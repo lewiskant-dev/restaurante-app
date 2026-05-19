@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { validateMasterLoginPayload } from '@/lib/masterLogin'
 import { createSupabaseServerAuthClient } from '@/lib/supabaseAdmin'
 
 export async function POST(request: Request) {
@@ -6,31 +7,13 @@ export async function POST(request: Request) {
     | { login?: string; password?: string }
     | null
 
-  const login = body?.login?.trim() || ''
-  const password = body?.password || ''
+  const validation = validateMasterLoginPayload(body, {
+    masterLogin: process.env.MASTER_LOGIN,
+    masterEmail: process.env.MASTER_EMAIL,
+  })
 
-  const masterLogin = (process.env.MASTER_LOGIN || '').trim()
-  const masterEmail = (process.env.MASTER_EMAIL || '').trim()
-
-  if (!masterLogin || !masterEmail) {
-    return NextResponse.json(
-      { error: 'El acceso master no está configurado en el servidor' },
-      { status: 500 }
-    )
-  }
-
-  if (!login || !password) {
-    return NextResponse.json(
-      { error: 'Debes indicar usuario master y contraseña' },
-      { status: 400 }
-    )
-  }
-
-  if (login !== masterLogin) {
-    return NextResponse.json(
-      { error: 'Usuario master no reconocido' },
-      { status: 401 }
-    )
+  if (!validation.ok) {
+    return NextResponse.json({ error: validation.error }, { status: validation.status })
   }
 
   let supabaseServerAuth
@@ -45,8 +28,8 @@ export async function POST(request: Request) {
   }
 
   const { data, error } = await supabaseServerAuth.auth.signInWithPassword({
-    email: masterEmail,
-    password,
+    email: validation.masterEmail,
+    password: validation.password,
   })
 
   if (error || !data.session || !data.user) {

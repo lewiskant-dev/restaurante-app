@@ -1,37 +1,7 @@
 import { NextResponse } from 'next/server'
+import { getAuditDisplayName, validateAuditPayload } from '@/lib/auditPayload'
 import { getRestaurantScopeFromAppMetadata } from '@/lib/restaurantMetadata'
 import { createSupabaseAdminClient } from '@/lib/supabaseAdmin'
-
-type AuditEntity = 'sesion' | 'perfil'
-type AuditAction = 'login' | 'logout' | 'editar_perfil' | 'cambiar_password'
-
-function isAllowedAuditPayload(value: unknown): value is {
-  entidad?: AuditEntity
-  accion?: AuditAction
-  detalle?: string
-  payloadAntes?: unknown
-  payloadDespues?: unknown
-} {
-  return typeof value === 'object' && value !== null
-}
-
-function isAllowedEntity(value: unknown): value is AuditEntity {
-  return value === 'sesion' || value === 'perfil'
-}
-
-function isAllowedAction(entity: AuditEntity, action: unknown): action is AuditAction {
-  if (entity === 'sesion') return action === 'login' || action === 'logout'
-  return action === 'editar_perfil' || action === 'cambiar_password'
-}
-
-function getDisplayName(user: {
-  email?: string | null
-  user_metadata?: Record<string, unknown>
-}) {
-  const fullName = user.user_metadata?.full_name
-  if (typeof fullName === 'string' && fullName.trim()) return fullName.trim()
-  return user.email || 'Sin identificar'
-}
 
 export async function POST(request: Request) {
   const authHeader = request.headers.get('authorization') || ''
@@ -55,28 +25,24 @@ export async function POST(request: Request) {
   }
 
   const rawBody = await request.json().catch(() => null)
+  const validation = validateAuditPayload(rawBody)
 
-  if (!isAllowedAuditPayload(rawBody) || !isAllowedEntity(rawBody.entidad)) {
-    return NextResponse.json({ error: 'Entidad de auditoría no válida' }, { status: 400 })
+  if (!validation.ok) {
+    return NextResponse.json({ error: validation.error }, { status: validation.status })
   }
 
-  if (!isAllowedAction(rawBody.entidad, rawBody.accion)) {
-    return NextResponse.json({ error: 'Acción de auditoría no válida' }, { status: 400 })
-  }
-
-  const detalle = typeof rawBody.detalle === 'string' ? rawBody.detalle.trim() : ''
   const restaurantScope = getRestaurantScopeFromAppMetadata(user.app_metadata)
 
   const { error } = await supabaseAdmin.from('auditoria').insert({
-    entidad: rawBody.entidad,
+    entidad: validation.entidad,
     entidad_id: user.id,
-    accion: rawBody.accion,
+    accion: validation.accion,
     restaurant_id: restaurantScope.currentRestaurantId,
-    actor_nombre: getDisplayName(user),
+    actor_nombre: getAuditDisplayName(user),
     actor_id: user.id,
-    detalle,
-    payload_antes: rawBody.payloadAntes ?? null,
-    payload_despues: rawBody.payloadDespues ?? null,
+    detalle: validation.detalle,
+    payload_antes: validation.payloadAntes,
+    payload_despues: validation.payloadDespues,
   })
 
   if (error) {

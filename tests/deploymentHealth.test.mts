@@ -9,6 +9,7 @@ test('buildDeploymentHealthSummary marca ok si las variables criticas existen', 
       NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
       NEXT_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
       SUPABASE_SERVICE_ROLE_KEY: 'service-role',
+      MASTER_LOGIN: 'master',
       MASTER_EMAIL: 'master@example.com',
     },
     '2026-05-15T10:00:00.000Z'
@@ -26,6 +27,7 @@ test('buildDeploymentHealthSummary no expone valores y lista variables ausentes'
       NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
       NEXT_PUBLIC_SUPABASE_ANON_KEY: '',
       SUPABASE_SERVICE_ROLE_KEY: undefined,
+      MASTER_LOGIN: 'master',
       MASTER_EMAIL: 'master@example.com',
     },
     '2026-05-15T10:00:00.000Z'
