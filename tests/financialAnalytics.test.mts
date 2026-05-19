@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   buildComparativaMetrica,
+  buildBreakEvenSummary,
   buildFinancialHealthSummary,
   calculatePriceVariationPct,
   getDominantCategory,
@@ -35,6 +36,33 @@ test('calculatePriceVariationPct calcula subidas y bajadas de precio', () => {
 test('getMarginRatio devuelve null si no hay ventas', () => {
   assert.equal(getMarginRatio(0, 10), null)
   assert.equal(getMarginRatio(100, 25), 0.25)
+})
+
+test('buildBreakEvenSummary calcula ventas necesarias para cubrir compras', () => {
+  assert.deepEqual(buildBreakEvenSummary(1000, 250, 500), {
+    margenRatio: 0.25,
+    ventasNecesarias: 2000,
+    gapVentas: 1000,
+    status: 'pendiente',
+  })
+})
+
+test('buildBreakEvenSummary detecta compras cubiertas por margen', () => {
+  assert.deepEqual(buildBreakEvenSummary(2000, 800, 500), {
+    margenRatio: 0.4,
+    ventasNecesarias: 1250,
+    gapVentas: 0,
+    status: 'cubierto',
+  })
+})
+
+test('buildBreakEvenSummary marca sin margen si el periodo no tiene margen positivo', () => {
+  assert.deepEqual(buildBreakEvenSummary(1000, -100, 500), {
+    margenRatio: -0.1,
+    ventasNecesarias: null,
+    gapVentas: null,
+    status: 'sin_margen',
+  })
 })
 
 test('buildFinancialHealthSummary marca sin datos si no hay ventas ni compras', () => {

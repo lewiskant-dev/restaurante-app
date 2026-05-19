@@ -23,6 +23,45 @@ export function getMarginRatio(ventas: number, margen: number) {
   return margen / ventas
 }
 
+export type BreakEvenSummary = {
+  margenRatio: number | null
+  ventasNecesarias: number | null
+  gapVentas: number | null
+  status: 'sin_datos' | 'sin_margen' | 'cubierto' | 'pendiente'
+}
+
+export function buildBreakEvenSummary(ventas: number, margen: number, comprasCoste: number): BreakEvenSummary {
+  const margenRatio = getMarginRatio(ventas, margen)
+
+  if (ventas <= 0 && comprasCoste <= 0) {
+    return {
+      margenRatio: null,
+      ventasNecesarias: null,
+      gapVentas: null,
+      status: 'sin_datos',
+    }
+  }
+
+  if (margenRatio === null || margenRatio <= 0) {
+    return {
+      margenRatio,
+      ventasNecesarias: null,
+      gapVentas: null,
+      status: 'sin_margen',
+    }
+  }
+
+  const ventasNecesarias = comprasCoste / margenRatio
+  const gapVentas = Math.max(0, ventasNecesarias - ventas)
+
+  return {
+    margenRatio,
+    ventasNecesarias,
+    gapVentas,
+    status: gapVentas <= 0 ? 'cubierto' : 'pendiente',
+  }
+}
+
 type FinancialHealthInput = {
   ventasEstimadas: number
   margenEstimado: number

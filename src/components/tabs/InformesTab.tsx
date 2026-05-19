@@ -1,7 +1,7 @@
 'use client'
 
 import type { TpvAnaliticaResumen } from '@/features/home/types'
-import { buildFinancialHealthSummary } from '@/lib/financialAnalytics'
+import { buildBreakEvenSummary, buildFinancialHealthSummary } from '@/lib/financialAnalytics'
 
 function formatEuro(value: number) {
   return value.toLocaleString('es-ES', {
@@ -67,6 +67,13 @@ function getHealthToneClasses(tone: 'emerald' | 'amber' | 'red' | 'slate') {
   }
 }
 
+function getBreakEvenCopy(status: 'sin_datos' | 'sin_margen' | 'cubierto' | 'pendiente') {
+  if (status === 'cubierto') return 'El margen estimado cubre las compras del periodo.'
+  if (status === 'pendiente') return 'Ventas adicionales estimadas para cubrir las compras del periodo.'
+  if (status === 'sin_margen') return 'Necesitas margen positivo para estimar el punto muerto.'
+  return 'Registra ventas o compras para calcular este indicador.'
+}
+
 type InformesTabProps = {
   tpvAnaliticaRange: '7d' | '30d' | '90d'
   tpvAnalitica: TpvAnaliticaResumen
@@ -103,6 +110,11 @@ export function InformesTab({
     desviacionTotal: tpvAnalitica.desviacion_total,
     alertasCount: tpvAnalitica.alertas.length,
   })
+  const breakEvenSummary = buildBreakEvenSummary(
+    tpvAnalitica.ventas_estimadas_total,
+    tpvAnalitica.margen_estimado_total,
+    tpvAnalitica.compras_periodo.total_coste
+  )
   const healthTone = getHealthToneClasses(healthSummary.tone)
   const comparisonCards: ComparisonCard[] = [
     {
@@ -234,6 +246,71 @@ export function InformesTab({
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="mt-4 grid gap-3 xl:grid-cols-[0.9fr_1.1fr]">
+          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Punto muerto operativo
+            </div>
+            <div
+              className={`mt-2 text-[1.7rem] font-semibold ${
+                breakEvenSummary.status === 'cubierto'
+                  ? 'text-emerald-600'
+                  : breakEvenSummary.status === 'pendiente'
+                    ? 'text-amber-600'
+                    : breakEvenSummary.status === 'sin_margen'
+                      ? 'text-red-600'
+                      : 'text-slate-700'
+              }`}
+            >
+              {breakEvenSummary.ventasNecesarias === null
+                ? 'Sin cálculo'
+                : `${formatEuro(breakEvenSummary.ventasNecesarias)} €`}
+            </div>
+            <p className="mt-2 text-[12px] leading-5 text-slate-500">
+              {getBreakEvenCopy(breakEvenSummary.status)}
+            </p>
+          </div>
+
+          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-[16px] bg-white px-4 py-3">
+                <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
+                  Margen %
+                </div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">
+                  {breakEvenSummary.margenRatio === null
+                    ? 'Sin base'
+                    : `${(breakEvenSummary.margenRatio * 100).toFixed(1)}%`}
+                </div>
+              </div>
+              <div className="rounded-[16px] bg-white px-4 py-3">
+                <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
+                  Compras
+                </div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">
+                  {formatEuro(tpvAnalitica.compras_periodo.total_coste)} €
+                </div>
+              </div>
+              <div className="rounded-[16px] bg-white px-4 py-3">
+                <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
+                  Gap ventas
+                </div>
+                <div
+                  className={`mt-1 text-sm font-semibold ${
+                    breakEvenSummary.gapVentas && breakEvenSummary.gapVentas > 0
+                      ? 'text-amber-600'
+                      : 'text-emerald-600'
+                  }`}
+                >
+                  {breakEvenSummary.gapVentas === null
+                    ? 'Sin cálculo'
+                    : `${formatEuro(breakEvenSummary.gapVentas)} €`}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="mt-4 grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
