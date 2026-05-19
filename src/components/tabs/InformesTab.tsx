@@ -1,7 +1,13 @@
 'use client'
 
 import type { TpvAnaliticaResumen } from '@/features/home/types'
-import { buildBreakEvenSummary, buildFinancialHealthSummary, getMarginRatio } from '@/lib/financialAnalytics'
+import {
+  buildBreakEvenSummary,
+  buildFinancialHealthSummary,
+  buildInventoryFinancialSummary,
+  getMarginRatio,
+} from '@/lib/financialAnalytics'
+import type { Producto } from '@/types'
 
 function formatEuro(value: number) {
   return value.toLocaleString('es-ES', {
@@ -84,6 +90,7 @@ function getMarginRiskClasses(marginRatio: number | null) {
 type InformesTabProps = {
   tpvAnaliticaRange: '7d' | '30d' | '90d'
   tpvAnalitica: TpvAnaliticaResumen
+  productos: Producto[]
   onAnaliticaRangeChange: (value: '7d' | '30d' | '90d') => void
   onExportarGlobal: () => void
   onExportarResumen: () => void
@@ -103,6 +110,7 @@ type ComparisonCard = {
 export function InformesTab({
   tpvAnaliticaRange,
   tpvAnalitica,
+  productos,
   onAnaliticaRangeChange,
   onExportarGlobal,
   onExportarResumen,
@@ -122,6 +130,23 @@ export function InformesTab({
     tpvAnalitica.margen_estimado_total,
     tpvAnalitica.compras_periodo.total_coste
   )
+  const inventorySummary = buildInventoryFinancialSummary(productos)
+  const topInventoryProducts = [...productos]
+    .filter((producto) => !producto.archivado)
+    .map((producto) => {
+      const unitCost = Number(producto.ultimo_precio_compra ?? producto.coste_unitario ?? 0)
+      return {
+        id: producto.id,
+        nombre: producto.nombre,
+        unidad: producto.unidad || 'uds',
+        stock: Number(producto.stock_actual || 0),
+        unitCost,
+        value: Math.max(0, Number(producto.stock_actual || 0)) * Math.max(0, unitCost),
+      }
+    })
+    .filter((producto) => producto.value > 0)
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5)
   const healthTone = getHealthToneClasses(healthSummary.tone)
   const comparisonCards: ComparisonCard[] = [
     {
@@ -317,6 +342,81 @@ export function InformesTab({
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+          <div className="mb-3">
+            <h4 className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
+              Valor financiero del inventario
+            </h4>
+            <p className="mt-1 text-[11px] text-slate-500 sm:text-[12px]">
+              Estimación según stock actual y último coste conocido por producto.
+            </p>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-4">
+            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
+                Valor en stock
+              </div>
+              <div className="mt-1 text-[1.35rem] font-semibold text-slate-950">
+                {formatEuro(inventorySummary.totalValue)} €
+              </div>
+            </div>
+            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
+                Reposición mínima
+              </div>
+              <div className="mt-1 text-[1.35rem] font-semibold text-amber-600">
+                {formatEuro(inventorySummary.reorderGapValue)} €
+              </div>
+            </div>
+            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
+                Sobre mínimo
+              </div>
+              <div className="mt-1 text-[1.35rem] font-semibold text-emerald-600">
+                {formatEuro(inventorySummary.valueAboveMinimum)} €
+              </div>
+            </div>
+            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
+                Coste pendiente
+              </div>
+              <div className="mt-1 text-[1.35rem] font-semibold text-slate-950">
+                {inventorySummary.productsMissingCost}
+              </div>
+              <div className="mt-1 text-[11px] text-slate-500">
+                de {inventorySummary.activeProducts} productos activos
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {topInventoryProducts.length === 0 ? (
+              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-400">
+                Añade costes unitarios a productos para ver qué inventario concentra más valor.
+              </div>
+            ) : (
+              topInventoryProducts.map((producto) => (
+                <div
+                  key={producto.id}
+                  className="grid gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-3 lg:grid-cols-[1fr_auto]"
+                >
+                  <div>
+                    <div className="text-[13px] font-semibold text-slate-900">{producto.nombre}</div>
+                    <div className="mt-1 text-[11px] text-slate-500">
+                      Stock: {producto.stock.toLocaleString('es-ES')} {producto.unidad} · Coste:{' '}
+                      {formatEuro(producto.unitCost)} €
+                    </div>
+                  </div>
+                  <div className="text-left text-sm font-semibold text-slate-900 lg:text-right">
+                    {formatEuro(producto.value)} €
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

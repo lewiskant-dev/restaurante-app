@@ -1809,6 +1809,7 @@ export default function HomePage() {
           <InformesTab
             tpvAnaliticaRange={tpvAnaliticaRange}
             tpvAnalitica={tpvAnalitica}
+            productos={productos}
             onAnaliticaRangeChange={setTpvAnaliticaRange}
             onExportarGlobal={exportarAnaliticaTpvCSV}
             onExportarResumen={exportarResumenAnaliticaCSV}

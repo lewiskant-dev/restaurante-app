@@ -43,6 +43,58 @@ export function sortByMarginRisk<T extends MarginRiskCandidate>(items: T[]) {
     })
 }
 
+type InventoryValueCandidate = {
+  stock_actual: number
+  stock_minimo: number
+  coste_unitario?: number | null
+  ultimo_precio_compra?: number | null
+  archivado?: boolean | null
+}
+
+export type InventoryFinancialSummary = {
+  activeProducts: number
+  productsWithCost: number
+  productsMissingCost: number
+  totalValue: number
+  reorderGapValue: number
+  valueAboveMinimum: number
+}
+
+export function buildInventoryFinancialSummary(
+  products: InventoryValueCandidate[]
+): InventoryFinancialSummary {
+  const activeProducts = products.filter((product) => !product.archivado)
+
+  return activeProducts.reduce<InventoryFinancialSummary>(
+    (summary, product) => {
+      const stockActual = Math.max(0, Number(product.stock_actual || 0))
+      const stockMinimo = Math.max(0, Number(product.stock_minimo || 0))
+      const unitCost = Number(product.ultimo_precio_compra ?? product.coste_unitario ?? 0)
+
+      summary.activeProducts += 1
+
+      if (unitCost > 0) {
+        summary.productsWithCost += 1
+        summary.totalValue += stockActual * unitCost
+        summary.reorderGapValue += Math.max(0, stockMinimo - stockActual) * unitCost
+        summary.valueAboveMinimum += Math.max(0, stockActual - stockMinimo) * unitCost
+      } else {
+        summary.productsMissingCost += 1
+      }
+
+      return summary
+    },
+    {
+      activeProducts: 0,
+      productsWithCost: 0,
+      productsMissingCost: 0,
+      totalValue: 0,
+      reorderGapValue: 0,
+      valueAboveMinimum: 0,
+    }
+  )
+}
+
 export type BreakEvenSummary = {
   margenRatio: number | null
   ventasNecesarias: number | null

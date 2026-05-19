@@ -5,6 +5,7 @@ import {
   buildComparativaMetrica,
   buildBreakEvenSummary,
   buildFinancialHealthSummary,
+  buildInventoryFinancialSummary,
   calculatePriceVariationPct,
   getDominantCategory,
   getMarginRatio,
@@ -50,6 +51,25 @@ test('sortByMarginRisk ordena recetas por peor porcentaje de margen', () => {
   assert.deepEqual(
     recipes.map((recipe) => recipe.receta_id),
     ['negativa', 'baja', 'alta']
+  )
+})
+
+test('buildInventoryFinancialSummary calcula valor de stock y reposicion', () => {
+  assert.deepEqual(
+    buildInventoryFinancialSummary([
+      { stock_actual: 10, stock_minimo: 4, coste_unitario: 2 },
+      { stock_actual: 1, stock_minimo: 5, ultimo_precio_compra: 3 },
+      { stock_actual: 7, stock_minimo: 2, coste_unitario: 0 },
+      { stock_actual: 100, stock_minimo: 10, coste_unitario: 1, archivado: true },
+    ]),
+    {
+      activeProducts: 3,
+      productsWithCost: 2,
+      productsMissingCost: 1,
+      totalValue: 23,
+      reorderGapValue: 12,
+      valueAboveMinimum: 12,
+    }
   )
 })
 
