@@ -55,11 +55,13 @@ Orden recomendado:
 2. Ejecutar [supabase/multi-restaurant-setup.sql](supabase/multi-restaurant-setup.sql)
 3. Si quieres empezar de cero sin tocar funcionalidades, ejecutar [supabase/reset-operational-data.sql](supabase/reset-operational-data.sql)
 4. Si usas imagenes de producto, ejecutar [supabase/product-media-setup.sql](supabase/product-media-setup.sql)
+5. Aplicar índices de rendimiento con [supabase/performance-indexes.sql](supabase/performance-indexes.sql)
 
 Documentacion de apoyo:
 - [supabase/roles-setup.md](supabase/roles-setup.md)
 - [supabase/multi-restaurant-setup.md](supabase/multi-restaurant-setup.md)
 - [supabase/operacion-nexo.md](supabase/operacion-nexo.md)
+- [supabase/production-checklist.md](supabase/production-checklist.md)
 - [supabase/multi-restaurant-validation.sql](supabase/multi-restaurant-validation.sql)
 - [supabase/security-validation.sql](supabase/security-validation.sql)
 

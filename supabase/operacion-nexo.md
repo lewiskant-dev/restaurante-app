@@ -2,6 +2,8 @@
 
 Guía práctica para operar Nexo con varios restaurantes sin depender de memoria o pruebas manuales sueltas.
 
+Para una puesta en producción completa, usa también [production-checklist.md](/Users/jorge/restaurante-app/supabase/production-checklist.md:1).
+
 ## Verificación local del proyecto
 
 Antes de subir cambios importantes:
