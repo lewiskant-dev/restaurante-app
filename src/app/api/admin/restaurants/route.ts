@@ -1,5 +1,6 @@
 import { PostgrestError } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { getAuditDisplayName } from '@/lib/auditPayload'
 import { isValidRestaurantSlug, slugifyRestaurantName } from '@/lib/restaurantCatalog'
 import { getRestaurantScopeFromAppMetadata } from '@/lib/restaurantMetadata'
 import { createSupabaseAdminClient } from '@/lib/supabaseAdmin'
@@ -32,30 +33,38 @@ async function ensureRestaurantUniqueness(
 ) {
   const { nombre, slug, excludeId } = params
 
-  let query = supabaseAdmin
+  let nameQuery = supabaseAdmin
     .from('restaurantes')
     .select('id, nombre, slug')
-    .or(`nombre.eq.${nombre},slug.eq.${slug}`)
+    .eq('nombre', nombre)
+
+  let slugQuery = supabaseAdmin
+    .from('restaurantes')
+    .select('id, nombre, slug')
+    .eq('slug', slug)
 
   if (excludeId) {
-    query = query.neq('id', excludeId)
+    nameQuery = nameQuery.neq('id', excludeId)
+    slugQuery = slugQuery.neq('id', excludeId)
   }
 
-  const { data, error } = await query
+  const [nameResult, slugResult] = await Promise.all([nameQuery, slugQuery])
 
-  if (error) {
-    return { error }
+  if (nameResult.error) {
+    return { error: nameResult.error }
   }
 
-  const duplicateName = (data ?? []).find((item) => item.nombre === nombre)
-  if (duplicateName) {
+  if (slugResult.error) {
+    return { error: slugResult.error }
+  }
+
+  if ((nameResult.data ?? []).length > 0) {
     return {
       duplicateError: `Ya existe un restaurante con el nombre "${nombre}".`,
     }
   }
 
-  const duplicateSlug = (data ?? []).find((item) => item.slug === slug)
-  if (duplicateSlug) {
+  if ((slugResult.data ?? []).length > 0) {
     return {
       duplicateError: `El slug "${slug}" ya está en uso por otro restaurante.`,
     }
@@ -390,11 +399,7 @@ export async function POST(request: Request) {
     entidad_id: data.id,
     accion: 'crear',
     restaurant_id: authResult.restaurantScope.currentRestaurantId,
-    actor_nombre:
-      (typeof authResult.user.user_metadata?.full_name === 'string' &&
-        authResult.user.user_metadata.full_name.trim()) ||
-      authResult.user.email ||
-      'Sin identificar',
+    actor_nombre: getAuditDisplayName(authResult.user),
     actor_id: authResult.user.id,
     detalle: `Restaurante creado: ${data.nombre}`,
     payload_despues: data,
@@ -567,11 +572,7 @@ export async function PATCH(request: Request) {
     entidad_id: data.id,
     accion: 'editar',
     restaurant_id: authResult.restaurantScope.currentRestaurantId,
-    actor_nombre:
-      (typeof authResult.user.user_metadata?.full_name === 'string' &&
-        authResult.user.user_metadata.full_name.trim()) ||
-      authResult.user.email ||
-      'Sin identificar',
+    actor_nombre: getAuditDisplayName(authResult.user),
     actor_id: authResult.user.id,
     detalle: `Restaurante actualizado: ${data.nombre}`,
     payload_antes: beforeRestaurant,
