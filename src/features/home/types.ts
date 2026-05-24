@@ -66,6 +66,8 @@ export type MovimientoConProducto = MovimientoStock & {
   productos?: {
     nombre: string
     unidad: string
+    coste_unitario?: number | null
+    ultimo_precio_compra?: number | null
   } | null
 }
 
@@ -112,6 +114,19 @@ export type TpvAnaliticaCompra = {
   ultimo_precio_unitario: number
   precio_anterior_unitario: number | null
   variacion_precio_pct: number | null
+}
+
+export type InventarioCierre = {
+  id: string
+  fecha: string
+  valor_total: number
+  coste_reposicion_minima: number
+  valor_sobre_minimo: number
+  productos_activos: number
+  productos_con_coste: number
+  productos_sin_coste: number
+  notas: string
+  created_at: string
 }
 
 export type TpvAnaliticaAlerta = {

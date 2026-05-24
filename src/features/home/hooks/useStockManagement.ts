@@ -184,7 +184,9 @@ export function useStockManagement({
         *,
         productos (
           nombre,
-          unidad
+          unidad,
+          coste_unitario,
+          ultimo_precio_compra
         )
       `
       )
@@ -633,6 +635,16 @@ export function useStockManagement({
 
     const stockAntes = Number(consumoProducto.stock_actual)
     const stockDespues = stockAntes - cantidad
+    const categoriaConsumo =
+      consumoMotivo === 'Uso en cocina'
+        ? 'cocina'
+        : consumoMotivo === 'Venta en sala'
+          ? 'venta'
+          : consumoMotivo === 'Merma / caducado' || consumoMotivo === 'Rotura'
+            ? 'merma'
+            : consumoMotivo === 'Inventario'
+              ? 'inventario'
+              : 'otro'
     const restaurantId = requireActiveRestaurant()
     if (!restaurantId) {
       setConsumoSaving(false)
@@ -656,17 +668,27 @@ export function useStockManagement({
       return
     }
 
-    const { error: movError } = await supabase.from('movimientos_stock').insert({
+    const movimientoConsumo = {
       producto_id: consumoProducto.id,
       restaurant_id: restaurantId,
       tipo: 'consumo',
       cantidad,
       motivo: consumoMotivo,
+      categoria_consumo: categoriaConsumo,
       origen_tipo: 'manual',
       origen_id: null,
       stock_antes: stockAntes,
       stock_despues: stockDespues,
-    })
+    }
+    let { error: movError } = await supabase.from('movimientos_stock').insert(movimientoConsumo)
+
+    if (movError && /categoria_consumo|schema cache/i.test(movError.message)) {
+      const movimientoCompatible = Object.fromEntries(
+        Object.entries(movimientoConsumo).filter(([key]) => key !== 'categoria_consumo')
+      )
+      const retry = await supabase.from('movimientos_stock').insert(movimientoCompatible)
+      movError = retry.error
+    }
 
     if (movError) {
       onError(movError.message)

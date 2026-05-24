@@ -26,7 +26,8 @@ export type MovimientoStock = {
   tipo: 'entrada' | 'consumo' | 'ajuste'
   cantidad: number
   motivo: string
-  origen_tipo: '' | 'albaran' | 'manual'
+  categoria_consumo?: '' | 'cocina' | 'venta' | 'merma' | 'inventario' | 'otro'
+  origen_tipo: '' | 'albaran' | 'manual' | 'tpv'
   origen_id: string | null
   stock_antes: number
   stock_despues: number

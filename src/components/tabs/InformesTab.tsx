@@ -1,10 +1,17 @@
 'use client'
 
-import type { TpvAnaliticaResumen } from '@/features/home/types'
+import type {
+  InventarioCierre,
+  MovimientoConProducto,
+  TpvAnaliticaResumen,
+} from '@/features/home/types'
 import {
   buildBreakEvenSummary,
   buildFinancialHealthSummary,
+  buildInventoryClosingComparison,
   buildInventoryFinancialSummary,
+  buildReorderRecommendations,
+  buildWasteFinancialSummary,
   getMarginRatio,
 } from '@/lib/financialAnalytics'
 import type { Producto } from '@/types'
@@ -29,6 +36,14 @@ function formatVariation(value: number | null) {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   })}%`
+}
+
+function formatDate(value: string) {
+  return new Date(`${value}T12:00:00`).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
 }
 
 function getDeltaClass(value: number, inverted = false) {
@@ -91,12 +106,18 @@ type InformesTabProps = {
   tpvAnaliticaRange: '7d' | '30d' | '90d'
   tpvAnalitica: TpvAnaliticaResumen
   productos: Producto[]
+  movimientos: MovimientoConProducto[]
+  inventarioCierres: InventarioCierre[]
+  loadingInventarioCierres: boolean
+  creatingInventarioCierre: boolean
   onAnaliticaRangeChange: (value: '7d' | '30d' | '90d') => void
   onExportarGlobal: () => void
   onExportarResumen: () => void
   onExportarDesviaciones: () => void
   onExportarRentabilidad: () => void
   onExportarCompras: () => void
+  onExportarInventario: () => void
+  onCrearCierreInventario: () => void
 }
 
 type ComparisonCard = {
@@ -111,12 +132,18 @@ export function InformesTab({
   tpvAnaliticaRange,
   tpvAnalitica,
   productos,
+  movimientos,
+  inventarioCierres,
+  loadingInventarioCierres,
+  creatingInventarioCierre,
   onAnaliticaRangeChange,
   onExportarGlobal,
   onExportarResumen,
   onExportarDesviaciones,
   onExportarRentabilidad,
   onExportarCompras,
+  onExportarInventario,
+  onCrearCierreInventario,
 }: InformesTabProps) {
   const healthSummary = buildFinancialHealthSummary({
     ventasEstimadas: tpvAnalitica.ventas_estimadas_total,
@@ -131,6 +158,14 @@ export function InformesTab({
     tpvAnalitica.compras_periodo.total_coste
   )
   const inventorySummary = buildInventoryFinancialSummary(productos)
+  const reorderRecommendations = buildReorderRecommendations(productos)
+  const topReorderRecommendations = reorderRecommendations.slice(0, 6)
+  const inventoryClosingComparison = buildInventoryClosingComparison(inventarioCierres)
+  const wasteCutoff = new Date()
+  wasteCutoff.setDate(
+    wasteCutoff.getDate() - (tpvAnaliticaRange === '7d' ? 7 : tpvAnaliticaRange === '90d' ? 90 : 30)
+  )
+  const wasteSummary = buildWasteFinancialSummary(movimientos, wasteCutoff.toISOString())
   const topInventoryProducts = [...productos]
     .filter((producto) => !producto.archivado)
     .map((producto) => {
@@ -346,13 +381,23 @@ export function InformesTab({
         </div>
 
         <div className="mt-4 rounded-[18px] border border-slate-200 bg-slate-50 p-4">
-          <div className="mb-3">
-            <h4 className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
-              Valor financiero del inventario
-            </h4>
-            <p className="mt-1 text-[11px] text-slate-500 sm:text-[12px]">
-              Estimación según stock actual y último coste conocido por producto.
-            </p>
+          <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h4 className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
+                Valor financiero del inventario
+              </h4>
+              <p className="mt-1 text-[11px] text-slate-500 sm:text-[12px]">
+                Estimación según stock actual y último coste conocido por producto.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onCrearCierreInventario}
+              disabled={creatingInventarioCierre}
+              className="rounded-[16px] bg-slate-950 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-wait disabled:bg-slate-400"
+            >
+              {creatingInventarioCierre ? 'Creando cierre...' : 'Crear cierre de hoy'}
+            </button>
           </div>
 
           <div className="grid gap-3 lg:grid-cols-4">
@@ -418,6 +463,234 @@ export function InformesTab({
               ))
             )}
           </div>
+
+          <div className="mt-3 rounded-[18px] border border-amber-100 bg-amber-50/60 p-3">
+            <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h5 className="text-[12px] font-semibold text-slate-900">
+                  Reposición recomendada
+                </h5>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  Productos por debajo del mínimo, priorizados por coste estimado.
+                </p>
+              </div>
+              <span className="text-[11px] font-semibold text-amber-700">
+                {reorderRecommendations.length} producto{reorderRecommendations.length === 1 ? '' : 's'}
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {topReorderRecommendations.length === 0 ? (
+                <div className="rounded-[14px] border border-dashed border-amber-200 bg-white px-4 py-4 text-[12px] text-slate-400">
+                  No hay productos por debajo del mínimo.
+                </div>
+              ) : (
+                topReorderRecommendations.map((item) => (
+                  <div
+                    key={item.productoId}
+                    className="grid gap-2 rounded-[14px] border border-amber-100 bg-white px-4 py-3 md:grid-cols-[1fr_auto]"
+                  >
+                    <div>
+                      <div className="text-[12px] font-semibold text-slate-900">{item.producto}</div>
+                      <div className="mt-1 text-[11px] text-slate-500">
+                        Actual {item.stockActual.toLocaleString('es-ES')} · Mínimo{' '}
+                        {item.stockMinimo.toLocaleString('es-ES')} · Comprar{' '}
+                        {item.cantidadRecomendada.toLocaleString('es-ES')} {item.unidad}
+                      </div>
+                    </div>
+                    <div className="text-left md:text-right">
+                      <div className="text-[12px] font-semibold text-amber-700">
+                        {item.costeDisponible ? `${formatEuro(item.costeEstimado)} €` : 'Sin coste'}
+                      </div>
+                      <div className="mt-1 text-[10px] text-slate-400">{item.categoria}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-[18px] border border-slate-200 bg-white p-3">
+            <div className="mb-2">
+              <h5 className="text-[12px] font-semibold text-slate-900">Cierres recientes</h5>
+              <p className="mt-0.5 text-[11px] text-slate-500">
+                Fotos históricas del inventario para comparar valor entre fechas.
+              </p>
+            </div>
+            {inventoryClosingComparison && (
+              <div className="mb-2 rounded-[14px] border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Comparativa de cierres
+                    </div>
+                    <div className="mt-1 text-[12px] font-semibold text-slate-900">
+                      {formatDate(inventoryClosingComparison.current.fecha)}
+                      {inventoryClosingComparison.previous
+                        ? ` frente a ${formatDate(inventoryClosingComparison.previous.fecha)}`
+                        : ' sin cierre anterior'}
+                    </div>
+                  </div>
+                  {!inventoryClosingComparison.previous && (
+                    <span className="text-[11px] text-slate-500">
+                      Crea un segundo cierre para comparar evolución.
+                    </span>
+                  )}
+                </div>
+                {inventoryClosingComparison.previous && (
+                  <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                    {[
+                      {
+                        key: 'valor',
+                        label: 'Valor stock',
+                        metric: inventoryClosingComparison.valorTotal,
+                        currency: true,
+                        inverted: false,
+                      },
+                      {
+                        key: 'reposicion',
+                        label: 'Reposición',
+                        metric: inventoryClosingComparison.reposicionMinima,
+                        currency: true,
+                        inverted: true,
+                      },
+                      {
+                        key: 'sobrante',
+                        label: 'Sobre mínimo',
+                        metric: inventoryClosingComparison.valorSobreMinimo,
+                        currency: true,
+                        inverted: true,
+                      },
+                      {
+                        key: 'coste-pendiente',
+                        label: 'Sin coste',
+                        metric: inventoryClosingComparison.productosSinCoste,
+                        currency: false,
+                        inverted: true,
+                      },
+                    ].map((item) => (
+                      <div key={item.key} className="rounded-[12px] border border-slate-200 bg-white px-3 py-2">
+                        <div className="text-[10px] uppercase tracking-[0.12em] text-slate-400">
+                          {item.label}
+                        </div>
+                        <div
+                          className={`mt-1 text-[12px] font-semibold ${getDeltaClass(
+                            Number(item.metric?.delta || 0),
+                            item.inverted
+                          )}`}
+                        >
+                          {item.metric
+                            ? `${formatDelta(item.metric.delta, item.currency)} · ${formatVariation(
+                                item.metric.variacion_pct
+                              )}`
+                            : 'Sin comparativa'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="space-y-2">
+              {loadingInventarioCierres ? (
+                <div className="rounded-[14px] border border-dashed border-slate-200 px-4 py-4 text-[12px] text-slate-400">
+                  Cargando cierres de inventario...
+                </div>
+              ) : inventarioCierres.length === 0 ? (
+                <div className="rounded-[14px] border border-dashed border-slate-200 px-4 py-4 text-[12px] text-slate-400">
+                  Todavía no hay cierres. Crea el primero para congelar el valor actual.
+                </div>
+              ) : (
+                inventarioCierres.map((cierre) => (
+                  <div
+                    key={cierre.id}
+                    className="grid gap-2 rounded-[14px] border border-slate-200 bg-slate-50 px-4 py-3 md:grid-cols-[1fr_auto]"
+                  >
+                    <div>
+                      <div className="text-[12px] font-semibold text-slate-900">
+                        {formatDate(cierre.fecha)}
+                      </div>
+                      <div className="mt-1 text-[11px] text-slate-500">
+                        {cierre.productos_con_coste} con coste · {cierre.productos_sin_coste} pendientes
+                        {cierre.notas ? ` · ${cierre.notas}` : ''}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-[11px] font-semibold md:justify-end">
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-700">
+                        Valor {formatEuro(Number(cierre.valor_total || 0))} €
+                      </span>
+                      <span className="rounded-full border border-amber-100 bg-amber-50 px-3 py-1.5 text-amber-700">
+                        Reponer {formatEuro(Number(cierre.coste_reposicion_minima || 0))} €
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+          <div className="mb-3">
+            <h4 className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
+              Mermas del periodo
+            </h4>
+            <p className="mt-1 text-[11px] text-slate-500 sm:text-[12px]">
+              Consumos marcados como merma o rotura dentro de {tpvAnalitica.periodo_label.toLowerCase()}.
+            </p>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
+                Coste estimado
+              </div>
+              <div className="mt-1 text-[1.35rem] font-semibold text-red-600">
+                {formatEuro(wasteSummary.valorEstimado)} €
+              </div>
+            </div>
+            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
+                Movimientos
+              </div>
+              <div className="mt-1 text-[1.35rem] font-semibold text-slate-950">
+                {wasteSummary.movimientos}
+              </div>
+            </div>
+            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
+                Cantidad agregada
+              </div>
+              <div className="mt-1 text-[1.35rem] font-semibold text-slate-950">
+                {wasteSummary.cantidad.toLocaleString('es-ES')}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {wasteSummary.productos.length === 0 ? (
+              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-400">
+                No hay mermas registradas en este rango.
+              </div>
+            ) : (
+              wasteSummary.productos.map((item) => (
+                <div
+                  key={`${item.producto}-${item.unidad}`}
+                  className="grid gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-3 md:grid-cols-[1fr_auto]"
+                >
+                  <div>
+                    <div className="text-[13px] font-semibold text-slate-900">{item.producto}</div>
+                    <div className="mt-1 text-[11px] text-slate-500">
+                      Merma: {item.cantidad.toLocaleString('es-ES')} {item.unidad}
+                    </div>
+                  </div>
+                  <div className="text-sm font-semibold text-red-600 md:text-right">
+                    {formatEuro(item.valorEstimado)} €
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
         <div className="mt-4 grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
@@ -460,6 +733,13 @@ export function InformesTab({
                 className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-left text-[12px] font-semibold text-slate-700 shadow-sm"
               >
                 Compras del periodo CSV
+              </button>
+              <button
+                type="button"
+                onClick={onExportarInventario}
+                className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-left text-[12px] font-semibold text-slate-700 shadow-sm"
+              >
+                Inventario financiero CSV
               </button>
             </div>
           </div>

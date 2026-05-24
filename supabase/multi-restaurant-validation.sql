@@ -204,6 +204,18 @@ union all
 
 select 'productos_precios_historial', count(*)::bigint
 from public.productos_precios_historial
+where restaurant_id is null
+
+union all
+
+select 'inventario_cierres', count(*)::bigint
+from public.inventario_cierres
+where restaurant_id is null
+
+union all
+
+select 'inventario_cierre_lineas', count(*)::bigint
+from public.inventario_cierre_lineas
 where restaurant_id is null;
 
 -- 9. Comprobación financiera de históricos cruzados entre restaurantes
@@ -217,3 +229,18 @@ from public.productos_precios_historial h
 join public.productos p on p.id = h.producto_id
 where h.restaurant_id <> p.restaurant_id
 order by h.fecha_compra desc;
+
+-- 10. Comprobación de líneas de cierre cruzadas entre restaurantes
+select
+  l.id,
+  l.restaurant_id as linea_restaurant_id,
+  c.restaurant_id as cierre_restaurant_id,
+  p.restaurant_id as producto_restaurant_id,
+  l.cierre_id,
+  l.producto_id
+from public.inventario_cierre_lineas l
+join public.inventario_cierres c on c.id = l.cierre_id
+left join public.productos p on p.id = l.producto_id
+where l.restaurant_id <> c.restaurant_id
+  or (p.id is not null and l.restaurant_id <> p.restaurant_id)
+order by l.created_at desc;

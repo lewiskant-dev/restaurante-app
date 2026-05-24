@@ -30,6 +30,7 @@ import type {
 } from '@/types'
 import type {
   MainTab,
+  InventarioCierre,
   ManagedRestaurant,
   MapeoProducto,
   PermissionKey,
@@ -56,6 +57,7 @@ import {
   todayLocalInputDate,
 } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
+import { buildInventoryFinancialSummary } from '@/lib/financialAnalytics'
 import {
   getRestaurantScopeDetail,
   getRestaurantScopeFromAppMetadata,
@@ -85,6 +87,9 @@ export default function HomePage() {
 
   const [mapeosProductos, setMapeosProductos] = useState<MapeoProducto[]>([])
   const [auditoria, setAuditoria] = useState<Auditoria[]>([])
+  const [inventarioCierres, setInventarioCierres] = useState<InventarioCierre[]>([])
+  const [loadingInventarioCierres, setLoadingInventarioCierres] = useState(false)
+  const [creatingInventarioCierre, setCreatingInventarioCierre] = useState(false)
 
   const [operarioActual, setOperarioActual] = useState('')
   const [error, setError] = useState('')
@@ -237,6 +242,9 @@ export default function HomePage() {
     resetAlbaranState()
     resetRecetaTpvState()
     resetManagedUsersState()
+    setInventarioCierres([])
+    setLoadingInventarioCierres(false)
+    setCreatingInventarioCierre(false)
   })
 
   const openRecoveryModeEvent = useEffectEvent(() => {
@@ -439,9 +447,10 @@ export default function HomePage() {
     }
 
     if (hasPermission(role, 'tpv_manage')) {
-      tasks.push(loadMapeosProductos())
+      tasks.push(loadMapeosProductos(), loadInventarioCierres())
     } else {
       setMapeosProductos([])
+      setInventarioCierres([])
     }
 
     await Promise.all(tasks)
@@ -535,6 +544,7 @@ export default function HomePage() {
 
   const {
     productos,
+    movimientos,
     loadingProductos,
     loadingMovimientos,
     busqueda,
@@ -795,6 +805,68 @@ export default function HomePage() {
     }
 
     setMapeosProductos((data ?? []) as MapeoProducto[])
+  }
+
+  async function loadInventarioCierres() {
+    if (!activeRestaurantId) {
+      setInventarioCierres([])
+      return
+    }
+
+    setLoadingInventarioCierres(true)
+
+    const { data, error } = await supabase
+      .from('inventario_cierres')
+      .select(
+        'id,fecha,valor_total,coste_reposicion_minima,valor_sobre_minimo,productos_activos,productos_con_coste,productos_sin_coste,notas,created_at'
+      )
+      .eq('restaurant_id', activeRestaurantId)
+      .order('fecha', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(6)
+
+    if (error) {
+      console.warn('No se pudieron cargar inventario_cierres:', error.message)
+      setInventarioCierres([])
+      setLoadingInventarioCierres(false)
+      return
+    }
+
+    setInventarioCierres((data ?? []) as InventarioCierre[])
+    setLoadingInventarioCierres(false)
+  }
+
+  async function crearCierreInventario() {
+    if (!requirePermission('tpv_manage', 'No tienes permisos para crear cierres de inventario')) {
+      return
+    }
+
+    if (!activeRestaurantId) {
+      setError('Selecciona un restaurante activo para crear un cierre de inventario')
+      return
+    }
+
+    setCreatingInventarioCierre(true)
+    setError('')
+
+    const { error } = await supabase.rpc('crear_cierre_inventario', {
+      target_fecha: todayLocalInputDate(),
+      target_notas: 'Cierre generado desde Informes',
+    })
+
+    if (error) {
+      setError(
+        error.message.includes('crear_cierre_inventario')
+          ? 'No está aplicada la fase de cierres de inventario en Supabase. Ejecuta restaurant-finance-setup.sql.'
+          : error.message
+      )
+      setCreatingInventarioCierre(false)
+      return
+    }
+
+    setToast('Cierre de inventario guardado')
+    await loadInventarioCierres()
+    setCreatingInventarioCierre(false)
   }
 
   async function registrarAuditoria(params: {
@@ -1109,6 +1181,7 @@ export default function HomePage() {
         cantidad: m.cantidad,
         unidad: m.productos?.unidad || '',
         motivo: m.motivo,
+        categoria_consumo: m.categoria_consumo || '',
         stock_antes: m.stock_antes,
         stock_despues: m.stock_despues,
         origen_tipo: m.origen_tipo,
@@ -1151,10 +1224,11 @@ export default function HomePage() {
     const filasProductos = getFilasDesviacionesAnalitica()
     const filasRentabilidad = getFilasRentabilidadAnalitica()
     const filasCompras = getFilasComprasAnalitica()
+    const filasInventario = getFilasInventarioFinanciero()
 
     descargarCSV(
       `tpv_analitica_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
-      [...filasResumen, ...filasProductos, ...filasRentabilidad, ...filasCompras]
+      [...filasResumen, ...filasProductos, ...filasRentabilidad, ...filasCompras, ...filasInventario]
     )
   }
 
@@ -1249,6 +1323,72 @@ export default function HomePage() {
     }))
   }
 
+  function getFilasInventarioFinanciero() {
+    const summary = buildInventoryFinancialSummary(productos)
+    const filasResumen = [
+      {
+        bloque: 'inventario_financiero_resumen',
+        periodo: todayLocalInputDate(),
+        concepto: 'productos_activos',
+        valor: summary.activeProducts,
+      },
+      {
+        bloque: 'inventario_financiero_resumen',
+        periodo: todayLocalInputDate(),
+        concepto: 'productos_con_coste',
+        valor: summary.productsWithCost,
+      },
+      {
+        bloque: 'inventario_financiero_resumen',
+        periodo: todayLocalInputDate(),
+        concepto: 'productos_sin_coste',
+        valor: summary.productsMissingCost,
+      },
+      {
+        bloque: 'inventario_financiero_resumen',
+        periodo: todayLocalInputDate(),
+        concepto: 'valor_total_stock',
+        valor: summary.totalValue,
+      },
+      {
+        bloque: 'inventario_financiero_resumen',
+        periodo: todayLocalInputDate(),
+        concepto: 'coste_reposicion_minima',
+        valor: summary.reorderGapValue,
+      },
+      {
+        bloque: 'inventario_financiero_resumen',
+        periodo: todayLocalInputDate(),
+        concepto: 'valor_sobre_minimo',
+        valor: summary.valueAboveMinimum,
+      },
+    ]
+
+    const filasProductos = productos
+      .filter((producto) => !producto.archivado)
+      .map((producto) => {
+        const costeUnitario = Number(producto.ultimo_precio_compra ?? producto.coste_unitario ?? 0)
+        const stockActual = Math.max(0, Number(producto.stock_actual || 0))
+        const stockMinimo = Math.max(0, Number(producto.stock_minimo || 0))
+
+        return {
+          bloque: 'inventario_financiero_producto',
+          producto: producto.nombre,
+          categoria: producto.categoria,
+          unidad: producto.unidad,
+          stock_actual: stockActual,
+          stock_minimo: stockMinimo,
+          coste_unitario: costeUnitario,
+          valor_stock: stockActual * Math.max(0, costeUnitario),
+          coste_reposicion_minima: Math.max(0, stockMinimo - stockActual) * Math.max(0, costeUnitario),
+          valor_sobre_minimo: Math.max(0, stockActual - stockMinimo) * Math.max(0, costeUnitario),
+          referencia: producto.referencia,
+        }
+      })
+
+    return [...filasResumen, ...filasProductos]
+  }
+
   function exportarResumenAnaliticaCSV() {
     descargarCSV(
       `informe_resumen_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
@@ -1274,6 +1414,13 @@ export default function HomePage() {
     descargarCSV(
       `informe_compras_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
       getFilasComprasAnalitica()
+    )
+  }
+
+  function exportarInventarioFinancieroCSV() {
+    descargarCSV(
+      `informe_inventario_financiero_${todayLocalInputDate()}.csv`,
+      getFilasInventarioFinanciero()
     )
   }
 
@@ -1810,12 +1957,18 @@ export default function HomePage() {
             tpvAnaliticaRange={tpvAnaliticaRange}
             tpvAnalitica={tpvAnalitica}
             productos={productos}
+            movimientos={movimientos}
+            inventarioCierres={inventarioCierres}
+            loadingInventarioCierres={loadingInventarioCierres}
+            creatingInventarioCierre={creatingInventarioCierre}
             onAnaliticaRangeChange={setTpvAnaliticaRange}
             onExportarGlobal={exportarAnaliticaTpvCSV}
             onExportarResumen={exportarResumenAnaliticaCSV}
             onExportarDesviaciones={exportarDesviacionesAnaliticaCSV}
             onExportarRentabilidad={exportarRentabilidadAnaliticaCSV}
             onExportarCompras={exportarComprasAnaliticaCSV}
+            onExportarInventario={exportarInventarioFinancieroCSV}
+            onCrearCierreInventario={() => void crearCierreInventario()}
           />
         )}
 

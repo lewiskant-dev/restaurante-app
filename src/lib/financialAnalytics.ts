@@ -1,4 +1,8 @@
-import type { TpvAnaliticaComparativaMetrica } from '@/features/home/types'
+import type {
+  InventarioCierre,
+  MovimientoConProducto,
+  TpvAnaliticaComparativaMetrica,
+} from '@/features/home/types'
 
 export function buildComparativaMetrica(
   actual: number,
@@ -44,6 +48,10 @@ export function sortByMarginRisk<T extends MarginRiskCandidate>(items: T[]) {
 }
 
 type InventoryValueCandidate = {
+  id?: string
+  nombre?: string
+  categoria?: string
+  unidad?: string
   stock_actual: number
   stock_minimo: number
   coste_unitario?: number | null
@@ -93,6 +101,163 @@ export function buildInventoryFinancialSummary(
       valueAboveMinimum: 0,
     }
   )
+}
+
+export type ReorderRecommendation = {
+  productoId: string
+  producto: string
+  categoria: string
+  unidad: string
+  stockActual: number
+  stockMinimo: number
+  cantidadRecomendada: number
+  costeUnitario: number
+  costeEstimado: number
+  costeDisponible: boolean
+}
+
+export function buildReorderRecommendations(
+  products: InventoryValueCandidate[]
+): ReorderRecommendation[] {
+  return products
+    .filter((product) => !product.archivado)
+    .map((product) => {
+      const stockActual = Math.max(0, Number(product.stock_actual || 0))
+      const stockMinimo = Math.max(0, Number(product.stock_minimo || 0))
+      const cantidadRecomendada = Math.max(0, stockMinimo - stockActual)
+      const costeUnitario = Math.max(
+        0,
+        Number(product.ultimo_precio_compra ?? product.coste_unitario ?? 0)
+      )
+
+      return {
+        productoId: product.id || product.nombre || 'producto',
+        producto: product.nombre || 'Producto',
+        categoria: product.categoria || 'Otros',
+        unidad: product.unidad || 'uds',
+        stockActual,
+        stockMinimo,
+        cantidadRecomendada,
+        costeUnitario,
+        costeEstimado: cantidadRecomendada * costeUnitario,
+        costeDisponible: costeUnitario > 0,
+      }
+    })
+    .filter((item) => item.cantidadRecomendada > 0)
+    .sort((a, b) => {
+      if (a.costeDisponible !== b.costeDisponible) return a.costeDisponible ? -1 : 1
+      return b.costeEstimado - a.costeEstimado || b.cantidadRecomendada - a.cantidadRecomendada
+    })
+}
+
+export type InventoryClosingComparison = {
+  current: InventarioCierre
+  previous: InventarioCierre | null
+  valorTotal: TpvAnaliticaComparativaMetrica | null
+  reposicionMinima: TpvAnaliticaComparativaMetrica | null
+  valorSobreMinimo: TpvAnaliticaComparativaMetrica | null
+  productosSinCoste: TpvAnaliticaComparativaMetrica | null
+}
+
+export function buildInventoryClosingComparison(
+  closings: InventarioCierre[]
+): InventoryClosingComparison | null {
+  const [current, previous] = closings
+  if (!current) return null
+
+  if (!previous) {
+    return {
+      current,
+      previous: null,
+      valorTotal: null,
+      reposicionMinima: null,
+      valorSobreMinimo: null,
+      productosSinCoste: null,
+    }
+  }
+
+  return {
+    current,
+    previous,
+    valorTotal: buildComparativaMetrica(Number(current.valor_total || 0), Number(previous.valor_total || 0)),
+    reposicionMinima: buildComparativaMetrica(
+      Number(current.coste_reposicion_minima || 0),
+      Number(previous.coste_reposicion_minima || 0)
+    ),
+    valorSobreMinimo: buildComparativaMetrica(
+      Number(current.valor_sobre_minimo || 0),
+      Number(previous.valor_sobre_minimo || 0)
+    ),
+    productosSinCoste: buildComparativaMetrica(
+      Number(current.productos_sin_coste || 0),
+      Number(previous.productos_sin_coste || 0)
+    ),
+  }
+}
+
+export type WasteFinancialSummary = {
+  movimientos: number
+  cantidad: number
+  valorEstimado: number
+  productos: Array<{
+    producto: string
+    unidad: string
+    cantidad: number
+    valorEstimado: number
+  }>
+}
+
+function isWasteMovement(movimiento: MovimientoConProducto) {
+  if (movimiento.tipo !== 'consumo') return false
+  if (movimiento.categoria_consumo === 'merma') return true
+
+  const motivo = (movimiento.motivo || '').trim().toLowerCase()
+  return motivo === 'merma / caducado' || motivo === 'rotura'
+}
+
+export function buildWasteFinancialSummary(
+  movimientos: MovimientoConProducto[],
+  cutoffIso?: string
+): WasteFinancialSummary {
+  const products = new Map<string, WasteFinancialSummary['productos'][number]>()
+  let movimientosCount = 0
+  let cantidad = 0
+  let valorEstimado = 0
+
+  movimientos
+    .filter((movimiento) => !cutoffIso || movimiento.created_at >= cutoffIso)
+    .filter(isWasteMovement)
+    .forEach((movimiento) => {
+      const unitCost = Math.max(
+        0,
+        Number(movimiento.productos?.ultimo_precio_compra ?? movimiento.productos?.coste_unitario ?? 0)
+      )
+      const movementQuantity = Math.max(0, Number(movimiento.cantidad || 0))
+      const movementValue = movementQuantity * unitCost
+      const productKey = movimiento.producto_id || movimiento.productos?.nombre || movimiento.id
+      const currentProduct = products.get(productKey) ?? {
+        producto: movimiento.productos?.nombre || 'Producto',
+        unidad: movimiento.productos?.unidad || 'uds',
+        cantidad: 0,
+        valorEstimado: 0,
+      }
+
+      movimientosCount += 1
+      cantidad += movementQuantity
+      valorEstimado += movementValue
+      currentProduct.cantidad += movementQuantity
+      currentProduct.valorEstimado += movementValue
+      products.set(productKey, currentProduct)
+    })
+
+  return {
+    movimientos: movimientosCount,
+    cantidad,
+    valorEstimado,
+    productos: Array.from(products.values())
+      .sort((a, b) => b.valorEstimado - a.valorEstimado || b.cantidad - a.cantidad)
+      .slice(0, 5),
+  }
 }
 
 export type BreakEvenSummary = {

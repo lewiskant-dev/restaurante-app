@@ -1281,17 +1281,27 @@ export function useRecetaTpvManagement({
 
           if (updateProductoError) throw new Error(updateProductoError.message)
 
-          const { error: movError } = await supabase.from('movimientos_stock').insert({
+          const movimientoTPV = {
             producto_id: producto.id,
             restaurant_id: restaurantId,
             tipo: 'consumo',
             cantidad: consumo,
             motivo: `TPV: ${venta.producto_externo}`,
+            categoria_consumo: 'venta',
             origen_tipo: 'tpv',
             origen_id: importacion.id,
             stock_antes: stockAntes,
             stock_despues: stockDespues,
-          })
+          }
+          let { error: movError } = await supabase.from('movimientos_stock').insert(movimientoTPV)
+
+          if (movError && /categoria_consumo|schema cache/i.test(movError.message)) {
+            const movimientoCompatible = Object.fromEntries(
+              Object.entries(movimientoTPV).filter(([key]) => key !== 'categoria_consumo')
+            )
+            const retry = await supabase.from('movimientos_stock').insert(movimientoCompatible)
+            movError = retry.error
+          }
 
           if (movError) throw new Error(movError.message)
 

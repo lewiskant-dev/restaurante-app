@@ -34,7 +34,9 @@ where n.nspname = 'public'
     'mapeos_productos',
     'tpv_importaciones',
     'tpv_ventas_crudas',
-    'productos_precios_historial'
+    'productos_precios_historial',
+    'inventario_cierres',
+    'inventario_cierre_lineas'
   )
 order by c.relname asc;
 
@@ -59,7 +61,9 @@ where n.nspname = 'public'
     'mapeos_productos',
     'tpv_importaciones',
     'tpv_ventas_crudas',
-    'productos_precios_historial'
+    'productos_precios_historial',
+    'inventario_cierres',
+    'inventario_cierre_lineas'
   )
   and c.relrowsecurity = false
 order by c.relname asc;
@@ -88,7 +92,9 @@ where schemaname = 'public'
     'mapeos_productos',
     'tpv_importaciones',
     'tpv_ventas_crudas',
-    'productos_precios_historial'
+    'productos_precios_historial',
+    'inventario_cierres',
+    'inventario_cierre_lineas'
   )
 order by tablename asc, policyname asc;
 
@@ -108,7 +114,9 @@ with critical_tables as (
     'mapeos_productos',
     'tpv_importaciones',
     'tpv_ventas_crudas',
-    'productos_precios_historial'
+    'productos_precios_historial',
+    'inventario_cierres',
+    'inventario_cierre_lineas'
   ]) as tablename
 )
 select

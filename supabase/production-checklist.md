@@ -48,6 +48,7 @@ La validación debe dejar claro:
 - no hay tablas críticas sin policies
 - no hay registros operativos sin `restaurant_id`
 - no hay históricos financieros cruzados entre restaurantes
+- no hay cierres de inventario cruzados entre restaurantes
 - existen policies de storage para `albaranes`
 
 ## 4. Validación del despliegue web
@@ -83,6 +84,13 @@ Entrar como `Master` y comprobar:
 8. Confirmar que el producto de `Restaurante A` no aparece.
 9. Crear proveedor, albarán y receta de prueba.
 10. Confirmar que informes y notificaciones cargan sin errores.
+11. Generar un cierre de inventario desde SQL o desde la futura acción de UI:
+
+```sql
+select public.crear_cierre_inventario(current_date, 'Prueba de cierre');
+```
+
+12. Confirmar que `inventario_cierres` e `inventario_cierre_lineas` solo contienen datos del restaurante activo.
 
 ## 6. Criterios para darlo por listo
 
@@ -93,6 +101,7 @@ Entrar como `Master` y comprobar:
 - `Master` puede cambiar entre restaurantes asignados.
 - El alta de producto, proveedor, albarán y receta funciona dentro del restaurante activo.
 - Las alertas de stock bajo coinciden con el total del panel de Stock.
+- El cierre de inventario genera una foto financiera coherente del restaurante activo.
 
 ## 7. Si algo falla
 

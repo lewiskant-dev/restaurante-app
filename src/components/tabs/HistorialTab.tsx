@@ -71,6 +71,11 @@ export default function HistorialTab({
                   <div className="mt-1 text-[11px] text-slate-500 sm:text-[12px]">
                     {mov.motivo || 'Sin motivo'}
                   </div>
+                  {mov.categoria_consumo === 'merma' && (
+                    <div className="mt-1 inline-flex rounded-full border border-red-100 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                      Merma
+                    </div>
+                  )}
                   <div className="mt-1 text-[10px] text-slate-400 sm:text-[11px]">
                     {formatFechaHora(mov.created_at)}
                   </div>

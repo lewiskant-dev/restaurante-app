@@ -23,6 +23,8 @@
 -- - mapeos_productos
 -- - tpv_importaciones
 -- - tpv_ventas_crudas
+-- - inventario_cierres
+-- - inventario_cierre_lineas
 --
 -- Nota:
 -- Si también quieres vaciar archivos subidos del bucket "albaranes",
@@ -33,10 +35,12 @@ begin;
 truncate table
   public.albaran_lineas,
   public.movimientos_stock,
+  public.inventario_cierre_lineas,
   public.recetas_lineas,
   public.tpv_ventas_crudas,
   public.albaranes,
   public.tpv_importaciones,
+  public.inventario_cierres,
   public.recetas,
   public.mapeos_productos,
   public.productos,
