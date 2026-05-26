@@ -1,6 +1,12 @@
 'use client'
 
 import { ActionMenu } from '@/components/ui/ActionMenu'
+import {
+  fieldShell,
+  primaryGradientButton,
+  softPanel,
+  surfaceCard,
+} from '@/components/ui/primitives'
 import type { Proveedor } from '@/types'
 
 type ProveedoresTabProps = {
@@ -42,21 +48,21 @@ export function ProveedoresTab({
         <button
           type="button"
           onClick={onOpenCrearProveedor}
-          className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-[15px] bg-[linear-gradient(135deg,#1482ff_0%,#4d54ff_48%,#8c2eff_100%)] px-4 py-2.5 text-[12px] font-semibold text-white shadow-[0_14px_28px_rgba(92,88,255,0.22)] transition hover:scale-[1.01] sm:min-h-[unset] sm:gap-2.5 sm:rounded-[16px] sm:px-5 sm:py-3 sm:text-[13px] sm:shadow-[0_18px_36px_rgba(92,88,255,0.28)]"
+          className={`inline-flex min-h-[42px] items-center justify-center gap-2 rounded-[15px] px-4 py-2.5 text-[12px] sm:min-h-[unset] sm:gap-2.5 sm:rounded-[16px] sm:px-5 sm:py-3 sm:text-[13px] ${primaryGradientButton}`}
         >
           <span className="text-[13px] leading-none sm:text-[15px]">＋</span>
           <span>Nuevo proveedor</span>
         </button>
       </div>
 
-      <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_12px_28px_rgba(15,23,42,0.06)] sm:rounded-[24px] sm:p-5 sm:shadow-[0_16px_40px_rgba(15,23,42,0.07)]">
+      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
         <div className="grid gap-3 xl:grid-cols-[1.3fr_0.8fr_auto]">
           <input
             type="search"
             value={busquedaProveedor}
             onChange={(e) => onBusquedaChange(e.target.value)}
             placeholder="Buscar proveedor..."
-            className="w-full rounded-[15px] border border-slate-200 bg-white px-3.5 py-2.5 text-[12px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:px-4 sm:text-[13px]"
+            className={`w-full px-3.5 py-2.5 text-[12px] text-slate-900 outline-none placeholder:text-slate-400 sm:px-4 sm:text-[13px] ${fieldShell}`}
           />
 
           <div className="flex flex-wrap gap-2">
@@ -75,20 +81,48 @@ export function ProveedoresTab({
             ))}
           </div>
 
-          <div className="rounded-[15px] bg-slate-100 px-3.5 py-2.5 text-[12px] text-slate-600 sm:rounded-[16px] sm:px-4 sm:text-[13px]">
+          <div className="rounded-[16px] border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[12px] font-semibold text-slate-600 sm:px-4 sm:text-[13px]">
             Visibles: {proveedoresFiltrados.length}
           </div>
         </div>
       </div>
 
-      <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_12px_28px_rgba(15,23,42,0.06)] sm:rounded-[24px] sm:p-5 sm:shadow-[0_16px_40px_rgba(15,23,42,0.07)]">
+      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
         {loadingProveedores && (
-          <div className="py-10 text-center text-sm text-slate-400">Cargando proveedores...</div>
+          <div className="grid gap-2.5">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex animate-pulse items-center justify-between gap-3 rounded-[18px] border border-slate-100 bg-white px-4 py-4"
+              >
+                <div className="space-y-2">
+                  <div className="h-3.5 w-44 rounded-full bg-slate-100" />
+                  <div className="h-3 w-28 rounded-full bg-slate-100" />
+                </div>
+                <div className="h-9 w-20 rounded-[14px] bg-slate-100" />
+              </div>
+            ))}
+          </div>
         )}
 
         {!loadingProveedores && proveedoresFiltrados.length === 0 && (
-          <div className="py-10 text-center text-sm text-slate-400">
-            No hay proveedores para este filtro.
+          <div className="py-12 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[20px] bg-slate-50 text-slate-400">
+              <span className="text-2xl leading-none">＋</span>
+            </div>
+            <div className="mt-4 text-sm font-semibold text-slate-800">
+              No hay proveedores para este filtro
+            </div>
+            <p className="mx-auto mt-1 max-w-sm text-[12px] leading-5 text-slate-500">
+              Crea un proveedor o ajusta búsqueda y estado para ampliar resultados.
+            </p>
+            <button
+              type="button"
+              onClick={onOpenCrearProveedor}
+              className={`mt-5 inline-flex items-center justify-center rounded-[16px] px-4 py-2.5 text-sm ${primaryGradientButton}`}
+            >
+              Nuevo proveedor
+            </button>
           </div>
         )}
 
@@ -96,7 +130,7 @@ export function ProveedoresTab({
           proveedoresFiltrados.map((prov) => (
             <div
               key={prov.id}
-              className="rounded-[18px] border border-slate-100 bg-slate-50/70 px-3 py-3 last:mb-0 sm:rounded-[20px] sm:px-4 sm:py-3.5"
+              className={`mb-2 px-3 py-3 last:mb-0 sm:px-4 sm:py-3.5 ${softPanel}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">

@@ -15,6 +15,7 @@ import {
   buildWasteFinancialSummary,
   getMarginRatio,
 } from '@/lib/financialAnalytics'
+import { fieldShell, ghostButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 import type { Producto } from '@/types'
 
 function formatEuro(value: number) {
@@ -232,7 +233,7 @@ export function InformesTab({
         </p>
       </div>
 
-      <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_10px_22px_rgba(15,23,42,0.045)] sm:rounded-[24px] sm:p-5">
+      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
@@ -246,7 +247,7 @@ export function InformesTab({
             <select
               value={tpvAnaliticaRange}
               onChange={(e) => onAnaliticaRangeChange(e.target.value as '7d' | '30d' | '90d')}
-              className="w-full rounded-[16px] border border-slate-200 bg-white px-3.5 py-2.5 text-[12px] text-slate-900 sm:w-[190px] sm:text-[13px]"
+              className={`w-full px-3.5 py-2.5 text-[12px] text-slate-900 sm:w-[190px] sm:text-[13px] ${fieldShell}`}
             >
               <option value="7d">Últimos 7 días</option>
               <option value="30d">Últimos 30 días</option>
@@ -255,7 +256,7 @@ export function InformesTab({
             <button
               type="button"
               onClick={onExportarGlobal}
-              className="rounded-[16px] border border-slate-200 bg-white px-3.5 py-2.5 text-[12px] font-semibold text-slate-700 shadow-sm sm:text-[13px]"
+              className={`px-3.5 py-2.5 text-[12px] sm:text-[13px] ${ghostButton}`}
             >
               Exportar informe completo
             </button>
@@ -289,7 +290,7 @@ export function InformesTab({
               {healthSummary.reasons.slice(0, 4).map((reason) => (
                 <div
                   key={reason}
-                  className="rounded-[16px] border border-white/80 bg-white/75 px-4 py-3 text-[12px] font-medium text-slate-700 shadow-sm"
+                  className="rounded-[16px] border border-white/80 bg-white/85 px-4 py-3 text-[12px] font-medium text-slate-700 shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
                 >
                   {reason}
                 </div>
@@ -302,7 +303,7 @@ export function InformesTab({
           {comparisonCards.map((card) => (
             <div
               key={card.key}
-              className="rounded-[18px] border border-slate-200 bg-slate-50 p-4"
+              className={`p-4 ${softPanel}`}
             >
               <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
                 {card.label}
@@ -326,7 +327,7 @@ export function InformesTab({
         </div>
 
         <div className="mt-4 grid gap-3 xl:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+          <div className={`p-4 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
               Punto muerto operativo
             </div>
@@ -350,7 +351,7 @@ export function InformesTab({
             </p>
           </div>
 
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+          <div className={`p-4 ${softPanel}`}>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-[16px] bg-white px-4 py-3">
                 <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
@@ -411,7 +412,7 @@ export function InformesTab({
           </div>
 
           <div className="grid gap-3 lg:grid-cols-4">
-            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.03)]">
               <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
                 Valor en stock
               </div>
@@ -419,7 +420,7 @@ export function InformesTab({
                 {formatEuro(inventorySummary.totalValue)} €
               </div>
             </div>
-            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.03)]">
               <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
                 Reposición mínima
               </div>
@@ -427,7 +428,7 @@ export function InformesTab({
                 {formatEuro(inventorySummary.reorderGapValue)} €
               </div>
             </div>
-            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.03)]">
               <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
                 Sobre mínimo
               </div>
@@ -435,7 +436,7 @@ export function InformesTab({
                 {formatEuro(inventorySummary.valueAboveMinimum)} €
               </div>
             </div>
-            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.03)]">
               <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
                 Coste pendiente
               </div>
@@ -450,7 +451,7 @@ export function InformesTab({
 
           <div className="mt-3 space-y-2">
             {topInventoryProducts.length === 0 ? (
-              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-400">
+              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-center text-sm text-slate-400">
                 Añade costes unitarios a productos para ver qué inventario concentra más valor.
               </div>
             ) : (
@@ -671,7 +672,7 @@ export function InformesTab({
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.03)]">
               <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
                 Coste estimado
               </div>
@@ -679,7 +680,7 @@ export function InformesTab({
                 {formatEuro(wasteSummary.valorEstimado)} €
               </div>
             </div>
-            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.03)]">
               <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
                 Movimientos
               </div>
@@ -687,7 +688,7 @@ export function InformesTab({
                 {wasteSummary.movimientos}
               </div>
             </div>
-            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+            <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.03)]">
               <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
                 Cantidad agregada
               </div>
@@ -699,7 +700,7 @@ export function InformesTab({
 
           <div className="mt-3 space-y-2">
             {wasteSummary.productos.length === 0 ? (
-              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-400">
+              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-center text-sm text-slate-400">
                 No hay mermas registradas en este rango.
               </div>
             ) : (
@@ -724,7 +725,7 @@ export function InformesTab({
         </div>
 
         <div className="mt-4 grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+          <div className={`p-4 ${softPanel}`}>
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h4 className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
@@ -739,35 +740,35 @@ export function InformesTab({
               <button
                 type="button"
                 onClick={onExportarResumen}
-                className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-left text-[12px] font-semibold text-slate-700 shadow-sm"
+                className={`px-4 py-3 text-left text-[12px] ${ghostButton}`}
               >
                 Resumen financiero CSV
               </button>
               <button
                 type="button"
                 onClick={onExportarDesviaciones}
-                className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-left text-[12px] font-semibold text-slate-700 shadow-sm"
+                className={`px-4 py-3 text-left text-[12px] ${ghostButton}`}
               >
                 Desviaciones CSV
               </button>
               <button
                 type="button"
                 onClick={onExportarRentabilidad}
-                className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-left text-[12px] font-semibold text-slate-700 shadow-sm"
+                className={`px-4 py-3 text-left text-[12px] ${ghostButton}`}
               >
                 Rentabilidad recetas CSV
               </button>
               <button
                 type="button"
                 onClick={onExportarCompras}
-                className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-left text-[12px] font-semibold text-slate-700 shadow-sm"
+                className={`px-4 py-3 text-left text-[12px] ${ghostButton}`}
               >
                 Compras del periodo CSV
               </button>
               <button
                 type="button"
                 onClick={onExportarInventario}
-                className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-left text-[12px] font-semibold text-slate-700 shadow-sm"
+                className={`px-4 py-3 text-left text-[12px] ${ghostButton}`}
               >
                 Inventario financiero CSV
               </button>
@@ -788,27 +789,27 @@ export function InformesTab({
               <button
                 type="button"
                 onClick={onExportarCierres}
-                className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-left text-[12px] font-semibold text-slate-700 shadow-sm"
+                className={`px-4 py-3 text-left text-[12px] ${ghostButton}`}
               >
                 Cierres de inventario CSV
               </button>
               <button
                 type="button"
                 onClick={onExportarAlertas}
-                className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-left text-[12px] font-semibold text-slate-700 shadow-sm"
+                className={`px-4 py-3 text-left text-[12px] ${ghostButton}`}
               >
                 Alertas del periodo CSV
               </button>
             </div>
           </div>
 
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+          <div className={`p-4 ${softPanel}`}>
             <h4 className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
               Alertas del periodo
             </h4>
             <div className="mt-3 space-y-2">
               {tpvAnalitica.alertas.length === 0 ? (
-                <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-400">
+                <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-center text-sm text-slate-400">
                   No hay alertas relevantes en este rango.
                 </div>
               ) : (
@@ -844,7 +845,7 @@ export function InformesTab({
 
           <div className="space-y-2">
             {tpvAnalitica.compras_periodo.productos.length === 0 ? (
-              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-400">
+              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-center text-sm text-slate-400">
                 Aún no hay histórico suficiente de compras para evaluar costes.
               </div>
             ) : (
@@ -902,7 +903,7 @@ export function InformesTab({
 
           <div className="space-y-2">
             {tpvAnalitica.recetas_riesgo.length === 0 ? (
-              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-400">
+              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-center text-sm text-slate-400">
                 Aún no hay ventas suficientes para detectar recetas de riesgo.
               </div>
             ) : (
@@ -954,7 +955,7 @@ export function InformesTab({
 
           <div className="space-y-2">
             {tpvAnalitica.categorias_rentables.length === 0 ? (
-              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-400">
+              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-center text-sm text-slate-400">
                 Aún no hay ventas suficientes para agrupar rentabilidad por categoría.
               </div>
             ) : (

@@ -2,6 +2,7 @@
 
 import type { Albaran } from '@/types'
 import { formatEuro, formatFecha } from '@/features/home/utils'
+import { fieldShell, ghostButton, surfaceCard } from '@/components/ui/primitives'
 
 type AlbaranesTabProps = {
   busquedaAlbaran: string
@@ -43,27 +44,27 @@ export function AlbaranesTab({
         </p>
       </div>
 
-      <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_10px_22px_rgba(15,23,42,0.045)] sm:rounded-[24px] sm:p-5">
+      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
         <div className="grid gap-3 xl:grid-cols-[1.2fr_0.72fr_0.72fr_auto_auto]">
           <input
             type="search"
             value={busquedaAlbaran}
             onChange={(e) => onBusquedaChange(e.target.value)}
             placeholder="Buscar albarán o proveedor..."
-            className="w-full rounded-[16px] border border-slate-200 bg-white px-3.5 py-2.5 text-[12px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:px-4 sm:py-2.5 sm:text-[13px]"
+            className={`w-full px-3.5 py-2.5 text-[12px] text-slate-900 outline-none placeholder:text-slate-400 sm:px-4 sm:py-2.5 sm:text-[13px] ${fieldShell}`}
           />
 
           <input
             type="date"
             value={albaranDesde}
             onChange={(e) => onDesdeChange(e.target.value)}
-            className="rounded-[16px] border border-slate-200 px-3 py-2.5 text-[12px] sm:rounded-[16px] sm:px-3 sm:py-2 sm:text-[13px]"
+            className={`px-3 py-2.5 text-[12px] sm:px-3 sm:py-2 sm:text-[13px] ${fieldShell}`}
           />
           <input
             type="date"
             value={albaranHasta}
             onChange={(e) => onHastaChange(e.target.value)}
-            className="rounded-[16px] border border-slate-200 px-3 py-2.5 text-[12px] sm:rounded-[16px] sm:px-3 sm:py-2 sm:text-[13px]"
+            className={`px-3 py-2.5 text-[12px] sm:px-3 sm:py-2 sm:text-[13px] ${fieldShell}`}
           />
 
           <div className="flex flex-wrap gap-2">
@@ -84,21 +85,43 @@ export function AlbaranesTab({
 
           <button
             onClick={onExportar}
-            className="rounded-[16px] bg-emerald-50 px-4 py-2.5 text-[12px] font-semibold text-emerald-700 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+            className={`px-4 py-2.5 text-[12px] sm:py-2.5 sm:text-[13px] ${ghostButton}`}
           >
             Exportar CSV
           </button>
         </div>
       </div>
 
-      <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_10px_22px_rgba(15,23,42,0.045)] sm:rounded-[24px] sm:p-5">
+      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
         {loadingAlbaranes && (
-          <div className="py-10 text-center text-sm text-slate-400">Cargando albaranes...</div>
+          <div className="grid gap-2.5">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex animate-pulse items-center gap-3 rounded-[18px] border border-slate-100 bg-white px-4 py-3"
+              >
+                <div className="h-11 w-11 rounded-[14px] bg-slate-100" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="h-3.5 w-36 rounded-full bg-slate-100" />
+                  <div className="h-3 w-52 max-w-[50vw] rounded-full bg-slate-100" />
+                </div>
+                <div className="h-7 w-20 rounded-full bg-slate-100" />
+              </div>
+            ))}
+          </div>
         )}
 
         {!loadingAlbaranes && albaranesFiltrados.length === 0 && (
-          <div className="py-10 text-center text-sm text-slate-400">
-            No hay albaranes para este filtro.
+          <div className="py-12 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[20px] bg-slate-50 text-xl text-slate-400">
+              🧾
+            </div>
+            <div className="mt-4 text-sm font-semibold text-slate-800">
+              No hay albaranes para este filtro
+            </div>
+            <p className="mx-auto mt-1 max-w-sm text-[12px] leading-5 text-slate-500">
+              Ajusta búsqueda, fechas o estado para revisar otros documentos.
+            </p>
           </div>
         )}
 

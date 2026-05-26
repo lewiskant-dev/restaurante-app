@@ -12,6 +12,13 @@ import {
   getRoleLabel,
   validatePasswordStrength,
 } from '@/features/home/utils'
+import {
+  fieldShell,
+  ghostButton,
+  primaryGradientButton,
+  softPanel,
+  surfaceCard,
+} from '@/components/ui/primitives'
 
 type UserManagementPanelProps = {
   currentUserId: string
@@ -177,14 +184,14 @@ export function UserManagementPanel({
         <button
           type="button"
           onClick={onReload}
-          className="rounded-[15px] bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 sm:rounded-[15px] sm:py-2 sm:text-[13px]"
+          className={`px-4 py-2.5 text-[12px] sm:py-2 sm:text-[13px] ${ghostButton}`}
         >
           Actualizar
         </button>
       </div>
 
       {currentUserRole === 'master' ? (
-        <div className="rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:rounded-[24px] sm:p-5">
+        <div className={`p-4 sm:p-5 ${surfaceCard}`}>
           <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h3 className="text-[17px] font-semibold text-slate-900 sm:text-sm">Restaurantes</h3>
@@ -197,7 +204,7 @@ export function UserManagementPanel({
               <button
                 type="button"
                 onClick={onSyncRestaurantMemberships}
-                className="rounded-[15px] bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm"
+                className="rounded-[16px] bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm transition hover:bg-slate-800"
               >
                 {syncingManagedRestaurantMemberships
                   ? 'Sincronizando usuarios...'
@@ -206,7 +213,7 @@ export function UserManagementPanel({
               <button
                 type="button"
                 onClick={onReloadRestaurants}
-                className="rounded-[15px] bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200"
+                className={`px-4 py-2.5 text-[12px] ${ghostButton}`}
               >
                 Recargar restaurantes
               </button>
@@ -219,19 +226,19 @@ export function UserManagementPanel({
               value={newRestaurantName}
               onChange={(e) => onNewRestaurantNameChange(e.target.value)}
               placeholder="Nombre del restaurante"
-              className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+              className={`px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:py-2.5 sm:text-[13px] ${fieldShell}`}
             />
             <input
               type="text"
               value={newRestaurantSlug}
               onChange={(e) => onNewRestaurantSlugChange(e.target.value)}
               placeholder="slug-restaurante"
-              className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+              className={`px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:py-2.5 sm:text-[13px] ${fieldShell}`}
             />
             <button
               type="button"
               onClick={onCreateRestaurant}
-              className="rounded-[20px] bg-indigo-600 px-5 py-3 text-[15px] font-semibold text-white shadow-[0_14px_30px_rgba(79,70,229,0.25)] sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+              className={`rounded-[16px] px-5 py-3 text-[15px] sm:py-2.5 sm:text-[13px] ${primaryGradientButton}`}
             >
               {creatingManagedRestaurant ? 'Creando...' : 'Crear restaurante'}
             </button>
@@ -250,7 +257,7 @@ export function UserManagementPanel({
               managedRestaurants.map((restaurant) => (
                 <div
                   key={restaurant.id}
-                  className="grid gap-3 rounded-[20px] border border-slate-200 bg-slate-50/70 p-3 xl:grid-cols-[1fr_0.8fr_auto]"
+                  className={`grid gap-3 p-3 xl:grid-cols-[1fr_0.8fr_auto] ${softPanel}`}
                 >
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
@@ -426,7 +433,7 @@ export function UserManagementPanel({
         </button>
       </div>
 
-      <div className="rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:rounded-[24px] sm:p-5">
+      <div className={`p-4 sm:p-5 ${surfaceCard}`}>
         <div className="mb-4">
           <h3 className="text-[17px] font-semibold text-slate-900 sm:text-sm">Alta de usuario</h3>
           <p className="mt-1 text-[14px] text-slate-500 sm:text-sm">
@@ -440,8 +447,8 @@ export function UserManagementPanel({
             value={newManagedUserName}
             onChange={(e) => onNewNameChange(e.target.value)}
             placeholder="Nombre visible"
-            className={`rounded-[20px] border bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px] ${
-              newManagedUserNameError ? 'border-red-200' : 'border-slate-200'
+            className={`px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:py-2.5 sm:text-[13px] ${fieldShell} ${
+              newManagedUserNameError ? '!border-red-200 !ring-red-100' : ''
             }`}
           />
           <input
@@ -449,8 +456,8 @@ export function UserManagementPanel({
             value={newManagedUserEmail}
             onChange={(e) => onNewEmailChange(e.target.value)}
             placeholder="usuario@restaurante.com"
-            className={`rounded-[20px] border bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px] ${
-              newManagedUserEmailError ? 'border-red-200' : 'border-slate-200'
+            className={`px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:py-2.5 sm:text-[13px] ${fieldShell} ${
+              newManagedUserEmailError ? '!border-red-200 !ring-red-100' : ''
             }`}
           />
           <input
@@ -458,14 +465,14 @@ export function UserManagementPanel({
             value={newManagedUserPassword}
             onChange={(e) => onNewPasswordChange(e.target.value)}
             placeholder="Contraseña inicial"
-            className={`rounded-[20px] border bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px] ${
-              newManagedUserPasswordError ? 'border-red-200' : 'border-slate-200'
+            className={`px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:py-2.5 sm:text-[13px] ${fieldShell} ${
+              newManagedUserPasswordError ? '!border-red-200 !ring-red-100' : ''
             }`}
           />
           <select
             value={newManagedUserRole}
             onChange={(e) => onNewRoleChange(e.target.value as UserRole)}
-            className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+            className={`px-4 py-3 text-[15px] text-slate-900 outline-none sm:py-2.5 sm:text-[13px] ${fieldShell}`}
           >
             <option value="empleado">Empleado</option>
             <option value="encargado">Encargado</option>
@@ -476,7 +483,7 @@ export function UserManagementPanel({
             type="button"
             onClick={onCreate}
             disabled={!canSubmitManagedUser}
-            className="rounded-[20px] bg-blue-600 px-5 py-3 text-[15px] font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 disabled:opacity-60 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+            className={`rounded-[16px] px-5 py-3 text-[15px] disabled:cursor-not-allowed disabled:opacity-60 sm:py-2.5 sm:text-[13px] ${primaryGradientButton}`}
           >
             {creatingManagedUser ? 'Creando...' : 'Crear usuario'}
           </button>

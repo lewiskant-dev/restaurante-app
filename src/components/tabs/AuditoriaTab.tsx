@@ -10,6 +10,7 @@ import {
   getAuditEntityLabel,
   getAuditEntries,
 } from '@/features/home/utils'
+import { fieldShell, ghostButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 
 type AuditoriaTabProps = {
   auditoria: Auditoria[]
@@ -89,7 +90,7 @@ export function AuditoriaTab({
         <button
           type="button"
           onClick={onResetFilters}
-          className="rounded-[18px] border border-white/80 bg-white p-3.5 text-left shadow-[0_8px_18px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 sm:rounded-[20px]"
+          className={`p-3.5 text-left transition hover:bg-slate-50 ${surfaceCard}`}
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Registros visibles
@@ -101,7 +102,7 @@ export function AuditoriaTab({
         <button
           type="button"
           onClick={() => onEntidadFiltroChange('sesion')}
-          className="rounded-[18px] border border-white/80 bg-white p-3.5 text-left shadow-[0_8px_18px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 sm:rounded-[20px]"
+          className={`p-3.5 text-left transition hover:bg-slate-50 ${surfaceCard}`}
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Sesión
@@ -113,7 +114,7 @@ export function AuditoriaTab({
         <button
           type="button"
           onClick={() => onEntidadFiltroChange('perfil')}
-          className="rounded-[18px] border border-white/80 bg-white p-3.5 text-left shadow-[0_8px_18px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 sm:rounded-[20px]"
+          className={`p-3.5 text-left transition hover:bg-slate-50 ${surfaceCard}`}
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Perfil
@@ -125,7 +126,7 @@ export function AuditoriaTab({
         <button
           type="button"
           onClick={() => onEntidadFiltroChange('usuario')}
-          className="rounded-[18px] border border-white/80 bg-white p-3.5 text-left shadow-[0_8px_18px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 sm:rounded-[20px]"
+          className={`p-3.5 text-left transition hover:bg-slate-50 ${surfaceCard}`}
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
             Usuarios
@@ -135,14 +136,14 @@ export function AuditoriaTab({
         </button>
       </div>
 
-      <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_10px_22px_rgba(15,23,42,0.045)] sm:rounded-[24px] sm:p-5">
+      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
         <div className="mt-1">
           <input
             type="search"
             value={busquedaAuditoria}
             onChange={(e) => onBusquedaChange(e.target.value)}
             placeholder="Buscar por entidad, acción, operario..."
-            className="w-full rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+            className={`w-full px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:py-2.5 sm:text-[13px] ${fieldShell}`}
           />
         </div>
 
@@ -151,13 +152,13 @@ export function AuditoriaTab({
             type="date"
             value={auditoriaDesde}
             onChange={(e) => onDesdeChange(e.target.value)}
-            className="rounded-[20px] border border-slate-200 px-4 py-3 text-[15px] sm:rounded-[16px] sm:px-3 sm:py-2 sm:text-[13px]"
+            className={`px-4 py-3 text-[15px] sm:px-3 sm:py-2 sm:text-[13px] ${fieldShell}`}
           />
           <input
             type="date"
             value={auditoriaHasta}
             onChange={(e) => onHastaChange(e.target.value)}
-            className="rounded-[20px] border border-slate-200 px-4 py-3 text-[15px] sm:rounded-[16px] sm:px-3 sm:py-2 sm:text-[13px]"
+            className={`px-4 py-3 text-[15px] sm:px-3 sm:py-2 sm:text-[13px] ${fieldShell}`}
           />
         </div>
 
@@ -223,28 +224,50 @@ export function AuditoriaTab({
             <button
               type="button"
               onClick={onResetFilters}
-              className="rounded-[16px] bg-slate-100 px-3 py-2.5 text-[13px] font-semibold text-slate-700 transition hover:bg-slate-200 sm:rounded-[14px] sm:py-2 sm:text-[12px]"
+              className={`px-3 py-2.5 text-[13px] sm:py-2 sm:text-[12px] ${ghostButton}`}
             >
               Limpiar filtros
             </button>
 
             <button
               onClick={onExportar}
-              className="rounded-[16px] bg-emerald-50 px-3 py-2.5 text-[13px] font-semibold text-emerald-700 sm:rounded-[14px] sm:py-2 sm:text-[12px]"
+              className={`px-3 py-2.5 text-[13px] sm:py-2 sm:text-[12px] ${ghostButton}`}
             >
               Exportar CSV
             </button>
           </div>
         </div>
 
-        <div className="mt-4 rounded-[24px] bg-slate-50/80 p-3 sm:rounded-[20px]">
+        <div className={`mt-4 p-3 ${softPanel}`}>
         {loadingAuditoria && (
-          <div className="py-10 text-center text-sm text-slate-400">Cargando auditoría...</div>
+          <div className="grid gap-2">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={index}
+                className="animate-pulse rounded-[18px] border border-slate-100 bg-white px-4 py-3"
+              >
+                <div className="flex gap-2">
+                  <div className="h-6 w-20 rounded-full bg-slate-100" />
+                  <div className="h-6 w-24 rounded-full bg-slate-100" />
+                </div>
+                <div className="mt-3 h-3 w-2/3 rounded-full bg-slate-100" />
+                <div className="mt-2 h-3 w-1/3 rounded-full bg-slate-100" />
+              </div>
+            ))}
+          </div>
         )}
 
         {!loadingAuditoria && auditoriaFiltrada.length === 0 && (
-          <div className="py-10 text-center text-sm text-slate-400">
-            No hay registros para este filtro.
+          <div className="py-12 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[20px] bg-white text-slate-400 shadow-sm">
+              ✓
+            </div>
+            <div className="mt-4 text-sm font-semibold text-slate-800">
+              No hay registros para este filtro
+            </div>
+            <p className="mx-auto mt-1 max-w-sm text-[12px] leading-5 text-slate-500">
+              Prueba a limpiar filtros o ampliar el rango de fechas.
+            </p>
           </div>
         )}
 

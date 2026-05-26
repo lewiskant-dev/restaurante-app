@@ -2,6 +2,7 @@
 
 import type { MovimientoConProducto } from '@/features/home/types'
 import { formatFechaHora } from '@/features/home/utils'
+import { fieldShell, ghostButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 
 type HistorialTabProps = {
   movimientosFiltrados: MovimientoConProducto[]
@@ -29,39 +30,62 @@ export default function HistorialTab({
         </p>
       </div>
 
-      <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_12px_28px_rgba(15,23,42,0.06)] sm:rounded-[24px] sm:p-5 sm:shadow-[0_16px_40px_rgba(15,23,42,0.07)]">
+      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
         <div className="grid gap-3 xl:grid-cols-[1.2fr_auto]">
           <input
             type="search"
             value={busquedaMov}
             onChange={(e) => onBusquedaChange(e.target.value)}
             placeholder="Buscar por producto o motivo..."
-            className="w-full rounded-[15px] border border-slate-200 bg-white px-3.5 py-2.5 text-[12px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:px-4 sm:text-[13px]"
+            className={`w-full px-3.5 py-2.5 text-[12px] text-slate-900 outline-none placeholder:text-slate-400 sm:px-4 sm:text-[13px] ${fieldShell}`}
           />
 
           <button
             onClick={onExportar}
-            className="rounded-[15px] bg-emerald-50 px-3.5 py-2.5 text-[12px] font-semibold text-emerald-700 sm:rounded-[16px] sm:px-4 sm:text-[13px]"
+            className={`px-3.5 py-2.5 text-[12px] sm:px-4 sm:text-[13px] ${ghostButton}`}
           >
             Exportar CSV
           </button>
         </div>
       </div>
 
-      <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_12px_28px_rgba(15,23,42,0.06)] sm:rounded-[24px] sm:p-5 sm:shadow-[0_16px_40px_rgba(15,23,42,0.07)]">
+      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
         {loadingMovimientos && (
-          <div className="py-10 text-center text-sm text-slate-400">Cargando historial...</div>
+          <div className="grid gap-2.5">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex animate-pulse items-center justify-between gap-3 rounded-[18px] border border-slate-100 bg-white px-4 py-3"
+              >
+                <div className="space-y-2">
+                  <div className="h-3.5 w-44 rounded-full bg-slate-100" />
+                  <div className="h-3 w-64 max-w-[55vw] rounded-full bg-slate-100" />
+                </div>
+                <div className="h-6 w-12 rounded-full bg-slate-100" />
+              </div>
+            ))}
+          </div>
         )}
 
         {!loadingMovimientos && movimientosFiltrados.length === 0 && (
-          <div className="py-10 text-center text-sm text-slate-400">No hay movimientos todavía.</div>
+          <div className="py-12 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[20px] bg-slate-50 text-slate-400">
+              ↕
+            </div>
+            <div className="mt-4 text-sm font-semibold text-slate-800">
+              No hay movimientos todavía
+            </div>
+            <p className="mx-auto mt-1 max-w-sm text-[12px] leading-5 text-slate-500">
+              Las entradas, ajustes y consumos aparecerán aquí cuando empieces a operar.
+            </p>
+          </div>
         )}
 
         {!loadingMovimientos &&
           movimientosFiltrados.map((mov) => (
             <div
               key={mov.id}
-              className="rounded-[18px] border border-slate-100 bg-slate-50/70 px-3 py-3 last:mb-0 sm:rounded-[20px] sm:px-4 sm:py-3.5"
+              className={`mb-2 px-3 py-3 last:mb-0 sm:px-4 sm:py-3.5 ${softPanel}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
