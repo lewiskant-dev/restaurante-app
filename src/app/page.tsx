@@ -58,9 +58,11 @@ import {
 } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
 import {
+  buildInventoryClosingComparison,
   buildInventoryFinancialSummary,
   buildReorderRecommendations,
   buildReorderSupplierSummary,
+  buildWasteFinancialSummary,
 } from '@/lib/financialAnalytics'
 import {
   getRestaurantScopeDetail,
@@ -1230,6 +1232,9 @@ export default function HomePage() {
     const filasCompras = getFilasComprasAnalitica()
     const filasInventario = getFilasInventarioFinanciero()
     const filasReposicion = getFilasReposicionRecomendada()
+    const filasMermas = getFilasMermasAnalitica()
+    const filasCierres = getFilasCierresInventario()
+    const filasAlertas = getFilasAlertasAnalitica()
 
     descargarCSV(
       `tpv_analitica_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
@@ -1240,8 +1245,21 @@ export default function HomePage() {
         ...filasCompras,
         ...filasInventario,
         ...filasReposicion,
+        ...filasMermas,
+        ...filasCierres,
+        ...filasAlertas,
       ]
     )
+  }
+
+  function getAnaliticaRangeDays() {
+    return tpvAnaliticaRange === '7d' ? 7 : tpvAnaliticaRange === '90d' ? 90 : 30
+  }
+
+  function getAnaliticaCutoffIso() {
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - getAnaliticaRangeDays())
+    return cutoff.toISOString()
   }
 
   function getFilasResumenAnalitica() {
@@ -1430,6 +1448,88 @@ export default function HomePage() {
     return [...filasProveedor, ...filasProducto]
   }
 
+  function getFilasMermasAnalitica() {
+    const summary = buildWasteFinancialSummary(movimientos, getAnaliticaCutoffIso())
+    const filasResumen = [
+      {
+        bloque: 'mermas_resumen',
+        periodo: tpvAnalitica.periodo_label,
+        concepto: 'movimientos',
+        valor: summary.movimientos,
+      },
+      {
+        bloque: 'mermas_resumen',
+        periodo: tpvAnalitica.periodo_label,
+        concepto: 'cantidad_total',
+        valor: summary.cantidad,
+      },
+      {
+        bloque: 'mermas_resumen',
+        periodo: tpvAnalitica.periodo_label,
+        concepto: 'valor_estimado',
+        valor: summary.valorEstimado,
+      },
+    ]
+
+    const filasProductos = summary.productos.map((item) => ({
+      bloque: 'merma_producto',
+      periodo: tpvAnalitica.periodo_label,
+      producto: item.producto,
+      unidad: item.unidad,
+      cantidad: item.cantidad,
+      valor_estimado: item.valorEstimado,
+    }))
+
+    return [...filasResumen, ...filasProductos]
+  }
+
+  function getFilasCierresInventario() {
+    const filasCierres = inventarioCierres.map((cierre) => ({
+      bloque: 'cierre_inventario',
+      fecha: cierre.fecha,
+      valor_total: cierre.valor_total,
+      coste_reposicion_minima: cierre.coste_reposicion_minima,
+      valor_sobre_minimo: cierre.valor_sobre_minimo,
+      productos_activos: cierre.productos_activos,
+      productos_con_coste: cierre.productos_con_coste,
+      productos_sin_coste: cierre.productos_sin_coste,
+      notas: cierre.notas,
+      creado_en: cierre.created_at,
+    }))
+
+    const comparison = buildInventoryClosingComparison(inventarioCierres)
+    if (!comparison?.previous) return filasCierres
+
+    const filasComparativa = [
+      {
+        bloque: 'cierre_inventario_comparativa',
+        fecha_actual: comparison.current.fecha,
+        fecha_anterior: comparison.previous.fecha,
+        valor_total_delta: comparison.valorTotal?.delta ?? null,
+        valor_total_variacion_pct: comparison.valorTotal?.variacion_pct ?? null,
+        reposicion_minima_delta: comparison.reposicionMinima?.delta ?? null,
+        reposicion_minima_variacion_pct: comparison.reposicionMinima?.variacion_pct ?? null,
+        valor_sobre_minimo_delta: comparison.valorSobreMinimo?.delta ?? null,
+        valor_sobre_minimo_variacion_pct: comparison.valorSobreMinimo?.variacion_pct ?? null,
+        productos_sin_coste_delta: comparison.productosSinCoste?.delta ?? null,
+        productos_sin_coste_variacion_pct: comparison.productosSinCoste?.variacion_pct ?? null,
+      },
+    ]
+
+    return [...filasComparativa, ...filasCierres]
+  }
+
+  function getFilasAlertasAnalitica() {
+    return tpvAnalitica.alertas.map((alerta) => ({
+      bloque: 'alerta_periodo',
+      periodo: tpvAnalitica.periodo_label,
+      severidad: alerta.severidad,
+      titulo: alerta.titulo,
+      detalle: alerta.detalle,
+      alerta_id: alerta.id,
+    }))
+  }
+
   function exportarResumenAnaliticaCSV() {
     descargarCSV(
       `informe_resumen_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
@@ -1469,6 +1569,27 @@ export default function HomePage() {
     descargarCSV(
       `informe_reposicion_recomendada_${todayLocalInputDate()}.csv`,
       getFilasReposicionRecomendada()
+    )
+  }
+
+  function exportarMermasAnaliticaCSV() {
+    descargarCSV(
+      `informe_mermas_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
+      getFilasMermasAnalitica()
+    )
+  }
+
+  function exportarCierresInventarioCSV() {
+    descargarCSV(
+      `informe_cierres_inventario_${todayLocalInputDate()}.csv`,
+      getFilasCierresInventario()
+    )
+  }
+
+  function exportarAlertasAnaliticaCSV() {
+    descargarCSV(
+      `informe_alertas_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
+      getFilasAlertasAnalitica()
     )
   }
 
@@ -2017,6 +2138,9 @@ export default function HomePage() {
             onExportarCompras={exportarComprasAnaliticaCSV}
             onExportarInventario={exportarInventarioFinancieroCSV}
             onExportarReposicion={exportarReposicionRecomendadaCSV}
+            onExportarMermas={exportarMermasAnaliticaCSV}
+            onExportarCierres={exportarCierresInventarioCSV}
+            onExportarAlertas={exportarAlertasAnaliticaCSV}
             onCrearCierreInventario={() => void crearCierreInventario()}
           />
         )}

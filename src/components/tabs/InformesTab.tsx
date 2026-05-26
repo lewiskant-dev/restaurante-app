@@ -119,6 +119,9 @@ type InformesTabProps = {
   onExportarCompras: () => void
   onExportarInventario: () => void
   onExportarReposicion: () => void
+  onExportarMermas: () => void
+  onExportarCierres: () => void
+  onExportarAlertas: () => void
   onCrearCierreInventario: () => void
 }
 
@@ -146,6 +149,9 @@ export function InformesTab({
   onExportarCompras,
   onExportarInventario,
   onExportarReposicion,
+  onExportarMermas,
+  onExportarCierres,
+  onExportarAlertas,
   onCrearCierreInventario,
 }: InformesTabProps) {
   const healthSummary = buildFinancialHealthSummary({
@@ -771,6 +777,27 @@ export function InformesTab({
                 className="rounded-[16px] border border-amber-100 bg-amber-50 px-4 py-3 text-left text-[12px] font-semibold text-amber-700 shadow-sm"
               >
                 Reposición recomendada CSV
+              </button>
+              <button
+                type="button"
+                onClick={onExportarMermas}
+                className="rounded-[16px] border border-red-100 bg-red-50 px-4 py-3 text-left text-[12px] font-semibold text-red-700 shadow-sm"
+              >
+                Mermas del periodo CSV
+              </button>
+              <button
+                type="button"
+                onClick={onExportarCierres}
+                className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-left text-[12px] font-semibold text-slate-700 shadow-sm"
+              >
+                Cierres de inventario CSV
+              </button>
+              <button
+                type="button"
+                onClick={onExportarAlertas}
+                className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-left text-[12px] font-semibold text-slate-700 shadow-sm"
+              >
+                Alertas del periodo CSV
               </button>
             </div>
           </div>
