@@ -1,6 +1,7 @@
 'use client'
 
 import { ActionMenu } from '@/components/ui/ActionMenu'
+import { primaryGradientButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 import type { Receta } from '@/features/home/types'
 import { formatEuro } from '@/features/home/utils'
 
@@ -44,7 +45,7 @@ export function RecetasTab({
         <button
           type="button"
           onClick={onOpenCrearReceta}
-          className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-[15px] bg-[linear-gradient(135deg,#1482ff_0%,#4d54ff_48%,#8c2eff_100%)] px-4 py-2.5 text-[12px] font-semibold text-white shadow-[0_14px_28px_rgba(92,88,255,0.22)] transition hover:scale-[1.01] sm:min-h-[unset] sm:gap-2.5 sm:rounded-[16px] sm:px-5 sm:py-3 sm:text-[13px] sm:shadow-[0_18px_36px_rgba(92,88,255,0.28)]"
+          className={`inline-flex min-h-[42px] items-center justify-center gap-2 rounded-[15px] px-4 py-2.5 text-[12px] sm:min-h-[unset] sm:gap-2.5 sm:rounded-[16px] sm:px-5 sm:py-3 sm:text-[13px] ${primaryGradientButton}`}
         >
           <span className="text-[13px] leading-none sm:text-[15px]">＋</span>
           <span>Nueva receta</span>
@@ -52,7 +53,7 @@ export function RecetasTab({
       </div>
 
       <div className="grid gap-2 md:grid-cols-6 md:gap-3">
-        <div className="rounded-[18px] border border-white/80 bg-white p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.05)] sm:rounded-[20px] sm:p-4 sm:shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
+        <div className={`p-3.5 sm:p-4 ${surfaceCard}`}>
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Total</div>
           <div className="mt-1.5 text-[1.6rem] font-semibold text-slate-950 sm:mt-2 sm:text-[2rem]">
             {recetas.length}
@@ -61,7 +62,7 @@ export function RecetasTab({
             Recetas dadas de alta en el sistema.
           </div>
         </div>
-        <div className="rounded-[18px] border border-white/80 bg-white p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.05)] sm:rounded-[20px] sm:p-4 sm:shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
+        <div className={`p-3.5 sm:p-4 ${surfaceCard}`}>
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Activas</div>
           <div className="mt-1.5 text-[1.6rem] font-semibold text-emerald-600 sm:mt-2 sm:text-[2rem]">
             {activas}
@@ -70,7 +71,7 @@ export function RecetasTab({
             Disponibles para trabajar con TPV.
           </div>
         </div>
-        <div className="rounded-[18px] border border-white/80 bg-white p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.05)] sm:rounded-[20px] sm:p-4 sm:shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
+        <div className={`p-3.5 sm:p-4 ${surfaceCard}`}>
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Pendientes</div>
           <div className="mt-1.5 text-[1.6rem] font-semibold text-amber-500 sm:mt-2 sm:text-[2rem]">
             {recetas.length - activas}
@@ -79,7 +80,7 @@ export function RecetasTab({
             Recetas inactivas o por revisar.
           </div>
         </div>
-        <div className="rounded-[18px] border border-white/80 bg-white p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.05)] sm:rounded-[20px] sm:p-4 sm:shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
+        <div className={`p-3.5 sm:p-4 ${surfaceCard}`}>
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Coste teórico</div>
           <div className="mt-1.5 text-[1.6rem] font-semibold text-blue-600 sm:mt-2 sm:text-[2rem]">
             {formatEuro(costeTeoricoTotal)}
@@ -88,7 +89,7 @@ export function RecetasTab({
             Suma actual del coste teórico de las recetas visibles.
           </div>
         </div>
-        <div className="rounded-[18px] border border-white/80 bg-white p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.05)] sm:rounded-[20px] sm:p-4 sm:shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
+        <div className={`p-3.5 sm:p-4 ${surfaceCard}`}>
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Coste / ración</div>
           <div className="mt-1.5 text-[1.6rem] font-semibold text-violet-600 sm:mt-2 sm:text-[2rem]">
             {formatEuro(costePorRacionMedio)}
@@ -97,7 +98,7 @@ export function RecetasTab({
             Media visible según raciones estimadas de cada receta.
           </div>
         </div>
-        <div className="rounded-[18px] border border-white/80 bg-white p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.05)] sm:rounded-[20px] sm:p-4 sm:shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
+        <div className={`p-3.5 sm:p-4 ${surfaceCard}`}>
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Margen estimado</div>
           <div className="mt-1.5 text-[1.6rem] font-semibold text-emerald-600 sm:mt-2 sm:text-[2rem]">
             {formatEuro(margenEstimadoMedio)}
@@ -108,14 +109,44 @@ export function RecetasTab({
         </div>
       </div>
 
-      <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_12px_28px_rgba(15,23,42,0.06)] sm:rounded-[24px] sm:p-5 sm:shadow-[0_16px_40px_rgba(15,23,42,0.07)]">
+      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
         {loadingRecetas && (
-          <div className="py-10 text-center text-sm text-slate-400">Cargando recetas...</div>
+          <div className="grid gap-2.5">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="animate-pulse rounded-[18px] border border-slate-100 bg-white px-4 py-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="space-y-2">
+                    <div className="h-4 w-44 rounded-full bg-slate-100" />
+                    <div className="h-3 w-64 max-w-[55vw] rounded-full bg-slate-100" />
+                  </div>
+                  <div className="h-9 w-20 rounded-[14px] bg-slate-100" />
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
         {!loadingRecetas && recetas.length === 0 && (
-          <div className="py-10 text-center text-sm text-slate-400">
-            Todavía no hay recetas creadas.
+          <div className="py-12 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[20px] bg-slate-50 text-slate-400">
+              +
+            </div>
+            <div className="mt-4 text-sm font-semibold text-slate-800">
+              Todavía no hay recetas creadas
+            </div>
+            <p className="mx-auto mt-1 max-w-sm text-[12px] leading-5 text-slate-500">
+              Crea recetas para conectar ventas TPV con consumo teórico de stock.
+            </p>
+            <button
+              type="button"
+              onClick={onOpenCrearReceta}
+              className={`mt-5 inline-flex items-center justify-center rounded-[16px] px-4 py-2.5 text-sm ${primaryGradientButton}`}
+            >
+              Nueva receta
+            </button>
           </div>
         )}
 
@@ -123,7 +154,7 @@ export function RecetasTab({
           recetas.map((receta) => (
             <div
               key={receta.id}
-              className="mb-2.5 rounded-[18px] border border-slate-100 bg-slate-50/80 p-3 last:mb-0 sm:mb-3 sm:rounded-[20px] sm:p-4"
+              className={`mb-2.5 p-3 last:mb-0 sm:mb-3 sm:p-4 ${softPanel}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">

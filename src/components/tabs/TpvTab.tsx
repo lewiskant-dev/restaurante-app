@@ -2,6 +2,7 @@
 
 import type { Receta, TpvAnaliticaResumen, VentaTPVCruda } from '@/features/home/types'
 import { formatCantidad, formatFechaHora } from '@/features/home/utils'
+import { fieldShell, ghostButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 
 type PendienteMapeo = {
   producto_externo: string
@@ -59,7 +60,7 @@ export function TpvTab({
         </p>
       </div>
 
-      <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_10px_22px_rgba(15,23,42,0.045)] sm:rounded-[24px] sm:p-5">
+      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
         <div className="mb-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
@@ -73,7 +74,7 @@ export function TpvTab({
             <select
               value={tpvAnaliticaRange}
               onChange={(e) => onAnaliticaRangeChange(e.target.value as '7d' | '30d' | '90d')}
-              className="w-full rounded-[16px] border border-slate-200 bg-white px-3.5 py-2.5 text-[12px] text-slate-900 md:w-[180px] sm:text-[13px]"
+              className={`w-full px-3.5 py-2.5 text-[12px] text-slate-900 md:w-[180px] sm:text-[13px] ${fieldShell}`}
             >
               <option value="7d">Últimos 7 días</option>
               <option value="30d">Últimos 30 días</option>
@@ -84,7 +85,7 @@ export function TpvTab({
             <button
               type="button"
               onClick={onExportarAnalitica}
-              className="rounded-[16px] border border-slate-200 bg-white px-3.5 py-2.5 text-[12px] font-semibold text-slate-700 shadow-sm sm:text-[13px]"
+              className={`px-3.5 py-2.5 text-[12px] sm:text-[13px] ${ghostButton}`}
             >
               Exportar analítica CSV
             </button>
@@ -92,7 +93,7 @@ export function TpvTab({
         </div>
 
         <div className="grid gap-3 md:grid-cols-4">
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3">
+          <div className={`p-3 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
               Ventas estimadas
             </div>
@@ -104,7 +105,7 @@ export function TpvTab({
               €
             </div>
           </div>
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3">
+          <div className={`p-3 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
               Coste teórico vendido
             </div>
@@ -116,7 +117,7 @@ export function TpvTab({
               €
             </div>
           </div>
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3">
+          <div className={`p-3 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
               Margen estimado
             </div>
@@ -132,7 +133,7 @@ export function TpvTab({
               €
             </div>
           </div>
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3">
+          <div className={`p-3 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
               Teórico
             </div>
@@ -140,7 +141,7 @@ export function TpvTab({
               {formatCantidad(tpvAnalitica.consumo_teorico_total)}
             </div>
           </div>
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3 md:col-span-2">
+          <div className={`p-3 md:col-span-2 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
               Real
             </div>
@@ -148,7 +149,7 @@ export function TpvTab({
               {formatCantidad(tpvAnalitica.consumo_real_total)}
             </div>
           </div>
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3 md:col-span-2">
+          <div className={`p-3 md:col-span-2 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
               Desviación
             </div>
@@ -165,7 +166,7 @@ export function TpvTab({
               {formatCantidad(tpvAnalitica.desviacion_total)}
             </div>
           </div>
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-3 md:col-span-2">
+          <div className={`p-3 md:col-span-2 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
               Productos a revisar
             </div>
@@ -207,14 +208,19 @@ export function TpvTab({
           ) : null}
 
           {tpvAnalitica.productos.length === 0 ? (
-            <div className="rounded-[18px] border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-400">
-              Aún no hay base suficiente para calcular desviaciones operativas.
+            <div className="rounded-[18px] border border-dashed border-slate-200 bg-white px-4 py-8 text-center">
+              <div className="text-sm font-semibold text-slate-700">
+                Aún no hay base suficiente
+              </div>
+              <p className="mx-auto mt-1 max-w-md text-[12px] leading-5 text-slate-500">
+                Importa ventas TPV y vincula recetas para calcular desviaciones operativas.
+              </p>
             </div>
           ) : (
             tpvAnalitica.productos.map((item) => (
               <div
                 key={item.producto_id}
-                className="grid gap-3 rounded-[18px] border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1.2fr_repeat(3,0.7fr)]"
+                className={`grid gap-3 p-3 md:grid-cols-[1.2fr_repeat(3,0.7fr)] ${softPanel}`}
               >
                 <div>
                   <div className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
@@ -263,7 +269,7 @@ export function TpvTab({
         </div>
 
         <div className="mt-5 grid gap-4 xl:grid-cols-2">
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+          <div className={`p-4 ${softPanel}`}>
             <div className="mb-3">
               <h4 className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
                 Recetas más rentables
@@ -307,7 +313,7 @@ export function TpvTab({
             </div>
           </div>
 
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+          <div className={`p-4 ${softPanel}`}>
             <div className="mb-3">
               <h4 className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
                 Compras y evolución de costes
@@ -318,7 +324,7 @@ export function TpvTab({
             </div>
 
             <div className="mb-3 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+              <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.03)]">
                 <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Coste total compras</div>
                 <div className="mt-1 text-sm font-semibold text-slate-900">
                   {tpvAnalitica.compras_periodo.total_coste.toLocaleString('es-ES', {
@@ -327,7 +333,7 @@ export function TpvTab({
                   })} €
                 </div>
               </div>
-              <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
+              <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.03)]">
                 <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Líneas de compra</div>
                 <div className="mt-1 text-sm font-semibold text-slate-900">
                   {tpvAnalitica.compras_periodo.total_lineas}
@@ -337,14 +343,14 @@ export function TpvTab({
 
             <div className="space-y-2">
               {tpvAnalitica.compras_periodo.productos.length === 0 ? (
-                <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-400">
+                <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-4 py-5 text-center text-sm text-slate-400">
                   Aún no hay histórico de compras en este periodo.
                 </div>
               ) : (
                 tpvAnalitica.compras_periodo.productos.map((item) => (
                   <div
                     key={item.producto_id}
-                    className="grid gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-3 md:grid-cols-[1fr_auto]"
+                    className="grid gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.03)] md:grid-cols-[1fr_auto]"
                   >
                     <div>
                       <div className="text-[13px] font-semibold text-slate-900">{item.producto_nombre}</div>
@@ -390,7 +396,7 @@ export function TpvTab({
         </div>
       </div>
 
-      <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_10px_22px_rgba(15,23,42,0.045)] sm:rounded-[24px] sm:p-5">
+      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
         <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
           Importar ventas del TPV
         </h3>
@@ -407,7 +413,7 @@ export function TpvTab({
               type="file"
               accept=".csv,text/csv"
               onChange={(e) => onFileChange(e.target.files?.[0] || null)}
-              className="w-full rounded-[16px] border border-slate-200 bg-white px-3.5 py-2.5 text-[12px] text-slate-700 sm:border-0 sm:px-0 sm:py-0 sm:text-[13px]"
+              className={`w-full px-3.5 py-2.5 text-[12px] text-slate-700 sm:text-[13px] ${fieldShell}`}
             />
           </div>
 
@@ -415,7 +421,7 @@ export function TpvTab({
             <label className="mb-1 block text-[12px] font-medium text-slate-600 sm:text-[13px]">
               Separador detectado
             </label>
-            <div className="rounded-[16px] border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[12px] text-slate-700 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]">
+            <div className={`px-3.5 py-2.5 text-[12px] text-slate-700 sm:py-2.5 sm:text-[13px] ${fieldShell}`}>
               Punto y coma (;)
             </div>
           </div>
@@ -425,7 +431,7 @@ export function TpvTab({
           <button
             onClick={onImportarCsv}
             disabled={tpvImportando}
-            className="w-full rounded-[16px] bg-blue-600 px-4 py-2.5 text-[12px] font-semibold text-white shadow-[0_10px_20px_rgba(37,99,235,0.2)] disabled:opacity-60 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+            className="w-full rounded-[16px] bg-blue-600 px-4 py-2.5 text-[12px] font-semibold text-white shadow-[0_10px_20px_rgba(37,99,235,0.2)] transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:py-2.5 sm:text-[13px]"
           >
             {tpvImportando ? 'Cargando CSV...' : 'Cargar y revisar CSV'}
           </button>
@@ -433,13 +439,13 @@ export function TpvTab({
           <button
             onClick={onAplicarImportacion}
             disabled={tpvAplicando || tpvVentasCrudas.length === 0}
-            className="w-full rounded-[16px] bg-emerald-600 px-4 py-2.5 text-[12px] font-semibold text-white shadow-[0_10px_20px_rgba(5,150,105,0.2)] disabled:opacity-60 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+            className="w-full rounded-[16px] bg-emerald-600 px-4 py-2.5 text-[12px] font-semibold text-white shadow-[0_10px_20px_rgba(5,150,105,0.2)] transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 sm:py-2.5 sm:text-[13px]"
           >
             {tpvAplicando ? 'Aplicando importación...' : 'Aplicar importación'}
           </button>
         </div>
 
-        <div className="mt-4 rounded-[18px] bg-slate-50 p-3 text-[12px] text-slate-600 sm:rounded-[18px] sm:p-3 sm:text-[13px]">
+        <div className={`mt-4 p-3 text-[12px] text-slate-600 sm:p-3 sm:text-[13px] ${softPanel}`}>
           <div className="font-semibold text-slate-900">Formato esperado</div>
           <div className="mt-1">Columnas que usamos del CSV real:</div>
           <div className="mt-2 whitespace-pre-wrap rounded-[18px] bg-white p-3 font-mono text-[12px] text-slate-700 sm:rounded-[14px]">
@@ -450,7 +456,7 @@ export function TpvTab({
         </div>
       </div>
 
-      <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_10px_22px_rgba(15,23,42,0.045)] sm:rounded-[24px] sm:p-5">
+      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
             Vista previa de ventas
@@ -461,15 +467,23 @@ export function TpvTab({
         </div>
 
         {tpvVentasCrudas.length === 0 ? (
-          <div className="py-8 text-center text-sm text-slate-400">
-            Aún no has importado un CSV del TPV.
+          <div className="py-10 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[20px] bg-slate-50 text-slate-400">
+              CSV
+            </div>
+            <div className="mt-4 text-sm font-semibold text-slate-800">
+              Aún no has importado un CSV del TPV
+            </div>
+            <p className="mx-auto mt-1 max-w-sm text-[12px] leading-5 text-slate-500">
+              Carga un archivo para previsualizar ventas antes de descontar stock.
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
             {tpvVentasCrudas.map((venta, index) => (
               <div
                 key={`${venta.producto_externo}-${index}`}
-                className="rounded-[18px] border border-slate-200 bg-slate-50 p-3 sm:rounded-[18px] sm:p-3"
+                className={`p-3 sm:p-3 ${softPanel}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -496,7 +510,7 @@ export function TpvTab({
         )}
       </div>
 
-      <div className="rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_10px_22px_rgba(15,23,42,0.045)] sm:rounded-[24px] sm:p-5">
+      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
             Pendientes de mapear
@@ -505,11 +519,11 @@ export function TpvTab({
         </div>
 
         {tpvVentasCrudas.length === 0 ? (
-          <div className="py-6 text-center text-sm text-slate-400">
+          <div className="py-8 text-center text-sm text-slate-400">
             Carga primero un CSV para ver sugerencias de mapeo.
           </div>
         ) : tpvPendientesMapeo.length === 0 ? (
-          <div className="py-6 text-center text-sm text-emerald-600">
+          <div className="py-8 text-center text-sm font-semibold text-emerald-600">
             Todo lo cargado tiene receta asociada. Ya puedes aplicar la importación.
           </div>
         ) : (
@@ -517,7 +531,7 @@ export function TpvTab({
             {tpvPendientesMapeo.map((item) => (
               <div
                 key={item.producto_externo}
-                className="rounded-[18px] border border-slate-200 bg-slate-50 p-3 sm:rounded-[18px] sm:p-3"
+                className={`p-3 sm:p-3 ${softPanel}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -538,7 +552,7 @@ export function TpvTab({
                     onChange={(e) =>
                       onMapeoSeleccionadoChange(item.producto_externo, e.target.value)
                     }
-                    className="w-full rounded-[16px] border border-slate-200 bg-white px-3.5 py-2.5 text-[12px] text-slate-900 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+                    className={`w-full px-3.5 py-2.5 text-[12px] text-slate-900 sm:py-2.5 sm:text-[13px] ${fieldShell}`}
                   >
                     <option value="">Selecciona receta sugerida</option>
                     {item.sugerencias.map((receta) => (

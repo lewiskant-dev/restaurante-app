@@ -1,6 +1,13 @@
 'use client'
 
 import type { AlbaranLineaForm } from '@/features/home/types'
+import {
+  fieldShell,
+  ghostButton,
+  primaryGradientButton,
+  softPanel,
+  surfaceCard,
+} from '@/components/ui/primitives'
 import type { Producto, Proveedor } from '@/types'
 
 type AlbaranFormTabProps = {
@@ -83,14 +90,14 @@ export function AlbaranFormTab({
         </p>
       </div>
 
-      <div className="rounded-[24px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:p-5">
+      <div className={`p-4 sm:p-5 ${surfaceCard}`}>
 
         <div className="mt-4 space-y-3">
           <input
             value={albaranNumero}
             onChange={(e) => onNumeroChange(e.target.value)}
             placeholder="Número de albarán"
-            className="w-full rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400"
+            className={`w-full px-4 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
 
           <div className="space-y-2">
@@ -100,7 +107,7 @@ export function AlbaranFormTab({
                 <button
                   type="button"
                   onClick={onOpenCrearProveedor}
-                  className="rounded-[14px] bg-slate-900 px-3 py-2 text-[12px] font-semibold text-white"
+                  className="rounded-[14px] bg-slate-900 px-3 py-2 text-[12px] font-semibold text-white transition hover:bg-slate-800"
                 >
                   + Proveedor
                 </button>
@@ -110,7 +117,7 @@ export function AlbaranFormTab({
             <select
               value={albaranProveedorId}
               onChange={(e) => onProveedorIdChange(e.target.value)}
-              className="w-full rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900"
+              className={`w-full px-4 py-2.5 text-[13px] text-slate-900 ${fieldShell}`}
             >
               <option value="">Selecciona proveedor</option>
               {proveedores
@@ -127,14 +134,14 @@ export function AlbaranFormTab({
             type="date"
             value={albaranFecha}
             onChange={(e) => onFechaChange(e.target.value)}
-            className="w-full rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900"
+            className={`w-full px-4 py-2.5 text-[13px] text-slate-900 ${fieldShell}`}
           />
 
           <textarea
             value={albaranNotas}
             onChange={(e) => onNotasChange(e.target.value)}
             placeholder="Notas"
-            className="min-h-24 w-full rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400"
+            className={`min-h-24 w-full px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
 
           <div>
@@ -147,33 +154,33 @@ export function AlbaranFormTab({
               accept="image/*,.pdf,application/pdf"
               capture="environment"
               onChange={(e) => onFotoChange(e.target.files?.[0] || null)}
-              className="w-full text-sm text-slate-700"
+              className={`w-full px-4 py-3 text-sm text-slate-700 ${fieldShell}`}
             />
 
             <button
               type="button"
               onClick={onAnalizarOCR}
               disabled={albaranOCRLoading || !albaranFoto}
-              className="mt-3 w-full rounded-[16px] bg-amber-500 px-4 py-2.5 text-[13px] font-semibold text-white disabled:opacity-60"
+              className="mt-3 w-full rounded-[16px] bg-amber-500 px-4 py-2.5 text-[13px] font-semibold text-white shadow-[0_10px_20px_rgba(245,158,11,0.18)] transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {albaranOCRLoading ? 'Analizando albarán...' : 'Analizar albarán'}
             </button>
           </div>
 
           {albaranOCRResumen ? (
-            <div className="rounded-[16px] bg-amber-50 px-4 py-3 text-[13px] text-slate-700">
+            <div className="rounded-[16px] border border-amber-100 bg-amber-50 px-4 py-3 text-[13px] text-slate-700">
               {albaranOCRResumen} · Revisa líneas y aplica cuando todo esté en verde o azul.
             </div>
           ) : null}
         </div>
       </div>
 
-      <div className="rounded-[24px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:p-5">
+      <div className={`p-4 sm:p-5 ${surfaceCard}`}>
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-[15px] font-semibold text-slate-900">Líneas</h3>
           <button
             onClick={onAddLinea}
-            className="rounded-[14px] bg-slate-900 px-3 py-2 text-[12px] font-semibold text-white"
+            className="rounded-[14px] bg-slate-900 px-3 py-2 text-[12px] font-semibold text-white transition hover:bg-slate-800"
           >
             + Línea
           </button>
@@ -181,8 +188,11 @@ export function AlbaranFormTab({
 
         <div className="space-y-3">
           {albaranLineas.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-400">
-              Añade al menos una línea
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center">
+              <div className="text-sm font-semibold text-slate-700">Añade al menos una línea</div>
+              <p className="mx-auto mt-1 max-w-sm text-[12px] leading-5 text-slate-500">
+                Cada línea actualiza stock y costes al guardar el albarán.
+              </p>
             </div>
           )}
 
@@ -192,13 +202,13 @@ export function AlbaranFormTab({
             return (
               <div
                 key={index}
-                className="rounded-[18px] border border-slate-200 bg-slate-50 p-3"
+                className={`p-3 ${softPanel}`}
               >
                 <div className="space-y-3">
                   <select
                     value={linea.producto_id}
                     onChange={(e) => onSelectProducto(index, e.target.value, !!linea.nombre_detectado)}
-                    className="w-full rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900"
+                    className={`w-full px-4 py-2.5 text-[13px] text-slate-900 ${fieldShell}`}
                   >
                     <option value="">Selecciona producto</option>
                     {productos
@@ -259,7 +269,7 @@ export function AlbaranFormTab({
                       value={linea.cantidad}
                       onChange={(e) => onLineaFieldChange(index, 'cantidad', e.target.value)}
                       placeholder="Cantidad"
-                      className="w-full rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400"
+                      className={`w-full px-4 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
                     />
 
                     <input
@@ -270,7 +280,7 @@ export function AlbaranFormTab({
                         onLineaFieldChange(index, 'precio_unitario', e.target.value)
                       }
                       placeholder="Precio unitario"
-                      className="w-full rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400"
+                      className={`w-full px-4 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
                     />
                   </div>
 
@@ -281,7 +291,7 @@ export function AlbaranFormTab({
 
                   <button
                     onClick={() => onRemoveLinea(index)}
-                    className="w-full rounded-[14px] bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-600"
+                    className={`w-full px-3 py-2 text-[12px] text-red-600 ${ghostButton}`}
                   >
                     Eliminar línea
                   </button>
@@ -292,7 +302,7 @@ export function AlbaranFormTab({
         </div>
       </div>
 
-      <div className="rounded-[24px] border border-white/80 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07)] sm:p-5">
+      <div className={`p-4 sm:p-5 ${surfaceCard}`}>
         <div className="flex items-center justify-between">
           <span className="text-[15px] font-semibold text-slate-900">Total</span>
           <span className="text-[17px] font-bold text-blue-600">{totalAlbaran.toFixed(2)} €</span>
@@ -308,7 +318,7 @@ export function AlbaranFormTab({
         <button
           onClick={onGuardar}
           disabled={albaranSaving || lineasOCRPendientes > 0}
-          className="mt-4 w-full rounded-[16px] bg-blue-600 px-4 py-2.5 text-[13px] font-semibold text-white disabled:opacity-60"
+          className={`mt-4 w-full rounded-[16px] px-4 py-2.5 text-[13px] disabled:cursor-not-allowed disabled:opacity-60 ${primaryGradientButton}`}
         >
           {albaranSaving
             ? editingAlbaranId
