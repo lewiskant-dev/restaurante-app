@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { ghostButton } from '@/components/ui/primitives'
 
 type StockAlert = {
   id: string
@@ -117,21 +118,13 @@ export function NotificationsBell({
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((current) => !current)}
-        className={
-          mobile
-            ? 'relative flex h-[44px] w-[44px] items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-600 shadow-[0_7px_14px_rgba(15,23,42,0.035)]'
-            : 'relative flex h-9 w-9 items-center justify-center rounded-[15px] border border-slate-200 bg-white text-slate-600 shadow-sm'
-        }
+        className={`relative flex items-center justify-center text-slate-600 ${
+          mobile ? `h-[44px] w-[44px] ${ghostButton}` : `h-9 w-9 ${ghostButton}`
+        } ${open ? 'border-blue-300 text-blue-600 ring-4 ring-blue-100/70' : ''}`}
       >
         <BellIcon className={mobile ? 'h-[17px] w-[17px]' : 'h-5 w-5'} />
         {hasAlerts ? (
-          <span
-            className={
-              mobile
-                ? 'absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-semibold text-white ring-2 ring-white'
-                : 'absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-semibold text-white ring-2 ring-white'
-            }
-          >
+          <span className="absolute -right-1.5 -top-1.5 flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-bold text-white ring-[3px] ring-white">
             {alerts.length > 9 ? '9+' : alerts.length}
           </span>
         ) : null}
@@ -148,7 +141,7 @@ export function NotificationsBell({
                 top: menuStyle.top,
                 left: menuStyle.left,
               }}
-              className="z-[140] w-[320px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_22px_48px_rgba(15,23,42,0.14)]"
+              className="z-[140] w-[340px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_26px_60px_rgba(15,23,42,0.16)]"
             >
               <div className="border-b border-slate-100 px-4 py-3.5">
                 <div className="text-[14px] font-semibold text-slate-950">Notificaciones</div>
@@ -164,7 +157,7 @@ export function NotificationsBell({
                   {alerts.map((alert) => (
                     <div
                       key={alert.id}
-                      className="rounded-[18px] border border-amber-100 bg-amber-50/60 p-3"
+                      className="rounded-[18px] border border-amber-100 bg-amber-50/70 p-3"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -186,7 +179,7 @@ export function NotificationsBell({
                           setOpen(false)
                           onReviewAlert(alert.id)
                         }}
-                        className="mt-3 inline-flex rounded-[12px] bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white"
+                        className="mt-3 inline-flex rounded-[12px] bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-slate-800"
                       >
                         Revisar producto
                       </button>

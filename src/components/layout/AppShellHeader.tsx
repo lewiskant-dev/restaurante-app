@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { NotificationsBell } from '@/components/layout/NotificationsBell'
 import { NexoBrandMark } from '@/components/ui/NexoBrandMark'
+import { fieldShell, ghostButton } from '@/components/ui/primitives'
 import type { MainTab, TabKey } from '@/features/home/types'
 import { getTabLabel, canAccessTab } from '@/features/home/utils'
 
@@ -300,16 +301,16 @@ export function AppShellHeader({
 
   const desktopNav = (
     <div className="flex h-full flex-col">
-      <div className="border-b border-slate-200/80 px-4 py-3.5">
+      <div className="border-b border-slate-200/70 px-4 py-4">
         <button
           type="button"
           onClick={() => handleGroupTabChange('operativa', 'stock')}
-          className="flex items-start gap-3 text-left"
+          className="flex w-full items-start gap-3 rounded-[18px] text-left transition hover:bg-slate-50"
         >
           <NexoBrandMark className="mt-0.5 h-8 w-8 shrink-0" />
           <div>
-            <div className="text-[1.12rem] font-bold tracking-normal text-slate-950">Nexo</div>
-            <div className="mt-0.5 text-[12px] text-slate-500">
+            <div className="text-[1.12rem] font-bold leading-tight tracking-normal text-slate-950">Nexo</div>
+            <div className="mt-0.5 line-clamp-2 text-[12px] leading-4 text-slate-500">
               {restaurantScopeLabel}
             </div>
           </div>
@@ -320,7 +321,7 @@ export function AppShellHeader({
             value={activeRestaurantId}
             onChange={(e) => onRestaurantChange(e.target.value)}
             disabled={switchingRestaurant || accessibleRestaurants.length <= 1}
-            className="mt-3 w-full rounded-[15px] border border-slate-200 bg-slate-50 px-3 py-2.5 text-[12px] font-medium text-slate-700 outline-none disabled:opacity-60"
+            className={`mt-3 w-full px-3 py-2.5 text-[12px] font-medium text-slate-700 outline-none disabled:opacity-60 ${fieldShell}`}
           >
             {accessibleRestaurants.map((restaurant) => (
               <option key={restaurant.id} value={restaurant.id} disabled={!restaurant.activo}>
@@ -335,7 +336,7 @@ export function AppShellHeader({
         ) : null}
       </div>
 
-      <div className="flex-1 space-y-4 overflow-y-auto px-3 py-3.5">
+      <div className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
         {visibleMainGroups.map((group) => (
           <NavGroup
             key={group}
@@ -356,11 +357,11 @@ export function AppShellHeader({
         ) : null}
       </div>
 
-      <div className="border-t border-slate-200/80 p-3">
+      <div className="border-t border-slate-200/70 p-3">
         <button
           type="button"
           onClick={onSignOut}
-          className="flex w-full items-center gap-3 rounded-[16px] px-3 py-2 text-left text-[12.5px] font-medium text-slate-600 transition hover:bg-slate-50"
+          className="flex w-full items-center gap-3 rounded-[16px] px-3 py-2.5 text-left text-[12.5px] font-medium text-slate-600 transition hover:bg-slate-50"
         >
           <Icon
             className="h-[18px] w-[18px] text-slate-400"
@@ -382,17 +383,17 @@ export function AppShellHeader({
 
   return (
     <>
-      <aside className="hidden lg:sticky lg:top-4 lg:flex lg:h-[calc(100vh-2rem)] lg:w-[224px] lg:flex-col lg:overflow-hidden lg:rounded-[24px] lg:border lg:border-white/80 lg:bg-white/92 lg:shadow-[0_20px_44px_rgba(15,23,42,0.07)] lg:backdrop-blur">
+      <aside className="hidden lg:sticky lg:top-4 lg:flex lg:h-[calc(100vh-2rem)] lg:w-[224px] lg:flex-col lg:overflow-hidden lg:rounded-[26px] lg:border lg:border-slate-200/70 lg:bg-white/95 lg:shadow-[0_20px_44px_rgba(15,23,42,0.065)] lg:backdrop-blur">
         {desktopNav}
       </aside>
 
       <div className="lg:hidden">
-        <div className="border-b border-slate-200/60 bg-white px-4 pb-2.5 pt-2 shadow-[0_8px_16px_rgba(15,23,42,0.018)] backdrop-blur">
+        <div className="border-b border-slate-200/60 bg-white/96 px-4 pb-2.5 pt-2 shadow-[0_8px_16px_rgba(15,23,42,0.018)] backdrop-blur">
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="flex h-[46px] w-[46px] items-center justify-center rounded-[17px] border border-slate-200 bg-white text-slate-600 shadow-[0_7px_14px_rgba(15,23,42,0.035)]"
+              className={`flex h-[46px] w-[46px] items-center justify-center text-slate-600 ${ghostButton}`}
             >
               <Icon
                 className="h-[20px] w-[20px]"
@@ -439,7 +440,7 @@ export function AppShellHeader({
                 value={activeRestaurantId}
                 onChange={(e) => onRestaurantChange(e.target.value)}
                 disabled={switchingRestaurant || accessibleRestaurants.length <= 1}
-                className="w-full rounded-[16px] border border-slate-200 bg-white px-3 py-2.5 text-[12px] font-medium text-slate-700 outline-none shadow-[0_6px_14px_rgba(15,23,42,0.028)] disabled:opacity-60"
+                className={`w-full px-3 py-2.5 text-[12px] font-medium text-slate-700 outline-none disabled:opacity-60 ${fieldShell}`}
               >
                 {accessibleRestaurants.map((restaurant) => (
                   <option key={restaurant.id} value={restaurant.id} disabled={!restaurant.activo}>
@@ -480,7 +481,7 @@ export function AppShellHeader({
 
         {mobileMenuOpen ? (
           <div className="fixed inset-0 z-50 bg-slate-950/28 p-3 backdrop-blur-sm">
-            <div className="mx-auto flex h-full max-w-sm flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_24px_70px_rgba(15,23,42,0.16)]">
+            <div className="mx-auto flex h-full max-w-sm flex-col overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.16)]">
               <div className="flex items-center justify-between border-b border-slate-200/80 px-4 py-4">
                 <div>
                   <div className="text-[1rem] font-semibold text-slate-950">{userDisplayName}</div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useEffectEvent, useMemo, useState } from 'react'
+import { startTransition, useEffect, useEffectEvent, useMemo, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { UserManagementPanel } from '@/components/admin/UserManagementPanel'
 import { AuthScreen } from '@/components/auth/AuthScreen'
@@ -101,6 +101,18 @@ export default function HomePage() {
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
   const [proveedorRecienCreadoId, setProveedorRecienCreadoId] = useState('')
+
+  const changeTab = (nextTab: TabKey) => {
+    startTransition(() => {
+      setTab(nextTab)
+    })
+  }
+
+  const changeMainTab = (nextMainTab: MainTab) => {
+    startTransition(() => {
+      setMainTab(nextMainTab)
+    })
+  }
 
   const {
     authMode,
@@ -1638,7 +1650,12 @@ export default function HomePage() {
     )
   }
 
-  if (loadingAccessibleRestaurants) {
+  const shouldBlockForRestaurantAccess =
+    loadingAccessibleRestaurants &&
+    accessibleRestaurants.length === 0 &&
+    restaurantsHydratedForUserId !== currentUserId
+
+  if (shouldBlockForRestaurantAccess) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f6f8fc] px-4 text-slate-900">
         <div className="w-full max-w-lg rounded-[32px] border border-white/80 bg-white/95 p-8 text-center shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
@@ -1717,6 +1734,12 @@ export default function HomePage() {
 
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-[#f6f8fc] pb-28 text-slate-900 lg:pb-16">
+      {(loadingAccessibleRestaurants || switchingRestaurant) && !shouldBlockForRestaurantAccess ? (
+        <div className="fixed right-4 top-4 z-[130] rounded-full border border-slate-200 bg-white/95 px-3.5 py-2 text-[12px] font-semibold text-slate-600 shadow-[0_14px_30px_rgba(15,23,42,0.1)] backdrop-blur">
+          {switchingRestaurant ? 'Cambiando restaurante...' : 'Actualizando acceso...'}
+        </div>
+      ) : null}
+
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-[-10rem] top-[-6rem] h-[24rem] w-[24rem] rounded-full bg-blue-200/30 blur-3xl" />
         <div className="absolute right-[-6rem] top-[4rem] h-[22rem] w-[22rem] rounded-full bg-violet-200/30 blur-3xl" />
@@ -1750,15 +1773,15 @@ export default function HomePage() {
           onReviewStockAlert={reviewStockAlert}
           onRestaurantChange={(restaurantId) => void activateRestaurant(restaurantId)}
           onMainTabChange={(item) => {
-            setMainTab(item)
+            changeMainTab(item)
             const firstAccessibleTab = mainTabConfig[item].tabs.find((candidate) =>
               canAccessTab(currentUserRole, candidate)
             )
             if (firstAccessibleTab) {
-              setTab(firstAccessibleTab)
+              changeTab(firstAccessibleTab)
             }
           }}
-          onTabChange={setTab}
+          onTabChange={changeTab}
         />
 
         <div className="min-w-0 flex-1">
@@ -2276,8 +2299,8 @@ export default function HomePage() {
       <MobileBottomNav
         currentTab={tab}
         visibleTabsByGroup={visibleTabsByGroup}
-        onMainTabChange={setMainTab}
-        onTabChange={setTab}
+        onMainTabChange={changeMainTab}
+        onTabChange={changeTab}
       />
     </main>
   )

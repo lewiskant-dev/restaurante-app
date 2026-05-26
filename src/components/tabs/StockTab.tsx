@@ -4,6 +4,15 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { ActionMenu } from '@/components/ui/ActionMenu'
 import { normalizeProductCategory } from '@/features/home/constants'
 import { ProductCategoryBadge } from '@/components/ui/ProductCategoryVisual'
+import {
+  fieldShell,
+  ghostButton,
+  primaryGradientButton,
+  softPanel,
+  surfaceCard,
+  tableCell,
+  tableHeaderCell,
+} from '@/components/ui/primitives'
 import type { Producto } from '@/types'
 import { formatCantidad, getNivel } from '@/features/home/utils'
 
@@ -314,12 +323,12 @@ export default function StockTab({
 
   return (
     <>
-      <div className="mb-3 flex items-start justify-between gap-2.5 xl:items-end">
+      <div className="mb-4 flex items-start justify-between gap-3 xl:items-end">
         <div className="min-w-0 flex-1">
-          <h2 className="text-[1.56rem] font-semibold tracking-tight text-slate-950 md:text-[2.5rem] lg:text-[1.9rem]">
+          <h2 className="text-[1.56rem] font-semibold tracking-tight text-slate-950 md:text-[2.25rem] lg:text-[1.95rem]">
             Stock actual
           </h2>
-          <p className="mt-0.5 text-[12px] text-slate-500 md:text-lg lg:text-[14px]">
+          <p className="mt-0.5 text-[12px] text-slate-500 md:text-[16px] lg:text-[14px]">
             Resumen general de tu inventario
           </p>
         </div>
@@ -329,14 +338,14 @@ export default function StockTab({
             <button
               type="button"
               onClick={onOpenCategorias}
-              className="hidden lg:inline-flex items-center justify-center rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+              className={`hidden items-center justify-center px-4 py-2.5 text-sm lg:inline-flex ${ghostButton}`}
             >
               Categorías
             </button>
             <button
               type="button"
               onClick={onNuevoProducto}
-              className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-[15px] bg-[linear-gradient(135deg,#1482ff_0%,#4d54ff_48%,#8c2eff_100%)] px-3.5 py-2 text-[12px] font-semibold text-white shadow-[0_12px_20px_rgba(92,88,255,0.16)] transition hover:scale-[1.01] lg:min-h-0 lg:rounded-[16px] lg:px-4 lg:py-2.5 lg:text-sm"
+              className={`inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-[15px] px-3.5 py-2 text-[12px] lg:min-h-0 lg:rounded-[16px] lg:px-4 lg:py-2.5 lg:text-sm ${primaryGradientButton}`}
             >
               <span className="text-[13px] leading-none">＋</span>
               <span>Nuevo producto</span>
@@ -345,13 +354,13 @@ export default function StockTab({
         ) : null}
       </div>
 
-      <div className="grid grid-cols-4 gap-2 lg:gap-2">
+      <div className="grid grid-cols-4 gap-2.5 lg:gap-3">
         {metricCards.map((metric) => {
           const tone = getMetricTone(metric.tone)
           return (
             <div
               key={metric.key}
-              className="relative min-h-[128px] overflow-hidden rounded-[20px] border border-white/80 bg-white px-1.5 py-2.5 shadow-[0_6px_14px_rgba(15,23,42,0.032)] sm:px-4 lg:min-h-0 lg:rounded-[18px] lg:px-3 lg:py-2.5"
+              className={`relative min-h-[128px] overflow-hidden px-1.5 py-2.5 sm:px-4 lg:min-h-0 lg:px-3.5 lg:py-3 ${surfaceCard}`}
             >
               <div className="flex flex-col items-center text-center lg:flex-row lg:items-start lg:gap-2.5 lg:text-left">
                 <div className={`flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-full ${tone.badge} lg:h-[44px] lg:w-[44px]`}>
@@ -381,10 +390,10 @@ export default function StockTab({
         })}
       </div>
 
-      <div className="mt-3 rounded-[20px] border border-white/80 bg-white/96 shadow-[0_8px_18px_rgba(15,23,42,0.04)] lg:rounded-[20px]">
+      <div className={`mt-4 overflow-visible ${softPanel}`}>
         <div className="border-b border-slate-100 px-3 py-3 sm:px-5 lg:px-4 lg:py-2.5">
           <div className="hidden gap-2 xl:grid xl:grid-cols-[1.2fr_0.74fr_0.74fr_0.66fr_auto]">
-            <label className="flex items-center gap-3 rounded-[15px] border border-slate-200 bg-white px-3.5 py-2 shadow-sm">
+            <label className={`flex items-center gap-3 px-3.5 py-2 ${fieldShell}`}>
               <Icon
                 className="h-5 w-5 text-slate-400"
                 path={
@@ -406,7 +415,7 @@ export default function StockTab({
               />
             </label>
 
-            <label className="rounded-[15px] border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <label className={`px-3 py-2 ${fieldShell}`}>
               <div className="text-[11px] font-medium text-slate-400">Categoría</div>
               <select
                 value={categoriaFiltro}
@@ -425,7 +434,7 @@ export default function StockTab({
               </select>
             </label>
 
-            <label className="rounded-[15px] border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <label className={`px-3 py-2 ${fieldShell}`}>
               <div className="text-[11px] font-medium text-slate-400">Estado</div>
               <select
                 value={productoEstado}
@@ -441,7 +450,7 @@ export default function StockTab({
               </select>
             </label>
 
-            <label className="rounded-[15px] border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <label className={`px-3 py-2 ${fieldShell}`}>
               <div className="text-[11px] font-medium text-slate-400">Unidad</div>
               <select
                 value={unidadFiltro}
@@ -463,7 +472,7 @@ export default function StockTab({
             <button
               type="button"
               onClick={onExportar}
-              className="rounded-[15px] border border-slate-200 bg-white px-3 py-2 text-[12.5px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+              className={`px-3 py-2 text-[12.5px] ${ghostButton}`}
             >
               Exportar
             </button>
@@ -471,7 +480,7 @@ export default function StockTab({
 
           <div className="space-y-3 xl:hidden">
             <div className="flex gap-2">
-              <label className="flex flex-1 items-center gap-2.5 rounded-[16px] border border-slate-200 bg-white px-3.5 py-2.5 shadow-sm">
+              <label className={`flex flex-1 items-center gap-2.5 px-3.5 py-2.5 ${fieldShell}`}>
                 <Icon
                   className="h-5 w-5 text-slate-400"
                   path={
@@ -492,22 +501,19 @@ export default function StockTab({
                   className="w-full bg-transparent text-[12px] text-slate-800 outline-none placeholder:text-slate-400"
                 />
               </label>
-              <button className="flex h-[44px] w-[44px] items-center justify-center rounded-[14px] border border-slate-200 bg-white text-slate-700 shadow-sm">
-                <Icon
-                  className="h-5 w-5"
-                  path={
-                    <>
-                      <path d="M4 6h16" />
-                      <path d="M7 12h10" />
-                      <path d="M10 18h4" />
-                    </>
-                  }
-                />
-              </button>
             </div>
 
             <div className="flex flex-wrap gap-1.5">
-              <button className="rounded-[14px] border border-blue-200 bg-blue-50 px-3 py-2 text-[12px] font-semibold text-blue-600 shadow-sm">
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentPage(1)
+                  onCategoriaFiltroChange('todas')
+                  onProductoEstadoChange('activos')
+                  onUnidadFiltroChange('todas')
+                }}
+                className="rounded-[14px] border border-blue-200 bg-blue-50 px-3 py-2 text-[12px] font-semibold text-blue-600 shadow-sm"
+              >
                 Todas
               </button>
               <label className="rounded-[14px] border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-800 shadow-sm">
@@ -563,12 +569,53 @@ export default function StockTab({
         </div>
 
         {loadingProductos && (
-          <div className="px-6 py-16 text-center text-sm text-slate-400">Cargando stock...</div>
+          <div className="grid gap-2.5 px-3 py-4 lg:px-4">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex animate-pulse items-center gap-3 rounded-[18px] border border-slate-100 bg-white px-4 py-3"
+              >
+                <div className="h-12 w-12 rounded-[16px] bg-slate-100" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="h-3.5 w-1/2 rounded-full bg-slate-100" />
+                  <div className="h-3 w-1/4 rounded-full bg-slate-100" />
+                </div>
+                <div className="h-7 w-14 rounded-full bg-slate-100" />
+                <div className="h-10 w-10 rounded-[14px] bg-slate-100" />
+              </div>
+            ))}
+          </div>
         )}
 
         {!loadingProductos && productosFiltrados.length === 0 && (
-          <div className="px-6 py-16 text-center text-sm text-slate-400">
-            No hay productos o no coinciden con la búsqueda.
+          <div className="px-6 py-14 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[20px] bg-slate-50 text-slate-400">
+              <Icon
+                className="h-6 w-6"
+                path={
+                  <>
+                    <path d="m12 3 7 4v10l-7 4-7-4V7z" />
+                    <path d="m5 7 7 4 7-4" />
+                    <path d="M12 11v10" />
+                  </>
+                }
+              />
+            </div>
+            <div className="mt-4 text-sm font-semibold text-slate-800">
+              No hay productos para mostrar
+            </div>
+            <div className="mx-auto mt-1 max-w-sm text-[12px] leading-5 text-slate-500">
+              Añade tu primer producto o ajusta búsqueda, categoría, estado y unidad para ampliar resultados.
+            </div>
+            {canManageStock ? (
+              <button
+                type="button"
+                onClick={onNuevoProducto}
+                className={`mt-5 inline-flex items-center justify-center rounded-[16px] px-4 py-2.5 text-sm ${primaryGradientButton}`}
+              >
+                Nuevo producto
+              </button>
+            ) : null}
           </div>
         )}
 
@@ -577,23 +624,23 @@ export default function StockTab({
             <div className="hidden overflow-x-visible overflow-y-visible lg:block">
               <table className="w-full table-fixed text-left">
                 <colgroup>
-                  <col className="w-[36%]" />
+                  <col className="w-[34%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[15%]" />
                   <col className="w-[12%]" />
-                  <col className="w-[9%]" />
-                  <col className="w-[8%]" />
-                  <col className="w-[8%]" />
-                  <col className="w-[13%]" />
-                  <col className="w-[9%]" />
                 </colgroup>
                 <thead>
-                  <tr className="border-b border-slate-100 text-[12px] text-slate-500">
-                    <th className="px-4 py-3 font-semibold">Producto</th>
-                    <th className="px-2 py-3 font-semibold">Categoría</th>
-                    <th className="px-2 py-3 font-semibold">Stock</th>
-                    <th className="px-2 py-3 font-semibold">Mín.</th>
-                    <th className="px-2 py-3 font-semibold">Unidad</th>
-                    <th className="px-2 py-3 font-semibold">Estado</th>
-                    <th className="px-3 py-3 text-right font-semibold">Acciones</th>
+                  <tr className="border-b border-slate-100">
+                    <th className={`${tableHeaderCell} pl-4`}>Producto</th>
+                    <th className={tableHeaderCell}>Categoría</th>
+                    <th className={tableHeaderCell}>Stock</th>
+                    <th className={tableHeaderCell}>Mín.</th>
+                    <th className={tableHeaderCell}>Unidad</th>
+                    <th className={tableHeaderCell}>Estado</th>
+                    <th className={`${tableHeaderCell} pr-4 text-right`}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -610,9 +657,9 @@ export default function StockTab({
                     return (
                       <tr
                         key={producto.id}
-                        className="relative border-b border-slate-100 last:border-b-0 focus-within:z-20 hover:z-10"
+                        className="relative border-b border-slate-100 last:border-b-0 focus-within:z-20 hover:z-10 hover:bg-slate-50/50"
                       >
-                        <td className="relative min-w-0 px-4 py-3">
+                        <td className="relative min-w-0 py-3 pl-4 pr-3">
                           <button
                             type="button"
                             onClick={() =>
@@ -632,24 +679,24 @@ export default function StockTab({
                               <div className="truncate text-[13px] font-semibold text-slate-900">
                                 {producto.nombre}
                               </div>
-                          <div className="truncate text-[12px] text-slate-500">
-                            {producto.referencia || 'Sin referencia'}
+                              <div className="truncate text-[12px] text-slate-500">
+                                {producto.referencia || 'Sin referencia'}
                                 {producto.archivado ? ' · Archivado' : ''}
-                          </div>
-                        </div>
-                      </button>
-                    </td>
-                    <td className="truncate px-2 py-3 text-[12.5px] text-slate-700">
+                              </div>
+                            </div>
+                          </button>
+                        </td>
+                        <td className={`${tableCell} truncate`}>
                           {normalizeProductCategory(producto.categoria || 'Otros')}
-                    </td>
-                        <td className={`px-2 py-3 text-[1.45rem] font-semibold ${stockClass}`}>
+                        </td>
+                        <td className={`px-3 py-3 text-[1.38rem] font-semibold ${stockClass}`}>
                           {formatCantidad(producto.stock_actual)}
                         </td>
-                        <td className="px-2 py-3 text-[12.5px] text-slate-700">
+                        <td className={tableCell}>
                           {formatCantidad(producto.stock_minimo)}
                         </td>
-                        <td className="truncate px-2 py-3 text-[12.5px] text-slate-700">{producto.unidad}</td>
-                        <td className="px-2 py-3">
+                        <td className={`${tableCell} truncate`}>{producto.unidad}</td>
+                        <td className="px-3 py-3">
                           <span
                             className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[12px] font-semibold ${status.className}`}
                           >
@@ -657,7 +704,7 @@ export default function StockTab({
                             {status.label}
                           </span>
                         </td>
-                        <td className="px-3 py-3">
+                        <td className="py-3 pl-3 pr-4">
                           <div className="flex justify-end">
                             <ProductActionMenu
                               producto={producto}

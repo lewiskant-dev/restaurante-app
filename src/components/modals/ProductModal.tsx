@@ -4,6 +4,7 @@ import Image from 'next/image'
 import type { NuevoProductoForm, ProductoPrecioHistorial } from '@/features/home/types'
 import { PRODUCT_CATEGORY_OPTIONS } from '@/features/home/constants'
 import { ProductCategoryBadge } from '@/components/ui/ProductCategoryVisual'
+import { fieldShell, ghostButton, primaryGradientButton } from '@/components/ui/primitives'
 import { formatEuro } from '@/features/home/utils'
 import type { Producto } from '@/types'
 
@@ -79,39 +80,45 @@ export function ProductModal({
 
   return (
     <div
-      className="fixed inset-0 z-20 flex items-end bg-slate-950/40 lg:items-center lg:justify-center lg:p-6"
+      className="fixed inset-0 z-40 flex items-end bg-slate-950/40 backdrop-blur-[2px] lg:items-center lg:justify-center lg:p-6"
       onClick={onClose}
     >
       <div
-        className="max-h-[92vh] w-full overflow-hidden rounded-t-3xl bg-white shadow-xl lg:max-h-[90vh] lg:max-w-[760px] lg:rounded-[28px] lg:border lg:border-white/80 lg:shadow-[0_30px_90px_rgba(15,23,42,0.18)]"
+        className="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/80 bg-white shadow-xl lg:max-h-[90vh] lg:max-w-[760px] lg:rounded-[30px] lg:shadow-[0_30px_90px_rgba(15,23,42,0.18)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-4 pb-3 pt-4 lg:px-5 lg:pb-4 lg:pt-5">
-          <h3 className="text-base font-semibold text-slate-900">
-            {productoEditId ? 'Editar producto' : 'Nuevo producto'}
-          </h3>
+        <div className="flex items-center justify-between border-b border-slate-100 bg-white px-4 pb-3 pt-4 lg:px-5 lg:pb-4 lg:pt-5">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">
+              {productoEditId ? 'Editar producto' : 'Nuevo producto'}
+            </h3>
+            <p className="mt-0.5 text-[12px] text-slate-500">
+              Mantén stock, coste e imagen listos para compras e informes.
+            </p>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full px-2 py-1 text-sm font-medium text-slate-500"
+            className="flex h-9 w-9 items-center justify-center rounded-[14px] border border-slate-200 text-lg leading-none text-slate-500 transition hover:bg-slate-50"
+            aria-label="Cerrar modal"
           >
-            Cerrar
+            ×
           </button>
         </div>
 
-        <div className="max-h-[calc(92vh-76px)] overflow-y-auto px-4 pb-4 pt-4 lg:max-h-[calc(90vh-88px)] lg:px-5 lg:pb-5 lg:pt-4">
-        <div className="space-y-3">
+        <div className="flex-1 overflow-y-auto px-4 py-4 lg:px-5">
+        <div className="grid gap-3">
           <input
             placeholder="Nombre"
             value={productoForm.nombre}
             onChange={(e) => onFormChange({ ...productoForm, nombre: e.target.value })}
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+            className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
 
           <select
             value={productoForm.categoria}
             onChange={(e) => onFormChange({ ...productoForm, categoria: e.target.value })}
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+            className={`w-full px-4 py-3 text-base text-slate-900 ${fieldShell}`}
           >
             <option value="">Selecciona una categoría</option>
             {categoryOptions.map((categoria) => (
@@ -124,7 +131,7 @@ export function ProductModal({
           <select
             value={productoForm.unidad}
             onChange={(e) => onFormChange({ ...productoForm, unidad: e.target.value })}
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+            className={`w-full px-4 py-3 text-base text-slate-900 ${fieldShell}`}
           >
             <option value="uds">uds</option>
             <option value="kg">kg</option>
@@ -140,14 +147,14 @@ export function ProductModal({
               placeholder="Stock actual"
               value={productoForm.stock_actual}
               onChange={(e) => onFormChange({ ...productoForm, stock_actual: e.target.value })}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+              className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
             />
             <input
               type="number"
               placeholder="Stock mínimo"
               value={productoForm.stock_minimo}
               onChange={(e) => onFormChange({ ...productoForm, stock_minimo: e.target.value })}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+              className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
             />
           </div>
 
@@ -157,7 +164,7 @@ export function ProductModal({
             placeholder="Coste unitario actual"
             value={productoForm.coste_unitario}
             onChange={(e) => onFormChange({ ...productoForm, coste_unitario: e.target.value })}
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+            className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
 
           {productoEditId && productoActual ? (
@@ -204,7 +211,7 @@ export function ProductModal({
             placeholder="Referencia"
             value={productoForm.referencia}
             onChange={(e) => onFormChange({ ...productoForm, referencia: e.target.value })}
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+            className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
 
           <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
@@ -236,7 +243,7 @@ export function ProductModal({
               </div>
 
               <div className="flex-1 space-y-2">
-                <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
+                <label className={`flex cursor-pointer items-center justify-center px-4 py-3 text-sm ${ghostButton}`}>
                   Subir imagen
                   <input
                     type="file"
@@ -253,14 +260,14 @@ export function ProductModal({
                   <button
                     type="button"
                     onClick={() => onFormChange({ ...productoForm, imagen_url: '' })}
-                    className="flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600"
+                    className={`flex-1 px-3 py-2 text-xs ${ghostButton}`}
                   >
                     Quitar imagen
                   </button>
                   <button
                     type="button"
                     onClick={() => onFormChange({ ...productoForm, imagen_url: '' })}
-                    className="flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600"
+                    className={`flex-1 px-3 py-2 text-xs ${ghostButton}`}
                   >
                     Limpiar
                   </button>
@@ -311,21 +318,33 @@ export function ProductModal({
             </div>
           ) : null}
 
-          <button
-            type="button"
-            onClick={onGuardar}
-            disabled={productoSaving}
-            className="mt-2 w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
-          >
-            {productoSaving
-              ? productoEditId
-                ? 'Actualizando...'
-                : 'Guardando...'
-              : productoEditId
-              ? 'Actualizar producto'
-              : 'Guardar producto'}
-          </button>
         </div>
+        </div>
+
+        <div className="border-t border-slate-100 bg-white px-4 py-3 lg:px-5">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className={`px-4 py-3 text-sm ${ghostButton}`}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={onGuardar}
+              disabled={productoSaving}
+              className={`rounded-[16px] px-5 py-3 text-sm disabled:cursor-wait disabled:opacity-60 ${primaryGradientButton}`}
+            >
+              {productoSaving
+                ? productoEditId
+                  ? 'Actualizando...'
+                  : 'Guardando...'
+                : productoEditId
+                ? 'Actualizar producto'
+                : 'Guardar producto'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
