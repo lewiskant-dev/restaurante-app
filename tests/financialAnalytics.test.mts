@@ -8,6 +8,7 @@ import {
   buildInventoryClosingComparison,
   buildInventoryFinancialSummary,
   buildReorderRecommendations,
+  buildReorderSupplierSummary,
   buildWasteFinancialSummary,
   calculatePriceVariationPct,
   getDominantCategory,
@@ -86,6 +87,7 @@ test('buildReorderRecommendations prioriza productos bajo minimo con coste estim
       stock_actual: 1,
       stock_minimo: 5,
       coste_unitario: 3,
+      ultimo_proveedor_nombre: 'Proveedor A',
     },
     {
       id: 'sal',
@@ -113,6 +115,7 @@ test('buildReorderRecommendations prioriza productos bajo minimo con coste estim
       cantidadRecomendada: item.cantidadRecomendada,
       costeEstimado: item.costeEstimado,
       costeDisponible: item.costeDisponible,
+      proveedorSugerido: item.proveedorSugerido,
     })),
     [
       {
@@ -120,15 +123,58 @@ test('buildReorderRecommendations prioriza productos bajo minimo con coste estim
         cantidadRecomendada: 4,
         costeEstimado: 12,
         costeDisponible: true,
+        proveedorSugerido: 'Proveedor A',
       },
       {
         producto: 'Sal',
         cantidadRecomendada: 10,
         costeEstimado: 0,
         costeDisponible: false,
+        proveedorSugerido: 'Sin proveedor sugerido',
       },
     ]
   )
+})
+
+test('buildReorderSupplierSummary agrupa reposicion por proveedor sugerido', () => {
+  const summary = buildReorderSupplierSummary([
+    {
+      productoId: 'aceite',
+      producto: 'Aceite',
+      categoria: 'Aceites',
+      unidad: 'l',
+      stockActual: 1,
+      stockMinimo: 5,
+      cantidadRecomendada: 4,
+      costeUnitario: 3,
+      costeEstimado: 12,
+      costeDisponible: true,
+      proveedorSugerido: 'Proveedor A',
+    },
+    {
+      productoId: 'sal',
+      producto: 'Sal',
+      categoria: 'Despensa',
+      unidad: 'kg',
+      stockActual: 0,
+      stockMinimo: 10,
+      cantidadRecomendada: 10,
+      costeUnitario: 0,
+      costeEstimado: 0,
+      costeDisponible: false,
+      proveedorSugerido: 'Proveedor A',
+    },
+  ])
+
+  assert.deepEqual(summary, [
+    {
+      proveedor: 'Proveedor A',
+      productos: 2,
+      costeEstimado: 12,
+      cantidadLineas: 14,
+      costePendiente: true,
+    },
+  ])
 })
 
 test('buildInventoryClosingComparison compara el ultimo cierre con el anterior', () => {

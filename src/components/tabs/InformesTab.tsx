@@ -11,6 +11,7 @@ import {
   buildInventoryClosingComparison,
   buildInventoryFinancialSummary,
   buildReorderRecommendations,
+  buildReorderSupplierSummary,
   buildWasteFinancialSummary,
   getMarginRatio,
 } from '@/lib/financialAnalytics'
@@ -117,6 +118,7 @@ type InformesTabProps = {
   onExportarRentabilidad: () => void
   onExportarCompras: () => void
   onExportarInventario: () => void
+  onExportarReposicion: () => void
   onCrearCierreInventario: () => void
 }
 
@@ -143,6 +145,7 @@ export function InformesTab({
   onExportarRentabilidad,
   onExportarCompras,
   onExportarInventario,
+  onExportarReposicion,
   onCrearCierreInventario,
 }: InformesTabProps) {
   const healthSummary = buildFinancialHealthSummary({
@@ -160,6 +163,7 @@ export function InformesTab({
   const inventorySummary = buildInventoryFinancialSummary(productos)
   const reorderRecommendations = buildReorderRecommendations(productos)
   const topReorderRecommendations = reorderRecommendations.slice(0, 6)
+  const reorderSupplierSummary = buildReorderSupplierSummary(reorderRecommendations).slice(0, 4)
   const inventoryClosingComparison = buildInventoryClosingComparison(inventarioCierres)
   const wasteCutoff = new Date()
   wasteCutoff.setDate(
@@ -508,6 +512,26 @@ export function InformesTab({
                 ))
               )}
             </div>
+            {reorderSupplierSummary.length > 0 && (
+              <div className="mt-3 grid gap-2 md:grid-cols-2">
+                {reorderSupplierSummary.map((item) => (
+                  <div
+                    key={item.proveedor}
+                    className="rounded-[14px] border border-amber-100 bg-white px-4 py-3"
+                  >
+                    <div className="text-[12px] font-semibold text-slate-900">{item.proveedor}</div>
+                    <div className="mt-1 text-[11px] text-slate-500">
+                      {item.productos} producto{item.productos === 1 ? '' : 's'} · Comprar{' '}
+                      {item.cantidadLineas.toLocaleString('es-ES')} unidades
+                    </div>
+                    <div className="mt-2 text-[12px] font-semibold text-amber-700">
+                      {formatEuro(item.costeEstimado)} €
+                      {item.costePendiente ? ' · costes pendientes' : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="mt-3 rounded-[18px] border border-slate-200 bg-white p-3">
@@ -740,6 +764,13 @@ export function InformesTab({
                 className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-left text-[12px] font-semibold text-slate-700 shadow-sm"
               >
                 Inventario financiero CSV
+              </button>
+              <button
+                type="button"
+                onClick={onExportarReposicion}
+                className="rounded-[16px] border border-amber-100 bg-amber-50 px-4 py-3 text-left text-[12px] font-semibold text-amber-700 shadow-sm"
+              >
+                Reposición recomendada CSV
               </button>
             </div>
           </div>

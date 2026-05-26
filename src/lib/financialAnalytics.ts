@@ -52,6 +52,7 @@ type InventoryValueCandidate = {
   nombre?: string
   categoria?: string
   unidad?: string
+  ultimo_proveedor_nombre?: string | null
   stock_actual: number
   stock_minimo: number
   coste_unitario?: number | null
@@ -114,6 +115,7 @@ export type ReorderRecommendation = {
   costeUnitario: number
   costeEstimado: number
   costeDisponible: boolean
+  proveedorSugerido: string
 }
 
 export function buildReorderRecommendations(
@@ -141,6 +143,7 @@ export function buildReorderRecommendations(
         costeUnitario,
         costeEstimado: cantidadRecomendada * costeUnitario,
         costeDisponible: costeUnitario > 0,
+        proveedorSugerido: product.ultimo_proveedor_nombre?.trim() || 'Sin proveedor sugerido',
       }
     })
     .filter((item) => item.cantidadRecomendada > 0)
@@ -148,6 +151,40 @@ export function buildReorderRecommendations(
       if (a.costeDisponible !== b.costeDisponible) return a.costeDisponible ? -1 : 1
       return b.costeEstimado - a.costeEstimado || b.cantidadRecomendada - a.cantidadRecomendada
     })
+}
+
+export type ReorderSupplierSummary = {
+  proveedor: string
+  productos: number
+  costeEstimado: number
+  cantidadLineas: number
+  costePendiente: boolean
+}
+
+export function buildReorderSupplierSummary(
+  recommendations: ReorderRecommendation[]
+): ReorderSupplierSummary[] {
+  const grouped = new Map<string, ReorderSupplierSummary>()
+
+  recommendations.forEach((item) => {
+    const current = grouped.get(item.proveedorSugerido) ?? {
+      proveedor: item.proveedorSugerido,
+      productos: 0,
+      costeEstimado: 0,
+      cantidadLineas: 0,
+      costePendiente: false,
+    }
+
+    current.productos += 1
+    current.costeEstimado += item.costeEstimado
+    current.cantidadLineas += item.cantidadRecomendada
+    current.costePendiente = current.costePendiente || !item.costeDisponible
+    grouped.set(item.proveedorSugerido, current)
+  })
+
+  return Array.from(grouped.values()).sort(
+    (a, b) => b.costeEstimado - a.costeEstimado || b.productos - a.productos
+  )
 }
 
 export type InventoryClosingComparison = {

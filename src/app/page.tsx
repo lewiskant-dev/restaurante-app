@@ -57,7 +57,11 @@ import {
   todayLocalInputDate,
 } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
-import { buildInventoryFinancialSummary } from '@/lib/financialAnalytics'
+import {
+  buildInventoryFinancialSummary,
+  buildReorderRecommendations,
+  buildReorderSupplierSummary,
+} from '@/lib/financialAnalytics'
 import {
   getRestaurantScopeDetail,
   getRestaurantScopeFromAppMetadata,
@@ -1225,10 +1229,18 @@ export default function HomePage() {
     const filasRentabilidad = getFilasRentabilidadAnalitica()
     const filasCompras = getFilasComprasAnalitica()
     const filasInventario = getFilasInventarioFinanciero()
+    const filasReposicion = getFilasReposicionRecomendada()
 
     descargarCSV(
       `tpv_analitica_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
-      [...filasResumen, ...filasProductos, ...filasRentabilidad, ...filasCompras, ...filasInventario]
+      [
+        ...filasResumen,
+        ...filasProductos,
+        ...filasRentabilidad,
+        ...filasCompras,
+        ...filasInventario,
+        ...filasReposicion,
+      ]
     )
   }
 
@@ -1389,6 +1401,35 @@ export default function HomePage() {
     return [...filasResumen, ...filasProductos]
   }
 
+  function getFilasReposicionRecomendada() {
+    const recommendations = buildReorderRecommendations(productos)
+    const filasProveedor = buildReorderSupplierSummary(recommendations).map((item) => ({
+      bloque: 'reposicion_resumen_proveedor',
+      fecha: todayLocalInputDate(),
+      proveedor_sugerido: item.proveedor,
+      productos: item.productos,
+      cantidad_lineas: item.cantidadLineas,
+      coste_estimado: item.costeEstimado,
+      coste_pendiente: item.costePendiente,
+    }))
+    const filasProducto = recommendations.map((item) => ({
+      bloque: 'reposicion_recomendada',
+      fecha: todayLocalInputDate(),
+      producto: item.producto,
+      categoria: item.categoria,
+      proveedor_sugerido: item.proveedorSugerido,
+      unidad: item.unidad,
+      stock_actual: item.stockActual,
+      stock_minimo: item.stockMinimo,
+      cantidad_recomendada: item.cantidadRecomendada,
+      coste_unitario: item.costeUnitario,
+      coste_estimado: item.costeEstimado,
+      coste_disponible: item.costeDisponible,
+    }))
+
+    return [...filasProveedor, ...filasProducto]
+  }
+
   function exportarResumenAnaliticaCSV() {
     descargarCSV(
       `informe_resumen_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
@@ -1421,6 +1462,13 @@ export default function HomePage() {
     descargarCSV(
       `informe_inventario_financiero_${todayLocalInputDate()}.csv`,
       getFilasInventarioFinanciero()
+    )
+  }
+
+  function exportarReposicionRecomendadaCSV() {
+    descargarCSV(
+      `informe_reposicion_recomendada_${todayLocalInputDate()}.csv`,
+      getFilasReposicionRecomendada()
     )
   }
 
@@ -1968,6 +2016,7 @@ export default function HomePage() {
             onExportarRentabilidad={exportarRentabilidadAnaliticaCSV}
             onExportarCompras={exportarComprasAnaliticaCSV}
             onExportarInventario={exportarInventarioFinancieroCSV}
+            onExportarReposicion={exportarReposicionRecomendadaCSV}
             onCrearCierreInventario={() => void crearCierreInventario()}
           />
         )}
