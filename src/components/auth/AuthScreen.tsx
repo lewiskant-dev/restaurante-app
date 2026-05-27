@@ -2,7 +2,7 @@
 
 import type { FormEvent } from 'react'
 import { NexoBrandMark } from '@/components/ui/NexoBrandMark'
-import { fieldShell, primaryGradientButton, softPanel, surfaceCard } from '@/components/ui/primitives'
+import { fieldShell, primaryGradientButton, surfaceCard } from '@/components/ui/primitives'
 
 type AuthScreenProps = {
   authReady: boolean
@@ -81,48 +81,47 @@ export function AuthScreen({
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#dbeafe_0%,transparent_28%),linear-gradient(180deg,#f8fbff_0%,#f3f6fb_42%,#eef3f9_100%)] px-4 py-10 text-slate-900">
-      <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-        <section className={`bg-white/82 p-8 backdrop-blur sm:p-10 ${surfaceCard}`}>
+    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_12%_18%,#dbeafe_0%,transparent_24%),radial-gradient(circle_at_88%_12%,#ede9fe_0%,transparent_22%),linear-gradient(180deg,#f8fbff_0%,#f3f6fb_48%,#eef3f9_100%)] px-4 py-8 text-slate-900">
+      <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl gap-8 lg:grid-cols-[0.9fr_0.74fr] lg:items-center">
+        <section className="flex min-h-[28rem] flex-col justify-between rounded-[38px] border border-white/70 bg-white/42 p-8 shadow-[0_24px_80px_rgba(15,23,42,0.055)] backdrop-blur sm:p-10 lg:min-h-[34rem]">
           <BrandLockup />
-          <h1 className="mt-8 text-4xl font-semibold tracking-tight text-slate-950">
-            Acceso para el equipo del restaurante
-          </h1>
-          <p className="mt-4 max-w-xl text-lg leading-8 text-slate-600">
-            Cada persona entra con su propia cuenta para que el historial, las acciones y la
-            trazabilidad queden asociadas a un usuario real.
-          </p>
-
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            <div className={`p-5 ${softPanel}`}>
-              <div className="text-sm font-semibold text-slate-900">Identidad real</div>
-              <p className="mt-2 text-sm text-slate-500">
-                La auditoría registra quién hizo cada cambio.
-              </p>
+          <div>
+            <div className="mb-8 flex h-28 w-28 items-center justify-center rounded-[34px] bg-white/80 shadow-[0_22px_70px_rgba(15,23,42,0.08)]">
+              <NexoBrandMark className="h-16 w-16" />
             </div>
-            <div className={`p-5 ${softPanel}`}>
-              <div className="text-sm font-semibold text-slate-900">Acceso compartido</div>
-              <p className="mt-2 text-sm text-slate-500">
-                Varias personas pueden usar la app sin mezclar sesiones.
-              </p>
-            </div>
-            <div className={`p-5 ${softPanel}`}>
-              <div className="text-sm font-semibold text-slate-900">Base segura</div>
-              <p className="mt-2 text-sm text-slate-500">
-                Queda preparado para activar permisos por usuario en Supabase.
-              </p>
-            </div>
+            <h1 className="max-w-xl text-5xl font-semibold tracking-[-0.045em] text-slate-950 sm:text-6xl lg:text-[4.8rem] lg:leading-[0.96]">
+              Nexo
+            </h1>
+            <p className="mt-5 max-w-md text-base leading-7 text-slate-500 sm:text-lg">
+              Acceso privado al panel operativo.
+            </p>
+          </div>
+          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+            Restaurante conectado
           </div>
         </section>
 
-        <section className={`p-8 sm:p-10 ${surfaceCard}`}>
+        <section className={`p-6 sm:p-8 lg:p-10 ${surfaceCard}`}>
+          <div className="mb-8">
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
+              {authMode === 'recovery' ? 'Nueva contraseña' : 'Iniciar sesión'}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              {authMode === 'recovery'
+                ? 'Define una nueva contraseña para volver a entrar.'
+                : 'Introduce tus credenciales para acceder a Nexo.'}
+            </p>
+          </div>
+
           {authMode !== 'recovery' ? (
-            <div className="flex rounded-2xl bg-slate-100 p-1.5">
+            <div className="flex rounded-[20px] bg-slate-100/80 p-1.5">
               <button
                 type="button"
                 onClick={() => onModeChange('login')}
-                className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                  authMode === 'login' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
+                className={`flex-1 rounded-[16px] px-4 py-3 text-sm font-semibold transition ${
+                  authMode === 'login'
+                    ? 'bg-white text-blue-600 shadow-[0_10px_24px_rgba(15,23,42,0.08)]'
+                    : 'text-slate-500'
                 }`}
               >
                 Iniciar sesión
@@ -131,8 +130,10 @@ export function AuthScreen({
                 <button
                   type="button"
                   onClick={() => onModeChange('register')}
-                  className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                    authMode === 'register' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
+                  className={`flex-1 rounded-[16px] px-4 py-3 text-sm font-semibold transition ${
+                    authMode === 'register'
+                      ? 'bg-white text-blue-600 shadow-[0_10px_24px_rgba(15,23,42,0.08)]'
+                      : 'text-slate-500'
                   }`}
                 >
                   Crear cuenta
@@ -140,8 +141,8 @@ export function AuthScreen({
               ) : null}
             </div>
           ) : (
-            <div className="rounded-2xl bg-blue-50 px-4 py-3 text-sm text-blue-700">
-              Estás en modo seguro de recuperación. Define una contraseña nueva para tu cuenta.
+            <div className="rounded-[18px] bg-blue-50 px-4 py-3 text-sm text-blue-700">
+              Modo seguro de recuperación activo.
             </div>
           )}
 
@@ -284,24 +285,6 @@ export function AuthScreen({
             </div>
           )}
 
-          <p className="mt-5 text-sm text-slate-500">
-            {authMode === 'recovery' ? (
-              <>
-                Si has llegado desde el correo de recuperación, guarda aquí tu nueva contraseña y
-                después podrás acceder normalmente.
-              </>
-            ) : allowSelfRegister ? (
-              <>
-                Las cuentas nuevas nacen como <span className="font-semibold">Empleado</span>. Un
-                administrador o el usuario master podrá elevar permisos desde dentro de la app.
-              </>
-            ) : (
-              <>
-                El alta de cuentas está controlada desde el panel de <span className="font-semibold">Usuarios</span>.
-                Si necesitas acceso, pídeselo a un administrador o al usuario master.
-              </>
-            )}
-          </p>
         </section>
       </div>
     </main>
