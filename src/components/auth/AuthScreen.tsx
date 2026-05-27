@@ -2,6 +2,7 @@
 
 import type { FormEvent } from 'react'
 import { NexoBrandMark } from '@/components/ui/NexoBrandMark'
+import { fieldShell, primaryGradientButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 
 type AuthScreenProps = {
   authReady: boolean
@@ -70,7 +71,7 @@ export function AuthScreen({
   if (!authReady) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f8fbff_0%,#f3f6fb_42%,#eef3f9_100%)] px-4">
-        <div className="w-full max-w-md rounded-[32px] border border-white/80 bg-white/95 p-8 text-center shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+        <div className={`w-full max-w-md p-8 text-center ${surfaceCard}`}>
           <BrandLockup compact />
           <h1 className="mt-6 text-2xl font-semibold text-slate-950">Preparando tu acceso</h1>
           <p className="mt-2 text-sm text-slate-500">Comprobando tu sesión...</p>
@@ -82,7 +83,7 @@ export function AuthScreen({
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#dbeafe_0%,transparent_28%),linear-gradient(180deg,#f8fbff_0%,#f3f6fb_42%,#eef3f9_100%)] px-4 py-10 text-slate-900">
       <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-        <section className="rounded-[36px] border border-white/80 bg-white/80 p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur sm:p-10">
+        <section className={`bg-white/82 p-8 backdrop-blur sm:p-10 ${surfaceCard}`}>
           <BrandLockup />
           <h1 className="mt-8 text-4xl font-semibold tracking-tight text-slate-950">
             Acceso para el equipo del restaurante
@@ -93,19 +94,19 @@ export function AuthScreen({
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            <div className="rounded-3xl bg-slate-50 p-5">
+            <div className={`p-5 ${softPanel}`}>
               <div className="text-sm font-semibold text-slate-900">Identidad real</div>
               <p className="mt-2 text-sm text-slate-500">
                 La auditoría registra quién hizo cada cambio.
               </p>
             </div>
-            <div className="rounded-3xl bg-slate-50 p-5">
+            <div className={`p-5 ${softPanel}`}>
               <div className="text-sm font-semibold text-slate-900">Acceso compartido</div>
               <p className="mt-2 text-sm text-slate-500">
                 Varias personas pueden usar la app sin mezclar sesiones.
               </p>
             </div>
-            <div className="rounded-3xl bg-slate-50 p-5">
+            <div className={`p-5 ${softPanel}`}>
               <div className="text-sm font-semibold text-slate-900">Base segura</div>
               <p className="mt-2 text-sm text-slate-500">
                 Queda preparado para activar permisos por usuario en Supabase.
@@ -114,7 +115,7 @@ export function AuthScreen({
           </div>
         </section>
 
-        <section className="rounded-[36px] border border-white/80 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.1)] sm:p-10">
+        <section className={`p-8 sm:p-10 ${surfaceCard}`}>
           {authMode !== 'recovery' ? (
             <div className="flex rounded-2xl bg-slate-100 p-1.5">
               <button
@@ -155,7 +156,7 @@ export function AuthScreen({
                     onChange={(e) => onNameChange(e.target.value)}
                     placeholder="Carlos Pérez"
                     required
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                    className={`w-full px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${fieldShell}`}
                   />
                 </label>
               )}
@@ -174,7 +175,7 @@ export function AuthScreen({
                       : 'equipo@restaurante.com'
                   }
                   required
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                  className={`w-full px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${fieldShell}`}
                 />
               </label>
 
@@ -199,7 +200,7 @@ export function AuthScreen({
                   placeholder="Min. 6 caracteres"
                   required
                   minLength={6}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                  className={`w-full px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${fieldShell}`}
                 />
               </label>
 
@@ -210,7 +211,7 @@ export function AuthScreen({
               <button
                 type="submit"
                 disabled={authSaving}
-                className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 disabled:opacity-60"
+                className={`w-full rounded-2xl px-4 py-3 text-sm disabled:cursor-wait disabled:opacity-60 ${primaryGradientButton}`}
               >
                 {authSaving
                   ? authMode === 'login'
@@ -230,8 +231,8 @@ export function AuthScreen({
                   value={recoveryPasswordDraft}
                   onChange={(e) => onRecoveryPasswordChange(e.target.value)}
                   placeholder="Mínimo 8 caracteres"
-                  className={`w-full rounded-2xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
-                    recoveryPasswordDraft && recoveryPasswordError ? 'border-red-200' : 'border-slate-200'
+                  className={`w-full px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${fieldShell} ${
+                    recoveryPasswordDraft && recoveryPasswordError ? '!border-red-200 !ring-red-100' : ''
                   }`}
                 />
                 <div className={`mt-2 text-xs ${recoveryPasswordDraft && recoveryPasswordError ? 'text-red-500' : 'text-slate-500'}`}>
@@ -248,8 +249,8 @@ export function AuthScreen({
                   value={recoveryConfirmDraft}
                   onChange={(e) => onRecoveryConfirmChange(e.target.value)}
                   placeholder="Repite la nueva contraseña"
-                  className={`w-full rounded-2xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${
-                    recoveryConfirmDraft && recoveryPasswordMatchError ? 'border-red-200' : 'border-slate-200'
+                  className={`w-full px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${fieldShell} ${
+                    recoveryConfirmDraft && recoveryPasswordMatchError ? '!border-red-200 !ring-red-100' : ''
                   }`}
                 />
                 <div className={`mt-2 text-xs ${recoveryConfirmDraft && recoveryPasswordMatchError ? 'text-red-500' : 'text-slate-500'}`}>
@@ -268,7 +269,7 @@ export function AuthScreen({
                   type="button"
                   onClick={onCompleteRecovery}
                   disabled={completingRecoveryPassword}
-                  className="flex-1 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 disabled:opacity-60"
+                  className={`flex-1 rounded-2xl px-4 py-3 text-sm disabled:cursor-wait disabled:opacity-60 ${primaryGradientButton}`}
                 >
                   {completingRecoveryPassword ? 'Guardando...' : 'Guardar nueva contraseña'}
                 </button>

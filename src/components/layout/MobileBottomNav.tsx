@@ -38,7 +38,7 @@ export function MobileBottomNav({
   onMainTabChange,
   onTabChange,
 }: MobileBottomNavProps) {
-  const operativaRoot: TabKey = 'stock'
+  const operativaRoot: TabKey = visibleTabsByGroup.operativa.includes('historial') ? 'historial' : 'stock'
   const albaranesTarget: TabKey = visibleTabsByGroup.gestion.includes('albaranes')
     ? 'albaranes'
     : 'albaran'
@@ -147,10 +147,15 @@ export function MobileBottomNav({
     },
   ]
 
+  const visibleItems = items.filter((item) => !(item.key === 'inicio' && operativaRoot === 'stock'))
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/98 px-2 pb-[calc(env(safe-area-inset-bottom)+0.2rem)] pt-1 shadow-[0_-8px_18px_rgba(15,23,42,0.035)] backdrop-blur lg:hidden">
-      <div className="grid grid-cols-5 gap-0.5">
-        {items.map((item) => (
+      <div
+        className="grid gap-0.5"
+        style={{ gridTemplateColumns: `repeat(${visibleItems.length}, minmax(0, 1fr))` }}
+      >
+        {visibleItems.map((item) => (
           <button
             key={item.key}
             type="button"

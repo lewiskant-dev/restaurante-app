@@ -4,7 +4,7 @@ import Image from 'next/image'
 import type { NuevoProductoForm, ProductoPrecioHistorial } from '@/features/home/types'
 import { PRODUCT_CATEGORY_OPTIONS } from '@/features/home/constants'
 import { ProductCategoryBadge } from '@/components/ui/ProductCategoryVisual'
-import { fieldShell, ghostButton, primaryGradientButton } from '@/components/ui/primitives'
+import { fieldShell, ghostButton, primaryGradientButton, softPanel } from '@/components/ui/primitives'
 import { formatEuro } from '@/features/home/utils'
 import type { Producto } from '@/types'
 
@@ -99,7 +99,7 @@ export function ProductModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-[14px] border border-slate-200 text-lg leading-none text-slate-500 transition hover:bg-slate-50"
+            className={`flex h-9 w-9 items-center justify-center text-lg leading-none ${ghostButton}`}
             aria-label="Cerrar modal"
           >
             ×
@@ -168,7 +168,7 @@ export function ProductModal({
           />
 
           {productoEditId && productoActual ? (
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+            <div className={`p-4 ${softPanel}`}>
               <div className="mb-3">
                 <h4 className="text-sm font-semibold text-slate-900">Contexto financiero</h4>
                 <p className="mt-1 text-sm text-slate-500">
@@ -177,7 +177,7 @@ export function ProductModal({
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
                     Último coste
                   </div>
@@ -187,7 +187,7 @@ export function ProductModal({
                     )}
                   </div>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
                     Última compra
                   </div>
@@ -195,7 +195,7 @@ export function ProductModal({
                     {productoActual.ultima_compra_at || 'Sin compras registradas'}
                   </div>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:col-span-2">
+                <div className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 sm:col-span-2">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
                     Último proveedor
                   </div>
@@ -214,7 +214,7 @@ export function ProductModal({
             className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
 
-          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+          <div className={`p-4 ${softPanel}`}>
             <div className="mb-3">
               <h4 className="text-sm font-semibold text-slate-900">Imagen del producto</h4>
               <p className="mt-1 text-sm text-slate-500">
@@ -223,7 +223,7 @@ export function ProductModal({
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl border border-slate-200 bg-white">
+              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-[20px] border border-slate-200 bg-white">
                 {productoForm.imagen_url ? (
                   <Image
                     src={productoForm.imagen_url}
@@ -277,7 +277,7 @@ export function ProductModal({
           </div>
 
           {productoEditId ? (
-            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className={`p-4 ${softPanel}`}>
               <div className="mb-3">
                 <h4 className="text-sm font-semibold text-slate-900">Histórico reciente de compras</h4>
                 <p className="mt-1 text-sm text-slate-500">
@@ -286,11 +286,11 @@ export function ProductModal({
               </div>
 
               {historialPreciosLoading ? (
-                <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-5 text-sm text-slate-400">
+                <div className="rounded-[16px] border border-dashed border-slate-200 px-4 py-5 text-sm text-slate-400">
                   Cargando histórico...
                 </div>
               ) : historialPrecios.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-5 text-sm text-slate-400">
+                <div className="rounded-[16px] border border-dashed border-slate-200 px-4 py-5 text-sm text-slate-400">
                   Todavía no hay compras registradas para este producto.
                 </div>
               ) : (
@@ -298,7 +298,7 @@ export function ProductModal({
                   {historialPrecios.map((item) => (
                     <div
                       key={item.id}
-                      className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 sm:grid-cols-[1fr_auto]"
+                      className="grid gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-3 sm:grid-cols-[1fr_auto]"
                     >
                       <div>
                         <div className="text-sm font-semibold text-slate-900">

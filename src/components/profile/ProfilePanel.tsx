@@ -1,5 +1,7 @@
 'use client'
 
+import { fieldShell, ghostButton, primaryGradientButton, softPanel } from '@/components/ui/primitives'
+
 type ProfilePanelProps = {
   open: boolean
   profileNameDraft: string
@@ -65,11 +67,11 @@ export function ProfilePanel({
 
   return (
     <div
-      className="fixed inset-0 z-30 flex items-end bg-slate-950/40 lg:items-center lg:justify-center lg:p-6"
+      className="fixed inset-0 z-40 flex items-end bg-slate-950/40 backdrop-blur-[2px] lg:items-center lg:justify-center lg:p-6"
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-xl lg:max-w-[760px] lg:rounded-[28px] lg:border lg:border-white/80 lg:shadow-[0_30px_90px_rgba(15,23,42,0.18)]"
+        className="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/80 bg-white shadow-xl lg:max-w-[760px] lg:rounded-[30px] lg:shadow-[0_30px_90px_rgba(15,23,42,0.18)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-4 pb-3 pt-4 lg:pb-4 lg:pt-5">
@@ -80,7 +82,7 @@ export function ProfilePanel({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-10 items-center justify-center rounded-2xl border border-slate-200 px-3 text-sm font-medium text-slate-500 transition hover:bg-slate-50"
+            className={`inline-flex h-10 items-center justify-center px-3 text-sm ${ghostButton}`}
           >
             Cerrar
           </button>
@@ -88,7 +90,7 @@ export function ProfilePanel({
 
         <div className="flex-1 overflow-y-auto px-4 py-4 lg:px-5 lg:py-5">
           <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
-            <div className="rounded-[22px] bg-slate-50 p-4 lg:rounded-[24px] lg:p-5">
+            <div className={`p-4 lg:p-5 ${softPanel}`}>
             <div className="mb-3">
               <h4 className="text-sm font-semibold text-slate-900">Información personal</h4>
               <p className="mt-1 text-sm text-slate-500">
@@ -102,8 +104,8 @@ export function ProfilePanel({
                 value={profileNameDraft}
                 onChange={(e) => onProfileNameChange(e.target.value)}
                 placeholder="Nombre visible"
-                className={`w-full rounded-2xl border bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${
-                  profileNameError ? 'border-red-200' : 'border-slate-200'
+                className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell} ${
+                  profileNameError ? '!border-red-200 !ring-red-100' : ''
                 }`}
               />
               <div className={`text-xs ${profileNameError ? 'text-red-500' : 'text-slate-500'}`}>
@@ -113,13 +115,13 @@ export function ProfilePanel({
                 type="text"
                 value={currentUserEmail}
                 readOnly
-                className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-base text-slate-500"
+                className="w-full rounded-[16px] border border-slate-200 bg-slate-100 px-4 py-3 text-base text-slate-500"
               />
               <input
                 type="text"
                 value={userRoleLabel}
                 readOnly
-                className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-base text-slate-500"
+                className="w-full rounded-[16px] border border-slate-200 bg-slate-100 px-4 py-3 text-base text-slate-500"
               />
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
@@ -132,7 +134,7 @@ export function ProfilePanel({
                     value={activeRestaurantId}
                     onChange={(e) => onRestaurantChange(e.target.value)}
                     disabled={switchingRestaurant || accessibleRestaurants.length <= 1}
-                    className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none disabled:opacity-60"
+                    className={`mt-3 w-full px-3 py-2.5 text-sm text-slate-800 outline-none disabled:opacity-60 ${fieldShell}`}
                   >
                     {accessibleRestaurants.map((restaurant) => (
                       <option key={restaurant.id} value={restaurant.id} disabled={!restaurant.activo}>
@@ -151,14 +153,14 @@ export function ProfilePanel({
                 type="button"
                 onClick={onSaveProfile}
                 disabled={savingProfile || !!profileNameError}
-                className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
+                className="w-full rounded-[16px] bg-slate-900 px-4 py-3 text-base font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {savingProfile ? 'Guardando...' : 'Guardar perfil'}
               </button>
             </div>
           </div>
 
-            <div className="rounded-[22px] bg-slate-50 p-4 lg:rounded-[24px] lg:p-5">
+            <div className={`p-4 lg:p-5 ${softPanel}`}>
             <div className="mb-3">
               <h4 className="text-sm font-semibold text-slate-900">Seguridad</h4>
               <p className="mt-1 text-sm text-slate-500">
@@ -172,15 +174,15 @@ export function ProfilePanel({
                 value={currentPasswordDraft}
                 onChange={(e) => onCurrentPasswordChange(e.target.value)}
                 placeholder="Contraseña actual"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400"
+                className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
               />
               <input
                 type="password"
                 value={newPasswordDraft}
                 onChange={(e) => onNewPasswordChange(e.target.value)}
                 placeholder="Nueva contraseña"
-                className={`w-full rounded-2xl border bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${
-                  ownPasswordError || ownPasswordReuseError ? 'border-red-200' : 'border-slate-200'
+                className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell} ${
+                  ownPasswordError || ownPasswordReuseError ? '!border-red-200 !ring-red-100' : ''
                 }`}
               />
               <input
@@ -188,8 +190,8 @@ export function ProfilePanel({
                 value={confirmPasswordDraft}
                 onChange={(e) => onConfirmPasswordChange(e.target.value)}
                 placeholder="Confirmar nueva contraseña"
-                className={`w-full rounded-2xl border bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${
-                  ownPasswordMatchError ? 'border-red-200' : 'border-slate-200'
+                className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell} ${
+                  ownPasswordMatchError ? '!border-red-200 !ring-red-100' : ''
                 }`}
               />
               <div
@@ -215,7 +217,7 @@ export function ProfilePanel({
                   !!ownPasswordMatchError ||
                   !!ownPasswordReuseError
                 }
-                className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
+                className={`w-full rounded-[16px] px-4 py-3 text-base disabled:cursor-not-allowed disabled:opacity-60 ${primaryGradientButton}`}
               >
                 {updatingOwnPassword ? 'Actualizando...' : 'Actualizar contraseña'}
               </button>
@@ -228,7 +230,7 @@ export function ProfilePanel({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className={`inline-flex items-center justify-center px-4 py-2.5 text-sm ${ghostButton}`}
           >
             Salir sin guardar
           </button>
