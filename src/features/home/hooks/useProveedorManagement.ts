@@ -3,6 +3,7 @@ import { initialProveedorForm } from '@/features/home/constants'
 import type { PermissionKey, ProveedorForm } from '@/features/home/types'
 import { supabase } from '@/lib/supabase'
 import type { Proveedor } from '@/types'
+import type { ConfirmActionRequest } from '@/components/ui/ConfirmActionDialog'
 
 type AuditoriaParams = {
   entidad: string
@@ -20,6 +21,7 @@ type UseProveedorManagementOptions = {
   requirePermission: (permission: PermissionKey, message: string) => boolean
   registrarAuditoria: (params: AuditoriaParams) => Promise<void>
   onProveedorCreated?: (proveedor: Proveedor) => void
+  confirmAction?: (request: ConfirmActionRequest) => Promise<boolean>
 }
 
 export function useProveedorManagement({
@@ -29,6 +31,7 @@ export function useProveedorManagement({
   requirePermission,
   registrarAuditoria,
   onProveedorCreated,
+  confirmAction,
 }: UseProveedorManagementOptions) {
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [loadingProveedores, setLoadingProveedores] = useState(true)
@@ -229,7 +232,16 @@ export function useProveedorManagement({
       return
     }
 
-    const ok = window.confirm(`¿Archivar proveedor "${proveedor.nombre}"?`)
+    const ok = confirmAction
+      ? await confirmAction({
+          title: 'Archivar proveedor',
+          description: `El proveedor "${proveedor.nombre}" dejará de aparecer como activo. Su histórico y albaranes se mantienen intactos.`,
+          confirmLabel: 'Archivar proveedor',
+          tone: 'danger',
+        })
+      : typeof window !== 'undefined'
+        ? window.confirm(`¿Archivar proveedor "${proveedor.nombre}"?`)
+        : false
     if (!ok) return
 
     onError('')

@@ -13,6 +13,7 @@ import {
 import { todayLocalInputDate } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
 import type { Producto } from '@/types'
+import type { ConfirmActionRequest } from '@/components/ui/ConfirmActionDialog'
 
 type AuditoriaParams = {
   entidad: string
@@ -29,6 +30,7 @@ type UseStockManagementOptions = {
   onToast: (message: string) => void
   requirePermission: (permission: PermissionKey, message: string) => boolean
   registrarAuditoria: (params: AuditoriaParams) => Promise<void>
+  confirmAction?: (request: ConfirmActionRequest) => Promise<boolean>
 }
 
 export function useStockManagement({
@@ -37,6 +39,7 @@ export function useStockManagement({
   onToast,
   requirePermission,
   registrarAuditoria,
+  confirmAction,
 }: UseStockManagementOptions) {
   const [productos, setProductos] = useState<Producto[]>([])
   const [movimientos, setMovimientos] = useState<MovimientoConProducto[]>([])
@@ -404,7 +407,16 @@ export function useStockManagement({
       return
     }
 
-    const ok = window.confirm(`¿Archivar producto "${producto.nombre}"?`)
+    const ok = confirmAction
+      ? await confirmAction({
+          title: 'Archivar producto',
+          description: `El producto "${producto.nombre}" dejará de aparecer como activo, aunque podrás recuperarlo desde el filtro de archivados.`,
+          confirmLabel: 'Archivar producto',
+          tone: 'danger',
+        })
+      : typeof window !== 'undefined'
+        ? window.confirm(`¿Archivar producto "${producto.nombre}"?`)
+        : false
     if (!ok) return
 
     onError('')

@@ -1,12 +1,16 @@
 'use client'
 
-import { startTransition, useEffect, useEffectEvent, useMemo, useState } from 'react'
+import { startTransition, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { UserManagementPanel } from '@/components/admin/UserManagementPanel'
 import { AuthScreen } from '@/components/auth/AuthScreen'
 import { AppShellHeader } from '@/components/layout/AppShellHeader'
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 import { NotificationsBell } from '@/components/layout/NotificationsBell'
+import {
+  ConfirmActionDialog,
+  type ConfirmActionRequest,
+} from '@/components/ui/ConfirmActionDialog'
 import { NexoBrandMark } from '@/components/ui/NexoBrandMark'
 import { AjusteStockModal } from '@/components/modals/AjusteStockModal'
 import { ConsumoModal } from '@/components/modals/ConsumoModal'
@@ -102,6 +106,24 @@ export default function HomePage() {
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
   const [proveedorRecienCreadoId, setProveedorRecienCreadoId] = useState('')
+  const [confirmActionRequest, setConfirmActionRequest] =
+    useState<ConfirmActionRequest | null>(null)
+  const confirmActionResolverRef = useRef<((confirmed: boolean) => void) | null>(null)
+
+  function requestConfirmAction(request: ConfirmActionRequest) {
+    confirmActionResolverRef.current?.(false)
+
+    return new Promise<boolean>((resolve) => {
+      confirmActionResolverRef.current = resolve
+      setConfirmActionRequest(request)
+    })
+  }
+
+  function resolveConfirmAction(confirmed: boolean) {
+    confirmActionResolverRef.current?.(confirmed)
+    confirmActionResolverRef.current = null
+    setConfirmActionRequest(null)
+  }
 
   const changeTab = (nextTab: TabKey) => {
     startTransition(() => {
@@ -639,6 +661,7 @@ export default function HomePage() {
     onToast: setToast,
     requirePermission,
     registrarAuditoria,
+    confirmAction: requestConfirmAction,
   })
 
   const {
@@ -671,6 +694,7 @@ export default function HomePage() {
     onProveedorCreated: (proveedor) => {
       setProveedorRecienCreadoId(proveedor.id)
     },
+    confirmAction: requestConfirmAction,
   })
 
   const {
@@ -2311,6 +2335,12 @@ export default function HomePage() {
           {toast}
         </div>
       )}
+
+      <ConfirmActionDialog
+        request={confirmActionRequest}
+        onCancel={() => resolveConfirmAction(false)}
+        onConfirm={() => resolveConfirmAction(true)}
+      />
 
       <MobileBottomNav
         currentTab={tab}
