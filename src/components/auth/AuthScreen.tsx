@@ -81,28 +81,18 @@ export function AuthScreen({
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_12%_18%,#dbeafe_0%,transparent_24%),radial-gradient(circle_at_88%_12%,#ede9fe_0%,transparent_22%),linear-gradient(180deg,#f8fbff_0%,#f3f6fb_48%,#eef3f9_100%)] px-4 py-8 text-slate-900">
-      <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl gap-8 lg:grid-cols-[0.9fr_0.74fr] lg:items-center">
-        <section className="flex min-h-[28rem] flex-col justify-between rounded-[38px] border border-white/70 bg-white/42 p-8 shadow-[0_24px_80px_rgba(15,23,42,0.055)] backdrop-blur sm:p-10 lg:min-h-[34rem]">
+    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_18%_12%,#dbeafe_0%,transparent_24%),radial-gradient(circle_at_86%_10%,#ede9fe_0%,transparent_20%),linear-gradient(180deg,#f8fbff_0%,#f3f6fb_48%,#eef3f9_100%)] px-4 py-8 text-slate-900">
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl flex-col">
+        <header className="flex items-center justify-between py-2">
           <BrandLockup />
-          <div>
-            <div className="mb-8 flex h-28 w-28 items-center justify-center rounded-[34px] bg-white/80 shadow-[0_22px_70px_rgba(15,23,42,0.08)]">
-              <NexoBrandMark className="h-16 w-16" />
-            </div>
-            <h1 className="max-w-xl text-5xl font-semibold tracking-[-0.045em] text-slate-950 sm:text-6xl lg:text-[4.8rem] lg:leading-[0.96]">
-              Nexo
-            </h1>
-            <p className="mt-5 max-w-md text-base leading-7 text-slate-500 sm:text-lg">
-              Acceso privado al panel operativo.
-            </p>
-          </div>
-          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-            Restaurante conectado
-          </div>
-        </section>
+          <span className="hidden rounded-full border border-slate-200/80 bg-white/70 px-3 py-1.5 text-xs font-semibold text-slate-500 shadow-sm backdrop-blur sm:inline-flex">
+            Acceso privado
+          </span>
+        </header>
 
-        <section className={`p-6 sm:p-8 lg:p-10 ${surfaceCard}`}>
-          <div className="mb-8">
+        <div className="flex flex-1 items-center justify-center py-8">
+          <section className={`w-full max-w-[460px] p-6 sm:p-8 lg:p-9 ${surfaceCard}`}>
+            <div className="mb-8">
             <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
               {authMode === 'recovery' ? 'Nueva contraseña' : 'Iniciar sesión'}
             </h2>
@@ -285,7 +275,8 @@ export function AuthScreen({
             </div>
           )}
 
-        </section>
+          </section>
+        </div>
       </div>
     </main>
   )
