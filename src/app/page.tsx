@@ -87,6 +87,7 @@ export default function HomePage() {
   const [accessibleRestaurants, setAccessibleRestaurants] = useState<ManagedRestaurant[]>([])
   const [loadingAccessibleRestaurants, setLoadingAccessibleRestaurants] = useState(false)
   const [switchingRestaurant, setSwitchingRestaurant] = useState(false)
+  const [showRestaurantAccessLoader, setShowRestaurantAccessLoader] = useState(false)
   const [restaurantsHydratedForUserId, setRestaurantsHydratedForUserId] = useState<string | null>(
     null
   )
@@ -475,9 +476,9 @@ export default function HomePage() {
   })
 
   useEffect(() => {
-    if (!authReady || !session) return
+    if (!authReady || !currentUserId) return
     void loadInitialDataEvent()
-  }, [authReady, session])
+  }, [authReady, currentUserId, activeRestaurantId, currentUserRole])
 
   const syncManagedUsersForActiveTab = useEffectEvent(async () => {
     if (!session || !canManageUsers(getUserRole(currentUser))) {
@@ -499,6 +500,16 @@ export default function HomePage() {
     const timer = setTimeout(() => setToast(''), 2500)
     return () => clearTimeout(timer)
   }, [toast])
+
+  useEffect(() => {
+    if (!loadingAccessibleRestaurants && !switchingRestaurant) {
+      setShowRestaurantAccessLoader(false)
+      return
+    }
+
+    const timer = setTimeout(() => setShowRestaurantAccessLoader(true), 450)
+    return () => clearTimeout(timer)
+  }, [loadingAccessibleRestaurants, switchingRestaurant])
 
   useEffect(() => {
     const nextMainTab = getMainTabForTab(tab)
@@ -1074,6 +1085,12 @@ export default function HomePage() {
   )
   const hasAnyAssignedRestaurant = accessibleRestaurants.length > 0
   const hasAnyActiveRestaurant = accessibleRestaurants.some((restaurant) => restaurant.activo)
+  const isCheckingRestaurantAccess =
+    loadingAccessibleRestaurants &&
+    accessibleRestaurants.length === 0 &&
+    restaurantsHydratedForUserId !== currentUserId
+  const showRestaurantAccessFeedback =
+    showRestaurantAccessLoader && (loadingAccessibleRestaurants || switchingRestaurant)
   const userInitials = getInitials(userDisplayName || 'Usuario')
   const totalCategorias = categoriasProducto.length
   const topSearchPlaceholder =
@@ -1650,12 +1667,11 @@ export default function HomePage() {
     )
   }
 
-  const shouldBlockForRestaurantAccess =
-    loadingAccessibleRestaurants &&
-    accessibleRestaurants.length === 0 &&
-    restaurantsHydratedForUserId !== currentUserId
+  if (isCheckingRestaurantAccess && !showRestaurantAccessFeedback) {
+    return <main className="min-h-screen bg-[#f6f8fc]" />
+  }
 
-  if (shouldBlockForRestaurantAccess) {
+  if (isCheckingRestaurantAccess && showRestaurantAccessFeedback) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f6f8fc] px-4 text-slate-900">
         <div className="w-full max-w-lg rounded-[32px] border border-white/80 bg-white/95 p-8 text-center shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
@@ -1734,7 +1750,7 @@ export default function HomePage() {
 
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-[#f6f8fc] pb-28 text-slate-900 lg:pb-16">
-      {(loadingAccessibleRestaurants || switchingRestaurant) && !shouldBlockForRestaurantAccess ? (
+      {showRestaurantAccessFeedback && !isCheckingRestaurantAccess ? (
         <div className="fixed right-4 top-4 z-[130] rounded-full border border-slate-200 bg-white/95 px-3.5 py-2 text-[12px] font-semibold text-slate-600 shadow-[0_14px_30px_rgba(15,23,42,0.1)] backdrop-blur">
           {switchingRestaurant ? 'Cambiando restaurante...' : 'Actualizando acceso...'}
         </div>

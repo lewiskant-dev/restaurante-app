@@ -238,7 +238,17 @@ export default function StockTab({
   onArchivar,
   onReactivar,
 }: StockTabProps) {
-  const [currentPage, setCurrentPage] = useState(1)
+  const filterKey = `${busqueda}\u0000${categoriaFiltro}\u0000${unidadFiltro}\u0000${productoEstado}`
+  const [pagination, setPagination] = useState({ filterKey, page: 1 })
+  const currentPage = pagination.filterKey === filterKey ? pagination.page : 1
+  const setCurrentPage = (nextPage: number | ((page: number) => number)) => {
+    setPagination((current) => {
+      const basePage = current.filterKey === filterKey ? current.page : 1
+      const page = typeof nextPage === 'function' ? nextPage(basePage) : nextPage
+      return { filterKey, page }
+    })
+  }
+
   const totalPages = Math.max(1, Math.ceil(productosFiltrados.length / STOCK_PAGE_SIZE))
   const effectiveCurrentPage = Math.min(currentPage, totalPages)
   const visibleProducts = useMemo(() => {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useDeferredValue, useMemo, useState } from 'react'
 import { initialProveedorForm } from '@/features/home/constants'
 import type { PermissionKey, ProveedorForm } from '@/features/home/types'
 import { supabase } from '@/lib/supabase'
@@ -40,6 +40,7 @@ export function useProveedorManagement({
   const [proveedorSaving, setProveedorSaving] = useState(false)
   const [proveedorEditId, setProveedorEditId] = useState<string | null>(null)
   const [proveedorForm, setProveedorForm] = useState<ProveedorForm>(initialProveedorForm)
+  const deferredBusquedaProveedor = useDeferredValue(busquedaProveedor)
 
   function requireActiveRestaurant() {
     if (currentRestaurantId) return currentRestaurantId
@@ -48,7 +49,7 @@ export function useProveedorManagement({
   }
 
   const proveedoresFiltrados = useMemo(() => {
-    const q = busquedaProveedor.trim().toLowerCase()
+    const q = deferredBusquedaProveedor.trim().toLowerCase()
     return proveedores
       .filter((p) => {
         if (proveedorEstado === 'activos' && p.archivado) return false
@@ -72,7 +73,7 @@ export function useProveedorManagement({
           notas.includes(q)
         )
       })
-  }, [proveedores, busquedaProveedor, proveedorEstado])
+  }, [proveedores, deferredBusquedaProveedor, proveedorEstado])
 
   async function loadProveedores() {
     setLoadingProveedores(true)

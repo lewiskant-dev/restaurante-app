@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useDeferredValue, useMemo, useState } from 'react'
 import type {
   MovimientoConProducto,
   NuevoProductoForm,
@@ -68,6 +68,8 @@ export function useStockManagement({
   const [ajusteStockNuevo, setAjusteStockNuevo] = useState('')
   const [ajusteMotivo, setAjusteMotivo] = useState('Recuento manual')
   const [ajusteSaving, setAjusteSaving] = useState(false)
+  const deferredBusqueda = useDeferredValue(busqueda)
+  const deferredBusquedaMov = useDeferredValue(busquedaMov)
 
   function requireActiveRestaurant() {
     if (currentRestaurantId) return currentRestaurantId
@@ -76,7 +78,7 @@ export function useStockManagement({
   }
 
   const productosFiltrados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase()
+    const q = deferredBusqueda.trim().toLowerCase()
     return productos
       .filter((p) => {
         if (productoEstado === 'activos' && p.archivado) return false
@@ -101,10 +103,10 @@ export function useStockManagement({
 
         return nombre.includes(q) || categoria.includes(q) || referencia.includes(q)
       })
-  }, [productos, busqueda, productoEstado, categoriaFiltro, unidadFiltro])
+  }, [productos, deferredBusqueda, productoEstado, categoriaFiltro, unidadFiltro])
 
   const movimientosFiltrados = useMemo(() => {
-    const q = busquedaMov.trim().toLowerCase()
+    const q = deferredBusquedaMov.trim().toLowerCase()
     return movimientos.filter((m) => {
       if (!q) return true
 
@@ -114,7 +116,7 @@ export function useStockManagement({
 
       return nombre.includes(q) || motivo.includes(q) || tipo.includes(q)
     })
-  }, [movimientos, busquedaMov])
+  }, [movimientos, deferredBusquedaMov])
 
   const totalProductos = productos.filter((p) => !p.archivado).length
   const stockBajo = productos.filter(
