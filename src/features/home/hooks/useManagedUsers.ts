@@ -13,6 +13,7 @@ import {
   validateEmailAddress,
   validatePasswordStrength,
 } from '@/features/home/utils'
+import type { ConfirmActionRequest } from '@/components/ui/ConfirmActionDialog'
 
 type UseManagedUsersOptions = {
   accessToken?: string
@@ -20,6 +21,7 @@ type UseManagedUsersOptions = {
   currentRestaurantId?: string | null
   onError: (message: string) => void
   onToast: (message: string) => void
+  confirmAction?: (request: ConfirmActionRequest) => Promise<boolean>
 }
 
 const RECENT_ACCESS_WINDOW_MS = 1000 * 60 * 60 * 24 * 14
@@ -36,6 +38,7 @@ export function useManagedUsers({
   currentRestaurantId,
   onError,
   onToast,
+  confirmAction,
 }: UseManagedUsersOptions) {
   const [managedUsers, setManagedUsers] = useState<ManagedUser[]>([])
   const [managedRestaurants, setManagedRestaurants] = useState<ManagedRestaurant[]>([])
@@ -287,11 +290,22 @@ export function useManagedUsers({
       return
     }
 
-    const confirmed = window.confirm(
-      `¿Cambiar el rol de "${targetUser.full_name || targetUser.email}" de ${getRoleLabel(
-        targetUser.role
-      )} a ${getRoleLabel(role)}?`
-    )
+    const confirmed = confirmAction
+      ? await confirmAction({
+          title: 'Cambiar rol',
+          description: `El usuario "${targetUser.full_name || targetUser.email}" pasará de ${getRoleLabel(
+            targetUser.role
+          )} a ${getRoleLabel(role)}.`,
+          confirmLabel: 'Cambiar rol',
+          tone: 'primary',
+        })
+      : typeof window !== 'undefined'
+        ? window.confirm(
+            `¿Cambiar el rol de "${targetUser.full_name || targetUser.email}" de ${getRoleLabel(
+              targetUser.role
+            )} a ${getRoleLabel(role)}?`
+          )
+        : false
 
     if (!confirmed) return
 
@@ -400,9 +414,18 @@ export function useManagedUsers({
   async function deleteManagedUser(userId: string, label: string) {
     if (!accessToken) return
 
-    const confirmed = window.confirm(
-      `¿Eliminar el usuario "${label}"?\n\nEsta accion borrara su acceso al sistema y no se puede deshacer desde aqui.`
-    )
+    const confirmed = confirmAction
+      ? await confirmAction({
+          title: 'Eliminar usuario',
+          description: `El usuario "${label}" perderá el acceso al sistema. Esta acción no se puede deshacer desde Nexo.`,
+          confirmLabel: 'Eliminar usuario',
+          tone: 'danger',
+        })
+      : typeof window !== 'undefined'
+        ? window.confirm(
+            `¿Eliminar el usuario "${label}"?\n\nEsta accion borrara su acceso al sistema y no se puede deshacer desde aqui.`
+          )
+        : false
     if (!confirmed) return
 
     setDeletingManagedUserId(userId)
@@ -444,9 +467,18 @@ export function useManagedUsers({
       return
     }
 
-    const confirmed = window.confirm(
-      `¿Resetear la contraseña de "${label}"?\n\nLa nueva clave se guardara de inmediato.`
-    )
+    const confirmed = confirmAction
+      ? await confirmAction({
+          title: 'Resetear contraseña',
+          description: `La nueva contraseña de "${label}" se guardará de inmediato.`,
+          confirmLabel: 'Resetear contraseña',
+          tone: 'primary',
+        })
+      : typeof window !== 'undefined'
+        ? window.confirm(
+            `¿Resetear la contraseña de "${label}"?\n\nLa nueva clave se guardara de inmediato.`
+          )
+        : false
 
     if (!confirmed) return
 
@@ -481,11 +513,22 @@ export function useManagedUsers({
   async function toggleManagedUserBlocked(userId: string, blocked: boolean, label: string) {
     if (!accessToken) return
 
-    const confirmed = window.confirm(
-      blocked
-        ? `¿Bloquear el acceso de "${label}"?\n\nNo podrá volver a entrar hasta que lo desbloquees.`
-        : `¿Desbloquear el acceso de "${label}"?\n\nRecuperará el acceso normal a la aplicación.`
-    )
+    const confirmed = confirmAction
+      ? await confirmAction({
+          title: blocked ? 'Bloquear acceso' : 'Desbloquear acceso',
+          description: blocked
+            ? `"${label}" no podrá volver a entrar hasta que lo desbloquees.`
+            : `"${label}" recuperará el acceso normal a la aplicación.`,
+          confirmLabel: blocked ? 'Bloquear acceso' : 'Desbloquear acceso',
+          tone: blocked ? 'danger' : 'primary',
+        })
+      : typeof window !== 'undefined'
+        ? window.confirm(
+            blocked
+              ? `¿Bloquear el acceso de "${label}"?\n\nNo podrá volver a entrar hasta que lo desbloquees.`
+              : `¿Desbloquear el acceso de "${label}"?\n\nRecuperará el acceso normal a la aplicación.`
+          )
+        : false
 
     if (!confirmed) return
 
@@ -525,9 +568,18 @@ export function useManagedUsers({
     const restaurantIds = managedUserRestaurantDrafts[userId] ?? []
     const currentRestaurantId = managedUserCurrentRestaurantDrafts[userId] || restaurantIds[0] || ''
 
-    const confirmed = window.confirm(
-      `¿Guardar la asignación de restaurantes para "${label}"?\n\nEsto actualizará también su restaurante activo.`
-    )
+    const confirmed = confirmAction
+      ? await confirmAction({
+          title: 'Guardar restaurantes',
+          description: `Se actualizará el acceso por restaurante de "${label}" y también su restaurante activo por defecto.`,
+          confirmLabel: 'Guardar restaurantes',
+          tone: 'primary',
+        })
+      : typeof window !== 'undefined'
+        ? window.confirm(
+            `¿Guardar la asignación de restaurantes para "${label}"?\n\nEsto actualizará también su restaurante activo.`
+          )
+        : false
 
     if (!confirmed) return
 
@@ -622,9 +674,19 @@ export function useManagedUsers({
   async function syncManagedRestaurantMemberships() {
     if (!accessToken) return
 
-    const confirmed = window.confirm(
-      '¿Sincronizar usuario_restaurantes con la metadata actual de los usuarios?\n\nEsto reconstruirá la relación persistente de restaurantes para todas las cuentas dentro de tu alcance.'
-    )
+    const confirmed = confirmAction
+      ? await confirmAction({
+          title: 'Sincronizar restaurantes',
+          description:
+            'Nexo reconstruirá la relación persistente de restaurantes para todas las cuentas dentro de tu alcance.',
+          confirmLabel: 'Sincronizar',
+          tone: 'primary',
+        })
+      : typeof window !== 'undefined'
+        ? window.confirm(
+            '¿Sincronizar usuario_restaurantes con la metadata actual de los usuarios?\n\nEsto reconstruirá la relación persistente de restaurantes para todas las cuentas dentro de tu alcance.'
+          )
+        : false
 
     if (!confirmed) return
 

@@ -272,6 +272,7 @@ export default function HomePage() {
     currentRestaurantId: activeRestaurantId,
     onError: setError,
     onToast: setToast,
+    confirmAction: requestConfirmAction,
   })
 
   const resetClientDomainState = useEffectEvent(() => {
