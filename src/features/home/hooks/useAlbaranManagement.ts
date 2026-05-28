@@ -10,6 +10,7 @@ import type {
 import { formatOCRDateToInput, normalizeText, todayLocalInputDate } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
 import type { Albaran, AlbaranLinea, Producto, Proveedor } from '@/types'
+import type { PromptActionRequest } from '@/components/ui/PromptActionDialog'
 
 type AuditoriaParams = {
   entidad: string
@@ -33,6 +34,7 @@ type UseAlbaranManagementOptions = {
   loadProductos: () => Promise<void>
   loadMovimientos: () => Promise<void>
   loadMapeosProductos: () => Promise<void>
+  promptAction?: (request: PromptActionRequest) => Promise<string | null>
 }
 
 export function useAlbaranManagement({
@@ -48,6 +50,7 @@ export function useAlbaranManagement({
   loadProductos,
   loadMovimientos,
   loadMapeosProductos,
+  promptAction,
 }: UseAlbaranManagementOptions) {
   const [albaranes, setAlbaranes] = useState<Albaran[]>([])
   const [loadingAlbaranes, setLoadingAlbaranes] = useState(true)
@@ -376,10 +379,17 @@ export function useAlbaranManagement({
   }
 
   async function eliminarAlbaran(albaran: Albaran) {
-    const motivo = window.prompt(
-      `Motivo de anulación del albarán "${albaran.numero}":`,
-      'Error de registro'
-    )
+    const motivo = promptAction
+      ? await promptAction({
+          title: 'Anular albarán',
+          description: `El albarán "${albaran.numero}" quedará marcado como anulado y se revertirán sus movimientos de stock.`,
+          label: 'Motivo de anulación',
+          initialValue: 'Error de registro',
+          placeholder: 'Indica el motivo',
+          confirmLabel: 'Anular albarán',
+          tone: 'danger',
+        })
+      : null
 
     if (motivo === null) return
 

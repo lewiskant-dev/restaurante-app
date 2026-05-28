@@ -12,6 +12,10 @@ import {
   type ConfirmActionRequest,
 } from '@/components/ui/ConfirmActionDialog'
 import { NexoBrandMark } from '@/components/ui/NexoBrandMark'
+import {
+  PromptActionDialog,
+  type PromptActionRequest,
+} from '@/components/ui/PromptActionDialog'
 import { AjusteStockModal } from '@/components/modals/AjusteStockModal'
 import { ConsumoModal } from '@/components/modals/ConsumoModal'
 import { DetalleAlbaranModal } from '@/components/modals/DetalleAlbaranModal'
@@ -108,7 +112,9 @@ export default function HomePage() {
   const [proveedorRecienCreadoId, setProveedorRecienCreadoId] = useState('')
   const [confirmActionRequest, setConfirmActionRequest] =
     useState<ConfirmActionRequest | null>(null)
+  const [promptActionRequest, setPromptActionRequest] = useState<PromptActionRequest | null>(null)
   const confirmActionResolverRef = useRef<((confirmed: boolean) => void) | null>(null)
+  const promptActionResolverRef = useRef<((value: string | null) => void) | null>(null)
 
   function requestConfirmAction(request: ConfirmActionRequest) {
     confirmActionResolverRef.current?.(false)
@@ -123,6 +129,21 @@ export default function HomePage() {
     confirmActionResolverRef.current?.(confirmed)
     confirmActionResolverRef.current = null
     setConfirmActionRequest(null)
+  }
+
+  function requestPromptAction(request: PromptActionRequest) {
+    promptActionResolverRef.current?.(null)
+
+    return new Promise<string | null>((resolve) => {
+      promptActionResolverRef.current = resolve
+      setPromptActionRequest(request)
+    })
+  }
+
+  function resolvePromptAction(value: string | null) {
+    promptActionResolverRef.current?.(value)
+    promptActionResolverRef.current = null
+    setPromptActionRequest(null)
   }
 
   const changeTab = (nextTab: TabKey) => {
@@ -758,6 +779,7 @@ export default function HomePage() {
     loadProductos,
     loadMovimientos,
     loadMapeosProductos,
+    promptAction: requestPromptAction,
   })
 
   const {
@@ -962,6 +984,15 @@ export default function HomePage() {
       setError('La acción no tiene entidad asociada')
       return
     }
+
+    const confirmed = await requestConfirmAction({
+      title: 'Deshacer acción',
+      description: `Se reactivará el ${item.entidad === 'producto' ? 'producto' : 'proveedor'} asociado a este registro de auditoría.`,
+      confirmLabel: 'Deshacer acción',
+      tone: 'primary',
+    })
+
+    if (!confirmed) return
 
     setError('')
 
@@ -2341,6 +2372,12 @@ export default function HomePage() {
         request={confirmActionRequest}
         onCancel={() => resolveConfirmAction(false)}
         onConfirm={() => resolveConfirmAction(true)}
+      />
+
+      <PromptActionDialog
+        request={promptActionRequest}
+        onCancel={() => resolvePromptAction(null)}
+        onConfirm={(value) => resolvePromptAction(value)}
       />
 
       <MobileBottomNav
