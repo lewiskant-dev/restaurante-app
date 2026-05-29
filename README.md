@@ -45,7 +45,7 @@ npm run build
 npm run verify
 ```
 
-`npm run verify` ejecuta `lint + typecheck + build`.
+`npm run verify` ejecuta `lint + test + typecheck + build`.
 
 ## Puesta en marcha de Supabase
 
@@ -53,9 +53,10 @@ Orden recomendado:
 
 1. Ejecutar [supabase/auth-setup.sql](supabase/auth-setup.sql)
 2. Ejecutar [supabase/multi-restaurant-setup.sql](supabase/multi-restaurant-setup.sql)
-3. Si quieres empezar de cero sin tocar funcionalidades, ejecutar [supabase/reset-operational-data.sql](supabase/reset-operational-data.sql)
-4. Si usas imagenes de producto, ejecutar [supabase/product-media-setup.sql](supabase/product-media-setup.sql)
-5. Aplicar índices de rendimiento con [supabase/performance-indexes.sql](supabase/performance-indexes.sql)
+3. Ejecutar [supabase/restaurant-finance-setup.sql](supabase/restaurant-finance-setup.sql)
+4. Si quieres empezar de cero sin tocar funcionalidades, ejecutar [supabase/reset-operational-data.sql](supabase/reset-operational-data.sql)
+5. Si usas imagenes de producto, ejecutar [supabase/product-media-setup.sql](supabase/product-media-setup.sql)
+6. Aplicar índices de rendimiento con [supabase/performance-indexes.sql](supabase/performance-indexes.sql)
 
 Documentacion de apoyo:
 - [supabase/roles-setup.md](supabase/roles-setup.md)
@@ -86,7 +87,13 @@ Para comprobar que el despliegue tiene la configuración crítica cargada:
 curl https://tu-dominio.com/api/health
 ```
 
-La respuesta no expone secretos; solo indica qué variables obligatorias están configuradas.
+La respuesta no expone secretos. Devuelve:
+
+- `ok`: `true` cuando no falta nada obligatorio.
+- `missing`: variables o tablas obligatorias pendientes.
+- `warnings`: piezas opcionales/recomendadas pendientes, por ejemplo tablas financieras.
+
+Si aparecen tablas en `missing`, revisa el orden de SQL de Supabase. Si aparecen tablas financieras en `warnings`, aplica `restaurant-finance-setup.sql` cuando vayas a usar informes avanzados.
 
 Si quieres validar el aislamiento por restaurante en Supabase:
 

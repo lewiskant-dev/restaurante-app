@@ -68,7 +68,27 @@ Debe devolver `200` y:
 }
 ```
 
-Si devuelve `503`, revisar la lista `missing` y corregir variables de entorno antes de seguir.
+Interpretación:
+
+- `missing`: variables o tablas obligatorias que hay que corregir antes de operar.
+- `warnings`: piezas opcionales/recomendadas pendientes. La app puede funcionar, pero algunas fases pueden quedar limitadas.
+
+Si devuelve `503`, revisar `missing`. Si falta una variable, corregir el entorno del hosting. Si falta una tabla, aplicar el SQL correspondiente en Supabase antes de seguir.
+
+Tablas obligatorias esperadas:
+
+- `restaurantes`
+- `usuario_restaurantes`
+- `productos`
+- `proveedores`
+- `movimientos_stock`
+- `albaranes`
+- `auditoria`
+
+Tablas recomendadas para finanzas:
+
+- `productos_precios_historial`
+- `inventario_cierres`
 
 ## 5. Prueba funcional mínima
 

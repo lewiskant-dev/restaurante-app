@@ -15,6 +15,7 @@ npm run verify
 Este comando ejecuta:
 
 - `eslint`
+- tests del proyecto
 - `tsc --noEmit`
 - `next build --webpack`
 
@@ -29,8 +30,11 @@ https://tu-dominio.com/api/health
 La ruta devuelve:
 
 - `200` si la configuración crítica está completa
-- `503` si faltan variables necesarias
-- nombres de variables ausentes sin exponer valores ni secretos
+- `503` si faltan variables o tablas obligatorias
+- `missing` con lo que bloquea el despliegue
+- `warnings` con fases recomendadas pendientes, como tablas financieras
+
+Si `warnings` contiene `table:productos_precios_historial` o `table:inventario_cierres`, aplica [restaurant-finance-setup.sql](/Users/jorge/restaurante-app/supabase/restaurant-finance-setup.sql:1) antes de usar informes financieros avanzados.
 
 ## Alta de un restaurante nuevo
 
