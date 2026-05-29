@@ -159,13 +159,17 @@ export function useStockManagement({
   async function loadProductos() {
     setLoadingProductos(true)
 
+    if (!currentRestaurantId) {
+      setProductos([])
+      setLoadingProductos(false)
+      return
+    }
+
     let query = supabase.from('productos').select('*').order('nombre', {
       ascending: true,
     })
 
-    if (currentRestaurantId) {
-      query = query.eq('restaurant_id', currentRestaurantId)
-    }
+    query = query.eq('restaurant_id', currentRestaurantId)
 
     const { data, error } = await query
 
@@ -182,6 +186,12 @@ export function useStockManagement({
   async function loadMovimientos() {
     setLoadingMovimientos(true)
 
+    if (!currentRestaurantId) {
+      setMovimientos([])
+      setLoadingMovimientos(false)
+      return
+    }
+
     let query = supabase
       .from('movimientos_stock')
       .select(
@@ -197,9 +207,7 @@ export function useStockManagement({
       )
       .order('created_at', { ascending: false })
 
-    if (currentRestaurantId) {
-      query = query.eq('restaurant_id', currentRestaurantId)
-    }
+    query = query.eq('restaurant_id', currentRestaurantId)
 
     const { data, error } = await query
 

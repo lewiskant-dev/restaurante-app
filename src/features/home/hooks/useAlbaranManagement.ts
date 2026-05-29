@@ -112,14 +112,18 @@ export function useAlbaranManagement({
   async function loadAlbaranes() {
     setLoadingAlbaranes(true)
 
+    if (!currentRestaurantId) {
+      setAlbaranes([])
+      setLoadingAlbaranes(false)
+      return
+    }
+
     let query = supabase
       .from('albaranes')
       .select('*')
       .order('fecha', { ascending: false })
 
-    if (currentRestaurantId) {
-      query = query.eq('restaurant_id', currentRestaurantId)
-    }
+    query = query.eq('restaurant_id', currentRestaurantId)
 
     const { data, error } = await query
 

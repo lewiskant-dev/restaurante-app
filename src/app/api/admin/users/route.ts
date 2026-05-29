@@ -255,16 +255,17 @@ async function logAdminAudit(
     detalle: string
     payloadAntes?: unknown
     payloadDespues?: unknown
+    restaurantId?: string | null
   }
 ) {
-  const { actor, entidadId, accion, detalle, payloadAntes, payloadDespues } = params
+  const { actor, entidadId, accion, detalle, payloadAntes, payloadDespues, restaurantId } = params
   const restaurantScope = getRestaurantScopeFromAppMetadata(actor.app_metadata)
 
   await supabaseAdmin.from('auditoria').insert({
     entidad: 'usuario',
     entidad_id: entidadId,
     accion,
-    restaurant_id: restaurantScope.currentRestaurantId,
+    restaurant_id: restaurantId ?? restaurantScope.currentRestaurantId,
     actor_nombre: getUserDisplayName(actor),
     actor_id: actor.id,
     detalle,
@@ -523,6 +524,13 @@ export async function POST(request: Request) {
     )
   }
 
+  if (authResult.role !== 'master' && !inheritedCurrentRestaurantId) {
+    return NextResponse.json(
+      { error: 'Necesitas un restaurante activo para crear usuarios' },
+      { status: 403 }
+    )
+  }
+
   if (
     authResult.role === 'master' &&
     requestedCurrentRestaurantId &&
@@ -613,14 +621,15 @@ export async function POST(request: Request) {
     entidadId: data.user.id,
     accion: 'crear',
     detalle: `Usuario creado: ${fullName} · Rol: ${role}`,
-      payloadDespues: {
-        email,
-        full_name: fullName,
-        role,
-        current_restaurant_id: inheritedCurrentRestaurantId,
-        restaurant_ids: inheritedRestaurantIds,
-      },
-    })
+    restaurantId: inheritedCurrentRestaurantId,
+    payloadDespues: {
+      email,
+      full_name: fullName,
+      role,
+      current_restaurant_id: inheritedCurrentRestaurantId,
+      restaurant_ids: inheritedRestaurantIds,
+    },
+  })
 
   return NextResponse.json({ user: serializeUser(data.user) }, { status: 201 })
 }
@@ -845,28 +854,34 @@ export async function PATCH(request: Request) {
   }
 
   if (nextRole) {
+    const updatedRestaurantScope = getRestaurantScopeFromAppMetadata(data.user.app_metadata)
+
     await logAdminAudit(supabaseAdmin, {
       actor: authResult.user,
       entidadId: data.user.id,
       accion: 'editar',
       detalle: `Rol actualizado: ${getUserDisplayName(data.user)} · ${targetRole} -> ${nextRole}`,
+      restaurantId: updatedRestaurantScope.currentRestaurantId,
       payloadAntes: targetSnapshotBefore,
       payloadDespues: {
         email: data.user.email || '',
         full_name: getUserDisplayName(data.user),
         role: getUserRoleFromAuthUser(data.user),
-        current_restaurant_id: getRestaurantScopeFromAppMetadata(data.user.app_metadata).currentRestaurantId,
-        restaurant_ids: getRestaurantScopeFromAppMetadata(data.user.app_metadata).restaurantIds,
+        current_restaurant_id: updatedRestaurantScope.currentRestaurantId,
+        restaurant_ids: updatedRestaurantScope.restaurantIds,
       },
     })
   }
 
   if (nextPassword) {
+    const updatedRestaurantScope = getRestaurantScopeFromAppMetadata(data.user.app_metadata)
+
     await logAdminAudit(supabaseAdmin, {
       actor: authResult.user,
       entidadId: data.user.id,
       accion: 'reset_password',
       detalle: `Contraseña reseteada para: ${getUserDisplayName(data.user)}`,
+      restaurantId: updatedRestaurantScope.currentRestaurantId,
       payloadDespues: {
         email: data.user.email || '',
         full_name: getUserDisplayName(data.user),
@@ -875,11 +890,14 @@ export async function PATCH(request: Request) {
   }
 
   if (nextBlocked !== null) {
+    const updatedRestaurantScope = getRestaurantScopeFromAppMetadata(data.user.app_metadata)
+
     await logAdminAudit(supabaseAdmin, {
       actor: authResult.user,
       entidadId: data.user.id,
       accion: nextBlocked ? 'bloquear' : 'desbloquear',
       detalle: `${nextBlocked ? 'Acceso bloqueado' : 'Acceso desbloqueado'} para: ${getUserDisplayName(data.user)}`,
+      restaurantId: updatedRestaurantScope.currentRestaurantId,
       payloadAntes: {
         ...targetSnapshotBefore,
         banned_until: targetUser.banned_until || null,
@@ -888,26 +906,29 @@ export async function PATCH(request: Request) {
         email: data.user.email || '',
         full_name: getUserDisplayName(data.user),
         role: getUserRoleFromAuthUser(data.user),
-        current_restaurant_id: getRestaurantScopeFromAppMetadata(data.user.app_metadata).currentRestaurantId,
-        restaurant_ids: getRestaurantScopeFromAppMetadata(data.user.app_metadata).restaurantIds,
+        current_restaurant_id: updatedRestaurantScope.currentRestaurantId,
+        restaurant_ids: updatedRestaurantScope.restaurantIds,
         banned_until: data.user.banned_until || null,
       },
     })
   }
 
   if (nextRestaurantIds !== null) {
+    const updatedRestaurantScope = getRestaurantScopeFromAppMetadata(data.user.app_metadata)
+
     await logAdminAudit(supabaseAdmin, {
       actor: authResult.user,
       entidadId: data.user.id,
       accion: 'editar',
       detalle: `Asignación de restaurantes actualizada para: ${getUserDisplayName(data.user)}`,
+      restaurantId: updatedRestaurantScope.currentRestaurantId,
       payloadAntes: targetSnapshotBefore,
       payloadDespues: {
         email: data.user.email || '',
         full_name: getUserDisplayName(data.user),
         role: getUserRoleFromAuthUser(data.user),
-        current_restaurant_id: getRestaurantScopeFromAppMetadata(data.user.app_metadata).currentRestaurantId,
-        restaurant_ids: getRestaurantScopeFromAppMetadata(data.user.app_metadata).restaurantIds,
+        current_restaurant_id: updatedRestaurantScope.currentRestaurantId,
+        restaurant_ids: updatedRestaurantScope.restaurantIds,
       },
     })
   }
@@ -998,6 +1019,7 @@ export async function DELETE(request: Request) {
     entidadId: userId,
     accion: 'eliminar',
     detalle: `Usuario eliminado: ${targetSnapshot.full_name}`,
+    restaurantId: targetRestaurantScope.currentRestaurantId,
     payloadAntes: targetSnapshot,
   })
 

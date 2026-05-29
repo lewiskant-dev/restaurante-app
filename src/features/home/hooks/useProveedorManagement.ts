@@ -81,14 +81,18 @@ export function useProveedorManagement({
   async function loadProveedores() {
     setLoadingProveedores(true)
 
+    if (!currentRestaurantId) {
+      setProveedores([])
+      setLoadingProveedores(false)
+      return
+    }
+
     let query = supabase
       .from('proveedores')
       .select('*')
       .order('nombre', { ascending: true })
 
-    if (currentRestaurantId) {
-      query = query.eq('restaurant_id', currentRestaurantId)
-    }
+    query = query.eq('restaurant_id', currentRestaurantId)
 
     const { data, error } = await query
 

@@ -185,14 +185,20 @@ export function useRecetaTpvManagement({
   async function loadRecetas() {
     setLoadingRecetas(true)
 
+    if (!currentRestaurantId) {
+      setRecetas([])
+      setRecetasLineas([])
+      setLoadingRecetas(false)
+      await loadTpvAnalitica([], [])
+      return
+    }
+
     let query = supabase
       .from('recetas')
       .select('*')
       .order('nombre', { ascending: true })
 
-    if (currentRestaurantId) {
-      query = query.eq('restaurant_id', currentRestaurantId)
-    }
+    query = query.eq('restaurant_id', currentRestaurantId)
 
     const { data, error } = await query
 
@@ -206,9 +212,7 @@ export function useRecetaTpvManagement({
       ascending: true,
     })
 
-    if (currentRestaurantId) {
-      lineasQuery = lineasQuery.eq('restaurant_id', currentRestaurantId)
-    }
+    lineasQuery = lineasQuery.eq('restaurant_id', currentRestaurantId)
 
     const { data: lineasData, error: lineasError } = await lineasQuery
 

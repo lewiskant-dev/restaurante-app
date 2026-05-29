@@ -845,11 +845,15 @@ export default function HomePage() {
   async function loadAuditoria() {
     setLoadingAuditoria(true)
 
+    if (!activeRestaurantId) {
+      setAuditoria([])
+      setLoadingAuditoria(false)
+      return
+    }
+
     let query = supabase.from('auditoria').select('*').order('created_at', { ascending: false })
 
-    if (activeRestaurantId) {
-      query = query.eq('restaurant_id', activeRestaurantId)
-    }
+    query = query.eq('restaurant_id', activeRestaurantId)
 
     const { data, error } = await query
 
@@ -864,14 +868,17 @@ export default function HomePage() {
   }
 
   async function loadMapeosProductos() {
+    if (!activeRestaurantId) {
+      setMapeosProductos([])
+      return
+    }
+
     let query = supabase
       .from('mapeos_productos')
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (activeRestaurantId) {
-      query = query.eq('restaurant_id', activeRestaurantId)
-    }
+    query = query.eq('restaurant_id', activeRestaurantId)
 
     const { data, error } = await query
 
@@ -955,10 +962,16 @@ export default function HomePage() {
   }) {
     const { entidad, entidad_id, accion, detalle, payload_antes, payload_despues } = params
 
+    if (!activeRestaurantId) {
+      console.warn('No se registró auditoría sin restaurante activo:', params)
+      return
+    }
+
     const { error } = await supabase.from('auditoria').insert({
       entidad,
       entidad_id: entidad_id ?? null,
       accion,
+      restaurant_id: activeRestaurantId,
       actor_nombre: getUserDisplayName(currentUser) || operarioActual.trim() || 'Sin identificar',
       actor_id: currentUser?.id || '',
       detalle: detalle ?? '',

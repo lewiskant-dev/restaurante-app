@@ -33,6 +33,10 @@ export async function POST(request: Request) {
 
   const restaurantScope = getRestaurantScopeFromAppMetadata(user.app_metadata)
 
+  if (!restaurantScope.currentRestaurantId) {
+    return NextResponse.json({ ok: true, skipped: 'missing_active_restaurant' })
+  }
+
   const { error } = await supabaseAdmin.from('auditoria').insert({
     entidad: validation.entidad,
     entidad_id: user.id,
