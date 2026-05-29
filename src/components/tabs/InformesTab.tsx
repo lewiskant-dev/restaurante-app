@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import type {
   InventarioCierre,
   MovimientoConProducto,
@@ -134,6 +135,29 @@ type ComparisonCard = {
   inverted?: boolean
 }
 
+type DeploymentHealthCheck = {
+  name: string
+  configured: boolean
+  scope: 'env' | 'database'
+  required: boolean
+  message?: string
+}
+
+type DeploymentHealthSummary = {
+  ok: boolean
+  status: 'ok' | 'degraded'
+  checked_at: string
+  checks: DeploymentHealthCheck[]
+  missing: string[]
+  warnings: string[]
+}
+
+function formatHealthCheckName(value: string) {
+  if (value.startsWith('table:')) return value.replace('table:', 'Tabla ')
+  if (value === 'supabase:admin-client') return 'Cliente admin de Supabase'
+  return value
+}
+
 export function InformesTab({
   tpvAnaliticaRange,
   tpvAnalitica,
@@ -155,6 +179,38 @@ export function InformesTab({
   onExportarAlertas,
   onCrearCierreInventario,
 }: InformesTabProps) {
+  const [deploymentHealth, setDeploymentHealth] = useState<DeploymentHealthSummary | null>(null)
+  const [deploymentHealthLoading, setDeploymentHealthLoading] = useState(false)
+  const [deploymentHealthError, setDeploymentHealthError] = useState('')
+
+  async function loadDeploymentHealth() {
+    setDeploymentHealthLoading(true)
+    setDeploymentHealthError('')
+
+    try {
+      const response = await fetch('/api/health', {
+        cache: 'no-store',
+      })
+      const payload = (await response.json()) as DeploymentHealthSummary | { error?: string }
+
+      if (!response.ok && !('status' in payload)) {
+        throw new Error(payload.error || 'No se pudo cargar el diagnóstico')
+      }
+
+      setDeploymentHealth(payload as DeploymentHealthSummary)
+    } catch (error) {
+      setDeploymentHealthError(
+        error instanceof Error ? error.message : 'No se pudo cargar el diagnóstico'
+      )
+    } finally {
+      setDeploymentHealthLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadDeploymentHealth()
+  }, [])
+
   const healthSummary = buildFinancialHealthSummary({
     ventasEstimadas: tpvAnalitica.ventas_estimadas_total,
     margenEstimado: tpvAnalitica.margen_estimado_total,
@@ -231,6 +287,118 @@ export function InformesTab({
         <p className="mt-0.5 text-[12px] text-slate-500 sm:mt-1.5 sm:text-[15px]">
           Panel financiero operativo con comparativa entre periodos y exportes por bloque.
         </p>
+      </div>
+
+      <div className={`p-4 sm:p-5 ${surfaceCard}`}>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
+                Diagnóstico del despliegue
+              </h3>
+              <span
+                className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
+                  deploymentHealth?.ok
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : deploymentHealth
+                      ? 'bg-amber-50 text-amber-700'
+                      : 'bg-slate-100 text-slate-500'
+                }`}
+              >
+                {deploymentHealthLoading
+                  ? 'Comprobando'
+                  : deploymentHealth?.ok
+                    ? 'Correcto'
+                    : deploymentHealth
+                      ? 'Revisar'
+                      : 'Pendiente'}
+              </span>
+            </div>
+            <p className="mt-1 text-[12px] leading-5 text-slate-500 sm:text-[13px]">
+              Comprueba variables críticas y tablas necesarias para operar Nexo sin fases SQL a medias.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void loadDeploymentHealth()}
+            disabled={deploymentHealthLoading}
+            className={`px-3.5 py-2.5 text-[12px] sm:text-[13px] ${ghostButton}`}
+          >
+            {deploymentHealthLoading ? 'Actualizando...' : 'Actualizar diagnóstico'}
+          </button>
+        </div>
+
+        {deploymentHealthError ? (
+          <div className="mt-4 rounded-[18px] border border-red-100 bg-red-50 px-4 py-3 text-[12px] font-medium text-red-700">
+            {deploymentHealthError}
+          </div>
+        ) : (
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+            <div className="rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                Estado
+              </div>
+              <div className="mt-2 text-[1.35rem] font-semibold text-slate-950">
+                {deploymentHealthLoading
+                  ? '...'
+                  : deploymentHealth?.ok
+                    ? 'Operativo'
+                    : deploymentHealth
+                      ? 'Degradado'
+                      : 'Sin datos'}
+              </div>
+              <div className="mt-1 text-[11px] text-slate-500">
+                {deploymentHealth?.checked_at
+                  ? `Última revisión: ${new Date(deploymentHealth.checked_at).toLocaleString('es-ES')}`
+                  : 'Se cargará automáticamente al abrir informes.'}
+              </div>
+            </div>
+
+            <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  Pendientes críticos
+                </div>
+                <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700">
+                  {deploymentHealth?.missing.length ?? 0}
+                </span>
+              </div>
+              <div className="mt-3 space-y-2">
+                {deploymentHealth?.missing.length ? (
+                  deploymentHealth.missing.slice(0, 4).map((item) => (
+                    <div key={item} className="text-[12px] font-medium text-slate-700">
+                      {formatHealthCheckName(item)}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-[12px] text-slate-400">Sin bloqueos críticos.</div>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  Avisos
+                </div>
+                <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+                  {deploymentHealth?.warnings.length ?? 0}
+                </span>
+              </div>
+              <div className="mt-3 space-y-2">
+                {deploymentHealth?.warnings.length ? (
+                  deploymentHealth.warnings.slice(0, 4).map((item) => (
+                    <div key={item} className="text-[12px] font-medium text-slate-700">
+                      {formatHealthCheckName(item)}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-[12px] text-slate-400">Sin avisos pendientes.</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className={`p-3 sm:p-5 ${surfaceCard}`}>
