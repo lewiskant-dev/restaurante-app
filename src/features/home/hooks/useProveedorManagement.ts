@@ -232,16 +232,12 @@ export function useProveedorManagement({
       return
     }
 
-    const ok = confirmAction
-      ? await confirmAction({
-          title: 'Archivar proveedor',
-          description: `El proveedor "${proveedor.nombre}" dejará de aparecer como activo. Su histórico y albaranes se mantienen intactos.`,
-          confirmLabel: 'Archivar proveedor',
-          tone: 'danger',
-        })
-      : typeof window !== 'undefined'
-        ? window.confirm(`¿Archivar proveedor "${proveedor.nombre}"?`)
-        : false
+    const ok = await confirmAction?.({
+      title: 'Archivar proveedor',
+      description: `El proveedor "${proveedor.nombre}" dejará de aparecer como activo. Su histórico y albaranes se mantienen intactos.`,
+      confirmLabel: 'Archivar proveedor',
+      tone: 'danger',
+    })
     if (!ok) return
 
     onError('')

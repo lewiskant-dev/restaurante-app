@@ -407,16 +407,12 @@ export function useStockManagement({
       return
     }
 
-    const ok = confirmAction
-      ? await confirmAction({
-          title: 'Archivar producto',
-          description: `El producto "${producto.nombre}" dejará de aparecer como activo, aunque podrás recuperarlo desde el filtro de archivados.`,
-          confirmLabel: 'Archivar producto',
-          tone: 'danger',
-        })
-      : typeof window !== 'undefined'
-        ? window.confirm(`¿Archivar producto "${producto.nombre}"?`)
-        : false
+    const ok = await confirmAction?.({
+      title: 'Archivar producto',
+      description: `El producto "${producto.nombre}" dejará de aparecer como activo, aunque podrás recuperarlo desde el filtro de archivados.`,
+      confirmLabel: 'Archivar producto',
+      tone: 'danger',
+    })
     if (!ok) return
 
     onError('')
