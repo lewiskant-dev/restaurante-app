@@ -1,11 +1,17 @@
 import { PostgrestError } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { getAuditDisplayName } from '@/lib/auditPayload'
+import { consumeRateLimit, getRateLimitKey } from '@/lib/rateLimit'
 import { isValidRestaurantSlug, slugifyRestaurantName } from '@/lib/restaurantCatalog'
 import { getRestaurantScopeFromAppMetadata } from '@/lib/restaurantMetadata'
 import { createSupabaseAdminClient } from '@/lib/supabaseAdmin'
 
 type UserRole = 'empleado' | 'encargado' | 'administrador' | 'master'
+
+const RESTAURANT_MUTATION_RATE_LIMIT = {
+  windowMs: 60 * 1000,
+  maxAttempts: 12,
+}
 
 function normalizeRole(value: unknown): UserRole {
   const normalized = typeof value === 'string' ? value.trim().toLowerCase() : ''
@@ -25,6 +31,26 @@ function canManageRestaurantCatalog(role: UserRole) {
 
 function isMissingRelationError(error: unknown) {
   return error instanceof PostgrestError && error.code === '42P01'
+}
+
+function enforceRestaurantMutationRateLimit(actorId: string, action: string) {
+  const result = consumeRateLimit(
+    getRateLimitKey(['admin-restaurants', actorId, action]),
+    Date.now(),
+    RESTAURANT_MUTATION_RATE_LIMIT
+  )
+
+  if (result.allowed) return null
+
+  return NextResponse.json(
+    { error: 'Demasiadas acciones seguidas. Espera un momento antes de continuar.' },
+    {
+      status: 429,
+      headers: {
+        'Retry-After': String(result.retryAfterSeconds),
+      },
+    }
+  )
 }
 
 async function ensureRestaurantUniqueness(
@@ -224,6 +250,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: authResult.error }, { status: authResult.status })
   }
 
+  const rateLimitResponse = enforceRestaurantMutationRateLimit(authResult.user.id, 'post')
+  if (rateLimitResponse) return rateLimitResponse
+
   const { supabaseAdmin } = authResult
 
   let query = supabaseAdmin
@@ -325,6 +354,9 @@ export async function POST(request: Request) {
   if ('error' in authResult) {
     return NextResponse.json({ error: authResult.error }, { status: authResult.status })
   }
+
+  const rateLimitResponse = enforceRestaurantMutationRateLimit(authResult.user.id, 'patch')
+  if (rateLimitResponse) return rateLimitResponse
 
   const { supabaseAdmin } = authResult
 

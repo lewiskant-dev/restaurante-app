@@ -1,11 +1,44 @@
 import { NextResponse } from 'next/server'
-import { validateMasterLoginPayload } from '@/lib/masterLogin'
+import {
+  consumeMasterLoginAttempt,
+  getMasterLoginRateLimitKey,
+  resetMasterLoginAttempts,
+  validateMasterLoginPayload,
+} from '@/lib/masterLogin'
 import { createSupabaseServerAuthClient } from '@/lib/supabaseAdmin'
+
+function getRequestIp(request: Request) {
+  const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+  return (
+    forwardedFor ||
+    request.headers.get('x-real-ip')?.trim() ||
+    request.headers.get('cf-connecting-ip')?.trim() ||
+    'unknown'
+  )
+}
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as
     | { login?: string; password?: string }
     | null
+
+  const rateLimitKey = getMasterLoginRateLimitKey({
+    ip: getRequestIp(request),
+    login: body?.login,
+  })
+  const rateLimit = consumeMasterLoginAttempt(rateLimitKey)
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Demasiados intentos. Espera unos minutos antes de volver a intentarlo.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rateLimit.retryAfterSeconds),
+        },
+      }
+    )
+  }
 
   const validation = validateMasterLoginPayload(body, {
     masterLogin: process.env.MASTER_LOGIN,
@@ -34,7 +67,7 @@ export async function POST(request: Request) {
 
   if (error || !data.session || !data.user) {
     return NextResponse.json(
-      { error: error?.message || 'No se pudo iniciar sesión como master' },
+      { error: 'Credenciales master no válidas' },
       { status: 401 }
     )
   }
@@ -49,6 +82,8 @@ export async function POST(request: Request) {
       { status: 403 }
     )
   }
+
+  resetMasterLoginAttempts(rateLimitKey)
 
   return NextResponse.json({
     session: {

@@ -8,6 +8,7 @@ import {
   validateEmailAddress,
 } from '@/lib/userInputPolicy'
 import { createSupabaseAdminClient } from '@/lib/supabaseAdmin'
+import { consumeRateLimit, getRateLimitKey } from '@/lib/rateLimit'
 import {
   buildInheritedRestaurantAppMetadata,
   getRestaurantScopeFromAppMetadata,
@@ -19,6 +20,11 @@ type ManagedRestaurant = {
   nombre: string
   slug: string
   activo: boolean
+}
+
+const ADMIN_MUTATION_RATE_LIMIT = {
+  windowMs: 60 * 1000,
+  maxAttempts: 20,
 }
 
 function normalizeRole(value: unknown): UserRole {
@@ -289,6 +295,26 @@ function canManageTargetUser(
   return targetRestaurantIds.every((restaurantId) => actorRestaurantIds.includes(restaurantId))
 }
 
+function enforceAdminMutationRateLimit(actorId: string, action: string) {
+  const result = consumeRateLimit(
+    getRateLimitKey(['admin-users', actorId, action]),
+    Date.now(),
+    ADMIN_MUTATION_RATE_LIMIT
+  )
+
+  if (result.allowed) return null
+
+  return NextResponse.json(
+    { error: 'Demasiadas acciones seguidas. Espera un momento antes de continuar.' },
+    {
+      status: 429,
+      headers: {
+        'Retry-After': String(result.retryAfterSeconds),
+      },
+    }
+  )
+}
+
 async function getRequestUser(request: Request) {
   const adminResult = getAdminClientOrError()
   if ('error' in adminResult) {
@@ -395,6 +421,12 @@ export async function POST(request: Request) {
         currentRestaurantId?: string | null
       }
     | null
+
+  const rateLimitResponse = enforceAdminMutationRateLimit(
+    authResult.user.id,
+    body?.action === 'sync_restaurant_memberships' ? 'sync-restaurant-memberships' : 'create'
+  )
+  if (rateLimitResponse) return rateLimitResponse
 
   if (body?.action === 'sync_restaurant_memberships') {
     let users: Awaited<ReturnType<typeof listAllAuthUsers>> = []
@@ -640,6 +672,9 @@ export async function PATCH(request: Request) {
   if ('error' in authResult) {
     return NextResponse.json({ error: authResult.error }, { status: authResult.status })
   }
+
+  const rateLimitResponse = enforceAdminMutationRateLimit(authResult.user.id, 'patch')
+  if (rateLimitResponse) return rateLimitResponse
 
   const adminResult = getAdminClientOrError()
   if ('error' in adminResult) {
@@ -944,6 +979,9 @@ export async function DELETE(request: Request) {
   if ('error' in authResult) {
     return NextResponse.json({ error: authResult.error }, { status: authResult.status })
   }
+
+  const rateLimitResponse = enforceAdminMutationRateLimit(authResult.user.id, 'delete')
+  if (rateLimitResponse) return rateLimitResponse
 
   const adminResult = getAdminClientOrError()
   if ('error' in adminResult) {
