@@ -510,7 +510,7 @@ export default function HomePage() {
     }
 
     if (hasPermission(role, 'tpv_manage')) {
-      tasks.push(loadMapeosProductos(), loadInventarioCierres())
+      tasks.push(loadMapeosProductos(), loadInventarioCierres(), loadTpvImportaciones())
     } else {
       setMapeosProductos([])
       setInventarioCierres([])
@@ -798,6 +798,7 @@ export default function HomePage() {
     tpvAplicando,
     tpvVentasCrudas,
     tpvImportacionId,
+    tpvImportaciones,
     tpvMapeosSeleccionados,
     tpvGuardandoMapeo,
     tpvAnaliticaRange,
@@ -812,6 +813,7 @@ export default function HomePage() {
     setTpvAnaliticaRange,
     setTpvMapeosSeleccionados,
     loadRecetas,
+    loadTpvImportaciones,
     closeRecetaModal,
     addRecetaLinea,
     removeRecetaLinea,
@@ -2206,6 +2208,7 @@ export default function HomePage() {
             tpvAplicando={tpvAplicando}
             tpvVentasCrudas={tpvVentasCrudas}
             tpvImportacionId={tpvImportacionId}
+            tpvImportaciones={tpvImportaciones}
             tpvPendientesMapeo={tpvPendientesMapeo}
             tpvMapeosSeleccionados={tpvMapeosSeleccionados}
             tpvGuardandoMapeo={tpvGuardandoMapeo}

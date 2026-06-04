@@ -64,11 +64,11 @@ test('buildDeploymentHealthSummary diferencia checks requeridos y avisos', () =>
         required: true,
       },
       {
-        name: 'table:inventario_cierres',
+        name: 'bucket:albaranes',
         configured: false,
-        scope: 'database',
+        scope: 'storage',
         required: false,
-        message: 'relation does not exist',
+        message: 'bucket not found',
       },
     ]
   )
@@ -76,5 +76,5 @@ test('buildDeploymentHealthSummary diferencia checks requeridos y avisos', () =>
   assert.equal(summary.ok, true)
   assert.equal(summary.status, 'ok')
   assert.deepEqual(summary.missing, [])
-  assert.deepEqual(summary.warnings, ['table:inventario_cierres'])
+  assert.deepEqual(summary.warnings, ['bucket:albaranes'])
 })

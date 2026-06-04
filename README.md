@@ -93,7 +93,7 @@ La respuesta no expone secretos. Devuelve:
 - `missing`: variables o tablas obligatorias pendientes.
 - `warnings`: piezas opcionales/recomendadas pendientes, por ejemplo tablas financieras.
 
-Si aparecen tablas en `missing`, revisa el orden de SQL de Supabase. Si aparecen tablas financieras en `warnings`, aplica `restaurant-finance-setup.sql` cuando vayas a usar informes avanzados.
+Si aparecen tablas en `missing`, revisa el orden de SQL de Supabase. Si aparecen tablas financieras en `warnings`, aplica `restaurant-finance-setup.sql` cuando vayas a usar informes avanzados. Si aparecen columnas o buckets en `warnings`, revisa `product-media-setup.sql`, `tpv-reliability-setup.sql` y las policies de storage.
 
 Si quieres validar el aislamiento por restaurante en Supabase:
 

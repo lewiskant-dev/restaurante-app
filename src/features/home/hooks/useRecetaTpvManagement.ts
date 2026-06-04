@@ -6,10 +6,12 @@ import type {
   RecetaLinea,
   RecetaLineaForm,
   TpvAnaliticaResumen,
+  TpvImportacion,
   VentaTPVCruda,
   ProductoPrecioHistorial,
 } from '@/features/home/types'
 import { formatOCRDateToInput, normalizeText, scoreRecipeMatch } from '@/features/home/utils'
+import { createTpvCsvFingerprint, parseTpvCsvText } from '@/lib/tpvCsv'
 import {
   buildComparativaMetrica,
   calculatePriceVariationPct,
@@ -69,6 +71,8 @@ export function useRecetaTpvManagement({
   const [tpvAplicando, setTpvAplicando] = useState(false)
   const [tpvVentasCrudas, setTpvVentasCrudas] = useState<VentaTPVCruda[]>([])
   const [tpvImportacionId, setTpvImportacionId] = useState<string | null>(null)
+  const [tpvFileHash, setTpvFileHash] = useState('')
+  const [tpvImportaciones, setTpvImportaciones] = useState<TpvImportacion[]>([])
   const [tpvMapeosSeleccionados, setTpvMapeosSeleccionados] = useState<Record<string, string>>(
     {}
   )
@@ -227,6 +231,27 @@ export function useRecetaTpvManagement({
     setLoadingRecetas(false)
 
     await loadTpvAnalitica((data ?? []) as Receta[], (lineasData ?? []) as RecetaLinea[])
+  }
+
+  async function loadTpvImportaciones() {
+    if (!currentRestaurantId) {
+      setTpvImportaciones([])
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('tpv_importaciones')
+      .select('id,nombre_archivo,procesado,created_at')
+      .eq('restaurant_id', currentRestaurantId)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    if (error) {
+      onError(error.message)
+      return
+    }
+
+    setTpvImportaciones((data ?? []) as TpvImportacion[])
   }
 
   async function loadTpvAnalitica(recetasBase: Receta[], lineasBase: RecetaLinea[]) {
@@ -1100,54 +1125,12 @@ export function useRecetaTpvManagement({
     }
   }
 
-  async function parseCSVTPVFile(file: File) {
-    const fileText = await file.text()
-    const rawLines = fileText
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-
-    if (rawLines.length <= 1) {
-      throw new Error('El CSV no contiene datos suficientes')
-    }
-
-    const headerCols = rawLines[0].split(';').map((col) => col.trim())
-    const lineas = rawLines.slice(1)
-
-    const articuloIndex = headerCols.findIndex((col) => col.toLowerCase() === 'articulo')
-    const cantidadIndex = headerCols.findIndex((col) => col.toLowerCase() === 'cantidad')
-    const fechaIndex = headerCols.findIndex((col) => col.toLowerCase() === 'fecha')
-
-    if (articuloIndex === -1 || cantidadIndex === -1) {
-      throw new Error(
-        `No encuentro las columnas necesarias en el CSV. Columnas detectadas: ${headerCols.join(', ')}`
-      )
-    }
-
-    const ventas: VentaTPVCruda[] = lineas
-      .map((linea) => {
-        const cols = linea.split(';').map((v) => v.trim())
-        const producto = cols[articuloIndex] || ''
-        const cantidad = Number((cols[cantidadIndex] || '0').replace(',', '.'))
-        const fecha =
-          fechaIndex >= 0 ? cols[fechaIndex] || new Date().toISOString() : new Date().toISOString()
-
-        if (!producto || !cantidad || cantidad <= 0) return null
-
-        return {
-          producto_externo: producto,
-          cantidad,
-          fecha,
-          raw: linea,
-        }
-      })
-      .filter(Boolean) as VentaTPVCruda[]
-
-    if (!ventas.length) {
-      throw new Error('No se han encontrado líneas válidas de ventas en el CSV')
-    }
-
-    return ventas
+  function selectTpvFile(file: File | null) {
+    setTpvFile(file)
+    setTpvVentasCrudas([])
+    setTpvFileHash('')
+    setTpvImportacionId(null)
+    setTpvMapeosSeleccionados({})
   }
 
   async function importarCSVTPV() {
@@ -1164,8 +1147,11 @@ export function useRecetaTpvManagement({
     onError('')
 
     try {
-      const ventas = await parseCSVTPVFile(tpvFile)
+      const fileText = await tpvFile.text()
+      const ventas = parseTpvCsvText(fileText)
+      const fileHash = await createTpvCsvFingerprint(fileText)
       setTpvVentasCrudas(ventas)
+      setTpvFileHash(fileHash)
       setTpvImportacionId(null)
       setTpvMapeosSeleccionados({})
       onToast(`CSV cargado para revisión (${ventas.length} líneas)`)
@@ -1186,6 +1172,11 @@ export function useRecetaTpvManagement({
       return
     }
 
+    if (tpvImportacionId) {
+      onError('Esta importación ya se ha aplicado. Carga otro CSV para generar nuevos consumos.')
+      return
+    }
+
     setTpvAplicando(true)
     onError('')
 
@@ -1197,18 +1188,61 @@ export function useRecetaTpvManagement({
       }
 
       const ventas = tpvVentasCrudas
+      const fileHash = tpvFileHash || (await createTpvCsvFingerprint(await tpvFile.text()))
 
-      const { data: importacion, error: importError } = await supabase
+      const { data: importacionExistente, error: duplicateCheckError } = await supabase
+        .from('tpv_importaciones')
+        .select('id,procesado')
+        .eq('restaurant_id', restaurantId)
+        .eq('archivo_hash', fileHash)
+        .limit(1)
+        .maybeSingle()
+
+      const hashColumnMissing =
+        duplicateCheckError &&
+        /archivo_hash|schema cache|column .* does not exist/i.test(duplicateCheckError.message)
+
+      if (duplicateCheckError && !hashColumnMissing) {
+        throw new Error(duplicateCheckError.message)
+      }
+
+      if (importacionExistente) {
+        throw new Error(
+          importacionExistente.procesado
+            ? 'Este CSV ya se aplicó anteriormente en el restaurante activo.'
+            : 'Este CSV ya tiene una importación pendiente. Revísala antes de volver a aplicarlo.'
+        )
+      }
+
+      let { data: importacion, error: importError } = await supabase
         .from('tpv_importaciones')
         .insert({
           nombre_archivo: tpvFile.name,
           procesado: false,
           restaurant_id: restaurantId,
+          archivo_hash: fileHash,
         })
         .select()
         .single()
 
+      if (importError && /archivo_hash|schema cache|column .* does not exist/i.test(importError.message)) {
+        const retry = await supabase
+          .from('tpv_importaciones')
+          .insert({
+            nombre_archivo: tpvFile.name,
+            procesado: false,
+            restaurant_id: restaurantId,
+          })
+          .select()
+          .single()
+        importacion = retry.data
+        importError = retry.error
+      }
+
       if (importError || !importacion) {
+        if (/duplicate key|unique constraint|tpv_importaciones_restaurant_hash/i.test(importError?.message || '')) {
+          throw new Error('Este CSV ya está registrado en el restaurante activo.')
+        }
         throw new Error(importError?.message || 'No se pudo crear la importación TPV')
       }
 
@@ -1256,6 +1290,9 @@ export function useRecetaTpvManagement({
       let ventasConReceta = 0
       let ventasSinReceta = 0
       let consumosGenerados = 0
+      let recetasSinIngredientes = 0
+      const productosConsumidos = new Set<string>()
+      const productosSinStockSuficiente = new Set<string>()
 
       for (const venta of ventas) {
         const receta = recetasMap.get(normalizeText(venta.producto_externo))
@@ -1268,6 +1305,10 @@ export function useRecetaTpvManagement({
         ventasConReceta += 1
 
         const lineas = ((lineasData ?? []) as RecetaLinea[]).filter((l) => l.receta_id === receta.id)
+        if (!lineas.length) {
+          recetasSinIngredientes += 1
+          continue
+        }
 
         for (const linea of lineas) {
           const producto = productosMap.get(linea.producto_id)
@@ -1276,6 +1317,7 @@ export function useRecetaTpvManagement({
           const consumo = Number(linea.cantidad) * Number(venta.cantidad)
           const stockAntes = Number(producto.stock_actual || 0)
           const stockDespues = Math.max(0, stockAntes - consumo)
+          if (consumo > stockAntes) productosSinStockSuficiente.add(producto.id)
 
           const { error: updateProductoError } = await supabase
             .from('productos')
@@ -1328,28 +1370,49 @@ export function useRecetaTpvManagement({
             ...producto,
             stock_actual: stockDespues,
           })
+          productosConsumidos.add(producto.id)
           consumosGenerados += 1
         }
       }
+
+      const { error: procesadoError } = await supabase
+        .from('tpv_importaciones')
+        .update({ procesado: true })
+        .eq('id', importacion.id)
+        .eq('restaurant_id', restaurantId)
+
+      if (procesadoError) throw new Error(procesadoError.message)
 
       await registrarAuditoria({
         entidad: 'tpv',
         entidad_id: importacion.id,
         accion: 'importar_csv',
-        detalle: `Importación TPV aplicada: ${tpvFile.name} · Líneas válidas: ${ventas.length} · Con receta: ${ventasConReceta} · Sin receta: ${ventasSinReceta} · Consumos generados: ${consumosGenerados}`,
+        detalle: `Importación TPV aplicada: ${tpvFile.name} · Líneas válidas: ${ventas.length} · Con receta: ${ventasConReceta} · Sin receta: ${ventasSinReceta} · Recetas sin ingredientes: ${recetasSinIngredientes} · Productos afectados: ${productosConsumidos.size} · Consumos generados: ${consumosGenerados}`,
         payload_despues: {
           archivo: tpvFile.name,
           filas: ventas.length,
           ventas_con_receta: ventasConReceta,
           ventas_sin_receta: ventasSinReceta,
+          recetas_sin_ingredientes: recetasSinIngredientes,
+          productos_afectados: productosConsumidos.size,
+          productos_sin_stock_suficiente: productosSinStockSuficiente.size,
           consumos_generados: consumosGenerados,
+          procesado: true,
         },
       })
 
-      await Promise.all([loadProductos(), loadMovimientos(), loadAuditoria()])
+      await Promise.all([loadProductos(), loadMovimientos(), loadAuditoria(), loadTpvImportaciones()])
       await loadTpvAnalitica((recetasData ?? []) as Receta[], (lineasData ?? []) as RecetaLinea[])
+      const avisos = [
+        ventasSinReceta ? `${ventasSinReceta} sin mapear` : '',
+        recetasSinIngredientes ? `${recetasSinIngredientes} sin ingredientes` : '',
+        productosSinStockSuficiente.size ? `${productosSinStockSuficiente.size} stock insuficiente` : '',
+      ].filter(Boolean)
+
       onToast(
-        `Importación aplicada · Recetas: ${ventasConReceta} · Sin receta: ${ventasSinReceta}`
+        `Importación aplicada · ${consumosGenerados} consumos · ${productosConsumidos.size} productos${
+          avisos.length ? ` · Revisar: ${avisos.join(', ')}` : ''
+        }`
       )
     } catch (err) {
       onError(err instanceof Error ? err.message : 'No se pudo aplicar la importación del TPV')
@@ -1367,6 +1430,8 @@ export function useRecetaTpvManagement({
     setTpvAplicando(false)
     setTpvVentasCrudas([])
     setTpvImportacionId(null)
+    setTpvFileHash('')
+    setTpvImportaciones([])
     setTpvMapeosSeleccionados({})
     setTpvGuardandoMapeo('')
   }
@@ -1388,6 +1453,7 @@ export function useRecetaTpvManagement({
     tpvAplicando,
     tpvVentasCrudas,
     tpvImportacionId,
+    tpvImportaciones,
     tpvMapeosSeleccionados,
     tpvGuardandoMapeo,
     tpvAnaliticaRange,
@@ -1398,10 +1464,11 @@ export function useRecetaTpvManagement({
     setRecetaRaciones,
     setRecetaPrecioVenta,
     setRecetaActiva,
-    setTpvFile,
+    setTpvFile: selectTpvFile,
     setTpvAnaliticaRange,
     setTpvMapeosSeleccionados,
     loadRecetas,
+    loadTpvImportaciones,
     closeRecetaModal,
     addRecetaLinea,
     removeRecetaLinea,

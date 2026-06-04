@@ -78,6 +78,13 @@ export type VentaTPVCruda = {
   raw: string
 }
 
+export type TpvImportacion = {
+  id: string
+  nombre_archivo: string
+  procesado: boolean
+  created_at: string
+}
+
 export type TpvAnaliticaProducto = {
   producto_id: string
   producto_nombre: string

@@ -23,6 +23,28 @@ const DATABASE_CHECKS = [
     required: false,
   },
   { name: 'table:inventario_cierres', table: 'inventario_cierres', column: 'id', required: false },
+  {
+    name: 'table:inventario_cierre_lineas',
+    table: 'inventario_cierre_lineas',
+    column: 'id',
+    required: false,
+  },
+  { name: 'column:productos.imagen_url', table: 'productos', column: 'imagen_url', required: false },
+  { name: 'column:productos.icono', table: 'productos', column: 'icono', required: false },
+  {
+    name: 'column:tpv_importaciones.archivo_hash',
+    table: 'tpv_importaciones',
+    column: 'archivo_hash',
+    required: false,
+  },
+] as const
+
+const STORAGE_BUCKET_CHECKS = [
+  {
+    name: 'bucket:albaranes',
+    bucket: 'albaranes',
+    required: false,
+  },
 ] as const
 
 function shouldSkipDatabaseChecks() {
@@ -32,7 +54,7 @@ function shouldSkipDatabaseChecks() {
   )
 }
 
-async function buildDatabaseChecks(): Promise<DeploymentHealthCheck[]> {
+async function buildSupabaseChecks(): Promise<DeploymentHealthCheck[]> {
   if (shouldSkipDatabaseChecks()) return []
 
   let supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>
@@ -51,7 +73,7 @@ async function buildDatabaseChecks(): Promise<DeploymentHealthCheck[]> {
     ]
   }
 
-  return Promise.all(
+  const databaseChecks = await Promise.all(
     DATABASE_CHECKS.map(async (check) => {
       const { error } = await supabaseAdmin
         .from(check.table)
@@ -67,11 +89,23 @@ async function buildDatabaseChecks(): Promise<DeploymentHealthCheck[]> {
       }
     })
   )
+
+  const { data: buckets, error: bucketsError } = await supabaseAdmin.storage.listBuckets()
+  const bucketNames = new Set((buckets ?? []).map((bucket) => bucket.name))
+  const storageChecks = STORAGE_BUCKET_CHECKS.map((check) => ({
+    name: check.name,
+    configured: !bucketsError && bucketNames.has(check.bucket),
+    scope: 'storage' as const,
+    required: check.required,
+    message: bucketsError?.message,
+  }))
+
+  return [...databaseChecks, ...storageChecks]
 }
 
 export async function GET() {
-  const databaseChecks = await buildDatabaseChecks()
-  const summary = buildDeploymentHealthSummary(process.env, new Date().toISOString(), databaseChecks)
+  const supabaseChecks = await buildSupabaseChecks()
+  const summary = buildDeploymentHealthSummary(process.env, new Date().toISOString(), supabaseChecks)
 
   return NextResponse.json(summary, {
     status: summary.ok ? 200 : 503,

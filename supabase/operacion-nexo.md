@@ -34,7 +34,11 @@ La ruta devuelve:
 - `missing` con lo que bloquea el despliegue
 - `warnings` con fases recomendadas pendientes, como tablas financieras
 
-Si `warnings` contiene `table:productos_precios_historial` o `table:inventario_cierres`, aplica [restaurant-finance-setup.sql](/Users/jorge/restaurante-app/supabase/restaurant-finance-setup.sql:1) antes de usar informes financieros avanzados.
+Si `warnings` contiene `table:productos_precios_historial`, `table:inventario_cierres` o `table:inventario_cierre_lineas`, aplica [restaurant-finance-setup.sql](/Users/jorge/restaurante-app/supabase/restaurant-finance-setup.sql:1) antes de usar informes financieros avanzados.
+
+Si aparecen `column:productos.imagen_url`, `column:productos.icono` o `bucket:albaranes`, revisa [product-media-setup.sql](/Users/jorge/restaurante-app/supabase/product-media-setup.sql:1) y las policies de storage antes de usar imágenes o adjuntos.
+
+Si aparece `column:tpv_importaciones.archivo_hash`, aplica [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1) para impedir que un mismo CSV TPV se descuente dos veces.
 
 ## Alta de un restaurante nuevo
 

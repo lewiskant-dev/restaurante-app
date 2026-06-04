@@ -11,7 +11,7 @@ type EnvMap = Record<string, string | undefined>
 export type DeploymentHealthCheck = {
   name: string
   configured: boolean
-  scope: 'env' | 'database'
+  scope: 'env' | 'database' | 'storage'
   required: boolean
   message?: string
 }

@@ -138,7 +138,7 @@ type ComparisonCard = {
 type DeploymentHealthCheck = {
   name: string
   configured: boolean
-  scope: 'env' | 'database'
+  scope: 'env' | 'database' | 'storage'
   required: boolean
   message?: string
 }
@@ -154,6 +154,8 @@ type DeploymentHealthSummary = {
 
 function formatHealthCheckName(value: string) {
   if (value.startsWith('table:')) return value.replace('table:', 'Tabla ')
+  if (value.startsWith('column:')) return value.replace('column:', 'Columna ')
+  if (value.startsWith('bucket:')) return value.replace('bucket:', 'Bucket ')
   if (value === 'supabase:admin-client') return 'Cliente admin de Supabase'
   return value
 }

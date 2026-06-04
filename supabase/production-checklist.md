@@ -27,11 +27,12 @@ Ejecutar en `SQL Editor`, en este orden:
 2. [multi-restaurant-setup.sql](/Users/jorge/restaurante-app/supabase/multi-restaurant-setup.sql:1)
 3. [restaurant-finance-setup.sql](/Users/jorge/restaurante-app/supabase/restaurant-finance-setup.sql:1)
 4. [product-media-setup.sql](/Users/jorge/restaurante-app/supabase/product-media-setup.sql:1)
-5. [performance-indexes.sql](/Users/jorge/restaurante-app/supabase/performance-indexes.sql:1)
+5. [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1)
+6. [performance-indexes.sql](/Users/jorge/restaurante-app/supabase/performance-indexes.sql:1)
 
 Si quieres empezar con datos operativos vacíos, ejecutar después:
 
-6. [reset-operational-data.sql](/Users/jorge/restaurante-app/supabase/reset-operational-data.sql:1)
+7. [reset-operational-data.sql](/Users/jorge/restaurante-app/supabase/reset-operational-data.sql:1)
 
 No ejecutes `reset-operational-data.sql` si ya hay productos, proveedores, albaranes, TPV o recetas reales que quieras conservar.
 
@@ -89,6 +90,16 @@ Tablas recomendadas para finanzas:
 
 - `productos_precios_historial`
 - `inventario_cierres`
+- `inventario_cierre_lineas`
+
+Piezas recomendadas para adjuntos e imágenes:
+
+- columnas `productos.imagen_url` y `productos.icono`
+- bucket `albaranes`
+
+Pieza recomendada para evitar importaciones TPV duplicadas:
+
+- columna `tpv_importaciones.archivo_hash` e índice único por restaurante
 
 ## 5. Prueba funcional mínima
 
