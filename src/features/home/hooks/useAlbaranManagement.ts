@@ -8,6 +8,7 @@ import type {
   TabKey,
 } from '@/features/home/types'
 import { formatOCRDateToInput, normalizeText, todayLocalInputDate } from '@/features/home/utils'
+import { getAtomicAlbaranError, parseAtomicAlbaranResult } from '@/lib/albaranTransaction'
 import { supabase } from '@/lib/supabase'
 import type { Albaran, AlbaranLinea, Producto, Proveedor } from '@/types'
 import type { PromptActionRequest } from '@/components/ui/PromptActionDialog'
@@ -404,61 +405,12 @@ export function useAlbaranManagement({
       const restaurantId = requireActiveRestaurant()
       if (!restaurantId) return
 
-      const { data: lineas, error: lineasError } = await supabase
-        .from('albaran_lineas')
-        .select('*')
-        .eq('albaran_id', albaran.id)
-        .eq('restaurant_id', restaurantId)
+      const { error } = await supabase.rpc('anular_albaran_atomico', {
+        p_albaran_id: albaran.id,
+        p_motivo: motivo || 'Sin motivo',
+      })
 
-      if (lineasError) {
-        throw new Error(lineasError.message)
-      }
-
-      const lineasAlbaran = (lineas ?? []) as AlbaranLinea[]
-
-      for (const linea of lineasAlbaran) {
-        if (!linea.producto_id) continue
-
-        const producto = productos.find((p) => p.id === linea.producto_id)
-        if (!producto) continue
-
-        const stockActual = Number(producto.stock_actual)
-        const nuevoStock = stockActual - Number(linea.cantidad)
-
-        const { error: updateError } = await supabase
-          .from('productos')
-          .update({ stock_actual: nuevoStock < 0 ? 0 : nuevoStock })
-          .eq('id', producto.id)
-          .eq('restaurant_id', restaurantId)
-
-        if (updateError) {
-          throw new Error(updateError.message)
-        }
-      }
-
-      const { error: deleteMovError } = await supabase
-        .from('movimientos_stock')
-        .delete()
-        .eq('restaurant_id', restaurantId)
-        .eq('origen_tipo', 'albaran')
-        .eq('origen_id', albaran.id)
-
-      if (deleteMovError) {
-        throw new Error(deleteMovError.message)
-      }
-
-      const { error: updateAlbError } = await supabase
-        .from('albaranes')
-        .update({
-          anulado: true,
-          anulado_motivo: motivo || 'Sin motivo',
-        })
-        .eq('id', albaran.id)
-        .eq('restaurant_id', restaurantId)
-
-      if (updateAlbError) {
-        throw new Error(updateAlbError.message)
-      }
+      if (error) throw new Error(error.message)
 
       await registrarAuditoria({
         entidad: 'albaran',
@@ -480,7 +432,7 @@ export function useAlbaranManagement({
 
       await Promise.all([loadProductos(), loadMovimientos(), loadAlbaranes()])
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'No se pudo anular el albarán')
+      onError(getAtomicAlbaranError(err))
     }
   }
 
@@ -529,65 +481,6 @@ export function useAlbaranManagement({
     setAlbaranLineasDetalle([])
     onTabChange('albaran')
     onToast('Albarán cargado para editar')
-  }
-
-  async function revertirAlbaranExistente(albaranId: string) {
-    let query = supabase.from('albaran_lineas').select('*').eq('albaran_id', albaranId)
-
-    if (currentRestaurantId) {
-      query = query.eq('restaurant_id', currentRestaurantId)
-    }
-
-    const { data: lineas, error: lineasError } = await query
-
-    if (lineasError) {
-      throw new Error(lineasError.message)
-    }
-
-    const lineasExistentes = (lineas ?? []) as AlbaranLinea[]
-    const restaurantId = requireActiveRestaurant()
-    if (!restaurantId) return
-
-    for (const linea of lineasExistentes) {
-      if (!linea.producto_id) continue
-
-      const producto = productos.find((p) => p.id === linea.producto_id)
-      if (!producto) continue
-
-      const stockActual = Number(producto.stock_actual)
-      const nuevoStock = stockActual - Number(linea.cantidad)
-
-      const { error: updateError } = await supabase
-        .from('productos')
-        .update({ stock_actual: nuevoStock < 0 ? 0 : nuevoStock })
-        .eq('id', producto.id)
-        .eq('restaurant_id', restaurantId)
-
-      if (updateError) {
-        throw new Error(updateError.message)
-      }
-    }
-
-    const { error: deleteMovError } = await supabase
-      .from('movimientos_stock')
-      .delete()
-      .eq('restaurant_id', restaurantId)
-      .eq('origen_tipo', 'albaran')
-      .eq('origen_id', albaranId)
-
-    if (deleteMovError) {
-      throw new Error(deleteMovError.message)
-    }
-
-    const { error: deleteLineasError } = await supabase
-      .from('albaran_lineas')
-      .delete()
-      .eq('albaran_id', albaranId)
-      .eq('restaurant_id', restaurantId)
-
-    if (deleteLineasError) {
-      throw new Error(deleteLineasError.message)
-    }
   }
 
   function addAlbaranLinea() {
@@ -691,136 +584,27 @@ export function useAlbaranManagement({
         fotoUrl = publicUrlData.publicUrl
       }
 
-      const total = lineasPreparadas.reduce((acc, l) => acc + l.cantidad * l.precio_unitario, 0)
-      let albaranId = editingAlbaranId
-
-      if (editingAlbaranId) {
-        await revertirAlbaranExistente(editingAlbaranId)
-
-        const updatePayload: Record<string, unknown> = {
-          numero: albaranNumero.trim(),
-          proveedor_id: proveedor.id,
-          proveedor_nombre: proveedor.nombre,
-          fecha: albaranFecha,
-          notas: albaranNotas.trim(),
-          total,
-        }
-
-        if (fotoUrl) {
-          updatePayload.foto_url = fotoUrl
-        }
-
-        const { error: updateAlbError } = await supabase
-          .from('albaranes')
-          .update(updatePayload)
-          .eq('id', editingAlbaranId)
-          .eq('restaurant_id', restaurantId)
-
-        if (updateAlbError) {
-          throw new Error(updateAlbError.message)
-        }
-      } else {
-        const { data: albaranInsertado, error: albError } = await supabase
-          .from('albaranes')
-          .insert({
-            numero: albaranNumero.trim(),
-            proveedor_id: proveedor.id,
-            proveedor_nombre: proveedor.nombre,
-            fecha: albaranFecha,
-            notas: albaranNotas.trim(),
-            total,
-            foto_url: fotoUrl,
-            anulado: false,
-            anulado_motivo: '',
-            restaurant_id: restaurantId,
-          })
-          .select()
-          .single()
-
-        if (albError || !albaranInsertado) {
-          throw new Error(albError?.message || 'No se pudo crear el albarán')
-        }
-
-        albaranId = albaranInsertado.id
-      }
-
-      if (!albaranId) {
-        throw new Error('No se pudo determinar el albarán a guardar')
-      }
-
       const lineasPayload = lineasPreparadas.map((l) => ({
-        albaran_id: albaranId,
-        restaurant_id: restaurantId,
         producto_id: l.producto_id,
         nombre_producto: l.producto!.nombre,
         cantidad: l.cantidad,
         precio_unitario: l.precio_unitario,
-        subtotal: l.cantidad * l.precio_unitario,
       }))
 
-      const { error: lineasError } = await supabase.from('albaran_lineas').insert(lineasPayload)
-      if (lineasError) {
-        throw new Error(lineasError.message)
-      }
+      const { data, error } = await supabase.rpc('guardar_albaran_atomico', {
+        p_albaran_id: editingAlbaranId,
+        p_numero: albaranNumero.trim(),
+        p_proveedor_id: proveedor.id,
+        p_fecha: albaranFecha,
+        p_notas: albaranNotas.trim(),
+        p_foto_url: fotoUrl || null,
+        p_lineas: lineasPayload,
+      })
 
-      for (const linea of lineasPreparadas) {
-        const producto = linea.producto!
-        const stockAntes = Number(producto.stock_actual)
-        const stockDespues = stockAntes + linea.cantidad
-
-        const { error: updateError } = await supabase
-          .from('productos')
-          .update({
-            stock_actual: stockDespues,
-            coste_unitario: linea.precio_unitario,
-            ultimo_precio_compra: linea.precio_unitario,
-            ultima_compra_at: albaranFecha,
-            ultimo_proveedor_id: proveedor.id,
-            ultimo_proveedor_nombre: proveedor.nombre,
-          })
-          .eq('id', producto.id)
-          .eq('restaurant_id', restaurantId)
-
-        if (updateError) {
-          throw new Error(updateError.message)
-        }
-
-        const { error: historyError } = await supabase.from('productos_precios_historial').insert({
-          restaurant_id: restaurantId,
-          producto_id: producto.id,
-          proveedor_id: proveedor.id,
-          albaran_id: albaranId,
-          proveedor_nombre: proveedor.nombre,
-          fecha_compra: albaranFecha,
-          cantidad: linea.cantidad,
-          precio_unitario: linea.precio_unitario,
-        })
-
-        if (
-          historyError &&
-          !/productos_precios_historial|relation .* does not exist|could not find the table/i.test(
-            historyError.message
-          )
-        ) {
-          throw new Error(historyError.message)
-        }
-
-        const { error: movError } = await supabase.from('movimientos_stock').insert({
-          producto_id: producto.id,
-          restaurant_id: restaurantId,
-          tipo: 'entrada',
-          cantidad: linea.cantidad,
-          motivo: `Albarán ${albaranNumero.trim()}`,
-          origen_tipo: 'albaran',
-          origen_id: albaranId,
-          stock_antes: stockAntes,
-          stock_despues: stockDespues,
-        })
-
-        if (movError) {
-          throw new Error(movError.message)
-        }
-      }
+      if (error) throw new Error(error.message)
+      const resultado = parseAtomicAlbaranResult(data)
+      const albaranId = resultado.albaran_id
+      const total = resultado.total
 
       await registrarAuditoria({
         entidad: 'albaran',
@@ -849,7 +633,7 @@ export function useAlbaranManagement({
       await Promise.all([loadProductos(), loadMovimientos(), loadAlbaranes()])
       onTabChange('albaranes')
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Error guardando albarán')
+      onError(getAtomicAlbaranError(err))
     } finally {
       setAlbaranSaving(false)
     }

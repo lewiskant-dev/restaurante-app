@@ -47,6 +47,47 @@ const STORAGE_BUCKET_CHECKS = [
   },
 ] as const
 
+const RPC_CHECKS = [
+  {
+    name: 'rpc:registrar_movimiento_stock_atomico',
+    rpc: 'registrar_movimiento_stock_atomico',
+    args: {
+      p_producto_id: null,
+      p_tipo: 'ajuste',
+      p_cantidad: null,
+      p_stock_objetivo: 0,
+      p_motivo: 'healthcheck',
+      p_categoria_consumo: null,
+      p_origen_tipo: 'manual',
+      p_origen_id: null,
+    },
+    required: true,
+  },
+  {
+    name: 'rpc:guardar_albaran_atomico',
+    rpc: 'guardar_albaran_atomico',
+    args: {
+      p_albaran_id: null,
+      p_numero: 'healthcheck',
+      p_proveedor_id: null,
+      p_fecha: '2026-01-01',
+      p_notas: '',
+      p_foto_url: null,
+      p_lineas: [],
+    },
+    required: true,
+  },
+  {
+    name: 'rpc:anular_albaran_atomico',
+    rpc: 'anular_albaran_atomico',
+    args: {
+      p_albaran_id: null,
+      p_motivo: 'healthcheck',
+    },
+    required: true,
+  },
+] as const
+
 function shouldSkipDatabaseChecks() {
   return (
     !process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
@@ -100,7 +141,24 @@ async function buildSupabaseChecks(): Promise<DeploymentHealthCheck[]> {
     message: bucketsError?.message,
   }))
 
-  return [...databaseChecks, ...storageChecks]
+  const rpcChecks = await Promise.all(
+    RPC_CHECKS.map(async (check) => {
+      const { error } = await supabaseAdmin.rpc(check.rpc, check.args)
+      const missing = Boolean(
+        error && /could not find the function|schema cache|does not exist/i.test(error.message)
+      )
+
+      return {
+        name: check.name,
+        configured: !missing,
+        scope: 'database' as const,
+        required: check.required,
+        message: missing ? error?.message : undefined,
+      }
+    })
+  )
+
+  return [...databaseChecks, ...storageChecks, ...rpcChecks]
 }
 
 export async function GET() {

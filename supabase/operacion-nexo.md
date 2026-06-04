@@ -40,6 +40,10 @@ Si aparecen `column:productos.imagen_url`, `column:productos.icono` o `bucket:al
 
 Si aparece `column:tpv_importaciones.archivo_hash`, aplica [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1) para impedir que un mismo CSV TPV se descuente dos veces.
 
+Aplica [stock-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/stock-reliability-setup.sql:1) antes de operar con stock real. La función incluida actualiza el producto y registra su movimiento dentro de la misma transacción.
+
+Aplica [albaran-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/albaran-reliability-setup.sql:1) antes de guardar albaranes reales. La migración mantiene albarán, líneas, stock, movimientos e histórico de precios dentro de una única transacción.
+
 ## Alta de un restaurante nuevo
 
 1. Entrar como `Master`.

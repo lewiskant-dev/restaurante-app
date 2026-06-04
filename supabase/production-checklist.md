@@ -26,13 +26,15 @@ Ejecutar en `SQL Editor`, en este orden:
 1. [auth-setup.sql](/Users/jorge/restaurante-app/supabase/auth-setup.sql:1)
 2. [multi-restaurant-setup.sql](/Users/jorge/restaurante-app/supabase/multi-restaurant-setup.sql:1)
 3. [restaurant-finance-setup.sql](/Users/jorge/restaurante-app/supabase/restaurant-finance-setup.sql:1)
-4. [product-media-setup.sql](/Users/jorge/restaurante-app/supabase/product-media-setup.sql:1)
-5. [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1)
-6. [performance-indexes.sql](/Users/jorge/restaurante-app/supabase/performance-indexes.sql:1)
+4. [stock-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/stock-reliability-setup.sql:1)
+5. [albaran-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/albaran-reliability-setup.sql:1)
+6. [product-media-setup.sql](/Users/jorge/restaurante-app/supabase/product-media-setup.sql:1)
+7. [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1)
+8. [performance-indexes.sql](/Users/jorge/restaurante-app/supabase/performance-indexes.sql:1)
 
 Si quieres empezar con datos operativos vacíos, ejecutar después:
 
-7. [reset-operational-data.sql](/Users/jorge/restaurante-app/supabase/reset-operational-data.sql:1)
+9. [reset-operational-data.sql](/Users/jorge/restaurante-app/supabase/reset-operational-data.sql:1)
 
 No ejecutes `reset-operational-data.sql` si ya hay productos, proveedores, albaranes, TPV o recetas reales que quieras conservar.
 
@@ -86,6 +88,12 @@ Tablas obligatorias esperadas:
 - `albaranes`
 - `auditoria`
 
+Función obligatoria esperada:
+
+- `registrar_movimiento_stock_atomico`
+- `guardar_albaran_atomico`
+- `anular_albaran_atomico`
+
 Tablas recomendadas para finanzas:
 
 - `productos_precios_historial`
@@ -101,6 +109,10 @@ Pieza recomendada para evitar importaciones TPV duplicadas:
 
 - columna `tpv_importaciones.archivo_hash` e índice único por restaurante
 
+Operación obligatoria para mantener stock e historial sincronizados:
+
+- función `registrar_movimiento_stock_atomico` de `stock-reliability-setup.sql`
+
 ## 5. Prueba funcional mínima
 
 Entrar como `Master` y comprobar:
@@ -115,13 +127,16 @@ Entrar como `Master` y comprobar:
 8. Confirmar que el producto de `Restaurante A` no aparece.
 9. Crear proveedor, albarán y receta de prueba.
 10. Confirmar que informes y notificaciones cargan sin errores.
-11. Generar un cierre de inventario desde SQL o desde la futura acción de UI:
+11. Registrar un consumo manual y confirmar que stock e historial cambian juntos.
+12. Ajustar manualmente el stock y confirmar que se crea exactamente un movimiento.
+13. Crear, editar y anular un albarán; confirmar que stock, movimientos e histórico cambian juntos.
+14. Generar un cierre de inventario desde SQL o desde la futura acción de UI:
 
 ```sql
 select public.crear_cierre_inventario(current_date, 'Prueba de cierre');
 ```
 
-12. Confirmar que `inventario_cierres` e `inventario_cierre_lineas` solo contienen datos del restaurante activo.
+15. Confirmar que `inventario_cierres` e `inventario_cierre_lineas` solo contienen datos del restaurante activo.
 
 ## 6. Criterios para darlo por listo
 

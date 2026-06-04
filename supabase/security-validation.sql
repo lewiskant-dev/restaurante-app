@@ -139,3 +139,23 @@ where schemaname = 'storage'
   and tablename = 'objects'
   and policyname ilike '%albaranes%'
 order by policyname asc;
+
+-- 6. Funciones operativas críticas y permiso para usuarios autenticados
+select
+  p.proname as funcion,
+  p.prosecdef as security_definer,
+  has_function_privilege(
+    'authenticated',
+    p.oid,
+    'EXECUTE'
+  ) as authenticated_puede_ejecutar
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.proname in (
+    'registrar_movimiento_stock_atomico',
+    'guardar_albaran_atomico',
+    'anular_albaran_atomico',
+    'crear_cierre_inventario'
+  )
+order by p.proname asc;

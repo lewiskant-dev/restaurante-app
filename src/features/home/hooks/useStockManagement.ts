@@ -12,6 +12,7 @@ import {
 } from '@/features/home/constants'
 import { todayLocalInputDate } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
+import { getAtomicStockMovementError, parseAtomicStockMovementResult } from '@/lib/stockMovement'
 import type { Producto } from '@/types'
 import type { ConfirmActionRequest } from '@/components/ui/ConfirmActionDialog'
 
@@ -543,9 +544,6 @@ export function useStockManagement({
     setAjusteSaving(true)
     onError('')
 
-    const stockAntes = Number(ajusteProducto.stock_actual)
-    const stockDespues = nuevoStock
-    const diferencia = stockDespues - stockAntes
     const restaurantId = requireActiveRestaurant()
     if (!restaurantId) {
       setAjusteSaving(false)
@@ -553,49 +551,32 @@ export function useStockManagement({
     }
 
     try {
-      let updateQuery = supabase
-        .from('productos')
-        .update({ stock_actual: stockDespues })
-        .eq('id', ajusteProducto.id)
-
-      if (currentRestaurantId) {
-        updateQuery = updateQuery.eq('restaurant_id', currentRestaurantId)
-      }
-
-      const { error: updateError } = await updateQuery
-
-      if (updateError) {
-        throw new Error(updateError.message)
-      }
-
-      const { error: movError } = await supabase.from('movimientos_stock').insert({
-        producto_id: ajusteProducto.id,
-        restaurant_id: restaurantId,
-        tipo: 'ajuste',
-        cantidad: Math.abs(diferencia),
-        motivo: ajusteMotivo,
-        origen_tipo: 'manual',
-        origen_id: null,
-        stock_antes: stockAntes,
-        stock_despues: stockDespues,
+      const { data, error } = await supabase.rpc('registrar_movimiento_stock_atomico', {
+        p_producto_id: ajusteProducto.id,
+        p_tipo: 'ajuste',
+        p_cantidad: null,
+        p_stock_objetivo: nuevoStock,
+        p_motivo: ajusteMotivo,
+        p_categoria_consumo: null,
+        p_origen_tipo: 'manual',
+        p_origen_id: null,
       })
 
-      if (movError) {
-        throw new Error(movError.message)
-      }
+      if (error) throw new Error(error.message)
+      const movimiento = parseAtomicStockMovementResult(data)
 
       await registrarAuditoria({
         entidad: 'producto',
         entidad_id: ajusteProducto.id,
         accion: 'ajuste_stock',
-        detalle: `Producto: ${ajusteProducto.nombre} · Motivo: ${ajusteMotivo} · Antes: ${stockAntes} · Después: ${stockDespues}`,
+        detalle: `Producto: ${ajusteProducto.nombre} · Motivo: ${ajusteMotivo} · Antes: ${movimiento.stock_antes} · Después: ${movimiento.stock_despues}`,
         payload_antes: {
           producto: ajusteProducto.nombre,
-          stock_actual: stockAntes,
+          stock_actual: movimiento.stock_antes,
         },
         payload_despues: {
           producto: ajusteProducto.nombre,
-          stock_actual: stockDespues,
+          stock_actual: movimiento.stock_despues,
         },
       })
 
@@ -603,7 +584,7 @@ export function useStockManagement({
       onToast('Stock ajustado')
       await Promise.all([loadProductos(), loadMovimientos()])
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'No se pudo ajustar el stock')
+      onError(getAtomicStockMovementError(err))
     } finally {
       setAjusteSaving(false)
     }
@@ -651,8 +632,6 @@ export function useStockManagement({
     setConsumoSaving(true)
     onError('')
 
-    const stockAntes = Number(consumoProducto.stock_actual)
-    const stockDespues = stockAntes - cantidad
     const categoriaConsumo =
       consumoMotivo === 'Uso en cocina'
         ? 'cocina'
@@ -669,70 +648,44 @@ export function useStockManagement({
       return
     }
 
-    let updateQuery = supabase
-      .from('productos')
-      .update({ stock_actual: stockDespues })
-      .eq('id', consumoProducto.id)
+    try {
+      const { data, error } = await supabase.rpc('registrar_movimiento_stock_atomico', {
+        p_producto_id: consumoProducto.id,
+        p_tipo: 'consumo',
+        p_cantidad: cantidad,
+        p_stock_objetivo: null,
+        p_motivo: consumoMotivo,
+        p_categoria_consumo: categoriaConsumo,
+        p_origen_tipo: 'manual',
+        p_origen_id: null,
+      })
 
-    if (currentRestaurantId) {
-      updateQuery = updateQuery.eq('restaurant_id', currentRestaurantId)
-    }
+      if (error) throw new Error(error.message)
+      const movimiento = parseAtomicStockMovementResult(data)
 
-    const { error: updateError } = await updateQuery
+      await registrarAuditoria({
+        entidad: 'producto',
+        entidad_id: consumoProducto.id,
+        accion: 'consumo',
+        detalle: `Producto: ${consumoProducto.nombre} · Motivo: ${consumoMotivo} · Cantidad: ${cantidad} ${consumoProducto.unidad}`,
+        payload_antes: {
+          producto: consumoProducto.nombre,
+          stock_actual: movimiento.stock_antes,
+        },
+        payload_despues: {
+          producto: consumoProducto.nombre,
+          stock_actual: movimiento.stock_despues,
+        },
+      })
 
-    if (updateError) {
-      onError(updateError.message)
+      closeConsumoModal()
+      onToast('Consumo registrado')
+      await Promise.all([loadProductos(), loadMovimientos()])
+    } catch (err) {
+      onError(getAtomicStockMovementError(err))
+    } finally {
       setConsumoSaving(false)
-      return
     }
-
-    const movimientoConsumo = {
-      producto_id: consumoProducto.id,
-      restaurant_id: restaurantId,
-      tipo: 'consumo',
-      cantidad,
-      motivo: consumoMotivo,
-      categoria_consumo: categoriaConsumo,
-      origen_tipo: 'manual',
-      origen_id: null,
-      stock_antes: stockAntes,
-      stock_despues: stockDespues,
-    }
-    let { error: movError } = await supabase.from('movimientos_stock').insert(movimientoConsumo)
-
-    if (movError && /categoria_consumo|schema cache/i.test(movError.message)) {
-      const movimientoCompatible = Object.fromEntries(
-        Object.entries(movimientoConsumo).filter(([key]) => key !== 'categoria_consumo')
-      )
-      const retry = await supabase.from('movimientos_stock').insert(movimientoCompatible)
-      movError = retry.error
-    }
-
-    if (movError) {
-      onError(movError.message)
-      setConsumoSaving(false)
-      return
-    }
-
-    await registrarAuditoria({
-      entidad: 'producto',
-      entidad_id: consumoProducto.id,
-      accion: 'consumo',
-      detalle: `Producto: ${consumoProducto.nombre} · Motivo: ${consumoMotivo} · Cantidad: ${cantidad} ${consumoProducto.unidad}`,
-      payload_antes: {
-        producto: consumoProducto.nombre,
-        stock_actual: stockAntes,
-      },
-      payload_despues: {
-        producto: consumoProducto.nombre,
-        stock_actual: stockDespues,
-      },
-    })
-
-    closeConsumoModal()
-    setConsumoSaving(false)
-    onToast('Consumo registrado')
-    await Promise.all([loadProductos(), loadMovimientos()])
   }
 
   function resetStockState() {

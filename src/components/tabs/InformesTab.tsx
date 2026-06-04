@@ -156,6 +156,7 @@ function formatHealthCheckName(value: string) {
   if (value.startsWith('table:')) return value.replace('table:', 'Tabla ')
   if (value.startsWith('column:')) return value.replace('column:', 'Columna ')
   if (value.startsWith('bucket:')) return value.replace('bucket:', 'Bucket ')
+  if (value.startsWith('rpc:')) return value.replace('rpc:', 'Función ')
   if (value === 'supabase:admin-client') return 'Cliente admin de Supabase'
   return value
 }
