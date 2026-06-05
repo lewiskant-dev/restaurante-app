@@ -8,7 +8,8 @@ create or replace function public.registrar_movimiento_stock_atomico(
   p_motivo text default '',
   p_categoria_consumo text default null,
   p_origen_tipo text default 'manual',
-  p_origen_id uuid default null
+  p_origen_id uuid default null,
+  p_restaurant_id uuid default null
 )
 returns jsonb
 language plpgsql
@@ -23,7 +24,7 @@ declare
   cantidad_movimiento numeric;
   movimiento_id uuid;
 begin
-  target_restaurant_id := public.current_restaurant_id();
+  target_restaurant_id := coalesce(p_restaurant_id, public.current_restaurant_id());
 
   if target_restaurant_id is null then
     raise exception 'No hay restaurante activo para registrar el movimiento';
@@ -118,8 +119,8 @@ begin
 end;
 $$;
 
-comment on function public.registrar_movimiento_stock_atomico(uuid, text, numeric, numeric, text, text, text, uuid) is
+comment on function public.registrar_movimiento_stock_atomico(uuid, text, numeric, numeric, text, text, text, uuid, uuid) is
   'Actualiza un producto e inserta su movimiento de stock en una única transacción.';
 
-revoke all on function public.registrar_movimiento_stock_atomico(uuid, text, numeric, numeric, text, text, text, uuid) from public;
-grant execute on function public.registrar_movimiento_stock_atomico(uuid, text, numeric, numeric, text, text, text, uuid) to authenticated;
+revoke all on function public.registrar_movimiento_stock_atomico(uuid, text, numeric, numeric, text, text, text, uuid, uuid) from public;
+grant execute on function public.registrar_movimiento_stock_atomico(uuid, text, numeric, numeric, text, text, text, uuid, uuid) to authenticated;

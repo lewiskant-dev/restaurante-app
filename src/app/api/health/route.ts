@@ -60,6 +60,7 @@ const RPC_CHECKS = [
       p_categoria_consumo: null,
       p_origen_tipo: 'manual',
       p_origen_id: null,
+      p_restaurant_id: null,
     },
     required: true,
   },
@@ -74,6 +75,7 @@ const RPC_CHECKS = [
       p_notas: '',
       p_foto_url: null,
       p_lineas: [],
+      p_restaurant_id: null,
     },
     required: true,
   },
@@ -83,6 +85,7 @@ const RPC_CHECKS = [
     args: {
       p_albaran_id: null,
       p_motivo: 'healthcheck',
+      p_restaurant_id: null,
     },
     required: true,
   },

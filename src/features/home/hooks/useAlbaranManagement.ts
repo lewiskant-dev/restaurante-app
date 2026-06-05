@@ -408,6 +408,7 @@ export function useAlbaranManagement({
       const { error } = await supabase.rpc('anular_albaran_atomico', {
         p_albaran_id: albaran.id,
         p_motivo: motivo || 'Sin motivo',
+        p_restaurant_id: restaurantId,
       })
 
       if (error) throw new Error(error.message)
@@ -599,6 +600,7 @@ export function useAlbaranManagement({
         p_notas: albaranNotas.trim(),
         p_foto_url: fotoUrl || null,
         p_lineas: lineasPayload,
+        p_restaurant_id: restaurantId,
       })
 
       if (error) throw new Error(error.message)

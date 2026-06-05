@@ -560,6 +560,7 @@ export function useStockManagement({
         p_categoria_consumo: null,
         p_origen_tipo: 'manual',
         p_origen_id: null,
+        p_restaurant_id: restaurantId,
       })
 
       if (error) throw new Error(error.message)
@@ -658,6 +659,7 @@ export function useStockManagement({
         p_categoria_consumo: categoriaConsumo,
         p_origen_tipo: 'manual',
         p_origen_id: null,
+        p_restaurant_id: restaurantId,
       })
 
       if (error) throw new Error(error.message)

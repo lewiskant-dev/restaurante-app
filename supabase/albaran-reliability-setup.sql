@@ -57,7 +57,8 @@ create or replace function public.guardar_albaran_atomico(
   p_fecha date,
   p_notas text,
   p_foto_url text,
-  p_lineas jsonb
+  p_lineas jsonb,
+  p_restaurant_id uuid default null
 )
 returns jsonb
 language plpgsql
@@ -76,7 +77,7 @@ declare
   old_product_ids uuid[] := array[]::uuid[];
   affected_product_id uuid;
 begin
-  target_restaurant_id := public.current_restaurant_id();
+  target_restaurant_id := coalesce(p_restaurant_id, public.current_restaurant_id());
 
   if target_restaurant_id is null
     or not public.user_has_restaurant_access(target_restaurant_id)
@@ -346,7 +347,8 @@ $$;
 
 create or replace function public.anular_albaran_atomico(
   p_albaran_id uuid,
-  p_motivo text default 'Sin motivo'
+  p_motivo text default 'Sin motivo',
+  p_restaurant_id uuid default null
 )
 returns jsonb
 language plpgsql
@@ -360,7 +362,7 @@ declare
   old_product record;
   productos_afectados integer := 0;
 begin
-  target_restaurant_id := public.current_restaurant_id();
+  target_restaurant_id := coalesce(p_restaurant_id, public.current_restaurant_id());
 
   if target_restaurant_id is null
     or not public.user_has_restaurant_access(target_restaurant_id)
@@ -443,14 +445,14 @@ end;
 $$;
 
 revoke all on function public.recalcular_ultima_compra_producto(uuid, uuid) from public;
-revoke all on function public.guardar_albaran_atomico(uuid, text, uuid, date, text, text, jsonb) from public;
-revoke all on function public.anular_albaran_atomico(uuid, text) from public;
+revoke all on function public.guardar_albaran_atomico(uuid, text, uuid, date, text, text, jsonb, uuid) from public;
+revoke all on function public.anular_albaran_atomico(uuid, text, uuid) from public;
 
 grant execute on function public.recalcular_ultima_compra_producto(uuid, uuid) to authenticated;
-grant execute on function public.guardar_albaran_atomico(uuid, text, uuid, date, text, text, jsonb) to authenticated;
-grant execute on function public.anular_albaran_atomico(uuid, text) to authenticated;
+grant execute on function public.guardar_albaran_atomico(uuid, text, uuid, date, text, text, jsonb, uuid) to authenticated;
+grant execute on function public.anular_albaran_atomico(uuid, text, uuid) to authenticated;
 
-comment on function public.guardar_albaran_atomico(uuid, text, uuid, date, text, text, jsonb) is
+comment on function public.guardar_albaran_atomico(uuid, text, uuid, date, text, text, jsonb, uuid) is
   'Crea o edita un albarán y aplica líneas, stock, precios y movimientos en una única transacción.';
-comment on function public.anular_albaran_atomico(uuid, text) is
+comment on function public.anular_albaran_atomico(uuid, text, uuid) is
   'Anula un albarán y revierte stock, movimientos e histórico de compra en una única transacción.';
