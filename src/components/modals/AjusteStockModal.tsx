@@ -9,6 +9,7 @@ type AjusteStockModalProps = {
   ajusteStockNuevo: string
   ajusteMotivo: string
   ajusteSaving: boolean
+  errorMessage?: string
   onClose: () => void
   onStockNuevoChange: (value: string) => void
   onMotivoChange: (value: string) => void
@@ -21,6 +22,7 @@ export function AjusteStockModal({
   ajusteStockNuevo,
   ajusteMotivo,
   ajusteSaving,
+  errorMessage,
   onClose,
   onStockNuevoChange,
   onMotivoChange,
@@ -51,7 +53,8 @@ export function AjusteStockModal({
 
         <div className="space-y-3 px-4 py-4 lg:px-5">
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             placeholder="Nuevo stock"
             value={ajusteStockNuevo}
             onChange={(e) => onStockNuevoChange(e.target.value)}
@@ -70,6 +73,11 @@ export function AjusteStockModal({
             <option value="Otro ajuste">Otro ajuste</option>
           </select>
 
+          {errorMessage ? (
+            <div className="rounded-[16px] border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+              {errorMessage}
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-4 py-3 sm:flex-row sm:justify-end lg:px-5">
           <button type="button" onClick={onClose} className={`px-4 py-3 text-sm ${ghostButton}`}>

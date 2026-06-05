@@ -10,6 +10,7 @@ import {
   normalizeProductCategory,
   PRODUCT_CATEGORY_OPTIONS,
 } from '@/features/home/constants'
+import { parseDecimalInput } from '@/lib/numberInput'
 import { todayLocalInputDate } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
 import { getAtomicStockMovementError, parseAtomicStockMovementResult } from '@/lib/stockMovement'
@@ -532,9 +533,12 @@ export function useStockManagement({
       return
     }
 
-    if (!ajusteProducto) return
+    if (!ajusteProducto) {
+      onError('Selecciona un producto para ajustar stock')
+      return
+    }
 
-    const nuevoStock = Number(ajusteStockNuevo)
+    const nuevoStock = parseDecimalInput(ajusteStockNuevo)
 
     if (Number.isNaN(nuevoStock) || nuevoStock < 0) {
       onError('El nuevo stock debe ser un número válido mayor o igual a 0')
@@ -616,9 +620,12 @@ export function useStockManagement({
       return
     }
 
-    if (!consumoProducto) return
+    if (!consumoProducto) {
+      onError('Selecciona un producto para registrar consumo')
+      return
+    }
 
-    const cantidad = Number(consumoCantidad)
+    const cantidad = parseDecimalInput(consumoCantidad)
 
     if (!cantidad || cantidad <= 0) {
       onError('La cantidad debe ser mayor que 0')

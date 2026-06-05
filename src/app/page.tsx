@@ -2317,6 +2317,7 @@ export default function HomePage() {
         consumoCantidad={consumoCantidad}
         consumoMotivo={consumoMotivo}
         consumoSaving={consumoSaving}
+        errorMessage={error}
         onClose={closeConsumoModal}
         onCantidadChange={setConsumoCantidad}
         onMotivoChange={setConsumoMotivo}
@@ -2329,6 +2330,7 @@ export default function HomePage() {
         ajusteStockNuevo={ajusteStockNuevo}
         ajusteMotivo={ajusteMotivo}
         ajusteSaving={ajusteSaving}
+        errorMessage={error}
         onClose={closeAjusteModal}
         onStockNuevoChange={setAjusteStockNuevo}
         onMotivoChange={setAjusteMotivo}

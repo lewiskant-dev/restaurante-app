@@ -9,6 +9,7 @@ type ConsumoModalProps = {
   consumoCantidad: string
   consumoMotivo: string
   consumoSaving: boolean
+  errorMessage?: string
   onClose: () => void
   onCantidadChange: (value: string) => void
   onMotivoChange: (value: string) => void
@@ -21,6 +22,7 @@ export function ConsumoModal({
   consumoCantidad,
   consumoMotivo,
   consumoSaving,
+  errorMessage,
   onClose,
   onCantidadChange,
   onMotivoChange,
@@ -51,7 +53,8 @@ export function ConsumoModal({
 
         <div className="space-y-3 px-4 py-4 lg:px-5">
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             placeholder="Cantidad consumida"
             value={consumoCantidad}
             onChange={(e) => onCantidadChange(e.target.value)}
@@ -71,6 +74,11 @@ export function ConsumoModal({
             <option value="Otro">Otro</option>
           </select>
 
+          {errorMessage ? (
+            <div className="rounded-[16px] border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+              {errorMessage}
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-4 py-3 sm:flex-row sm:justify-end lg:px-5">
           <button type="button" onClick={onClose} className={`px-4 py-3 text-sm ${ghostButton}`}>
