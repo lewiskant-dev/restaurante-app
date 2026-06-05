@@ -50,6 +50,9 @@ begin
 end;
 $$;
 
+drop function if exists public.guardar_albaran_atomico(uuid, text, uuid, date, text, text, jsonb);
+drop function if exists public.guardar_albaran_atomico(uuid, text, uuid, date, text, text, jsonb, uuid);
+
 create or replace function public.guardar_albaran_atomico(
   p_albaran_id uuid,
   p_numero text,
@@ -201,16 +204,17 @@ begin
   -- Bloqueo estable para evitar interbloqueos entre albaranes simultáneos.
   perform p.id
   from public.productos p
-  join (
-    select distinct producto_id
-    from jsonb_to_recordset(p_lineas) as x(
-      producto_id uuid,
-      cantidad numeric,
-      precio_unitario numeric,
-      nombre_producto text
-    )
-  ) requested on requested.producto_id = p.id
   where p.restaurant_id = target_restaurant_id
+    and exists (
+      select 1
+      from jsonb_to_recordset(p_lineas) as x(
+        producto_id uuid,
+        cantidad numeric,
+        precio_unitario numeric,
+        nombre_producto text
+      )
+      where x.producto_id = p.id
+    )
   order by p.id
   for update;
 
@@ -344,6 +348,9 @@ begin
   );
 end;
 $$;
+
+drop function if exists public.anular_albaran_atomico(uuid, text);
+drop function if exists public.anular_albaran_atomico(uuid, text, uuid);
 
 create or replace function public.anular_albaran_atomico(
   p_albaran_id uuid,

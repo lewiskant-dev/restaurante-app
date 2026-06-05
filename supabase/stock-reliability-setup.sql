@@ -1,5 +1,18 @@
 -- Mantiene stock y movimientos sincronizados dentro de una única transacción.
 
+alter table if exists public.movimientos_stock
+  add column if not exists categoria_consumo text not null default '';
+
+alter table if exists public.movimientos_stock
+  drop constraint if exists movimientos_stock_categoria_consumo_check;
+
+alter table if exists public.movimientos_stock
+  add constraint movimientos_stock_categoria_consumo_check
+  check (categoria_consumo in ('', 'cocina', 'venta', 'merma', 'inventario', 'otro'));
+
+drop function if exists public.registrar_movimiento_stock_atomico(uuid, text, numeric, numeric, text, text, text, uuid);
+drop function if exists public.registrar_movimiento_stock_atomico(uuid, text, numeric, numeric, text, text, text, uuid, uuid);
+
 create or replace function public.registrar_movimiento_stock_atomico(
   p_producto_id uuid,
   p_tipo text,
@@ -101,7 +114,7 @@ begin
     p_tipo,
     cantidad_movimiento,
     coalesce(nullif(trim(p_motivo), ''), 'Sin motivo'),
-    nullif(trim(coalesce(p_categoria_consumo, '')), ''),
+    coalesce(nullif(trim(coalesce(p_categoria_consumo, '')), ''), ''),
     coalesce(nullif(trim(p_origen_tipo), ''), 'manual'),
     p_origen_id,
     stock_antes,
