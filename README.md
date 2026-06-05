@@ -54,9 +54,15 @@ Orden recomendado:
 1. Ejecutar [supabase/auth-setup.sql](supabase/auth-setup.sql)
 2. Ejecutar [supabase/multi-restaurant-setup.sql](supabase/multi-restaurant-setup.sql)
 3. Ejecutar [supabase/restaurant-finance-setup.sql](supabase/restaurant-finance-setup.sql)
-4. Si quieres empezar de cero sin tocar funcionalidades, ejecutar [supabase/reset-operational-data.sql](supabase/reset-operational-data.sql)
-5. Si usas imagenes de producto, ejecutar [supabase/product-media-setup.sql](supabase/product-media-setup.sql)
-6. Aplicar índices de rendimiento con [supabase/performance-indexes.sql](supabase/performance-indexes.sql)
+4. Ejecutar [supabase/stock-reliability-setup.sql](supabase/stock-reliability-setup.sql)
+5. Ejecutar [supabase/albaran-reliability-setup.sql](supabase/albaran-reliability-setup.sql)
+6. Ejecutar [supabase/receta-reliability-setup.sql](supabase/receta-reliability-setup.sql)
+7. Ejecutar [supabase/tpv-reliability-setup.sql](supabase/tpv-reliability-setup.sql)
+8. Si usas imagenes de producto, ejecutar [supabase/product-media-setup.sql](supabase/product-media-setup.sql)
+9. Aplicar índices de rendimiento con [supabase/performance-indexes.sql](supabase/performance-indexes.sql)
+10. Validar funciones críticas con [supabase/supabase-healthcheck.sql](supabase/supabase-healthcheck.sql)
+
+Si quieres empezar de cero sin tocar funcionalidades, ejecutar después [supabase/reset-operational-data.sql](supabase/reset-operational-data.sql).
 
 Documentacion de apoyo:
 - [supabase/roles-setup.md](supabase/roles-setup.md)
@@ -65,6 +71,7 @@ Documentacion de apoyo:
 - [supabase/production-checklist.md](supabase/production-checklist.md)
 - [supabase/multi-restaurant-validation.sql](supabase/multi-restaurant-validation.sql)
 - [supabase/security-validation.sql](supabase/security-validation.sql)
+- [supabase/supabase-healthcheck.sql](supabase/supabase-healthcheck.sql)
 
 ## Flujo multi-restaurante
 
@@ -93,7 +100,7 @@ La respuesta no expone secretos. Devuelve:
 - `missing`: variables o tablas obligatorias pendientes.
 - `warnings`: piezas opcionales/recomendadas pendientes, por ejemplo tablas financieras.
 
-Si aparecen tablas en `missing`, revisa el orden de SQL de Supabase. Si aparecen tablas financieras en `warnings`, aplica `restaurant-finance-setup.sql` cuando vayas a usar informes avanzados. Antes de operar con stock y albaranes reales aplica también `stock-reliability-setup.sql` y `albaran-reliability-setup.sql`. Si aparecen columnas o buckets en `warnings`, revisa `product-media-setup.sql`, `tpv-reliability-setup.sql` y las policies de storage.
+Si aparecen tablas o RPC en `missing`, revisa el orden de SQL de Supabase. Si aparecen tablas financieras en `warnings`, aplica `restaurant-finance-setup.sql` cuando vayas a usar informes avanzados. Antes de operar con stock, albaranes, recetas o TPV real aplica también `stock-reliability-setup.sql`, `albaran-reliability-setup.sql`, `receta-reliability-setup.sql` y `tpv-reliability-setup.sql`. Si aparecen columnas o buckets en `warnings`, revisa `product-media-setup.sql` y las policies de storage.
 
 Si quieres validar el aislamiento por restaurante en Supabase:
 

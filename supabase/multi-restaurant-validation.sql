@@ -244,3 +244,31 @@ left join public.productos p on p.id = l.producto_id
 where l.restaurant_id <> c.restaurant_id
   or (p.id is not null and l.restaurant_id <> p.restaurant_id)
 order by l.created_at desc;
+
+-- 11. Comprobación de líneas de receta cruzadas entre restaurantes
+select
+  l.id,
+  l.restaurant_id as linea_restaurant_id,
+  r.restaurant_id as receta_restaurant_id,
+  p.restaurant_id as producto_restaurant_id,
+  l.receta_id,
+  l.producto_id
+from public.recetas_lineas l
+join public.recetas r on r.id = l.receta_id
+left join public.productos p on p.id = l.producto_id
+where l.restaurant_id <> r.restaurant_id
+  or (p.id is not null and l.restaurant_id <> p.restaurant_id)
+order by l.created_at desc;
+
+-- 12. Comprobación de ventas TPV cruzadas con su importación
+select
+  v.id,
+  v.restaurant_id as venta_restaurant_id,
+  i.restaurant_id as importacion_restaurant_id,
+  v.importacion_id,
+  v.producto_externo,
+  v.fecha
+from public.tpv_ventas_crudas v
+join public.tpv_importaciones i on i.id = v.importacion_id
+where v.restaurant_id <> i.restaurant_id
+order by v.fecha desc, v.id desc;

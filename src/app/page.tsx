@@ -937,6 +937,7 @@ export default function HomePage() {
     const { error } = await supabase.rpc('crear_cierre_inventario', {
       target_fecha: todayLocalInputDate(),
       target_notas: 'Cierre generado desde Informes',
+      p_restaurant_id: activeRestaurantId,
     })
 
     if (error) {

@@ -12,6 +12,7 @@ import type {
 } from '@/features/home/types'
 import { formatOCRDateToInput, normalizeText, scoreRecipeMatch } from '@/features/home/utils'
 import { createTpvCsvFingerprint, parseTpvCsvText } from '@/lib/tpvCsv'
+import { getAtomicTpvImportError, parseAtomicTpvImportResult } from '@/lib/tpvTransaction'
 import {
   buildComparativaMetrica,
   calculatePriceVariationPct,
@@ -19,6 +20,7 @@ import {
   getMarginRatio,
   sortByMarginRisk,
 } from '@/lib/financialAnalytics'
+import { getAtomicRecetaError, parseAtomicRecetaResult } from '@/lib/recetaTransaction'
 import { supabase } from '@/lib/supabase'
 import type { Producto } from '@/types'
 
@@ -941,97 +943,42 @@ export function useRecetaTpvManagement({
       const restaurantId = requireActiveRestaurant()
       if (!restaurantId) return
 
-      let recetaId = recetaEditId
+      const recetaAntes = recetaEditId ? recetas.find((r) => r.id === recetaEditId) || null : null
 
-      if (recetaEditId) {
-        const recetaAntes = recetas.find((r) => r.id === recetaEditId) || null
+      const { data, error } = await supabase.rpc('guardar_receta_atomica', {
+        p_receta_id: recetaEditId,
+        p_nombre: recetaNombre.trim(),
+        p_nombre_tpv: recetaNombreTPV.trim() || null,
+        p_raciones: raciones,
+        p_precio_venta: precioVenta,
+        p_activo: recetaActiva,
+        p_lineas: lineasPreparadas,
+        p_restaurant_id: restaurantId,
+      })
 
-        const { error: updateError } = await supabase
-          .from('recetas')
-          .update({
-            nombre: recetaNombre.trim(),
-            nombre_tpv: recetaNombreTPV.trim() || null,
-            raciones,
-            precio_venta: precioVenta,
-            activo: recetaActiva,
-          })
-          .eq('id', recetaEditId)
-          .eq('restaurant_id', restaurantId)
-
-        if (updateError) throw new Error(updateError.message)
-
-        const { error: deleteLinesError } = await supabase
-          .from('recetas_lineas')
-          .delete()
-          .eq('receta_id', recetaEditId)
-          .eq('restaurant_id', restaurantId)
-
-        if (deleteLinesError) throw new Error(deleteLinesError.message)
-
-        await registrarAuditoria({
-          entidad: 'receta',
-          entidad_id: recetaEditId,
-          accion: 'editar',
-          detalle: `Receta actualizada: ${recetaNombre.trim()}`,
-          payload_antes: recetaAntes,
-          payload_despues: {
-            nombre: recetaNombre.trim(),
-            nombre_tpv: recetaNombreTPV.trim() || null,
-            raciones,
-            precio_venta: precioVenta,
-            activo: recetaActiva,
-            lineas: lineasPreparadas,
-          },
-        })
-      } else {
-        const { data, error: insertError } = await supabase
-          .from('recetas')
-          .insert({
-            nombre: recetaNombre.trim(),
-            nombre_tpv: recetaNombreTPV.trim() || null,
-            raciones,
-            precio_venta: precioVenta,
-            activo: recetaActiva,
-            restaurant_id: restaurantId,
-          })
-          .select()
-          .single()
-
-        if (insertError || !data) {
-          throw new Error(insertError?.message || 'No se pudo crear la receta')
-        }
-
-        recetaId = data.id
-
-        await registrarAuditoria({
-          entidad: 'receta',
-          entidad_id: data.id,
-          accion: 'crear',
-          detalle: `Receta creada: ${recetaNombre.trim()}`,
-          payload_despues: {
-            nombre: recetaNombre.trim(),
-            nombre_tpv: recetaNombreTPV.trim() || null,
-            raciones,
-            precio_venta: precioVenta,
-            activo: recetaActiva,
-            lineas: lineasPreparadas,
-          },
-        })
+      if (error) {
+        throw new Error(getAtomicRecetaError(error))
       }
 
-      if (!recetaId) {
-        throw new Error('No se pudo determinar la receta')
-      }
+      const result = parseAtomicRecetaResult(data)
 
-      const payloadLineas = lineasPreparadas.map((linea) => ({
-        receta_id: recetaId,
-        restaurant_id: restaurantId,
-        producto_id: linea.producto_id,
-        cantidad: linea.cantidad,
-      }))
-
-      const { error: lineasError } = await supabase.from('recetas_lineas').insert(payloadLineas)
-      if (lineasError) throw new Error(lineasError.message)
+      await registrarAuditoria({
+        entidad: 'receta',
+        entidad_id: result.receta_id,
+        accion: result.editado ? 'editar' : 'crear',
+        detalle: result.editado
+          ? `Receta actualizada: ${recetaNombre.trim()}`
+          : `Receta creada: ${recetaNombre.trim()}`,
+        payload_antes: recetaAntes,
+        payload_despues: {
+          nombre: recetaNombre.trim(),
+          nombre_tpv: recetaNombreTPV.trim() || null,
+          raciones,
+          precio_venta: precioVenta,
+          activo: recetaActiva,
+          lineas: lineasPreparadas,
+        },
+      })
 
       onToast(recetaEditId ? 'Receta actualizada' : 'Receta creada')
       closeRecetaModal()
@@ -1180,12 +1127,17 @@ export function useRecetaTpvManagement({
     setTpvAplicando(true)
     onError('')
 
+    let createdImportacionId: string | null = null
+    let cleanupRestaurantId: string | null = null
+    let tpvApplyCompleted = false
+
     try {
       const restaurantId = requireActiveRestaurant()
       if (!restaurantId) {
         setTpvAplicando(false)
         return
       }
+      cleanupRestaurantId = restaurantId
 
       const ventas = tpvVentasCrudas
       const fileHash = tpvFileHash || (await createTpvCsvFingerprint(await tpvFile.text()))
@@ -1207,11 +1159,25 @@ export function useRecetaTpvManagement({
       }
 
       if (importacionExistente) {
-        throw new Error(
-          importacionExistente.procesado
-            ? 'Este CSV ya se aplicó anteriormente en el restaurante activo.'
-            : 'Este CSV ya tiene una importación pendiente. Revísala antes de volver a aplicarlo.'
-        )
+        if (importacionExistente.procesado) {
+          throw new Error('Este CSV ya se aplicó anteriormente en el restaurante activo.')
+        }
+
+        const { error: deleteVentasPendientesError } = await supabase
+          .from('tpv_ventas_crudas')
+          .delete()
+          .eq('restaurant_id', restaurantId)
+          .eq('importacion_id', importacionExistente.id)
+
+        if (deleteVentasPendientesError) throw new Error(deleteVentasPendientesError.message)
+
+        const { error: deleteImportacionPendienteError } = await supabase
+          .from('tpv_importaciones')
+          .delete()
+          .eq('restaurant_id', restaurantId)
+          .eq('id', importacionExistente.id)
+
+        if (deleteImportacionPendienteError) throw new Error(deleteImportacionPendienteError.message)
       }
 
       let { data: importacion, error: importError } = await supabase
@@ -1245,6 +1211,7 @@ export function useRecetaTpvManagement({
         }
         throw new Error(importError?.message || 'No se pudo crear la importación TPV')
       }
+      createdImportacionId = importacion.id
 
       const payload = ventas.map((venta) => ({
         importacion_id: importacion.id,
@@ -1265,156 +1232,86 @@ export function useRecetaTpvManagement({
 
       let recetasQuery = supabase.from('recetas').select('*')
       let lineasQuery = supabase.from('recetas_lineas').select('*')
-      let productosQuery = supabase.from('productos').select('*')
 
       if (currentRestaurantId) {
         recetasQuery = recetasQuery.eq('restaurant_id', currentRestaurantId)
         lineasQuery = lineasQuery.eq('restaurant_id', currentRestaurantId)
-        productosQuery = productosQuery.eq('restaurant_id', currentRestaurantId)
       }
 
       const { data: recetasData } = await recetasQuery
       const { data: lineasData } = await lineasQuery
-      const { data: productosActuales } = await productosQuery
 
-      const recetasMap = new Map<string, Receta>()
-      ;((recetasData ?? []) as Receta[]).forEach((r) => {
-        if (r.nombre_tpv && r.activo !== false) recetasMap.set(normalizeText(r.nombre_tpv), r)
-      })
-
-      const productosMap = new Map<string, Producto>()
-      ;((productosActuales ?? []) as Producto[]).forEach((p) => {
-        productosMap.set(p.id, p)
-      })
-
-      let ventasConReceta = 0
-      let ventasSinReceta = 0
-      let consumosGenerados = 0
-      let recetasSinIngredientes = 0
-      const productosConsumidos = new Set<string>()
-      const productosSinStockSuficiente = new Set<string>()
-
-      for (const venta of ventas) {
-        const receta = recetasMap.get(normalizeText(venta.producto_externo))
-
-        if (!receta) {
-          ventasSinReceta += 1
-          continue
+      const { data: tpvResultData, error: tpvApplyError } = await supabase.rpc(
+        'aplicar_importacion_tpv_atomica',
+        {
+          p_importacion_id: importacion.id,
+          p_restaurant_id: restaurantId,
         }
+      )
 
-        ventasConReceta += 1
-
-        const lineas = ((lineasData ?? []) as RecetaLinea[]).filter((l) => l.receta_id === receta.id)
-        if (!lineas.length) {
-          recetasSinIngredientes += 1
-          continue
-        }
-
-        for (const linea of lineas) {
-          const producto = productosMap.get(linea.producto_id)
-          if (!producto) continue
-
-          const consumo = Number(linea.cantidad) * Number(venta.cantidad)
-          const stockAntes = Number(producto.stock_actual || 0)
-          const stockDespues = Math.max(0, stockAntes - consumo)
-          if (consumo > stockAntes) productosSinStockSuficiente.add(producto.id)
-
-          const { error: updateProductoError } = await supabase
-            .from('productos')
-            .update({ stock_actual: stockDespues })
-            .eq('id', producto.id)
-            .eq('restaurant_id', restaurantId)
-
-          if (updateProductoError) throw new Error(updateProductoError.message)
-
-          const movimientoTPV = {
-            producto_id: producto.id,
-            restaurant_id: restaurantId,
-            tipo: 'consumo',
-            cantidad: consumo,
-            motivo: `TPV: ${venta.producto_externo}`,
-            categoria_consumo: 'venta',
-            origen_tipo: 'tpv',
-            origen_id: importacion.id,
-            stock_antes: stockAntes,
-            stock_despues: stockDespues,
-          }
-          let { error: movError } = await supabase.from('movimientos_stock').insert(movimientoTPV)
-
-          if (movError && /categoria_consumo|schema cache/i.test(movError.message)) {
-            const movimientoCompatible = Object.fromEntries(
-              Object.entries(movimientoTPV).filter(([key]) => key !== 'categoria_consumo')
-            )
-            const retry = await supabase.from('movimientos_stock').insert(movimientoCompatible)
-            movError = retry.error
-          }
-
-          if (movError) throw new Error(movError.message)
-
-          await registrarAuditoria({
-            entidad: 'producto',
-            entidad_id: producto.id,
-            accion: 'consumo',
-            detalle: `TPV: ${venta.producto_externo} · Producto: ${producto.nombre} · Consumo: ${consumo}`,
-            payload_antes: {
-              producto: producto.nombre,
-              stock_actual: stockAntes,
-            },
-            payload_despues: {
-              producto: producto.nombre,
-              stock_actual: stockDespues,
-            },
-          })
-
-          productosMap.set(producto.id, {
-            ...producto,
-            stock_actual: stockDespues,
-          })
-          productosConsumidos.add(producto.id)
-          consumosGenerados += 1
-        }
+      if (tpvApplyError) {
+        throw new Error(getAtomicTpvImportError(tpvApplyError))
       }
 
-      const { error: procesadoError } = await supabase
-        .from('tpv_importaciones')
-        .update({ procesado: true })
-        .eq('id', importacion.id)
-        .eq('restaurant_id', restaurantId)
-
-      if (procesadoError) throw new Error(procesadoError.message)
+      const tpvResult = parseAtomicTpvImportResult(tpvResultData)
+      tpvApplyCompleted = true
 
       await registrarAuditoria({
         entidad: 'tpv',
         entidad_id: importacion.id,
         accion: 'importar_csv',
-        detalle: `Importación TPV aplicada: ${tpvFile.name} · Líneas válidas: ${ventas.length} · Con receta: ${ventasConReceta} · Sin receta: ${ventasSinReceta} · Recetas sin ingredientes: ${recetasSinIngredientes} · Productos afectados: ${productosConsumidos.size} · Consumos generados: ${consumosGenerados}`,
+        detalle: `Importación TPV aplicada: ${tpvFile.name} · Líneas válidas: ${tpvResult.ventas_total} · Con receta: ${tpvResult.ventas_con_receta} · Sin receta: ${tpvResult.ventas_sin_receta} · Recetas sin ingredientes: ${tpvResult.recetas_sin_ingredientes} · Productos afectados: ${tpvResult.productos_afectados} · Consumos generados: ${tpvResult.consumos_generados}`,
         payload_despues: {
           archivo: tpvFile.name,
-          filas: ventas.length,
-          ventas_con_receta: ventasConReceta,
-          ventas_sin_receta: ventasSinReceta,
-          recetas_sin_ingredientes: recetasSinIngredientes,
-          productos_afectados: productosConsumidos.size,
-          productos_sin_stock_suficiente: productosSinStockSuficiente.size,
-          consumos_generados: consumosGenerados,
-          procesado: true,
+          filas: tpvResult.ventas_total,
+          ventas_con_receta: tpvResult.ventas_con_receta,
+          ventas_sin_receta: tpvResult.ventas_sin_receta,
+          recetas_sin_ingredientes: tpvResult.recetas_sin_ingredientes,
+          productos_afectados: tpvResult.productos_afectados,
+          productos_sin_stock_suficiente: tpvResult.productos_sin_stock_suficiente,
+          consumos_generados: tpvResult.consumos_generados,
+          procesado: tpvResult.procesado,
         },
       })
 
       await Promise.all([loadProductos(), loadMovimientos(), loadAuditoria(), loadTpvImportaciones()])
       await loadTpvAnalitica((recetasData ?? []) as Receta[], (lineasData ?? []) as RecetaLinea[])
       const avisos = [
-        ventasSinReceta ? `${ventasSinReceta} sin mapear` : '',
-        recetasSinIngredientes ? `${recetasSinIngredientes} sin ingredientes` : '',
-        productosSinStockSuficiente.size ? `${productosSinStockSuficiente.size} stock insuficiente` : '',
+        tpvResult.ventas_sin_receta ? `${tpvResult.ventas_sin_receta} sin mapear` : '',
+        tpvResult.recetas_sin_ingredientes
+          ? `${tpvResult.recetas_sin_ingredientes} sin ingredientes`
+          : '',
+        tpvResult.productos_sin_stock_suficiente
+          ? `${tpvResult.productos_sin_stock_suficiente} stock insuficiente`
+          : '',
       ].filter(Boolean)
 
       onToast(
-        `Importación aplicada · ${consumosGenerados} consumos · ${productosConsumidos.size} productos${
+        `Importación aplicada · ${tpvResult.consumos_generados} consumos · ${tpvResult.productos_afectados} productos${
           avisos.length ? ` · Revisar: ${avisos.join(', ')}` : ''
         }`
       )
     } catch (err) {
+      if (createdImportacionId && cleanupRestaurantId && !tpvApplyCompleted) {
+        try {
+          await supabase
+            .from('tpv_ventas_crudas')
+            .delete()
+            .eq('restaurant_id', cleanupRestaurantId)
+            .eq('importacion_id', createdImportacionId)
+
+          await supabase
+            .from('tpv_importaciones')
+            .delete()
+            .eq('restaurant_id', cleanupRestaurantId)
+            .eq('id', createdImportacionId)
+
+          setTpvImportacionId(null)
+        } catch {
+          // Si la limpieza falla, mantenemos el error original visible para no ocultar la causa.
+        }
+      }
+
       onError(err instanceof Error ? err.message : 'No se pudo aplicar la importación del TPV')
     } finally {
       setTpvAplicando(false)

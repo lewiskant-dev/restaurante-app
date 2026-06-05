@@ -206,19 +206,23 @@ with check (
   and public.has_any_app_role(array['administrador', 'master'])
 );
 
+drop function if exists public.crear_cierre_inventario(date, text);
+
 create or replace function public.crear_cierre_inventario(
   target_fecha date default current_date,
-  target_notas text default ''
+  target_notas text default '',
+  p_restaurant_id uuid default null
 )
 returns uuid
 language plpgsql
 security invoker
+set search_path = public
 as $$
 declare
   target_restaurant_id uuid;
   new_cierre_id uuid;
 begin
-  target_restaurant_id := public.current_restaurant_id();
+  target_restaurant_id := coalesce(p_restaurant_id, public.current_restaurant_id());
 
   if target_restaurant_id is null then
     raise exception 'No hay restaurante activo para crear el cierre de inventario';
@@ -326,7 +330,7 @@ $$;
 
 comment on table public.inventario_cierres is 'Cierres históricos de valoración de inventario por restaurante.';
 comment on table public.inventario_cierre_lineas is 'Snapshot de productos incluido en cada cierre histórico de inventario.';
-comment on function public.crear_cierre_inventario(date, text) is 'Crea o recalcula un cierre de inventario para el restaurante activo.';
+comment on function public.crear_cierre_inventario(date, text, uuid) is 'Crea o recalcula un cierre de inventario para el restaurante activo.';
 
-revoke all on function public.crear_cierre_inventario(date, text) from public;
-grant execute on function public.crear_cierre_inventario(date, text) to authenticated;
+revoke all on function public.crear_cierre_inventario(date, text, uuid) from public;
+grant execute on function public.crear_cierre_inventario(date, text, uuid) to authenticated;

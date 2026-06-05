@@ -28,13 +28,14 @@ Ejecutar en `SQL Editor`, en este orden:
 3. [restaurant-finance-setup.sql](/Users/jorge/restaurante-app/supabase/restaurant-finance-setup.sql:1)
 4. [stock-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/stock-reliability-setup.sql:1)
 5. [albaran-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/albaran-reliability-setup.sql:1)
-6. [product-media-setup.sql](/Users/jorge/restaurante-app/supabase/product-media-setup.sql:1)
+6. [receta-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/receta-reliability-setup.sql:1)
 7. [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1)
-8. [performance-indexes.sql](/Users/jorge/restaurante-app/supabase/performance-indexes.sql:1)
+8. [product-media-setup.sql](/Users/jorge/restaurante-app/supabase/product-media-setup.sql:1)
+9. [performance-indexes.sql](/Users/jorge/restaurante-app/supabase/performance-indexes.sql:1)
 
 Si quieres empezar con datos operativos vacíos, ejecutar después:
 
-9. [reset-operational-data.sql](/Users/jorge/restaurante-app/supabase/reset-operational-data.sql:1)
+10. [reset-operational-data.sql](/Users/jorge/restaurante-app/supabase/reset-operational-data.sql:1)
 
 No ejecutes `reset-operational-data.sql` si ya hay productos, proveedores, albaranes, TPV o recetas reales que quieras conservar.
 
@@ -44,6 +45,7 @@ Después del SQL principal, ejecutar:
 
 1. [multi-restaurant-validation.sql](/Users/jorge/restaurante-app/supabase/multi-restaurant-validation.sql:1)
 2. [security-validation.sql](/Users/jorge/restaurante-app/supabase/security-validation.sql:1)
+3. [supabase-healthcheck.sql](/Users/jorge/restaurante-app/supabase/supabase-healthcheck.sql:1)
 
 La validación debe dejar claro:
 
@@ -52,7 +54,9 @@ La validación debe dejar claro:
 - no hay registros operativos sin `restaurant_id`
 - no hay históricos financieros cruzados entre restaurantes
 - no hay cierres de inventario cruzados entre restaurantes
+- no hay líneas de receta ni ventas TPV cruzadas entre restaurantes
 - existen policies de storage para `albaranes`
+- todas las funciones críticas están en la firma esperada y sin versiones antiguas
 
 ## 4. Validación del despliegue web
 
@@ -93,6 +97,9 @@ Función obligatoria esperada:
 - `registrar_movimiento_stock_atomico`
 - `guardar_albaran_atomico`
 - `anular_albaran_atomico`
+- `guardar_receta_atomica`
+- `aplicar_importacion_tpv_atomica`
+- `crear_cierre_inventario`
 
 Tablas recomendadas para finanzas:
 
@@ -105,13 +112,18 @@ Piezas recomendadas para adjuntos e imágenes:
 - columnas `productos.imagen_url` y `productos.icono`
 - bucket `albaranes`
 
-Pieza recomendada para evitar importaciones TPV duplicadas:
+Piezas obligatorias para importaciones TPV seguras:
 
 - columna `tpv_importaciones.archivo_hash` e índice único por restaurante
+- función `aplicar_importacion_tpv_atomica` de `tpv-reliability-setup.sql`
 
-Operación obligatoria para mantener stock e historial sincronizados:
+Operaciones obligatorias para mantener stock e historial sincronizados:
 
 - función `registrar_movimiento_stock_atomico` de `stock-reliability-setup.sql`
+- función `guardar_albaran_atomico` de `albaran-reliability-setup.sql`
+- función `guardar_receta_atomica` de `receta-reliability-setup.sql`
+- función `aplicar_importacion_tpv_atomica` de `tpv-reliability-setup.sql`
+- función `crear_cierre_inventario` de `restaurant-finance-setup.sql`
 
 ## 5. Prueba funcional mínima
 
@@ -130,13 +142,14 @@ Entrar como `Master` y comprobar:
 11. Registrar un consumo manual y confirmar que stock e historial cambian juntos.
 12. Ajustar manualmente el stock y confirmar que se crea exactamente un movimiento.
 13. Crear, editar y anular un albarán; confirmar que stock, movimientos e histórico cambian juntos.
-14. Generar un cierre de inventario desde SQL o desde la futura acción de UI:
+14. Importar un CSV TPV de prueba y confirmar que se marca como procesado, descuenta stock y crea movimientos de consumo.
+15. Generar un cierre de inventario desde `Informes` o desde SQL:
 
 ```sql
-select public.crear_cierre_inventario(current_date, 'Prueba de cierre');
+select public.crear_cierre_inventario(current_date, 'Prueba de cierre', '<restaurant_id>'::uuid);
 ```
 
-15. Confirmar que `inventario_cierres` e `inventario_cierre_lineas` solo contienen datos del restaurante activo.
+16. Confirmar que `inventario_cierres` e `inventario_cierre_lineas` solo contienen datos del restaurante activo.
 
 ## 6. Criterios para darlo por listo
 

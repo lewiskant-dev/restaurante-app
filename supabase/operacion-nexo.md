@@ -38,11 +38,17 @@ Si `warnings` contiene `table:productos_precios_historial`, `table:inventario_ci
 
 Si aparecen `column:productos.imagen_url`, `column:productos.icono` o `bucket:albaranes`, revisa [product-media-setup.sql](/Users/jorge/restaurante-app/supabase/product-media-setup.sql:1) y las policies de storage antes de usar imágenes o adjuntos.
 
-Si aparece `column:tpv_importaciones.archivo_hash`, aplica [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1) para impedir que un mismo CSV TPV se descuente dos veces.
+Si aparece `column:tpv_importaciones.archivo_hash` o `rpc:aplicar_importacion_tpv_atomica`, aplica [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1). Ese SQL impide duplicar CSV y aplica las importaciones TPV con stock y movimientos en una única transacción.
 
 Aplica [stock-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/stock-reliability-setup.sql:1) antes de operar con stock real. La función incluida actualiza el producto y registra su movimiento dentro de la misma transacción.
 
 Aplica [albaran-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/albaran-reliability-setup.sql:1) antes de guardar albaranes reales. La migración mantiene albarán, líneas, stock, movimientos e histórico de precios dentro de una única transacción.
+
+Aplica [receta-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/receta-reliability-setup.sql:1) antes de trabajar con recetas reales. La función incluida guarda la receta y reemplaza sus ingredientes dentro de una única transacción.
+
+Aplica [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1) antes de aplicar importaciones TPV reales. La función incluida descuenta stock, crea movimientos y marca la importación como procesada dentro de una única transacción.
+
+Después de aplicar SQL críticos, ejecuta [supabase-healthcheck.sql](/Users/jorge/restaurante-app/supabase/supabase-healthcheck.sql:1). Todas las filas deberían salir `OK`.
 
 ## Alta de un restaurante nuevo
 
@@ -87,6 +93,8 @@ Ese archivo revisa:
 - conteos operativos por restaurante
 - registros huérfanos sin `restaurant_id`
 - históricos financieros sin restaurante o cruzados entre restaurantes
+- líneas de receta cruzadas entre restaurantes
+- ventas TPV cruzadas con su importación
 
 ## Validación de seguridad en Supabase
 
@@ -101,6 +109,7 @@ Ese archivo revisa:
 - tablas críticas sin políticas
 - políticas existentes por tabla
 - policies de storage para albaranes por carpeta de restaurante
+- permiso `EXECUTE` de funciones operativas críticas para usuarios autenticados
 
 ## Checklist funcional rápido
 

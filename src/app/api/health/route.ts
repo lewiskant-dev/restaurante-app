@@ -89,6 +89,40 @@ const RPC_CHECKS = [
     },
     required: true,
   },
+  {
+    name: 'rpc:aplicar_importacion_tpv_atomica',
+    rpc: 'aplicar_importacion_tpv_atomica',
+    args: {
+      p_importacion_id: null,
+      p_restaurant_id: null,
+    },
+    required: true,
+  },
+  {
+    name: 'rpc:guardar_receta_atomica',
+    rpc: 'guardar_receta_atomica',
+    args: {
+      p_receta_id: null,
+      p_nombre: 'healthcheck',
+      p_nombre_tpv: null,
+      p_raciones: 1,
+      p_precio_venta: 0,
+      p_activo: true,
+      p_lineas: [],
+      p_restaurant_id: null,
+    },
+    required: true,
+  },
+  {
+    name: 'rpc:crear_cierre_inventario',
+    rpc: 'crear_cierre_inventario',
+    args: {
+      target_fecha: '2026-01-01',
+      target_notas: 'healthcheck',
+      p_restaurant_id: null,
+    },
+    required: true,
+  },
 ] as const
 
 function shouldSkipDatabaseChecks() {

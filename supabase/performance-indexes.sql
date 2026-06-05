@@ -25,14 +25,24 @@ create index if not exists proveedores_restaurant_nombre_idx
 create index if not exists recetas_restaurant_nombre_idx
   on public.recetas (restaurant_id, nombre);
 
+create index if not exists recetas_restaurant_nombre_tpv_idx
+  on public.recetas (restaurant_id, nombre_tpv)
+  where nombre_tpv is not null;
+
 create index if not exists recetas_lineas_restaurant_receta_idx
   on public.recetas_lineas (restaurant_id, receta_id);
+
+create index if not exists recetas_lineas_restaurant_producto_idx
+  on public.recetas_lineas (restaurant_id, producto_id);
 
 create index if not exists tpv_ventas_restaurant_fecha_idx
   on public.tpv_ventas_crudas (restaurant_id, fecha);
 
 create index if not exists tpv_ventas_restaurant_producto_fecha_idx
   on public.tpv_ventas_crudas (restaurant_id, producto_externo, fecha);
+
+create index if not exists tpv_ventas_restaurant_importacion_idx
+  on public.tpv_ventas_crudas (restaurant_id, importacion_id);
 
 create index if not exists precios_historial_restaurant_fecha_idx
   on public.productos_precios_historial (restaurant_id, fecha_compra desc);

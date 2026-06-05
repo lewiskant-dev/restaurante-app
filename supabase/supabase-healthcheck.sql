@@ -17,6 +17,21 @@ with expected_functions(function_name, expected_count, expected_args) as (
       'anular_albaran_atomico',
       1,
       'p_albaran_id uuid, p_motivo text, p_restaurant_id uuid'
+    ),
+    (
+      'aplicar_importacion_tpv_atomica',
+      1,
+      'p_importacion_id uuid, p_restaurant_id uuid'
+    ),
+    (
+      'guardar_receta_atomica',
+      1,
+      'p_receta_id uuid, p_nombre text, p_nombre_tpv text, p_raciones numeric, p_precio_venta numeric, p_activo boolean, p_lineas jsonb, p_restaurant_id uuid'
+    ),
+    (
+      'crear_cierre_inventario',
+      1,
+      'target_fecha date, target_notas text, p_restaurant_id uuid'
     )
 ),
 function_inventory as (
@@ -25,13 +40,19 @@ function_inventory as (
     count(*)::integer as found_count,
     string_agg(pg_get_function_identity_arguments(p.oid), ' | ' order by p.oid) as found_args,
     bool_or(pg_get_functiondef(p.oid) ilike '%coalesce(nullif(trim(coalesce(p_categoria_consumo%') as stock_category_safe,
-    bool_or(pg_get_functiondef(p.oid) ilike '%where x.producto_id = p.id%') as albaran_lock_safe
+    bool_or(pg_get_functiondef(p.oid) ilike '%where x.producto_id = p.id%') as albaran_lock_safe,
+    bool_or(pg_get_functiondef(p.oid) ilike '%productos_sin_stock_suficiente%') as tpv_atomic_safe,
+    bool_or(pg_get_functiondef(p.oid) ilike '%delete from public.recetas_lineas%') as receta_atomic_safe,
+    bool_or(pg_get_functiondef(p.oid) ilike '%coalesce(p_restaurant_id, public.current_restaurant_id%') as cierre_restaurant_safe
   from pg_proc p
   where p.pronamespace = 'public'::regnamespace
     and p.proname in (
       'registrar_movimiento_stock_atomico',
       'guardar_albaran_atomico',
-      'anular_albaran_atomico'
+      'anular_albaran_atomico',
+      'aplicar_importacion_tpv_atomica',
+      'guardar_receta_atomica',
+      'crear_cierre_inventario'
     )
   group by p.proname
 )
@@ -44,6 +65,9 @@ select
     when i.found_args <> e.expected_args then 'REVISAR_FIRMA'
     when e.function_name = 'registrar_movimiento_stock_atomico' and not coalesce(i.stock_category_safe, false) then 'REVISAR_VERSION_ANTIGUA'
     when e.function_name = 'guardar_albaran_atomico' and not coalesce(i.albaran_lock_safe, false) then 'REVISAR_VERSION_ANTIGUA'
+    when e.function_name = 'aplicar_importacion_tpv_atomica' and not coalesce(i.tpv_atomic_safe, false) then 'REVISAR_VERSION_ANTIGUA'
+    when e.function_name = 'guardar_receta_atomica' and not coalesce(i.receta_atomic_safe, false) then 'REVISAR_VERSION_ANTIGUA'
+    when e.function_name = 'crear_cierre_inventario' and not coalesce(i.cierre_restaurant_safe, false) then 'REVISAR_VERSION_ANTIGUA'
     else 'OK'
   end as estado,
   coalesce(i.found_args, 'No encontrada') as detalle

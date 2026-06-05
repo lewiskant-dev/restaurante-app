@@ -156,6 +156,8 @@ where n.nspname = 'public'
     'registrar_movimiento_stock_atomico',
     'guardar_albaran_atomico',
     'anular_albaran_atomico',
+    'guardar_receta_atomica',
+    'aplicar_importacion_tpv_atomica',
     'crear_cierre_inventario'
   )
 order by p.proname asc;
