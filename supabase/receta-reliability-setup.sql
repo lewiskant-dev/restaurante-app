@@ -2,6 +2,7 @@
 -- Requiere multi-restaurant-setup.sql y restaurant-finance-setup.sql.
 
 drop function if exists public.guardar_receta_atomica(uuid, text, text, numeric, numeric, boolean, jsonb, uuid);
+drop function if exists public.cambiar_estado_receta_atomica(uuid, boolean, uuid);
 
 create or replace function public.guardar_receta_atomica(
   p_receta_id uuid,
@@ -141,3 +142,48 @@ grant execute on function public.guardar_receta_atomica(uuid, text, text, numeri
 
 comment on function public.guardar_receta_atomica(uuid, text, text, numeric, numeric, boolean, jsonb, uuid) is
   'Crea o edita una receta y reemplaza sus ingredientes en una única transacción.';
+
+create or replace function public.cambiar_estado_receta_atomica(
+  p_receta_id uuid,
+  p_activo boolean,
+  p_restaurant_id uuid default null
+)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  target_restaurant_id uuid;
+  receta_result public.recetas%rowtype;
+begin
+  target_restaurant_id := coalesce(p_restaurant_id, public.current_restaurant_id());
+
+  if target_restaurant_id is null
+    or not public.user_has_restaurant_access(target_restaurant_id)
+    or not public.has_any_app_role(array['administrador', 'master']) then
+    raise exception 'No tienes permisos para gestionar recetas en el restaurante activo';
+  end if;
+
+  update public.recetas
+  set activo = coalesce(p_activo, true)
+  where id = p_receta_id
+    and restaurant_id = target_restaurant_id
+  returning * into receta_result;
+
+  if receta_result.id is null then
+    raise exception 'Receta no encontrada en el restaurante activo';
+  end if;
+
+  return jsonb_build_object(
+    'receta_id', receta_result.id,
+    'activo', receta_result.activo
+  );
+end;
+$$;
+
+revoke all on function public.cambiar_estado_receta_atomica(uuid, boolean, uuid) from public;
+grant execute on function public.cambiar_estado_receta_atomica(uuid, boolean, uuid) to authenticated;
+
+comment on function public.cambiar_estado_receta_atomica(uuid, boolean, uuid) is
+  'Activa o desactiva una receta dentro del restaurante activo validando permisos y pertenencia.';

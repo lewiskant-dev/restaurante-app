@@ -1,6 +1,7 @@
 import { useDeferredValue, useMemo, useState } from 'react'
 import { initialProveedorForm } from '@/features/home/constants'
 import type { PermissionKey, ProveedorForm } from '@/features/home/types'
+import { getAtomicProveedorError, parseAtomicProveedorResult } from '@/lib/proveedorTransaction'
 import { supabase } from '@/lib/supabase'
 import type { Proveedor } from '@/types'
 import type { ConfirmActionRequest } from '@/components/ui/ConfirmActionDialog'
@@ -163,61 +164,50 @@ export function useProveedorManagement({
     }
 
     try {
+      const restaurantId = requireActiveRestaurant()
+      if (!restaurantId) return
+
+      const proveedorAntes = proveedorEditId
+        ? proveedores.find((p) => p.id === proveedorEditId) || null
+        : null
+
+      const { data, error } = await supabase.rpc('guardar_proveedor_atomico', {
+        p_proveedor_id: proveedorEditId,
+        p_nombre: payload.nombre,
+        p_cif: payload.cif,
+        p_telefono: payload.telefono,
+        p_email: payload.email,
+        p_notas: payload.notas,
+        p_restaurant_id: restaurantId,
+      })
+
+      if (error) {
+        throw new Error(getAtomicProveedorError(error))
+      }
+
+      const proveedorGuardado = parseAtomicProveedorResult(data)
+
       if (proveedorEditId) {
-        const proveedorAntes = proveedores.find((p) => p.id === proveedorEditId) || null
-
-        let query = supabase.from('proveedores').update(payload).eq('id', proveedorEditId)
-
-        if (currentRestaurantId) {
-          query = query.eq('restaurant_id', currentRestaurantId)
-        }
-
-        const { data, error } = await query.select().single()
-
-        if (error) {
-          throw new Error(error.message)
-        }
-
         await registrarAuditoria({
           entidad: 'proveedor',
-          entidad_id: proveedorEditId,
+          entidad_id: proveedorGuardado.id,
           accion: 'editar',
           detalle: `Proveedor actualizado: ${payload.nombre}`,
           payload_antes: proveedorAntes,
-          payload_despues: data,
+          payload_despues: proveedorGuardado,
         })
 
         onToast('Proveedor actualizado')
       } else {
-        const restaurantId = requireActiveRestaurant()
-        if (!restaurantId) return
-
-        const { data, error } = await supabase
-          .from('proveedores')
-          .insert({
-            ...payload,
-            activo: true,
-            archivado: false,
-            restaurant_id: restaurantId,
-          })
-          .select()
-          .single()
-
-        if (error) {
-          throw new Error(error.message)
-        }
-
         await registrarAuditoria({
           entidad: 'proveedor',
-          entidad_id: data?.id,
+          entidad_id: proveedorGuardado.id,
           accion: 'crear',
           detalle: `Proveedor creado: ${payload.nombre}`,
-          payload_despues: data,
+          payload_despues: proveedorGuardado,
         })
 
-        if (data) {
-          onProveedorCreated?.(data as Proveedor)
-        }
+        onProveedorCreated?.(proveedorGuardado)
 
         onToast('Proveedor creado')
       }
@@ -246,41 +236,36 @@ export function useProveedorManagement({
 
     onError('')
     const payloadAntes = { ...proveedor }
+    const restaurantId = requireActiveRestaurant()
+    if (!restaurantId) return
 
-    let query = supabase
-      .from('proveedores')
-      .update({
-        activo: false,
-        archivado: true,
+    try {
+      const { data, error } = await supabase.rpc('cambiar_estado_proveedor_atomico', {
+        p_proveedor_id: proveedor.id,
+        p_archivado: true,
+        p_restaurant_id: restaurantId,
       })
-      .eq('id', proveedor.id)
 
-    if (currentRestaurantId) {
-      query = query.eq('restaurant_id', currentRestaurantId)
+      if (error) {
+        throw new Error(getAtomicProveedorError(error))
+      }
+
+      const proveedorArchivado = parseAtomicProveedorResult(data)
+
+      await registrarAuditoria({
+        entidad: 'proveedor',
+        entidad_id: proveedor.id,
+        accion: 'archivar',
+        detalle: `Proveedor archivado: ${proveedor.nombre}`,
+        payload_antes: payloadAntes,
+        payload_despues: proveedorArchivado,
+      })
+
+      onToast('Proveedor archivado')
+      await loadProveedores()
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'No se pudo archivar el proveedor')
     }
-
-    const { error } = await query
-
-    if (error) {
-      onError(error.message)
-      return
-    }
-
-    await registrarAuditoria({
-      entidad: 'proveedor',
-      entidad_id: proveedor.id,
-      accion: 'archivar',
-      detalle: `Proveedor archivado: ${proveedor.nombre}`,
-      payload_antes: payloadAntes,
-      payload_despues: {
-        ...payloadAntes,
-        activo: false,
-        archivado: true,
-      },
-    })
-
-    onToast('Proveedor archivado')
-    await loadProveedores()
   }
 
   async function reactivarProveedor(proveedor: Proveedor) {
@@ -290,41 +275,36 @@ export function useProveedorManagement({
 
     onError('')
     const payloadAntes = { ...proveedor }
+    const restaurantId = requireActiveRestaurant()
+    if (!restaurantId) return
 
-    let query = supabase
-      .from('proveedores')
-      .update({
-        activo: true,
-        archivado: false,
+    try {
+      const { data, error } = await supabase.rpc('cambiar_estado_proveedor_atomico', {
+        p_proveedor_id: proveedor.id,
+        p_archivado: false,
+        p_restaurant_id: restaurantId,
       })
-      .eq('id', proveedor.id)
 
-    if (currentRestaurantId) {
-      query = query.eq('restaurant_id', currentRestaurantId)
+      if (error) {
+        throw new Error(getAtomicProveedorError(error))
+      }
+
+      const proveedorReactivado = parseAtomicProveedorResult(data)
+
+      await registrarAuditoria({
+        entidad: 'proveedor',
+        entidad_id: proveedor.id,
+        accion: 'reactivar',
+        detalle: `Proveedor reactivado: ${proveedor.nombre}`,
+        payload_antes: payloadAntes,
+        payload_despues: proveedorReactivado,
+      })
+
+      onToast('Proveedor reactivado')
+      await loadProveedores()
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'No se pudo reactivar el proveedor')
     }
-
-    const { error } = await query
-
-    if (error) {
-      onError(error.message)
-      return
-    }
-
-    await registrarAuditoria({
-      entidad: 'proveedor',
-      entidad_id: proveedor.id,
-      accion: 'reactivar',
-      detalle: `Proveedor reactivado: ${proveedor.nombre}`,
-      payload_antes: payloadAntes,
-      payload_despues: {
-        ...payloadAntes,
-        activo: true,
-        archivado: false,
-      },
-    })
-
-    onToast('Proveedor reactivado')
-    await loadProveedores()
   }
 
   function resetProveedorState() {

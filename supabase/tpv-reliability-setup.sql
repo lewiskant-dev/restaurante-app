@@ -25,6 +25,7 @@ as $$
 $$;
 
 drop function if exists public.aplicar_importacion_tpv_atomica(uuid, uuid);
+drop function if exists public.guardar_mapeo_tpv_atomico(text, uuid, uuid);
 
 create or replace function public.aplicar_importacion_tpv_atomica(
   p_importacion_id uuid,
@@ -209,3 +210,54 @@ grant execute on function public.aplicar_importacion_tpv_atomica(uuid, uuid) to 
 
 comment on function public.aplicar_importacion_tpv_atomica(uuid, uuid) is
   'Aplica una importación TPV descontando stock, creando movimientos y marcando la importación como procesada dentro de una única transacción.';
+
+create or replace function public.guardar_mapeo_tpv_atomico(
+  p_producto_externo text,
+  p_receta_id uuid,
+  p_restaurant_id uuid default null
+)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  target_restaurant_id uuid;
+  receta_result public.recetas%rowtype;
+  normalized_producto_externo text;
+begin
+  target_restaurant_id := coalesce(p_restaurant_id, public.current_restaurant_id());
+  normalized_producto_externo := nullif(trim(coalesce(p_producto_externo, '')), '');
+
+  if target_restaurant_id is null
+    or not public.user_has_restaurant_access(target_restaurant_id)
+    or not public.has_any_app_role(array['administrador', 'master']) then
+    raise exception 'No tienes permisos para guardar mapeos TPV en el restaurante activo';
+  end if;
+
+  if normalized_producto_externo is null then
+    raise exception 'El producto externo del TPV es obligatorio';
+  end if;
+
+  update public.recetas
+  set nombre_tpv = normalized_producto_externo
+  where id = p_receta_id
+    and restaurant_id = target_restaurant_id
+  returning * into receta_result;
+
+  if receta_result.id is null then
+    raise exception 'Receta no encontrada en el restaurante activo';
+  end if;
+
+  return jsonb_build_object(
+    'receta_id', receta_result.id,
+    'nombre_tpv', receta_result.nombre_tpv
+  );
+end;
+$$;
+
+revoke all on function public.guardar_mapeo_tpv_atomico(text, uuid, uuid) from public;
+grant execute on function public.guardar_mapeo_tpv_atomico(text, uuid, uuid) to authenticated;
+
+comment on function public.guardar_mapeo_tpv_atomico(text, uuid, uuid) is
+  'Guarda el alias TPV de una receta validando permisos y pertenencia al restaurante activo.';

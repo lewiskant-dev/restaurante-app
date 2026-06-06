@@ -4,6 +4,7 @@
 -- 1. auth-setup.sql
 -- 2. multi-restaurant-setup.sql
 -- 3. restaurant-finance-setup.sql
+-- 4. Los setup de reliability que uses en producción
 --
 -- Objetivo:
 -- - comprobar que RLS está activo en tablas sensibles
@@ -156,8 +157,15 @@ where n.nspname = 'public'
     'registrar_movimiento_stock_atomico',
     'guardar_albaran_atomico',
     'anular_albaran_atomico',
+    'guardar_mapeo_producto_atomico',
     'guardar_receta_atomica',
+    'cambiar_estado_receta_atomica',
     'aplicar_importacion_tpv_atomica',
-    'crear_cierre_inventario'
+    'guardar_mapeo_tpv_atomico',
+    'crear_cierre_inventario',
+    'guardar_producto_atomico',
+    'cambiar_estado_producto_atomico',
+    'guardar_proveedor_atomico',
+    'cambiar_estado_proveedor_atomico'
   )
 order by p.proname asc;

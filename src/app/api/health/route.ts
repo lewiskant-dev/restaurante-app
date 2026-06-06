@@ -90,10 +90,30 @@ const RPC_CHECKS = [
     required: true,
   },
   {
+    name: 'rpc:guardar_mapeo_producto_atomico',
+    rpc: 'guardar_mapeo_producto_atomico',
+    args: {
+      p_nombre_externo: 'healthcheck',
+      p_producto_id: null,
+      p_restaurant_id: null,
+    },
+    required: true,
+  },
+  {
     name: 'rpc:aplicar_importacion_tpv_atomica',
     rpc: 'aplicar_importacion_tpv_atomica',
     args: {
       p_importacion_id: null,
+      p_restaurant_id: null,
+    },
+    required: true,
+  },
+  {
+    name: 'rpc:guardar_mapeo_tpv_atomico',
+    rpc: 'guardar_mapeo_tpv_atomico',
+    args: {
+      p_producto_externo: 'healthcheck',
+      p_receta_id: null,
       p_restaurant_id: null,
     },
     required: true,
@@ -114,11 +134,72 @@ const RPC_CHECKS = [
     required: true,
   },
   {
+    name: 'rpc:cambiar_estado_receta_atomica',
+    rpc: 'cambiar_estado_receta_atomica',
+    args: {
+      p_receta_id: null,
+      p_activo: true,
+      p_restaurant_id: null,
+    },
+    required: true,
+  },
+  {
     name: 'rpc:crear_cierre_inventario',
     rpc: 'crear_cierre_inventario',
     args: {
       target_fecha: '2026-01-01',
       target_notas: 'healthcheck',
+      p_restaurant_id: null,
+    },
+    required: true,
+  },
+  {
+    name: 'rpc:guardar_producto_atomico',
+    rpc: 'guardar_producto_atomico',
+    args: {
+      p_producto_id: null,
+      p_nombre: 'healthcheck',
+      p_categoria: 'Otros',
+      p_unidad: 'uds',
+      p_stock_actual: 0,
+      p_stock_minimo: 0,
+      p_coste_unitario: 0,
+      p_referencia: '',
+      p_imagen_url: null,
+      p_restaurant_id: null,
+    },
+    required: true,
+  },
+  {
+    name: 'rpc:cambiar_estado_producto_atomico',
+    rpc: 'cambiar_estado_producto_atomico',
+    args: {
+      p_producto_id: null,
+      p_archivado: false,
+      p_restaurant_id: null,
+    },
+    required: true,
+  },
+  {
+    name: 'rpc:guardar_proveedor_atomico',
+    rpc: 'guardar_proveedor_atomico',
+    args: {
+      p_proveedor_id: null,
+      p_nombre: 'healthcheck',
+      p_cif: '',
+      p_telefono: '',
+      p_email: '',
+      p_notas: '',
+      p_restaurant_id: null,
+    },
+    required: true,
+  },
+  {
+    name: 'rpc:cambiar_estado_proveedor_atomico',
+    rpc: 'cambiar_estado_proveedor_atomico',
+    args: {
+      p_proveedor_id: null,
+      p_archivado: false,
       p_restaurant_id: null,
     },
     required: true,

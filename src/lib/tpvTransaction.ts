@@ -10,6 +10,11 @@ export type AtomicTpvImportResult = {
   procesado: boolean
 }
 
+export type AtomicTpvMappingResult = {
+  receta_id: string
+  nombre_tpv: string
+}
+
 export function parseAtomicTpvImportResult(value: unknown): AtomicTpvImportResult {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('La respuesta de la importación TPV no es válida')
@@ -51,10 +56,33 @@ export function parseAtomicTpvImportResult(value: unknown): AtomicTpvImportResul
   }
 }
 
+export function parseAtomicTpvMappingResult(value: unknown): AtomicTpvMappingResult {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('La respuesta del mapeo TPV no es válida')
+  }
+
+  const result = value as Record<string, unknown>
+  const recetaId = String(result.receta_id || '')
+  const nombreTpv = String(result.nombre_tpv || '')
+
+  if (!recetaId || !nombreTpv) {
+    throw new Error('La respuesta del mapeo TPV está incompleta')
+  }
+
+  return {
+    receta_id: recetaId,
+    nombre_tpv: nombreTpv,
+  }
+}
+
 export function getAtomicTpvImportError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error || '')
 
-  if (/aplicar_importacion_tpv_atomica|schema cache|could not find the function/i.test(message)) {
+  if (
+    /aplicar_importacion_tpv_atomica|guardar_mapeo_tpv_atomico|schema cache|could not find the function/i.test(
+      message
+    )
+  ) {
     return 'Falta activar la operación segura de TPV en Supabase. Aplica tpv-reliability-setup.sql.'
   }
 

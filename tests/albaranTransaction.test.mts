@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   getAtomicAlbaranError,
   parseAtomicAlbaranResult,
+  parseAtomicMapeoProductoResult,
 } from '../src/lib/albaranTransaction.ts'
 
 test('parseAtomicAlbaranResult normaliza la respuesta de guardado', () => {
@@ -25,7 +26,31 @@ test('parseAtomicAlbaranResult normaliza la respuesta de guardado', () => {
 
 test('getAtomicAlbaranError explica cuando falta la RPC', () => {
   assert.match(
-    getAtomicAlbaranError(new Error('Could not find the function guardar_albaran_atomico')),
+    getAtomicAlbaranError(new Error('Could not find the function guardar_mapeo_producto_atomico')),
     /albaran-reliability-setup.sql/
+  )
+})
+
+test('parseAtomicMapeoProductoResult normaliza la respuesta de mapeo OCR', () => {
+  assert.deepEqual(
+    parseAtomicMapeoProductoResult({
+      mapeo_id: 'mapeo-1',
+      nombre_externo: 'Aceite oliva',
+      producto_id: 'producto-1',
+      editado: true,
+    }),
+    {
+      mapeo_id: 'mapeo-1',
+      nombre_externo: 'Aceite oliva',
+      producto_id: 'producto-1',
+      editado: true,
+    }
+  )
+})
+
+test('parseAtomicMapeoProductoResult rechaza respuestas incompletas', () => {
+  assert.throws(
+    () => parseAtomicMapeoProductoResult({ mapeo_id: 'mapeo-1' }),
+    /incompleta/
   )
 })

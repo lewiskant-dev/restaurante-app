@@ -8,7 +8,11 @@ import type {
   TabKey,
 } from '@/features/home/types'
 import { formatOCRDateToInput, normalizeText, todayLocalInputDate } from '@/features/home/utils'
-import { getAtomicAlbaranError, parseAtomicAlbaranResult } from '@/lib/albaranTransaction'
+import {
+  getAtomicAlbaranError,
+  parseAtomicAlbaranResult,
+  parseAtomicMapeoProductoResult,
+} from '@/lib/albaranTransaction'
 import { supabase } from '@/lib/supabase'
 import type { Albaran, AlbaranLinea, Producto, Proveedor } from '@/types'
 import type { PromptActionRequest } from '@/components/ui/PromptActionDialog'
@@ -225,48 +229,38 @@ export function useAlbaranManagement({
 
     onError('')
 
-    const existente = mapeosProductos.find(
-      (item) => normalizeText(item.nombre_externo || '') === normalizeText(nombreExterno)
-    )
-
-    if (existente?.id) {
-      const { error } = await supabase
-        .from('mapeos_productos')
-        .update({ producto_id: productoId })
-        .eq('id', existente.id)
-
-      if (error) {
-        onError(error.message)
-        return
-      }
-    } else {
+    try {
       const restaurantId = requireActiveRestaurant()
       if (!restaurantId) return
 
-      const { error } = await supabase.from('mapeos_productos').insert({
-        nombre_externo: nombreExterno,
-        producto_id: productoId,
-        restaurant_id: restaurantId,
+      const { data, error } = await supabase.rpc('guardar_mapeo_producto_atomico', {
+        p_nombre_externo: nombreExterno,
+        p_producto_id: productoId,
+        p_restaurant_id: restaurantId,
       })
 
       if (error) {
-        onError(error.message)
-        return
+        throw new Error(getAtomicAlbaranError(error))
       }
+
+      const result = parseAtomicMapeoProductoResult(data)
+
+      await registrarAuditoria({
+        entidad: 'producto',
+        accion: result.editado ? 'editar' : 'crear',
+        detalle: `Mapeo OCR guardado: ${result.nombre_externo} → ${getProductoNombre(result.producto_id)}`,
+        payload_despues: {
+          nombre_externo: result.nombre_externo,
+          producto_id: result.producto_id,
+          mapeo_id: result.mapeo_id,
+        },
+      })
+
+      await loadMapeosProductos()
+      onToast('Mapeo guardado')
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'No se pudo guardar el mapeo OCR')
     }
-
-    await registrarAuditoria({
-      entidad: 'producto',
-      accion: 'crear',
-      detalle: `Mapeo OCR guardado: ${nombreExterno} → ${getProductoNombre(productoId)}`,
-      payload_despues: {
-        nombre_externo: nombreExterno,
-        producto_id: productoId,
-      },
-    })
-
-    await loadMapeosProductos()
-    onToast('Mapeo guardado')
   }
 
   async function handleProductoSeleccionadoOCR(index: number, productoId: string) {

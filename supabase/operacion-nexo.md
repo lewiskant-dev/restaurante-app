@@ -38,11 +38,17 @@ Si `warnings` contiene `table:productos_precios_historial`, `table:inventario_ci
 
 Si aparecen `column:productos.imagen_url`, `column:productos.icono` o `bucket:albaranes`, revisa [product-media-setup.sql](/Users/jorge/restaurante-app/supabase/product-media-setup.sql:1) y las policies de storage antes de usar imágenes o adjuntos.
 
-Si aparece `column:tpv_importaciones.archivo_hash` o `rpc:aplicar_importacion_tpv_atomica`, aplica [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1). Ese SQL impide duplicar CSV y aplica las importaciones TPV con stock y movimientos en una única transacción.
+Si aparece `rpc:guardar_producto_atomico` o `rpc:cambiar_estado_producto_atomico`, aplica [product-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/product-reliability-setup.sql:1) antes de crear o editar productos reales.
+
+Si aparece `rpc:guardar_proveedor_atomico` o `rpc:cambiar_estado_proveedor_atomico`, aplica [proveedor-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/proveedor-reliability-setup.sql:1) antes de crear o archivar proveedores reales.
+
+Si aparece `column:tpv_importaciones.archivo_hash`, `rpc:guardar_mapeo_tpv_atomico` o `rpc:aplicar_importacion_tpv_atomica`, aplica [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1). Ese SQL guarda mapeos TPV por restaurante, impide duplicar CSV y aplica las importaciones TPV con stock y movimientos en una única transacción.
 
 Aplica [stock-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/stock-reliability-setup.sql:1) antes de operar con stock real. La función incluida actualiza el producto y registra su movimiento dentro de la misma transacción.
 
 Aplica [albaran-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/albaran-reliability-setup.sql:1) antes de guardar albaranes reales. La migración mantiene albarán, líneas, stock, movimientos e histórico de precios dentro de una única transacción.
+
+Si aparece `rpc:guardar_mapeo_producto_atomico`, vuelve a aplicar [albaran-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/albaran-reliability-setup.sql:1). Esa función guarda los aprendizajes OCR de producto dentro del restaurante activo.
 
 Aplica [receta-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/receta-reliability-setup.sql:1) antes de trabajar con recetas reales. La función incluida guarda la receta y reemplaza sus ingredientes dentro de una única transacción.
 

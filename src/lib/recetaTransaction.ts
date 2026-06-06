@@ -4,6 +4,11 @@ export type AtomicRecetaResult = {
   editado: boolean
 }
 
+export type AtomicRecetaEstadoResult = {
+  receta_id: string
+  activo: boolean
+}
+
 export function parseAtomicRecetaResult(value: unknown): AtomicRecetaResult {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('La respuesta de la receta no es válida')
@@ -24,10 +29,32 @@ export function parseAtomicRecetaResult(value: unknown): AtomicRecetaResult {
   }
 }
 
+export function parseAtomicRecetaEstadoResult(value: unknown): AtomicRecetaEstadoResult {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('La respuesta del estado de la receta no es válida')
+  }
+
+  const result = value as Record<string, unknown>
+  const recetaId = String(result.receta_id || '')
+
+  if (!recetaId || typeof result.activo !== 'boolean') {
+    throw new Error('La respuesta del estado de la receta está incompleta')
+  }
+
+  return {
+    receta_id: recetaId,
+    activo: result.activo,
+  }
+}
+
 export function getAtomicRecetaError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error || '')
 
-  if (/guardar_receta_atomica|schema cache|could not find the function/i.test(message)) {
+  if (
+    /guardar_receta_atomica|cambiar_estado_receta_atomica|schema cache|could not find the function/i.test(
+      message
+    )
+  ) {
     return 'Falta activar la operación segura de recetas en Supabase. Aplica receta-reliability-setup.sql.'
   }
 

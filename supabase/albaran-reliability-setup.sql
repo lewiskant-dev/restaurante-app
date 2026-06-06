@@ -52,6 +52,7 @@ $$;
 
 drop function if exists public.guardar_albaran_atomico(uuid, text, uuid, date, text, text, jsonb);
 drop function if exists public.guardar_albaran_atomico(uuid, text, uuid, date, text, text, jsonb, uuid);
+drop function if exists public.guardar_mapeo_producto_atomico(text, uuid, uuid);
 
 create or replace function public.guardar_albaran_atomico(
   p_albaran_id uuid,
@@ -451,15 +452,94 @@ begin
 end;
 $$;
 
+create or replace function public.guardar_mapeo_producto_atomico(
+  p_nombre_externo text,
+  p_producto_id uuid,
+  p_restaurant_id uuid default null
+)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  target_restaurant_id uuid;
+  normalized_nombre_externo text;
+  mapeo_actual public.mapeos_productos%rowtype;
+  mapeo_result public.mapeos_productos%rowtype;
+begin
+  target_restaurant_id := coalesce(p_restaurant_id, public.current_restaurant_id());
+  normalized_nombre_externo := nullif(trim(coalesce(p_nombre_externo, '')), '');
+
+  if target_restaurant_id is null
+    or not public.user_has_restaurant_access(target_restaurant_id)
+    or not public.has_any_app_role(array['administrador', 'master']) then
+    raise exception 'No tienes permisos para guardar mapeos OCR en el restaurante activo';
+  end if;
+
+  if normalized_nombre_externo is null then
+    raise exception 'El nombre detectado es obligatorio';
+  end if;
+
+  if not exists (
+    select 1
+    from public.productos
+    where id = p_producto_id
+      and restaurant_id = target_restaurant_id
+      and coalesce(archivado, false) = false
+  ) then
+    raise exception 'Producto no encontrado en el restaurante activo';
+  end if;
+
+  select *
+  into mapeo_actual
+  from public.mapeos_productos
+  where restaurant_id = target_restaurant_id
+    and lower(trim(nombre_externo)) = lower(normalized_nombre_externo)
+  limit 1;
+
+  if found then
+    update public.mapeos_productos
+    set producto_id = p_producto_id
+    where id = mapeo_actual.id
+      and restaurant_id = target_restaurant_id
+    returning * into mapeo_result;
+  else
+    insert into public.mapeos_productos (
+      restaurant_id,
+      nombre_externo,
+      producto_id
+    )
+    values (
+      target_restaurant_id,
+      normalized_nombre_externo,
+      p_producto_id
+    )
+    returning * into mapeo_result;
+  end if;
+
+  return jsonb_build_object(
+    'mapeo_id', mapeo_result.id,
+    'nombre_externo', mapeo_result.nombre_externo,
+    'producto_id', mapeo_result.producto_id,
+    'editado', mapeo_actual.id is not null
+  );
+end;
+$$;
+
 revoke all on function public.recalcular_ultima_compra_producto(uuid, uuid) from public;
 revoke all on function public.guardar_albaran_atomico(uuid, text, uuid, date, text, text, jsonb, uuid) from public;
 revoke all on function public.anular_albaran_atomico(uuid, text, uuid) from public;
+revoke all on function public.guardar_mapeo_producto_atomico(text, uuid, uuid) from public;
 
 grant execute on function public.recalcular_ultima_compra_producto(uuid, uuid) to authenticated;
 grant execute on function public.guardar_albaran_atomico(uuid, text, uuid, date, text, text, jsonb, uuid) to authenticated;
 grant execute on function public.anular_albaran_atomico(uuid, text, uuid) to authenticated;
+grant execute on function public.guardar_mapeo_producto_atomico(text, uuid, uuid) to authenticated;
 
 comment on function public.guardar_albaran_atomico(uuid, text, uuid, date, text, text, jsonb, uuid) is
   'Crea o edita un albarán y aplica líneas, stock, precios y movimientos en una única transacción.';
 comment on function public.anular_albaran_atomico(uuid, text, uuid) is
   'Anula un albarán y revierte stock, movimientos e histórico de compra en una única transacción.';
+comment on function public.guardar_mapeo_producto_atomico(text, uuid, uuid) is
+  'Guarda un mapeo OCR producto externo-producto interno validando restaurante, rol y producto destino.';

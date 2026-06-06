@@ -3,6 +3,7 @@ import { test } from 'node:test'
 import {
   getAtomicTpvImportError,
   parseAtomicTpvImportResult,
+  parseAtomicTpvMappingResult,
 } from '../src/lib/tpvTransaction.ts'
 
 test('parseAtomicTpvImportResult normaliza la respuesta de TPV', () => {
@@ -38,9 +39,25 @@ test('parseAtomicTpvImportResult rechaza respuestas incompletas', () => {
   )
 })
 
+test('parseAtomicTpvMappingResult normaliza la respuesta de mapeo TPV', () => {
+  const result = parseAtomicTpvMappingResult({
+    receta_id: 'receta-1',
+    nombre_tpv: 'Coca-Cola Zero',
+  })
+
+  assert.deepEqual(result, {
+    receta_id: 'receta-1',
+    nombre_tpv: 'Coca-Cola Zero',
+  })
+})
+
+test('parseAtomicTpvMappingResult rechaza respuestas incompletas', () => {
+  assert.throws(() => parseAtomicTpvMappingResult({ receta_id: 'receta-1' }), /incompleta/)
+})
+
 test('getAtomicTpvImportError explica cuando falta la RPC', () => {
   assert.match(
-    getAtomicTpvImportError(new Error('Could not find the function aplicar_importacion_tpv_atomica')),
+    getAtomicTpvImportError(new Error('Could not find the function guardar_mapeo_tpv_atomico')),
     /tpv-reliability-setup.sql/
   )
 })

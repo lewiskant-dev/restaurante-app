@@ -13,6 +13,7 @@ import {
 import { parseDecimalInput } from '@/lib/numberInput'
 import { todayLocalInputDate } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
+import { getAtomicProductError, parseAtomicProductResult } from '@/lib/productTransaction'
 import { getAtomicStockMovementError, parseAtomicStockMovementResult } from '@/lib/stockMovement'
 import type { Producto } from '@/types'
 import type { ConfirmActionRequest } from '@/components/ui/ConfirmActionDialog'
@@ -331,73 +332,81 @@ export function useStockManagement({
     onError('')
 
     const productoAntes = productoEditId ? productos.find((p) => p.id === productoEditId) || null : null
+    const stockActual = productoForm.stock_actual === '' ? 0 : parseDecimalInput(productoForm.stock_actual)
+    const stockMinimo = productoForm.stock_minimo === '' ? 0 : parseDecimalInput(productoForm.stock_minimo)
+    const costeUnitario =
+      productoForm.coste_unitario === '' ? 0 : parseDecimalInput(productoForm.coste_unitario)
+
+    if (!Number.isFinite(stockActual) || stockActual < 0) {
+      onError('Indica un stock actual válido')
+      setProductoSaving(false)
+      return
+    }
+
+    if (!Number.isFinite(stockMinimo) || stockMinimo < 0) {
+      onError('Indica un stock mínimo válido')
+      setProductoSaving(false)
+      return
+    }
+
+    if (!Number.isFinite(costeUnitario) || costeUnitario < 0) {
+      onError('Indica un coste unitario válido')
+      setProductoSaving(false)
+      return
+    }
 
     const payload: Record<string, string | number | boolean | null> = {
       nombre: productoForm.nombre.trim(),
       categoria: normalizeProductCategory(productoForm.categoria),
       unidad: productoForm.unidad.trim() || 'uds',
-      stock_actual: productoForm.stock_actual === '' ? 0 : Number(productoForm.stock_actual),
-      stock_minimo: productoForm.stock_minimo === '' ? 0 : Number(productoForm.stock_minimo),
-      coste_unitario:
-        productoForm.coste_unitario === '' ? 0 : Number(productoForm.coste_unitario),
+      stock_actual: stockActual,
+      stock_minimo: stockMinimo,
+      coste_unitario: costeUnitario,
       referencia: productoForm.referencia.trim(),
-    }
-
-    if (productoForm.imagen_url.trim()) {
-      payload.imagen_url = productoForm.imagen_url.trim()
-    } else if (productoAntes?.imagen_url) {
-      payload.imagen_url = null
+      imagen_url: productoForm.imagen_url.trim() || null,
     }
 
     try {
+      const restaurantId = requireActiveRestaurant()
+      if (!restaurantId) return
+
+      const { data, error } = await supabase.rpc('guardar_producto_atomico', {
+        p_producto_id: productoEditId,
+        p_nombre: payload.nombre,
+        p_categoria: payload.categoria,
+        p_unidad: payload.unidad,
+        p_stock_actual: payload.stock_actual,
+        p_stock_minimo: payload.stock_minimo,
+        p_coste_unitario: payload.coste_unitario,
+        p_referencia: payload.referencia,
+        p_imagen_url: payload.imagen_url,
+        p_restaurant_id: restaurantId,
+      })
+
+      if (error) {
+        throw new Error(getAtomicProductError(error))
+      }
+
+      const productoGuardado = parseAtomicProductResult(data)
+
       if (productoEditId) {
-        let query = supabase.from('productos').update(payload).eq('id', productoEditId)
-
-        if (currentRestaurantId) {
-          query = query.eq('restaurant_id', currentRestaurantId)
-        }
-
-        const { data, error } = await query.select().single()
-
-        if (error) {
-          throw new Error(error.message)
-        }
-
         await registrarAuditoria({
           entidad: 'producto',
-          entidad_id: productoEditId,
+          entidad_id: productoGuardado.id,
           accion: 'editar',
           detalle: `Producto actualizado: ${payload.nombre}`,
           payload_antes: productoAntes,
-          payload_despues: data,
+          payload_despues: productoGuardado,
         })
 
         onToast('Producto actualizado')
       } else {
-        const restaurantId = requireActiveRestaurant()
-        if (!restaurantId) return
-
-        const { data, error } = await supabase
-          .from('productos')
-          .insert({
-            ...payload,
-            activo: true,
-            archivado: false,
-            restaurant_id: restaurantId,
-          })
-          .select()
-          .single()
-
-        if (error) {
-          throw new Error(error.message)
-        }
-
         await registrarAuditoria({
           entidad: 'producto',
-          entidad_id: data?.id,
+          entidad_id: productoGuardado.id,
           accion: 'crear',
           detalle: `Producto creado: ${payload.nombre} · Categoría: ${payload.categoria || 'Sin categoría'} · Stock inicial: ${payload.stock_actual} ${payload.unidad}`,
-          payload_despues: data,
+          payload_despues: productoGuardado,
         })
 
         onToast('Producto creado')
@@ -427,25 +436,21 @@ export function useStockManagement({
 
     onError('')
     const payloadAntes = { ...producto }
+    const restaurantId = requireActiveRestaurant()
+    if (!restaurantId) return
 
-    let query = supabase
-      .from('productos')
-      .update({
-        activo: false,
-        archivado: true,
-      })
-      .eq('id', producto.id)
-
-    if (currentRestaurantId) {
-      query = query.eq('restaurant_id', currentRestaurantId)
-    }
-
-    const { error } = await query
+    const { data, error } = await supabase.rpc('cambiar_estado_producto_atomico', {
+      p_producto_id: producto.id,
+      p_archivado: true,
+      p_restaurant_id: restaurantId,
+    })
 
     if (error) {
-      onError(error.message)
+      onError(getAtomicProductError(error))
       return
     }
+
+    const productoArchivado = parseAtomicProductResult(data)
 
     await registrarAuditoria({
       entidad: 'producto',
@@ -453,11 +458,7 @@ export function useStockManagement({
       accion: 'archivar',
       detalle: `Producto archivado: ${producto.nombre}`,
       payload_antes: payloadAntes,
-      payload_despues: {
-        ...payloadAntes,
-        activo: false,
-        archivado: true,
-      },
+      payload_despues: productoArchivado,
     })
 
     onToast('Producto archivado')
@@ -471,25 +472,21 @@ export function useStockManagement({
 
     onError('')
     const payloadAntes = { ...producto }
+    const restaurantId = requireActiveRestaurant()
+    if (!restaurantId) return
 
-    let query = supabase
-      .from('productos')
-      .update({
-        activo: true,
-        archivado: false,
-      })
-      .eq('id', producto.id)
-
-    if (currentRestaurantId) {
-      query = query.eq('restaurant_id', currentRestaurantId)
-    }
-
-    const { error } = await query
+    const { data, error } = await supabase.rpc('cambiar_estado_producto_atomico', {
+      p_producto_id: producto.id,
+      p_archivado: false,
+      p_restaurant_id: restaurantId,
+    })
 
     if (error) {
-      onError(error.message)
+      onError(getAtomicProductError(error))
       return
     }
+
+    const productoReactivado = parseAtomicProductResult(data)
 
     await registrarAuditoria({
       entidad: 'producto',
@@ -497,11 +494,7 @@ export function useStockManagement({
       accion: 'reactivar',
       detalle: `Producto reactivado: ${producto.nombre}`,
       payload_antes: payloadAntes,
-      payload_despues: {
-        ...payloadAntes,
-        activo: true,
-        archivado: false,
-      },
+      payload_despues: productoReactivado,
     })
 
     onToast('Producto reactivado')

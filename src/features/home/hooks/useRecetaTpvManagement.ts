@@ -12,7 +12,11 @@ import type {
 } from '@/features/home/types'
 import { formatOCRDateToInput, normalizeText, scoreRecipeMatch } from '@/features/home/utils'
 import { createTpvCsvFingerprint, parseTpvCsvText } from '@/lib/tpvCsv'
-import { getAtomicTpvImportError, parseAtomicTpvImportResult } from '@/lib/tpvTransaction'
+import {
+  getAtomicTpvImportError,
+  parseAtomicTpvImportResult,
+  parseAtomicTpvMappingResult,
+} from '@/lib/tpvTransaction'
 import {
   buildComparativaMetrica,
   calculatePriceVariationPct,
@@ -20,7 +24,11 @@ import {
   getMarginRatio,
   sortByMarginRisk,
 } from '@/lib/financialAnalytics'
-import { getAtomicRecetaError, parseAtomicRecetaResult } from '@/lib/recetaTransaction'
+import {
+  getAtomicRecetaError,
+  parseAtomicRecetaEstadoResult,
+  parseAtomicRecetaResult,
+} from '@/lib/recetaTransaction'
 import { supabase } from '@/lib/supabase'
 import type { Producto } from '@/types'
 
@@ -997,30 +1005,36 @@ export function useRecetaTpvManagement({
 
     onError('')
     const nuevoEstado = receta.activo === false
+    const restaurantId = requireActiveRestaurant()
+    if (!restaurantId) return
 
-    let query = supabase.from('recetas').update({ activo: nuevoEstado }).eq('id', receta.id)
+    try {
+      const { data, error } = await supabase.rpc('cambiar_estado_receta_atomica', {
+        p_receta_id: receta.id,
+        p_activo: nuevoEstado,
+        p_restaurant_id: restaurantId,
+      })
 
-    if (currentRestaurantId) {
-      query = query.eq('restaurant_id', currentRestaurantId)
+      if (error) {
+        throw new Error(getAtomicRecetaError(error))
+      }
+
+      const result = parseAtomicRecetaEstadoResult(data)
+
+      await registrarAuditoria({
+        entidad: 'receta',
+        entidad_id: result.receta_id,
+        accion: result.activo ? 'reactivar' : 'archivar',
+        detalle: `${result.activo ? 'Receta reactivada' : 'Receta archivada'}: ${receta.nombre}`,
+        payload_antes: receta,
+        payload_despues: { ...receta, activo: result.activo },
+      })
+
+      onToast(result.activo ? 'Receta reactivada' : 'Receta archivada')
+      await loadRecetas()
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'No se pudo cambiar el estado de la receta')
     }
-
-    const { error } = await query
-    if (error) {
-      onError(error.message)
-      return
-    }
-
-    await registrarAuditoria({
-      entidad: 'receta',
-      entidad_id: receta.id,
-      accion: nuevoEstado ? 'reactivar' : 'archivar',
-      detalle: `${nuevoEstado ? 'Receta reactivada' : 'Receta archivada'}: ${receta.nombre}`,
-      payload_antes: receta,
-      payload_despues: { ...receta, activo: nuevoEstado },
-    })
-
-    onToast(nuevoEstado ? 'Receta reactivada' : 'Receta archivada')
-    await loadRecetas()
   }
 
   async function guardarMapeoTPV(productoExterno: string, recetaId: string) {
@@ -1042,29 +1056,35 @@ export function useRecetaTpvManagement({
 
       const recetaAntes = recetas.find((r) => r.id === recetaId) || null
 
-      const { error } = await supabase
-        .from('recetas')
-        .update({ nombre_tpv: productoExterno.trim() })
-        .eq('id', recetaId)
-        .eq('restaurant_id', restaurantId)
+      const { data, error } = await supabase.rpc('guardar_mapeo_tpv_atomico', {
+        p_producto_externo: productoExterno,
+        p_receta_id: recetaId,
+        p_restaurant_id: restaurantId,
+      })
 
-      if (error) throw new Error(error.message)
+      if (error) throw new Error(getAtomicTpvImportError(error))
+
+      const result = parseAtomicTpvMappingResult(data)
 
       await registrarAuditoria({
         entidad: 'receta',
-        entidad_id: recetaId,
+        entidad_id: result.receta_id,
         accion: 'editar',
-        detalle: `Mapeo TPV guardado: "${productoExterno}"`,
+        detalle: `Mapeo TPV guardado: "${result.nombre_tpv}"`,
         payload_antes: recetaAntes,
         payload_despues: {
           ...(recetaAntes || {}),
-          nombre_tpv: productoExterno.trim(),
+          nombre_tpv: result.nombre_tpv,
         },
       })
 
-      setTpvMapeosSeleccionados((prev) => ({ ...prev, [productoExterno]: recetaId }))
+      setTpvMapeosSeleccionados((prev) => ({
+        ...prev,
+        [productoExterno]: result.receta_id,
+        [result.nombre_tpv]: result.receta_id,
+      }))
       await loadRecetas()
-      onToast(`Mapeo guardado para ${productoExterno}`)
+      onToast(`Mapeo guardado para ${result.nombre_tpv}`)
     } catch (err) {
       onError(err instanceof Error ? err.message : 'No se pudo guardar el mapeo TPV')
     } finally {

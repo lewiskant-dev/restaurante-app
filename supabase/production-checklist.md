@@ -31,11 +31,13 @@ Ejecutar en `SQL Editor`, en este orden:
 6. [receta-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/receta-reliability-setup.sql:1)
 7. [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1)
 8. [product-media-setup.sql](/Users/jorge/restaurante-app/supabase/product-media-setup.sql:1)
-9. [performance-indexes.sql](/Users/jorge/restaurante-app/supabase/performance-indexes.sql:1)
+9. [product-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/product-reliability-setup.sql:1)
+10. [proveedor-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/proveedor-reliability-setup.sql:1)
+11. [performance-indexes.sql](/Users/jorge/restaurante-app/supabase/performance-indexes.sql:1)
 
 Si quieres empezar con datos operativos vacíos, ejecutar después:
 
-10. [reset-operational-data.sql](/Users/jorge/restaurante-app/supabase/reset-operational-data.sql:1)
+12. [reset-operational-data.sql](/Users/jorge/restaurante-app/supabase/reset-operational-data.sql:1)
 
 No ejecutes `reset-operational-data.sql` si ya hay productos, proveedores, albaranes, TPV o recetas reales que quieras conservar.
 
@@ -97,9 +99,16 @@ Función obligatoria esperada:
 - `registrar_movimiento_stock_atomico`
 - `guardar_albaran_atomico`
 - `anular_albaran_atomico`
+- `guardar_mapeo_producto_atomico`
 - `guardar_receta_atomica`
+- `cambiar_estado_receta_atomica`
 - `aplicar_importacion_tpv_atomica`
+- `guardar_mapeo_tpv_atomico`
 - `crear_cierre_inventario`
+- `guardar_producto_atomico`
+- `cambiar_estado_producto_atomico`
+- `guardar_proveedor_atomico`
+- `cambiar_estado_proveedor_atomico`
 
 Tablas recomendadas para finanzas:
 
@@ -116,12 +125,20 @@ Piezas obligatorias para importaciones TPV seguras:
 
 - columna `tpv_importaciones.archivo_hash` e índice único por restaurante
 - función `aplicar_importacion_tpv_atomica` de `tpv-reliability-setup.sql`
+- función `guardar_mapeo_tpv_atomico` de `tpv-reliability-setup.sql`
 
 Operaciones obligatorias para mantener stock e historial sincronizados:
 
+- función `guardar_producto_atomico` de `product-reliability-setup.sql`
+- función `cambiar_estado_producto_atomico` de `product-reliability-setup.sql`
+- función `guardar_proveedor_atomico` de `proveedor-reliability-setup.sql`
+- función `cambiar_estado_proveedor_atomico` de `proveedor-reliability-setup.sql`
 - función `registrar_movimiento_stock_atomico` de `stock-reliability-setup.sql`
 - función `guardar_albaran_atomico` de `albaran-reliability-setup.sql`
+- función `guardar_mapeo_producto_atomico` de `albaran-reliability-setup.sql`
 - función `guardar_receta_atomica` de `receta-reliability-setup.sql`
+- función `cambiar_estado_receta_atomica` de `receta-reliability-setup.sql`
+- función `guardar_mapeo_tpv_atomico` de `tpv-reliability-setup.sql`
 - función `aplicar_importacion_tpv_atomica` de `tpv-reliability-setup.sql`
 - función `crear_cierre_inventario` de `restaurant-finance-setup.sql`
 

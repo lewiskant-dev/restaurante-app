@@ -58,9 +58,11 @@ Orden recomendado:
 5. Ejecutar [supabase/albaran-reliability-setup.sql](supabase/albaran-reliability-setup.sql)
 6. Ejecutar [supabase/receta-reliability-setup.sql](supabase/receta-reliability-setup.sql)
 7. Ejecutar [supabase/tpv-reliability-setup.sql](supabase/tpv-reliability-setup.sql)
-8. Si usas imagenes de producto, ejecutar [supabase/product-media-setup.sql](supabase/product-media-setup.sql)
-9. Aplicar índices de rendimiento con [supabase/performance-indexes.sql](supabase/performance-indexes.sql)
-10. Validar funciones críticas con [supabase/supabase-healthcheck.sql](supabase/supabase-healthcheck.sql)
+8. Ejecutar [supabase/product-media-setup.sql](supabase/product-media-setup.sql)
+9. Ejecutar [supabase/product-reliability-setup.sql](supabase/product-reliability-setup.sql)
+10. Ejecutar [supabase/proveedor-reliability-setup.sql](supabase/proveedor-reliability-setup.sql)
+11. Aplicar índices de rendimiento con [supabase/performance-indexes.sql](supabase/performance-indexes.sql)
+12. Validar funciones críticas con [supabase/supabase-healthcheck.sql](supabase/supabase-healthcheck.sql)
 
 Si quieres empezar de cero sin tocar funcionalidades, ejecutar después [supabase/reset-operational-data.sql](supabase/reset-operational-data.sql).
 
@@ -100,7 +102,7 @@ La respuesta no expone secretos. Devuelve:
 - `missing`: variables o tablas obligatorias pendientes.
 - `warnings`: piezas opcionales/recomendadas pendientes, por ejemplo tablas financieras.
 
-Si aparecen tablas o RPC en `missing`, revisa el orden de SQL de Supabase. Si aparecen tablas financieras en `warnings`, aplica `restaurant-finance-setup.sql` cuando vayas a usar informes avanzados. Antes de operar con stock, albaranes, recetas o TPV real aplica también `stock-reliability-setup.sql`, `albaran-reliability-setup.sql`, `receta-reliability-setup.sql` y `tpv-reliability-setup.sql`. Si aparecen columnas o buckets en `warnings`, revisa `product-media-setup.sql` y las policies de storage.
+Si aparecen tablas o RPC en `missing`, revisa el orden de SQL de Supabase. Si aparecen tablas financieras en `warnings`, aplica `restaurant-finance-setup.sql` cuando vayas a usar informes avanzados. Antes de operar con productos, proveedores, stock, albaranes, recetas o TPV real aplica también `product-reliability-setup.sql`, `proveedor-reliability-setup.sql`, `stock-reliability-setup.sql`, `albaran-reliability-setup.sql`, `receta-reliability-setup.sql` y `tpv-reliability-setup.sql`. Si aparecen columnas o buckets en `warnings`, revisa `product-media-setup.sql` y las policies de storage.
 
 Si quieres validar el aislamiento por restaurante en Supabase:
 
