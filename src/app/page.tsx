@@ -77,6 +77,8 @@ import {
   getRestaurantScopeFromAppMetadata,
   getRestaurantScopeLabel,
 } from '@/lib/restaurantMetadata'
+import { getAtomicProductError, parseAtomicProductResult } from '@/lib/productTransaction'
+import { getAtomicProveedorError, parseAtomicProveedorResult } from '@/lib/proveedorTransaction'
 
 export default function HomePage() {
   const allowSelfRegister = process.env.NEXT_PUBLIC_ALLOW_SELF_REGISTER === 'true'
@@ -106,7 +108,6 @@ export default function HomePage() {
   const [loadingInventarioCierres, setLoadingInventarioCierres] = useState(false)
   const [creatingInventarioCierre, setCreatingInventarioCierre] = useState(false)
 
-  const [operarioActual, setOperarioActual] = useState('')
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
   const [proveedorRecienCreadoId, setProveedorRecienCreadoId] = useState('')
@@ -205,7 +206,7 @@ export default function HomePage() {
     currentUser,
     allowSelfRegister,
     onCurrentUserChange: setCurrentUser,
-    onOperarioActualChange: setOperarioActual,
+    onOperarioActualChange: () => undefined,
     onError: setError,
     onToast: setToast,
   })
@@ -432,7 +433,6 @@ export default function HomePage() {
       const nextSession = data.session ?? null
       setSession(nextSession)
       setCurrentUser(nextSession?.user ?? null)
-      setOperarioActual(getUserDisplayName(nextSession?.user ?? null))
       if (typeof window !== 'undefined') {
         const currentUrl = new URL(window.location.href)
         const recoveryType =
@@ -452,7 +452,6 @@ export default function HomePage() {
       if (!active) return
       setSession(nextSession)
       setCurrentUser(nextSession?.user ?? null)
-      setOperarioActual(getUserDisplayName(nextSession?.user ?? null))
       if (_event === 'PASSWORD_RECOVERY' && nextSession?.user) {
         openRecoveryModeEvent()
       }
@@ -970,21 +969,28 @@ export default function HomePage() {
       return
     }
 
-    const { error } = await supabase.from('auditoria').insert({
-      entidad,
-      entidad_id: entidad_id ?? null,
-      accion,
-      restaurant_id: activeRestaurantId,
-      actor_nombre: getUserDisplayName(currentUser) || operarioActual.trim() || 'Sin identificar',
-      actor_id: currentUser?.id || '',
-      detalle: detalle ?? '',
-      payload_antes: payload_antes ?? null,
-      payload_despues: payload_despues ?? null,
+    const response = await fetch('/api/audit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token ?? ''}`,
+      },
+      body: JSON.stringify({
+        entidad,
+        entidad_id: entidad_id ?? null,
+        accion,
+        detalle: detalle ?? '',
+        payloadAntes: payload_antes ?? null,
+        payloadDespues: payload_despues ?? null,
+      }),
     })
 
-    if (error) {
-      console.error('Error insertando auditoría:', error)
-      setError(`Auditoría: ${error.message}`)
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null
+
+    if (!response.ok) {
+      const message = payload?.error || 'No se pudo registrar la auditoría'
+      console.error('Error insertando auditoría:', message)
+      setError(`Auditoría: ${message}`)
       return
     }
 
@@ -1013,38 +1019,30 @@ export default function HomePage() {
     setError('')
 
     try {
+      if (!activeRestaurantId) {
+        throw new Error('Selecciona un restaurante activo para deshacer la acción')
+      }
+
       if (item.entidad === 'producto' && item.accion === 'archivar') {
-        let query = supabase
-          .from('productos')
-          .update({
-            activo: true,
-            archivado: false,
-          })
-          .eq('id', item.entidad_id)
-
-        if (activeRestaurantId) {
-          query = query.eq('restaurant_id', activeRestaurantId)
-        }
-
-        const { error } = await query
+        const { data, error } = await supabase.rpc('cambiar_estado_producto_atomico', {
+          p_producto_id: item.entidad_id,
+          p_archivado: false,
+          p_restaurant_id: activeRestaurantId,
+        })
 
         if (error) {
-          throw new Error(error.message)
+          throw new Error(getAtomicProductError(error))
         }
+
+        const productoReactivado = parseAtomicProductResult(data)
 
         await registrarAuditoria({
           entidad: 'producto',
-          entidad_id: item.entidad_id,
+          entidad_id: productoReactivado.id,
           accion: 'deshacer_archivar',
           detalle: 'Se deshizo el archivado del producto',
           payload_antes: item.payload_despues ?? null,
-          payload_despues: {
-            ...(typeof item.payload_despues === 'object' && item.payload_despues !== null
-              ? item.payload_despues
-              : {}),
-            activo: true,
-            archivado: false,
-          },
+          payload_despues: productoReactivado,
         })
 
         setToast('Producto reactivado')
@@ -1053,37 +1051,25 @@ export default function HomePage() {
       }
 
       if (item.entidad === 'proveedor' && item.accion === 'archivar') {
-        let query = supabase
-          .from('proveedores')
-          .update({
-            activo: true,
-            archivado: false,
-          })
-          .eq('id', item.entidad_id)
-
-        if (activeRestaurantId) {
-          query = query.eq('restaurant_id', activeRestaurantId)
-        }
-
-        const { error } = await query
+        const { data, error } = await supabase.rpc('cambiar_estado_proveedor_atomico', {
+          p_proveedor_id: item.entidad_id,
+          p_archivado: false,
+          p_restaurant_id: activeRestaurantId,
+        })
 
         if (error) {
-          throw new Error(error.message)
+          throw new Error(getAtomicProveedorError(error))
         }
+
+        const proveedorReactivado = parseAtomicProveedorResult(data)
 
         await registrarAuditoria({
           entidad: 'proveedor',
-          entidad_id: item.entidad_id,
+          entidad_id: proveedorReactivado.id,
           accion: 'deshacer_archivar',
           detalle: 'Se deshizo el archivado del proveedor',
           payload_antes: item.payload_despues ?? null,
-          payload_despues: {
-            ...(typeof item.payload_despues === 'object' && item.payload_despues !== null
-              ? item.payload_despues
-              : {}),
-            activo: true,
-            archivado: false,
-          },
+          payload_despues: proveedorReactivado,
         })
 
         setToast('Proveedor reactivado')

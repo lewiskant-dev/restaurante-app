@@ -25,7 +25,138 @@ as $$
 $$;
 
 drop function if exists public.aplicar_importacion_tpv_atomica(uuid, uuid);
+drop function if exists public.crear_importacion_tpv_atomica(text, text, jsonb, uuid);
 drop function if exists public.guardar_mapeo_tpv_atomico(text, uuid, uuid);
+
+create or replace function public.crear_importacion_tpv_atomica(
+  p_nombre_archivo text,
+  p_archivo_hash text,
+  p_ventas jsonb,
+  p_restaurant_id uuid default null
+)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  target_restaurant_id uuid;
+  normalized_archivo text;
+  normalized_hash text;
+  importacion_existente public.tpv_importaciones%rowtype;
+  importacion_result public.tpv_importaciones%rowtype;
+  venta record;
+  ventas_count integer := 0;
+begin
+  target_restaurant_id := coalesce(p_restaurant_id, public.current_restaurant_id());
+  normalized_archivo := nullif(trim(coalesce(p_nombre_archivo, '')), '');
+  normalized_hash := nullif(trim(coalesce(p_archivo_hash, '')), '');
+
+  if target_restaurant_id is null
+    or not public.user_has_restaurant_access(target_restaurant_id)
+    or not public.has_any_app_role(array['administrador', 'master']) then
+    raise exception 'No tienes permisos para crear importaciones TPV en el restaurante activo';
+  end if;
+
+  if normalized_archivo is null then
+    raise exception 'El nombre del archivo TPV es obligatorio';
+  end if;
+
+  if p_ventas is null or jsonb_typeof(p_ventas) <> 'array' or jsonb_array_length(p_ventas) = 0 then
+    raise exception 'La importación TPV debe incluir al menos una venta';
+  end if;
+
+  if normalized_hash is not null then
+    select *
+    into importacion_existente
+    from public.tpv_importaciones
+    where restaurant_id = target_restaurant_id
+      and archivo_hash = normalized_hash
+    limit 1
+    for update;
+
+    if found then
+      if coalesce(importacion_existente.procesado, false) then
+        raise exception 'Este CSV ya se aplicó anteriormente en el restaurante activo';
+      end if;
+
+      delete from public.tpv_ventas_crudas
+      where restaurant_id = target_restaurant_id
+        and importacion_id = importacion_existente.id;
+
+      delete from public.tpv_importaciones
+      where restaurant_id = target_restaurant_id
+        and id = importacion_existente.id;
+    end if;
+  end if;
+
+  insert into public.tpv_importaciones (
+    restaurant_id,
+    nombre_archivo,
+    archivo_hash,
+    procesado
+  )
+  values (
+    target_restaurant_id,
+    normalized_archivo,
+    normalized_hash,
+    false
+  )
+  returning * into importacion_result;
+
+  for venta in
+    select *
+    from jsonb_to_recordset(p_ventas) as x(
+      producto_externo text,
+      cantidad numeric,
+      fecha text,
+      raw text
+    )
+  loop
+    if nullif(trim(coalesce(venta.producto_externo, '')), '') is null
+      or venta.cantidad is null
+      or venta.cantidad <= 0
+      or nullif(trim(coalesce(venta.fecha, '')), '') is null then
+      raise exception 'La importación TPV contiene una venta no válida';
+    end if;
+
+    insert into public.tpv_ventas_crudas (
+      restaurant_id,
+      importacion_id,
+      producto_externo,
+      cantidad,
+      fecha,
+      raw
+    )
+    values (
+      target_restaurant_id,
+      importacion_result.id,
+      trim(venta.producto_externo),
+      venta.cantidad,
+      venta.fecha::timestamptz,
+      jsonb_build_object(
+        'linea', coalesce(venta.raw, ''),
+        'archivo', normalized_archivo
+      )
+    );
+
+    ventas_count := ventas_count + 1;
+  end loop;
+
+  if ventas_count = 0 then
+    raise exception 'La importación TPV debe incluir al menos una venta válida';
+  end if;
+
+  return jsonb_build_object(
+    'importacion_id', importacion_result.id,
+    'ventas_total', ventas_count,
+    'procesado', false
+  );
+exception
+  when unique_violation then
+    raise exception 'Este CSV ya está registrado en el restaurante activo';
+end;
+$$;
 
 create or replace function public.aplicar_importacion_tpv_atomica(
   p_importacion_id uuid,
@@ -203,11 +334,15 @@ end;
 $$;
 
 revoke all on function public.normalize_tpv_text(text) from public;
+revoke all on function public.crear_importacion_tpv_atomica(text, text, jsonb, uuid) from public;
 revoke all on function public.aplicar_importacion_tpv_atomica(uuid, uuid) from public;
 
 grant execute on function public.normalize_tpv_text(text) to authenticated;
+grant execute on function public.crear_importacion_tpv_atomica(text, text, jsonb, uuid) to authenticated;
 grant execute on function public.aplicar_importacion_tpv_atomica(uuid, uuid) to authenticated;
 
+comment on function public.crear_importacion_tpv_atomica(text, text, jsonb, uuid) is
+  'Crea una importación TPV y sus ventas crudas en una única transacción, sustituyendo duplicados pendientes del mismo CSV.';
 comment on function public.aplicar_importacion_tpv_atomica(uuid, uuid) is
   'Aplica una importación TPV descontando stock, creando movimientos y marcando la importación como procesada dentro de una única transacción.';
 

@@ -40,9 +40,13 @@ Si aparecen `column:productos.imagen_url`, `column:productos.icono` o `bucket:al
 
 Si aparece `rpc:guardar_producto_atomico` o `rpc:cambiar_estado_producto_atomico`, aplica [product-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/product-reliability-setup.sql:1) antes de crear o editar productos reales.
 
+Si aparece `rpc:sincronizar_usuario_restaurantes`, vuelve a aplicar [multi-restaurant-setup.sql](/Users/jorge/restaurante-app/supabase/multi-restaurant-setup.sql:1). Esa función mantiene la tabla `usuario_restaurantes` sincronizada de forma transaccional.
+
+Si aparece `rpc:guardar_restaurante_atomico`, vuelve a aplicar [multi-restaurant-setup.sql](/Users/jorge/restaurante-app/supabase/multi-restaurant-setup.sql:1). Esa función crea y edita restaurantes con validación de slug y duplicados.
+
 Si aparece `rpc:guardar_proveedor_atomico` o `rpc:cambiar_estado_proveedor_atomico`, aplica [proveedor-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/proveedor-reliability-setup.sql:1) antes de crear o archivar proveedores reales.
 
-Si aparece `column:tpv_importaciones.archivo_hash`, `rpc:guardar_mapeo_tpv_atomico` o `rpc:aplicar_importacion_tpv_atomica`, aplica [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1). Ese SQL guarda mapeos TPV por restaurante, impide duplicar CSV y aplica las importaciones TPV con stock y movimientos en una única transacción.
+Si aparece `column:tpv_importaciones.archivo_hash`, `rpc:crear_importacion_tpv_atomica`, `rpc:guardar_mapeo_tpv_atomico` o `rpc:aplicar_importacion_tpv_atomica`, aplica [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1). Ese SQL crea importaciones TPV por restaurante, guarda mapeos, impide duplicar CSV y aplica las ventas con stock y movimientos en operaciones seguras.
 
 Aplica [stock-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/stock-reliability-setup.sql:1) antes de operar con stock real. La función incluida actualiza el producto y registra su movimiento dentro de la misma transacción.
 

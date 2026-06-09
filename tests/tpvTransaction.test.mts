@@ -2,9 +2,28 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   getAtomicTpvImportError,
+  parseAtomicTpvCreateResult,
   parseAtomicTpvImportResult,
   parseAtomicTpvMappingResult,
 } from '../src/lib/tpvTransaction.ts'
+
+test('parseAtomicTpvCreateResult normaliza la respuesta de creación TPV', () => {
+  const result = parseAtomicTpvCreateResult({
+    importacion_id: 'tpv-1',
+    ventas_total: '8',
+    procesado: false,
+  })
+
+  assert.deepEqual(result, {
+    importacion_id: 'tpv-1',
+    ventas_total: 8,
+    procesado: false,
+  })
+})
+
+test('parseAtomicTpvCreateResult rechaza respuestas incompletas', () => {
+  assert.throws(() => parseAtomicTpvCreateResult({ importacion_id: 'tpv-1' }), /incompleta/)
+})
 
 test('parseAtomicTpvImportResult normaliza la respuesta de TPV', () => {
   const result = parseAtomicTpvImportResult({

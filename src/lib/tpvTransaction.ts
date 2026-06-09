@@ -10,9 +10,35 @@ export type AtomicTpvImportResult = {
   procesado: boolean
 }
 
+export type AtomicTpvCreateResult = {
+  importacion_id: string
+  ventas_total: number
+  procesado: boolean
+}
+
 export type AtomicTpvMappingResult = {
   receta_id: string
   nombre_tpv: string
+}
+
+export function parseAtomicTpvCreateResult(value: unknown): AtomicTpvCreateResult {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('La respuesta de creación TPV no es válida')
+  }
+
+  const result = value as Record<string, unknown>
+  const importacionId = String(result.importacion_id || '')
+  const ventasTotal = Number(result.ventas_total)
+
+  if (!importacionId || !Number.isFinite(ventasTotal)) {
+    throw new Error('La respuesta de creación TPV está incompleta')
+  }
+
+  return {
+    importacion_id: importacionId,
+    ventas_total: ventasTotal,
+    procesado: Boolean(result.procesado),
+  }
 }
 
 export function parseAtomicTpvImportResult(value: unknown): AtomicTpvImportResult {
@@ -79,7 +105,7 @@ export function getAtomicTpvImportError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error || '')
 
   if (
-    /aplicar_importacion_tpv_atomica|guardar_mapeo_tpv_atomico|schema cache|could not find the function/i.test(
+    /crear_importacion_tpv_atomica|aplicar_importacion_tpv_atomica|guardar_mapeo_tpv_atomico|schema cache|could not find the function/i.test(
       message
     )
   ) {

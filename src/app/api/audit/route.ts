@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
   const { error } = await supabaseAdmin.from('auditoria').insert({
     entidad: validation.entidad,
-    entidad_id: user.id,
+    entidad_id: validation.entidadId ?? user.id,
     accion: validation.accion,
     restaurant_id: restaurantScope.currentRestaurantId,
     actor_nombre: getAuditDisplayName(user),

@@ -14,6 +14,7 @@ test('validateAuditPayload acepta acciones de sesion permitidas', () => {
     {
       ok: true,
       entidad: 'sesion',
+      entidadId: null,
       accion: 'login',
       detalle: 'Inicio correcto',
       payloadAntes: { from: 'login' },
@@ -23,7 +24,7 @@ test('validateAuditPayload acepta acciones de sesion permitidas', () => {
 })
 
 test('validateAuditPayload rechaza entidad no permitida', () => {
-  assert.deepEqual(validateAuditPayload({ entidad: 'productos', accion: 'login' }), {
+  assert.deepEqual(validateAuditPayload({ entidad: 'restaurante', accion: 'login' }), {
     ok: false,
     status: 400,
     error: 'Entidad de auditoría no válida',
@@ -47,6 +48,26 @@ test('validateAuditPayload limita detalle largo', () => {
 
   assert.equal(result.ok, true)
   assert.equal(result.ok ? result.detalle.length : 0, 1000)
+})
+
+test('validateAuditPayload acepta auditoría operativa con entidad asociada', () => {
+  assert.deepEqual(
+    validateAuditPayload({
+      entidad: 'producto',
+      entidad_id: 'producto-1',
+      accion: 'ajuste_stock',
+      detalle: 'Ajuste manual',
+    }),
+    {
+      ok: true,
+      entidad: 'producto',
+      entidadId: 'producto-1',
+      accion: 'ajuste_stock',
+      detalle: 'Ajuste manual',
+      payloadAntes: null,
+      payloadDespues: null,
+    }
+  )
 })
 
 test('getAuditDisplayName prioriza nombre completo y cae a email', () => {

@@ -4,6 +4,16 @@
 with expected_functions(function_name, expected_count, expected_args) as (
   values
     (
+      'sincronizar_usuario_restaurantes',
+      1,
+      'p_user_id uuid, p_role text, p_restaurant_ids uuid[], p_current_restaurant_id uuid'
+    ),
+    (
+      'guardar_restaurante_atomico',
+      1,
+      'p_restaurant_id uuid, p_nombre text, p_slug text, p_activo boolean'
+    ),
+    (
       'registrar_movimiento_stock_atomico',
       1,
       'p_producto_id uuid, p_tipo text, p_cantidad numeric, p_stock_objetivo numeric, p_motivo text, p_categoria_consumo text, p_origen_tipo text, p_origen_id uuid, p_restaurant_id uuid'
@@ -27,6 +37,11 @@ with expected_functions(function_name, expected_count, expected_args) as (
       'aplicar_importacion_tpv_atomica',
       1,
       'p_importacion_id uuid, p_restaurant_id uuid'
+    ),
+    (
+      'crear_importacion_tpv_atomica',
+      1,
+      'p_nombre_archivo text, p_archivo_hash text, p_ventas jsonb, p_restaurant_id uuid'
     ),
     (
       'guardar_mapeo_tpv_atomico',
@@ -75,9 +90,12 @@ function_inventory as (
     count(*)::integer as found_count,
     string_agg(pg_get_function_identity_arguments(p.oid), ' | ' order by p.oid) as found_args,
     bool_or(pg_get_functiondef(p.oid) ilike '%coalesce(nullif(trim(coalesce(p_categoria_consumo%') as stock_category_safe,
+    bool_or(pg_get_functiondef(p.oid) ilike '%delete from public.usuario_restaurantes%') as user_restaurants_sync_safe,
+    bool_or(pg_get_functiondef(p.oid) ilike '%ya existe un restaurante con ese nombre%') as restaurant_atomic_safe,
     bool_or(pg_get_functiondef(p.oid) ilike '%where x.producto_id = p.id%') as albaran_lock_safe,
     bool_or(pg_get_functiondef(p.oid) ilike '%no tienes permisos para guardar mapeos ocr%') as albaran_mapping_safe,
     bool_or(pg_get_functiondef(p.oid) ilike '%productos_sin_stock_suficiente%') as tpv_atomic_safe,
+    bool_or(pg_get_functiondef(p.oid) ilike '%no tienes permisos para crear importaciones tpv%') as tpv_create_safe,
     bool_or(pg_get_functiondef(p.oid) ilike '%no tienes permisos para guardar mapeos tpv%') as tpv_mapping_safe,
     bool_or(pg_get_functiondef(p.oid) ilike '%delete from public.recetas_lineas%') as receta_atomic_safe,
     bool_or(pg_get_functiondef(p.oid) ilike '%no tienes permisos para gestionar recetas%') as receta_estado_safe,
@@ -88,10 +106,13 @@ function_inventory as (
   where p.pronamespace = 'public'::regnamespace
     and p.proname in (
       'registrar_movimiento_stock_atomico',
+      'sincronizar_usuario_restaurantes',
+      'guardar_restaurante_atomico',
       'guardar_albaran_atomico',
       'anular_albaran_atomico',
       'guardar_mapeo_producto_atomico',
       'aplicar_importacion_tpv_atomica',
+      'crear_importacion_tpv_atomica',
       'guardar_mapeo_tpv_atomico',
       'guardar_receta_atomica',
       'cambiar_estado_receta_atomica',
@@ -111,9 +132,12 @@ select
     when i.found_count <> e.expected_count then 'REVISAR_DUPLICADA'
     when i.found_args <> e.expected_args then 'REVISAR_FIRMA'
     when e.function_name = 'registrar_movimiento_stock_atomico' and not coalesce(i.stock_category_safe, false) then 'REVISAR_VERSION_ANTIGUA'
+    when e.function_name = 'sincronizar_usuario_restaurantes' and not coalesce(i.user_restaurants_sync_safe, false) then 'REVISAR_VERSION_ANTIGUA'
+    when e.function_name = 'guardar_restaurante_atomico' and not coalesce(i.restaurant_atomic_safe, false) then 'REVISAR_VERSION_ANTIGUA'
     when e.function_name = 'guardar_albaran_atomico' and not coalesce(i.albaran_lock_safe, false) then 'REVISAR_VERSION_ANTIGUA'
     when e.function_name = 'guardar_mapeo_producto_atomico' and not coalesce(i.albaran_mapping_safe, false) then 'REVISAR_VERSION_ANTIGUA'
     when e.function_name = 'aplicar_importacion_tpv_atomica' and not coalesce(i.tpv_atomic_safe, false) then 'REVISAR_VERSION_ANTIGUA'
+    when e.function_name = 'crear_importacion_tpv_atomica' and not coalesce(i.tpv_create_safe, false) then 'REVISAR_VERSION_ANTIGUA'
     when e.function_name = 'guardar_mapeo_tpv_atomico' and not coalesce(i.tpv_mapping_safe, false) then 'REVISAR_VERSION_ANTIGUA'
     when e.function_name = 'guardar_receta_atomica' and not coalesce(i.receta_atomic_safe, false) then 'REVISAR_VERSION_ANTIGUA'
     when e.function_name = 'cambiar_estado_receta_atomica' and not coalesce(i.receta_estado_safe, false) then 'REVISAR_VERSION_ANTIGUA'

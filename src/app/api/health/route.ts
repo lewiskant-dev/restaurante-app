@@ -65,6 +65,28 @@ const RPC_CHECKS = [
     required: true,
   },
   {
+    name: 'rpc:sincronizar_usuario_restaurantes',
+    rpc: 'sincronizar_usuario_restaurantes',
+    args: {
+      p_user_id: null,
+      p_role: 'empleado',
+      p_restaurant_ids: [],
+      p_current_restaurant_id: null,
+    },
+    required: true,
+  },
+  {
+    name: 'rpc:guardar_restaurante_atomico',
+    rpc: 'guardar_restaurante_atomico',
+    args: {
+      p_restaurant_id: null,
+      p_nombre: '',
+      p_slug: '',
+      p_activo: true,
+    },
+    required: true,
+  },
+  {
     name: 'rpc:guardar_albaran_atomico',
     rpc: 'guardar_albaran_atomico',
     args: {
@@ -104,6 +126,17 @@ const RPC_CHECKS = [
     rpc: 'aplicar_importacion_tpv_atomica',
     args: {
       p_importacion_id: null,
+      p_restaurant_id: null,
+    },
+    required: true,
+  },
+  {
+    name: 'rpc:crear_importacion_tpv_atomica',
+    rpc: 'crear_importacion_tpv_atomica',
+    args: {
+      p_nombre_archivo: 'healthcheck.csv',
+      p_archivo_hash: 'healthcheck',
+      p_ventas: [],
       p_restaurant_id: null,
     },
     required: true,

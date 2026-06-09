@@ -29,6 +29,38 @@ function canManageRestaurantCatalog(role: UserRole) {
   return role === 'master'
 }
 
+function parseRestaurantRpcResult(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('La respuesta del restaurante no es válida')
+  }
+
+  const result = value as Record<string, unknown>
+  const id = String(result.id || '')
+  const nombre = String(result.nombre || '')
+  const slug = String(result.slug || '')
+
+  if (!id || !nombre || !slug || typeof result.activo !== 'boolean') {
+    throw new Error('La respuesta del restaurante está incompleta')
+  }
+
+  return {
+    id,
+    nombre,
+    slug,
+    activo: result.activo,
+  }
+}
+
+function getRestaurantRpcError(error: { message?: string } | null | undefined) {
+  const message = error?.message || ''
+
+  if (/guardar_restaurante_atomico|schema cache|could not find the function/i.test(message)) {
+    return 'Falta activar la operación segura de restaurantes. Ejecuta multi-restaurant-setup.sql en Supabase.'
+  }
+
+  return message || 'No se pudo guardar el restaurante'
+}
+
 function isMissingRelationError(error: unknown) {
   return error instanceof PostgrestError && error.code === '42P01'
 }
@@ -405,15 +437,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: uniquenessCheck.duplicateError }, { status: 409 })
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('restaurantes')
-    .insert({
-      nombre,
-      slug,
-      activo: true,
-    })
-    .select('id, nombre, slug, activo')
-    .single()
+  const { data, error } = await supabaseAdmin.rpc('guardar_restaurante_atomico', {
+    p_restaurant_id: null,
+    p_nombre: nombre,
+    p_slug: slug,
+    p_activo: true,
+  })
 
   if (error) {
     if (isMissingRelationError(error)) {
@@ -423,21 +452,31 @@ export async function POST(request: Request) {
       }, { status: 409 })
     }
 
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: getRestaurantRpcError(error) }, { status: 500 })
+  }
+
+  let restaurant: ReturnType<typeof parseRestaurantRpcResult>
+  try {
+    restaurant = parseRestaurantRpcResult(data)
+  } catch (parseError) {
+    return NextResponse.json(
+      { error: parseError instanceof Error ? parseError.message : 'Respuesta de restaurante inválida' },
+      { status: 500 }
+    )
   }
 
   await supabaseAdmin.from('auditoria').insert({
     entidad: 'restaurante',
-    entidad_id: data.id,
+    entidad_id: restaurant.id,
     accion: 'crear',
-    restaurant_id: data.id,
+    restaurant_id: restaurant.id,
     actor_nombre: getAuditDisplayName(authResult.user),
     actor_id: authResult.user.id,
-    detalle: `Restaurante creado: ${data.nombre}`,
-    payload_despues: data,
+    detalle: `Restaurante creado: ${restaurant.nombre}`,
+    payload_despues: restaurant,
   })
 
-  return NextResponse.json({ restaurant: data }, { status: 201 })
+  return NextResponse.json({ restaurant }, { status: 201 })
 }
 
 export async function PATCH(request: Request) {
@@ -577,16 +616,12 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: uniquenessCheck.duplicateError }, { status: 409 })
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('restaurantes')
-    .update({
-      nombre,
-      slug,
-      activo,
-    })
-    .eq('id', id)
-    .select('id, nombre, slug, activo')
-    .single()
+  const { data, error } = await supabaseAdmin.rpc('guardar_restaurante_atomico', {
+    p_restaurant_id: id,
+    p_nombre: nombre,
+    p_slug: slug,
+    p_activo: activo,
+  })
 
   if (error) {
     if (isMissingRelationError(error)) {
@@ -596,20 +631,30 @@ export async function PATCH(request: Request) {
       }, { status: 409 })
     }
 
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: getRestaurantRpcError(error) }, { status: 500 })
+  }
+
+  let restaurant: ReturnType<typeof parseRestaurantRpcResult>
+  try {
+    restaurant = parseRestaurantRpcResult(data)
+  } catch (parseError) {
+    return NextResponse.json(
+      { error: parseError instanceof Error ? parseError.message : 'Respuesta de restaurante inválida' },
+      { status: 500 }
+    )
   }
 
   await supabaseAdmin.from('auditoria').insert({
     entidad: 'restaurante',
-    entidad_id: data.id,
+    entidad_id: restaurant.id,
     accion: 'editar',
-    restaurant_id: data.id,
+    restaurant_id: restaurant.id,
     actor_nombre: getAuditDisplayName(authResult.user),
     actor_id: authResult.user.id,
-    detalle: `Restaurante actualizado: ${data.nombre}`,
+    detalle: `Restaurante actualizado: ${restaurant.nombre}`,
     payload_antes: beforeRestaurant,
-    payload_despues: data,
+    payload_despues: restaurant,
   })
 
-  return NextResponse.json({ restaurant: data })
+  return NextResponse.json({ restaurant })
 }

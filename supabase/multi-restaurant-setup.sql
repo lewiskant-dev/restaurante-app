@@ -273,6 +273,8 @@ using (public.user_has_restaurant_access(restaurant_id));
 
 drop policy if exists "productos read by authenticated" on public.productos;
 drop policy if exists "productos write by encargado plus" on public.productos;
+drop policy if exists "productos read by restaurant membership" on public.productos;
+drop policy if exists "productos write by restaurant encargado plus" on public.productos;
 create policy "productos read by restaurant membership"
 on public.productos
 for select
@@ -294,6 +296,8 @@ with check (
 
 drop policy if exists "proveedores read by encargado plus" on public.proveedores;
 drop policy if exists "proveedores write by admin plus" on public.proveedores;
+drop policy if exists "proveedores read by restaurant encargado plus" on public.proveedores;
+drop policy if exists "proveedores write by restaurant admin plus" on public.proveedores;
 create policy "proveedores read by restaurant encargado plus"
 on public.proveedores
 for select
@@ -318,6 +322,8 @@ with check (
 
 drop policy if exists "movimientos read by authenticated" on public.movimientos_stock;
 drop policy if exists "movimientos write by encargado plus" on public.movimientos_stock;
+drop policy if exists "movimientos read by restaurant membership" on public.movimientos_stock;
+drop policy if exists "movimientos write by restaurant encargado plus" on public.movimientos_stock;
 create policy "movimientos read by restaurant membership"
 on public.movimientos_stock
 for select
@@ -339,6 +345,8 @@ with check (
 
 drop policy if exists "albaranes read by encargado plus" on public.albaranes;
 drop policy if exists "albaranes write by encargado plus" on public.albaranes;
+drop policy if exists "albaranes read by restaurant encargado plus" on public.albaranes;
+drop policy if exists "albaranes write by restaurant encargado plus" on public.albaranes;
 create policy "albaranes read by restaurant encargado plus"
 on public.albaranes
 for select
@@ -363,6 +371,8 @@ with check (
 
 drop policy if exists "albaran lineas read by encargado plus" on public.albaran_lineas;
 drop policy if exists "albaran lineas write by encargado plus" on public.albaran_lineas;
+drop policy if exists "albaran lineas read by restaurant encargado plus" on public.albaran_lineas;
+drop policy if exists "albaran lineas write by restaurant encargado plus" on public.albaran_lineas;
 create policy "albaran lineas read by restaurant encargado plus"
 on public.albaran_lineas
 for select
@@ -387,6 +397,8 @@ with check (
 
 drop policy if exists "auditoria read by admin plus" on public.auditoria;
 drop policy if exists "auditoria insert by encargado plus" on public.auditoria;
+drop policy if exists "auditoria read by restaurant admin plus" on public.auditoria;
+drop policy if exists "auditoria insert by restaurant encargado plus" on public.auditoria;
 create policy "auditoria read by restaurant admin plus"
 on public.auditoria
 for select
@@ -407,6 +419,8 @@ with check (
 
 drop policy if exists "recetas read by admin plus" on public.recetas;
 drop policy if exists "recetas write by admin plus" on public.recetas;
+drop policy if exists "recetas read by restaurant admin plus" on public.recetas;
+drop policy if exists "recetas write by restaurant admin plus" on public.recetas;
 create policy "recetas read by restaurant admin plus"
 on public.recetas
 for select
@@ -431,6 +445,8 @@ with check (
 
 drop policy if exists "recetas lineas read by admin plus" on public.recetas_lineas;
 drop policy if exists "recetas lineas write by admin plus" on public.recetas_lineas;
+drop policy if exists "recetas lineas read by restaurant admin plus" on public.recetas_lineas;
+drop policy if exists "recetas lineas write by restaurant admin plus" on public.recetas_lineas;
 create policy "recetas lineas read by restaurant admin plus"
 on public.recetas_lineas
 for select
@@ -455,6 +471,8 @@ with check (
 
 drop policy if exists "mapeos read by admin plus" on public.mapeos_productos;
 drop policy if exists "mapeos write by admin plus" on public.mapeos_productos;
+drop policy if exists "mapeos read by restaurant admin plus" on public.mapeos_productos;
+drop policy if exists "mapeos write by restaurant admin plus" on public.mapeos_productos;
 create policy "mapeos read by restaurant admin plus"
 on public.mapeos_productos
 for select
@@ -479,6 +497,8 @@ with check (
 
 drop policy if exists "tpv importaciones read by admin plus" on public.tpv_importaciones;
 drop policy if exists "tpv importaciones write by admin plus" on public.tpv_importaciones;
+drop policy if exists "tpv importaciones read by restaurant admin plus" on public.tpv_importaciones;
+drop policy if exists "tpv importaciones write by restaurant admin plus" on public.tpv_importaciones;
 create policy "tpv importaciones read by restaurant admin plus"
 on public.tpv_importaciones
 for select
@@ -503,6 +523,8 @@ with check (
 
 drop policy if exists "tpv ventas read by admin plus" on public.tpv_ventas_crudas;
 drop policy if exists "tpv ventas write by admin plus" on public.tpv_ventas_crudas;
+drop policy if exists "tpv ventas read by restaurant admin plus" on public.tpv_ventas_crudas;
+drop policy if exists "tpv ventas write by restaurant admin plus" on public.tpv_ventas_crudas;
 create policy "tpv ventas read by restaurant admin plus"
 on public.tpv_ventas_crudas
 for select
@@ -528,8 +550,193 @@ with check (
 comment on table public.restaurantes is 'Entidad multi-tenant principal de Nexo.';
 comment on table public.usuario_restaurantes is 'Relación entre usuarios autenticados y restaurantes accesibles.';
 
+drop function if exists public.sincronizar_usuario_restaurantes(uuid, text, uuid[], uuid);
+drop function if exists public.guardar_restaurante_atomico(uuid, text, text, boolean);
+
+create or replace function public.sincronizar_usuario_restaurantes(
+  p_user_id uuid,
+  p_role text,
+  p_restaurant_ids uuid[] default array[]::uuid[],
+  p_current_restaurant_id uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  normalized_role text;
+  restaurant_id uuid;
+  unique_restaurant_ids uuid[] := array[]::uuid[];
+  inserted_count integer := 0;
+  target_current_restaurant_id uuid;
+begin
+  if p_user_id is null then
+    raise exception 'El usuario es obligatorio';
+  end if;
+
+  normalized_role := case lower(trim(coalesce(p_role, 'empleado')))
+    when 'master' then 'master'
+    when 'administrador' then 'administrador'
+    when 'admin' then 'administrador'
+    when 'encargado' then 'encargado'
+    else 'empleado'
+  end;
+
+  if p_restaurant_ids is not null then
+    foreach restaurant_id in array p_restaurant_ids loop
+      if restaurant_id is not null and not restaurant_id = any(unique_restaurant_ids) then
+        unique_restaurant_ids := array_append(unique_restaurant_ids, restaurant_id);
+      end if;
+    end loop;
+  end if;
+
+  if p_current_restaurant_id is not null and not p_current_restaurant_id = any(unique_restaurant_ids) then
+    raise exception 'El restaurante activo debe estar dentro de la asignación seleccionada';
+  end if;
+
+  if exists (
+    select 1
+    from unnest(unique_restaurant_ids) as requested(id)
+    left join public.restaurantes r on r.id = requested.id and coalesce(r.activo, true) = true
+    where r.id is null
+  ) then
+    raise exception 'Hay restaurantes seleccionados que no existen o están inactivos';
+  end if;
+
+  target_current_restaurant_id := coalesce(p_current_restaurant_id, unique_restaurant_ids[1]);
+
+  delete from public.usuario_restaurantes
+  where user_id = p_user_id;
+
+  foreach restaurant_id in array unique_restaurant_ids loop
+    insert into public.usuario_restaurantes (
+      user_id,
+      restaurant_id,
+      role,
+      is_default
+    )
+    values (
+      p_user_id,
+      restaurant_id,
+      normalized_role,
+      restaurant_id = target_current_restaurant_id
+    );
+
+    inserted_count := inserted_count + 1;
+  end loop;
+
+  return jsonb_build_object(
+    'user_id', p_user_id,
+    'role', normalized_role,
+    'restaurant_ids', coalesce(to_jsonb(unique_restaurant_ids), '[]'::jsonb),
+    'current_restaurant_id', target_current_restaurant_id,
+    'inserted', inserted_count
+  );
+end;
+$$;
+
+revoke all on function public.sincronizar_usuario_restaurantes(uuid, text, uuid[], uuid) from public;
+grant execute on function public.sincronizar_usuario_restaurantes(uuid, text, uuid[], uuid) to service_role;
+
+comment on function public.sincronizar_usuario_restaurantes(uuid, text, uuid[], uuid) is
+  'Sincroniza de forma transaccional la tabla usuario_restaurantes para un usuario.';
+
+create or replace function public.guardar_restaurante_atomico(
+  p_restaurant_id uuid,
+  p_nombre text,
+  p_slug text,
+  p_activo boolean default true
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  normalized_nombre text;
+  normalized_slug text;
+  restaurante_result public.restaurantes%rowtype;
+begin
+  normalized_nombre := nullif(trim(coalesce(p_nombre, '')), '');
+  normalized_slug := lower(nullif(trim(coalesce(p_slug, '')), ''));
+
+  if normalized_nombre is null then
+    raise exception 'El nombre del restaurante es obligatorio';
+  end if;
+
+  if normalized_slug is null then
+    raise exception 'El slug del restaurante es obligatorio';
+  end if;
+
+  if normalized_slug !~ '^[a-z0-9]+(-[a-z0-9]+)*$' then
+    raise exception 'El slug solo puede contener letras minúsculas, números y guiones intermedios';
+  end if;
+
+  if exists (
+    select 1
+    from public.restaurantes
+    where lower(nombre) = lower(normalized_nombre)
+      and (p_restaurant_id is null or id <> p_restaurant_id)
+  ) then
+    raise exception 'Ya existe un restaurante con ese nombre';
+  end if;
+
+  if exists (
+    select 1
+    from public.restaurantes
+    where slug = normalized_slug
+      and (p_restaurant_id is null or id <> p_restaurant_id)
+  ) then
+    raise exception 'El slug ya está en uso por otro restaurante';
+  end if;
+
+  if p_restaurant_id is null then
+    insert into public.restaurantes (
+      nombre,
+      slug,
+      activo
+    )
+    values (
+      normalized_nombre,
+      normalized_slug,
+      coalesce(p_activo, true)
+    )
+    returning * into restaurante_result;
+  else
+    update public.restaurantes
+    set
+      nombre = normalized_nombre,
+      slug = normalized_slug,
+      activo = coalesce(p_activo, true)
+    where id = p_restaurant_id
+    returning * into restaurante_result;
+
+    if restaurante_result.id is null then
+      raise exception 'Restaurante no encontrado';
+    end if;
+  end if;
+
+  return jsonb_build_object(
+    'id', restaurante_result.id,
+    'nombre', restaurante_result.nombre,
+    'slug', restaurante_result.slug,
+    'activo', restaurante_result.activo,
+    'editado', p_restaurant_id is not null
+  );
+end;
+$$;
+
+revoke all on function public.guardar_restaurante_atomico(uuid, text, text, boolean) from public;
+grant execute on function public.guardar_restaurante_atomico(uuid, text, text, boolean) to service_role;
+
+comment on function public.guardar_restaurante_atomico(uuid, text, text, boolean) is
+  'Crea o edita un restaurante validando nombre, slug y duplicados de forma transaccional.';
+
 drop policy if exists "authenticated read albaranes bucket" on storage.objects;
 drop policy if exists "encargado plus write albaranes bucket" on storage.objects;
+drop policy if exists "authenticated read albaranes bucket by restaurant folder" on storage.objects;
+drop policy if exists "encargado plus write albaranes bucket by restaurant folder" on storage.objects;
 
 create policy "authenticated read albaranes bucket by restaurant folder"
 on storage.objects

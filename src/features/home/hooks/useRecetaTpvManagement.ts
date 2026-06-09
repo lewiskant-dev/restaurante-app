@@ -14,6 +14,7 @@ import { formatOCRDateToInput, normalizeText, scoreRecipeMatch } from '@/feature
 import { createTpvCsvFingerprint, parseTpvCsvText } from '@/lib/tpvCsv'
 import {
   getAtomicTpvImportError,
+  parseAtomicTpvCreateResult,
   parseAtomicTpvImportResult,
   parseAtomicTpvMappingResult,
 } from '@/lib/tpvTransaction'
@@ -1147,116 +1148,37 @@ export function useRecetaTpvManagement({
     setTpvAplicando(true)
     onError('')
 
-    let createdImportacionId: string | null = null
-    let cleanupRestaurantId: string | null = null
-    let tpvApplyCompleted = false
-
     try {
       const restaurantId = requireActiveRestaurant()
       if (!restaurantId) {
         setTpvAplicando(false)
         return
       }
-      cleanupRestaurantId = restaurantId
 
       const ventas = tpvVentasCrudas
       const fileHash = tpvFileHash || (await createTpvCsvFingerprint(await tpvFile.text()))
 
-      const { data: importacionExistente, error: duplicateCheckError } = await supabase
-        .from('tpv_importaciones')
-        .select('id,procesado')
-        .eq('restaurant_id', restaurantId)
-        .eq('archivo_hash', fileHash)
-        .limit(1)
-        .maybeSingle()
-
-      const hashColumnMissing =
-        duplicateCheckError &&
-        /archivo_hash|schema cache|column .* does not exist/i.test(duplicateCheckError.message)
-
-      if (duplicateCheckError && !hashColumnMissing) {
-        throw new Error(duplicateCheckError.message)
-      }
-
-      if (importacionExistente) {
-        if (importacionExistente.procesado) {
-          throw new Error('Este CSV ya se aplicó anteriormente en el restaurante activo.')
+      const { data: createData, error: createError } = await supabase.rpc(
+        'crear_importacion_tpv_atomica',
+        {
+          p_nombre_archivo: tpvFile.name,
+          p_archivo_hash: fileHash,
+          p_ventas: ventas,
+          p_restaurant_id: restaurantId,
         }
+      )
 
-        const { error: deleteVentasPendientesError } = await supabase
-          .from('tpv_ventas_crudas')
-          .delete()
-          .eq('restaurant_id', restaurantId)
-          .eq('importacion_id', importacionExistente.id)
-
-        if (deleteVentasPendientesError) throw new Error(deleteVentasPendientesError.message)
-
-        const { error: deleteImportacionPendienteError } = await supabase
-          .from('tpv_importaciones')
-          .delete()
-          .eq('restaurant_id', restaurantId)
-          .eq('id', importacionExistente.id)
-
-        if (deleteImportacionPendienteError) throw new Error(deleteImportacionPendienteError.message)
+      if (createError) {
+        throw new Error(getAtomicTpvImportError(createError))
       }
 
-      let { data: importacion, error: importError } = await supabase
-        .from('tpv_importaciones')
-        .insert({
-          nombre_archivo: tpvFile.name,
-          procesado: false,
-          restaurant_id: restaurantId,
-          archivo_hash: fileHash,
-        })
-        .select()
-        .single()
-
-      if (importError && /archivo_hash|schema cache|column .* does not exist/i.test(importError.message)) {
-        const retry = await supabase
-          .from('tpv_importaciones')
-          .insert({
-            nombre_archivo: tpvFile.name,
-            procesado: false,
-            restaurant_id: restaurantId,
-          })
-          .select()
-          .single()
-        importacion = retry.data
-        importError = retry.error
-      }
-
-      if (importError || !importacion) {
-        if (/duplicate key|unique constraint|tpv_importaciones_restaurant_hash/i.test(importError?.message || '')) {
-          throw new Error('Este CSV ya está registrado en el restaurante activo.')
-        }
-        throw new Error(importError?.message || 'No se pudo crear la importación TPV')
-      }
-      createdImportacionId = importacion.id
-
-      const payload = ventas.map((venta) => ({
-        importacion_id: importacion.id,
-        restaurant_id: restaurantId,
-        producto_externo: venta.producto_externo,
-        cantidad: venta.cantidad,
-        fecha: venta.fecha,
-        raw: {
-          linea: venta.raw,
-          archivo: tpvFile.name,
-        },
-      }))
-
-      const { error: ventasError } = await supabase.from('tpv_ventas_crudas').insert(payload)
-      if (ventasError) throw new Error(ventasError.message)
-
-      setTpvImportacionId(importacion.id)
+      const importacion = parseAtomicTpvCreateResult(createData)
 
       let recetasQuery = supabase.from('recetas').select('*')
       let lineasQuery = supabase.from('recetas_lineas').select('*')
 
-      if (currentRestaurantId) {
-        recetasQuery = recetasQuery.eq('restaurant_id', currentRestaurantId)
-        lineasQuery = lineasQuery.eq('restaurant_id', currentRestaurantId)
-      }
+      recetasQuery = recetasQuery.eq('restaurant_id', restaurantId)
+      lineasQuery = lineasQuery.eq('restaurant_id', restaurantId)
 
       const { data: recetasData } = await recetasQuery
       const { data: lineasData } = await lineasQuery
@@ -1264,7 +1186,7 @@ export function useRecetaTpvManagement({
       const { data: tpvResultData, error: tpvApplyError } = await supabase.rpc(
         'aplicar_importacion_tpv_atomica',
         {
-          p_importacion_id: importacion.id,
+          p_importacion_id: importacion.importacion_id,
           p_restaurant_id: restaurantId,
         }
       )
@@ -1274,11 +1196,11 @@ export function useRecetaTpvManagement({
       }
 
       const tpvResult = parseAtomicTpvImportResult(tpvResultData)
-      tpvApplyCompleted = true
+      setTpvImportacionId(importacion.importacion_id)
 
       await registrarAuditoria({
         entidad: 'tpv',
-        entidad_id: importacion.id,
+        entidad_id: importacion.importacion_id,
         accion: 'importar_csv',
         detalle: `Importación TPV aplicada: ${tpvFile.name} · Líneas válidas: ${tpvResult.ventas_total} · Con receta: ${tpvResult.ventas_con_receta} · Sin receta: ${tpvResult.ventas_sin_receta} · Recetas sin ingredientes: ${tpvResult.recetas_sin_ingredientes} · Productos afectados: ${tpvResult.productos_afectados} · Consumos generados: ${tpvResult.consumos_generados}`,
         payload_despues: {
@@ -1312,26 +1234,6 @@ export function useRecetaTpvManagement({
         }`
       )
     } catch (err) {
-      if (createdImportacionId && cleanupRestaurantId && !tpvApplyCompleted) {
-        try {
-          await supabase
-            .from('tpv_ventas_crudas')
-            .delete()
-            .eq('restaurant_id', cleanupRestaurantId)
-            .eq('importacion_id', createdImportacionId)
-
-          await supabase
-            .from('tpv_importaciones')
-            .delete()
-            .eq('restaurant_id', cleanupRestaurantId)
-            .eq('id', createdImportacionId)
-
-          setTpvImportacionId(null)
-        } catch {
-          // Si la limpieza falla, mantenemos el error original visible para no ocultar la causa.
-        }
-      }
-
       onError(err instanceof Error ? err.message : 'No se pudo aplicar la importación del TPV')
     } finally {
       setTpvAplicando(false)

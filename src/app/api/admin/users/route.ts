@@ -188,28 +188,27 @@ async function syncUserRestaurantMemberships(
 ) {
   const { userId, role, restaurantIds, currentRestaurantId } = params
 
-  const { error: deleteError } = await supabaseAdmin
-    .from('usuario_restaurantes')
-    .delete()
-    .eq('user_id', userId)
+  const { error } = await supabaseAdmin.rpc('sincronizar_usuario_restaurantes', {
+    p_user_id: userId,
+    p_role: role,
+    p_restaurant_ids: restaurantIds,
+    p_current_restaurant_id: currentRestaurantId,
+  })
 
-  if (deleteError && !isMissingRelationError(deleteError)) {
-    throw deleteError
-  }
+  if (error) {
+    if (isMissingRelationError(error)) {
+      throw new Error(
+        'La tabla usuario_restaurantes todavía no existe. Ejecuta multi-restaurant-setup.sql en Supabase.'
+      )
+    }
 
-  if (!restaurantIds.length) return
+    if (/sincronizar_usuario_restaurantes|schema cache|could not find the function/i.test(error.message)) {
+      throw new Error(
+        'Falta activar la sincronización segura de usuario_restaurantes. Ejecuta multi-restaurant-setup.sql en Supabase.'
+      )
+    }
 
-  const payload = restaurantIds.map((restaurantId) => ({
-    user_id: userId,
-    restaurant_id: restaurantId,
-    role,
-    is_default: currentRestaurantId === restaurantId,
-  }))
-
-  const { error: insertError } = await supabaseAdmin.from('usuario_restaurantes').insert(payload)
-
-  if (insertError && !isMissingRelationError(insertError)) {
-    throw insertError
+    throw error
   }
 }
 

@@ -155,12 +155,15 @@ join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public'
   and p.proname in (
     'registrar_movimiento_stock_atomico',
+    'sincronizar_usuario_restaurantes',
+    'guardar_restaurante_atomico',
     'guardar_albaran_atomico',
     'anular_albaran_atomico',
     'guardar_mapeo_producto_atomico',
     'guardar_receta_atomica',
     'cambiar_estado_receta_atomica',
     'aplicar_importacion_tpv_atomica',
+    'crear_importacion_tpv_atomica',
     'guardar_mapeo_tpv_atomico',
     'crear_cierre_inventario',
     'guardar_producto_atomico',

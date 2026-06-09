@@ -96,6 +96,8 @@ Tablas obligatorias esperadas:
 
 Función obligatoria esperada:
 
+- `sincronizar_usuario_restaurantes`
+- `guardar_restaurante_atomico`
 - `registrar_movimiento_stock_atomico`
 - `guardar_albaran_atomico`
 - `anular_albaran_atomico`
@@ -103,6 +105,7 @@ Función obligatoria esperada:
 - `guardar_receta_atomica`
 - `cambiar_estado_receta_atomica`
 - `aplicar_importacion_tpv_atomica`
+- `crear_importacion_tpv_atomica`
 - `guardar_mapeo_tpv_atomico`
 - `crear_cierre_inventario`
 - `guardar_producto_atomico`
@@ -124,11 +127,14 @@ Piezas recomendadas para adjuntos e imágenes:
 Piezas obligatorias para importaciones TPV seguras:
 
 - columna `tpv_importaciones.archivo_hash` e índice único por restaurante
+- función `crear_importacion_tpv_atomica` de `tpv-reliability-setup.sql`
 - función `aplicar_importacion_tpv_atomica` de `tpv-reliability-setup.sql`
 - función `guardar_mapeo_tpv_atomico` de `tpv-reliability-setup.sql`
 
 Operaciones obligatorias para mantener stock e historial sincronizados:
 
+- función `sincronizar_usuario_restaurantes` de `multi-restaurant-setup.sql`
+- función `guardar_restaurante_atomico` de `multi-restaurant-setup.sql`
 - función `guardar_producto_atomico` de `product-reliability-setup.sql`
 - función `cambiar_estado_producto_atomico` de `product-reliability-setup.sql`
 - función `guardar_proveedor_atomico` de `proveedor-reliability-setup.sql`
@@ -139,6 +145,7 @@ Operaciones obligatorias para mantener stock e historial sincronizados:
 - función `guardar_receta_atomica` de `receta-reliability-setup.sql`
 - función `cambiar_estado_receta_atomica` de `receta-reliability-setup.sql`
 - función `guardar_mapeo_tpv_atomico` de `tpv-reliability-setup.sql`
+- función `crear_importacion_tpv_atomica` de `tpv-reliability-setup.sql`
 - función `aplicar_importacion_tpv_atomica` de `tpv-reliability-setup.sql`
 - función `crear_cierre_inventario` de `restaurant-finance-setup.sql`
 
