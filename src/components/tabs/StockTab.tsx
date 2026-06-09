@@ -669,7 +669,7 @@ export default function StockTab({
                         key={producto.id}
                         className="relative border-b border-slate-100 last:border-b-0 focus-within:z-20 hover:z-10 hover:bg-slate-50/50"
                       >
-                        <td className="relative min-w-0 py-3 pl-4 pr-3">
+                        <td className="relative min-w-0 align-middle py-3 pl-4 pr-3">
                           <button
                             type="button"
                             onClick={() =>
@@ -677,7 +677,7 @@ export default function StockTab({
                                 ? onOpenEditarProducto(producto)
                                 : undefined
                             }
-                            className="flex min-w-0 items-center gap-3 text-left"
+                            className="flex w-full min-w-0 items-center gap-3 text-left"
                           >
                             <ProductCategoryBadge
                               category={producto.categoria || 'Otros'}
@@ -686,7 +686,7 @@ export default function StockTab({
                               size="md"
                             />
                             <div className="min-w-0 flex-1">
-                              <div className="truncate text-[13px] font-semibold text-slate-900">
+                              <div className="max-w-full break-words text-[13px] font-semibold leading-snug text-slate-900 [overflow-wrap:anywhere]">
                                 {producto.nombre}
                               </div>
                               <div className="truncate text-[12px] text-slate-500">
