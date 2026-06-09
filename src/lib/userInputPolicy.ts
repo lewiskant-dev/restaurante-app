@@ -6,6 +6,13 @@ export function normalizeEmailAddress(value: string) {
   return value.trim().toLowerCase()
 }
 
+export function normalizeSearchText(value: string) {
+  return sanitizeSingleLine(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
 export function validateDisplayName(value: string) {
   const normalized = sanitizeSingleLine(value)
 

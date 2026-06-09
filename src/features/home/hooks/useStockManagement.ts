@@ -15,6 +15,7 @@ import { todayLocalInputDate } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
 import { getAtomicProductError, parseAtomicProductResult } from '@/lib/productTransaction'
 import { getAtomicStockMovementError, parseAtomicStockMovementResult } from '@/lib/stockMovement'
+import { normalizeSearchText } from '@/lib/userInputPolicy'
 import type { Producto } from '@/types'
 import type { ConfirmActionRequest } from '@/components/ui/ConfirmActionDialog'
 
@@ -84,7 +85,7 @@ export function useStockManagement({
   }
 
   const productosFiltrados = useMemo(() => {
-    const q = deferredBusqueda.trim().toLowerCase()
+    const q = normalizeSearchText(deferredBusqueda)
     return productos
       .filter((p) => {
         if (productoEstado === 'activos' && p.archivado) return false
@@ -103,22 +104,22 @@ export function useStockManagement({
       .filter((p) => {
         if (!q) return true
 
-        const nombre = p.nombre?.toLowerCase() ?? ''
-        const categoria = normalizeProductCategory(p.categoria || 'Otros').toLowerCase()
-        const referencia = p.referencia?.toLowerCase() ?? ''
+        const nombre = normalizeSearchText(p.nombre ?? '')
+        const categoria = normalizeSearchText(normalizeProductCategory(p.categoria || 'Otros'))
+        const referencia = normalizeSearchText(p.referencia ?? '')
 
         return nombre.includes(q) || categoria.includes(q) || referencia.includes(q)
       })
   }, [productos, deferredBusqueda, productoEstado, categoriaFiltro, unidadFiltro])
 
   const movimientosFiltrados = useMemo(() => {
-    const q = deferredBusquedaMov.trim().toLowerCase()
+    const q = normalizeSearchText(deferredBusquedaMov)
     return movimientos.filter((m) => {
       if (!q) return true
 
-      const nombre = m.productos?.nombre?.toLowerCase() ?? ''
-      const motivo = m.motivo?.toLowerCase() ?? ''
-      const tipo = m.tipo?.toLowerCase() ?? ''
+      const nombre = normalizeSearchText(m.productos?.nombre ?? '')
+      const motivo = normalizeSearchText(m.motivo ?? '')
+      const tipo = normalizeSearchText(m.tipo ?? '')
 
       return nombre.includes(q) || motivo.includes(q) || tipo.includes(q)
     })

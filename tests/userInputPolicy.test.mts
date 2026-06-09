@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   normalizeEmailAddress,
+  normalizeSearchText,
   sanitizeSingleLine,
   validateDisplayName,
   validateEmailAddress,
@@ -14,6 +15,11 @@ test('sanitizeSingleLine compacta espacios y saltos de linea', () => {
 
 test('normalizeEmailAddress normaliza email', () => {
   assert.equal(normalizeEmailAddress('  Persona@Example.COM  '), 'persona@example.com')
+})
+
+test('normalizeSearchText permite buscar sin tildes', () => {
+  assert.equal(normalizeSearchText('  Jardín  Central  '), 'jardin central')
+  assert.equal(normalizeSearchText('VINYES DOMÈNECH'), 'vinyes domenech')
 })
 
 test('validateDisplayName exige nombre razonable', () => {
