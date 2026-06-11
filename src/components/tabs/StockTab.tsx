@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/primitives'
 import type { Producto } from '@/types'
 import { formatCantidad, getNivel } from '@/features/home/utils'
+import type { ProductoEstadoFiltro } from '@/features/home/hooks/useStockManagement'
 
 const STOCK_PAGE_SIZE = 12
 
@@ -31,13 +32,13 @@ type StockTabProps = {
   unidadFiltro: string
   categoriasProducto: string[]
   unidadesProducto: string[]
-  productoEstado: 'activos' | 'archivados' | 'todos'
+  productoEstado: ProductoEstadoFiltro
   loadingProductos: boolean
   productosFiltrados: Producto[]
   onBusquedaChange: (value: string) => void
   onCategoriaFiltroChange: (value: string) => void
   onUnidadFiltroChange: (value: string) => void
-  onProductoEstadoChange: (value: 'activos' | 'archivados' | 'todos') => void
+  onProductoEstadoChange: (value: ProductoEstadoFiltro) => void
   onNuevoProducto: () => void
   onOpenCategorias: () => void
   onExportar: () => void
@@ -450,11 +451,12 @@ export default function StockTab({
                 value={productoEstado}
                 onChange={(e) => {
                   setCurrentPage(1)
-                  onProductoEstadoChange(e.target.value as 'activos' | 'archivados' | 'todos')
+                  onProductoEstadoChange(e.target.value as ProductoEstadoFiltro)
                 }}
                 className="mt-1 w-full bg-transparent text-[13px] font-medium capitalize text-slate-800 outline-none"
               >
                 <option value="activos">Activos</option>
+                <option value="stock_bajo">Stock bajo</option>
                 <option value="archivados">Archivados</option>
                 <option value="todos">Todos</option>
               </select>
@@ -548,12 +550,13 @@ export default function StockTab({
                   value={productoEstado}
                   onChange={(e) => {
                     setCurrentPage(1)
-                    onProductoEstadoChange(e.target.value as 'activos' | 'archivados' | 'todos')
+                    onProductoEstadoChange(e.target.value as ProductoEstadoFiltro)
                   }}
                   className="bg-transparent outline-none"
                 >
                   <option value="todos">Estado</option>
                   <option value="activos">Activos</option>
+                  <option value="stock_bajo">Stock bajo</option>
                   <option value="archivados">Archivados</option>
                 </select>
               </label>

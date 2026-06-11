@@ -1,6 +1,21 @@
 -- Gestiona productos desde una RPC con restaurante explícito.
 -- Requiere multi-restaurant-setup.sql, restaurant-finance-setup.sql y product-media-setup.sql.
 
+create or replace function public.normalizar_referencia_producto(value text)
+returns text
+language sql
+immutable
+as $$
+  select regexp_replace(lower(coalesce(value, '')), '[^[:alnum:]]', '', 'g')
+$$;
+
+create unique index if not exists productos_restaurant_referencia_unique_idx
+  on public.productos (
+    restaurant_id,
+    public.normalizar_referencia_producto(referencia)
+  )
+  where public.normalizar_referencia_producto(referencia) <> '';
+
 drop function if exists public.guardar_producto_atomico(uuid, text, text, text, numeric, numeric, numeric, text, text, uuid);
 drop function if exists public.cambiar_estado_producto_atomico(uuid, boolean, uuid);
 
@@ -24,6 +39,8 @@ as $$
 declare
   target_restaurant_id uuid;
   producto_result public.productos%rowtype;
+  producto_referencia_duplicada public.productos%rowtype;
+  referencia_normalizada text;
 begin
   target_restaurant_id := coalesce(p_restaurant_id, public.current_restaurant_id());
 
@@ -47,6 +64,25 @@ begin
 
   if coalesce(p_coste_unitario, 0) < 0 then
     raise exception 'El coste unitario no puede ser negativo';
+  end if;
+
+  referencia_normalizada := public.normalizar_referencia_producto(p_referencia);
+
+  if referencia_normalizada <> '' then
+    select *
+    into producto_referencia_duplicada
+    from public.productos
+    where restaurant_id = target_restaurant_id
+      and id is distinct from p_producto_id
+      and public.normalizar_referencia_producto(referencia) = referencia_normalizada
+    limit 1;
+
+    if producto_referencia_duplicada.id is not null then
+      raise exception 'Ya existe un producto con la referencia "%": %',
+        trim(coalesce(p_referencia, '')),
+        producto_referencia_duplicada.nombre
+        using errcode = '23505';
+    end if;
   end if;
 
   if p_producto_id is not null then

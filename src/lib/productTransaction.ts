@@ -25,5 +25,9 @@ export function getAtomicProductError(error: unknown) {
     return 'Falta activar la operación segura de productos en Supabase. Aplica product-reliability-setup.sql.'
   }
 
+  if (/referencia|productos_restaurant_referencia_unique_idx|duplicate key|23505/i.test(message)) {
+    return 'No se puede guardar: ya existe un producto con esa referencia en este restaurante.'
+  }
+
   return message || 'No se pudo guardar el producto'
 }

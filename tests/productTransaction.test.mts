@@ -30,3 +30,12 @@ test('getAtomicProductError explica cuando falta la RPC', () => {
     /product-reliability-setup.sql/
   )
 })
+
+test('getAtomicProductError explica referencias duplicadas', () => {
+  assert.match(
+    getAtomicProductError(
+      new Error('duplicate key value violates unique constraint "productos_restaurant_referencia_unique_idx"')
+    ),
+    /ya existe un producto con esa referencia/
+  )
+})

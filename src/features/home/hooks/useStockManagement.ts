@@ -13,6 +13,10 @@ import {
 import { parseDecimalInput } from '@/lib/numberInput'
 import { todayLocalInputDate } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
+import {
+  findProductWithSameName,
+  findProductWithSameReference,
+} from '@/lib/productDuplicateValidation'
 import { getAtomicProductError, parseAtomicProductResult } from '@/lib/productTransaction'
 import { getAtomicStockMovementError, parseAtomicStockMovementResult } from '@/lib/stockMovement'
 import { normalizeSearchText } from '@/lib/userInputPolicy'
@@ -37,6 +41,8 @@ type UseStockManagementOptions = {
   confirmAction?: (request: ConfirmActionRequest) => Promise<boolean>
 }
 
+export type ProductoEstadoFiltro = 'activos' | 'archivados' | 'todos' | 'stock_bajo'
+
 export function useStockManagement({
   currentRestaurantId,
   onError,
@@ -53,9 +59,7 @@ export function useStockManagement({
   const [categoriaFiltro, setCategoriaFiltro] = useState('todas')
   const [unidadFiltro, setUnidadFiltro] = useState('todas')
   const [busquedaMov, setBusquedaMov] = useState('')
-  const [productoEstado, setProductoEstado] = useState<'activos' | 'archivados' | 'todos'>(
-    'activos'
-  )
+  const [productoEstado, setProductoEstado] = useState<ProductoEstadoFiltro>('activos')
   const [productoModalOpen, setProductoModalOpen] = useState(false)
   const [categoriasModalOpen, setCategoriasModalOpen] = useState(false)
   const [productoSaving, setProductoSaving] = useState(false)
@@ -90,6 +94,12 @@ export function useStockManagement({
       .filter((p) => {
         if (productoEstado === 'activos' && p.archivado) return false
         if (productoEstado === 'archivados' && !p.archivado) return false
+        if (
+          productoEstado === 'stock_bajo' &&
+          (p.archivado || p.stock_minimo <= 0 || p.stock_actual > p.stock_minimo)
+        ) {
+          return false
+        }
         if (
           categoriaFiltro !== 'todas' &&
           normalizeProductCategory(p.categoria || 'Otros') !== categoriaFiltro
@@ -365,6 +375,42 @@ export function useStockManagement({
       coste_unitario: costeUnitario,
       referencia: productoForm.referencia.trim(),
       imagen_url: productoForm.imagen_url.trim() || null,
+    }
+
+    const productoMismaReferencia = findProductWithSameReference({
+      products: productos,
+      productId: productoEditId,
+      name: String(payload.nombre),
+      reference: String(payload.referencia),
+    })
+
+    if (productoMismaReferencia) {
+      onError(
+        `No se puede guardar: la referencia "${payload.referencia}" ya existe en "${productoMismaReferencia.nombre}".`
+      )
+      setProductoSaving(false)
+      return
+    }
+
+    const productoMismoNombre = findProductWithSameName({
+      products: productos,
+      productId: productoEditId,
+      name: String(payload.nombre),
+    })
+
+    if (productoMismoNombre) {
+      const ok = await confirmAction?.({
+        title: 'Producto con nombre similar',
+        description: `Ya existe un producto llamado "${productoMismoNombre.nombre}". Puedes continuar si realmente quieres crear o guardar otro producto con el mismo nombre, pero revisa que no sea un duplicado.`,
+        confirmLabel: 'Guardar igualmente',
+        cancelLabel: 'Revisar producto',
+        tone: 'primary',
+      })
+
+      if (!ok) {
+        setProductoSaving(false)
+        return
+      }
     }
 
     try {

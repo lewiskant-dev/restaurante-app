@@ -100,7 +100,10 @@ function_inventory as (
     bool_or(pg_get_functiondef(p.oid) ilike '%delete from public.recetas_lineas%') as receta_atomic_safe,
     bool_or(pg_get_functiondef(p.oid) ilike '%no tienes permisos para gestionar recetas%') as receta_estado_safe,
     bool_or(pg_get_functiondef(p.oid) ilike '%coalesce(p_restaurant_id, public.current_restaurant_id%') as cierre_restaurant_safe,
-    bool_or(pg_get_functiondef(p.oid) ilike '%no tienes permisos para gestionar productos%') as producto_atomic_safe,
+    bool_or(
+      pg_get_functiondef(p.oid) ilike '%no tienes permisos para gestionar productos%'
+      and pg_get_functiondef(p.oid) ilike '%producto_referencia_duplicada%'
+    ) as producto_atomic_safe,
     bool_or(pg_get_functiondef(p.oid) ilike '%no tienes permisos para gestionar proveedores%') as proveedor_atomic_safe
   from pg_proc p
   where p.pronamespace = 'public'::regnamespace
@@ -190,5 +193,44 @@ from (values (true)) as expected(exists_marker)
 left join pg_constraint con
   on con.conrelid = 'public.movimientos_stock'::regclass
  and con.conname = 'movimientos_stock_categoria_consumo_check'
+
+union all
+
+select
+  'INDICE' as bloque,
+  'productos_restaurant_referencia_unique_idx' as elemento,
+  case
+    when idx.indexname is null then 'FALTA'
+    else 'OK'
+  end as estado,
+  coalesce(idx.indexdef, 'No encontrado') as detalle
+from (values (true)) as expected(exists_marker)
+left join pg_indexes idx
+  on idx.schemaname = 'public'
+ and idx.tablename = 'productos'
+ and idx.indexname = 'productos_restaurant_referencia_unique_idx'
+
+union all
+
+select
+  'DATOS' as bloque,
+  'productos.referencias_duplicadas' as elemento,
+  case
+    when count(*) = 0 then 'OK'
+    else 'REVISAR'
+  end as estado,
+  case
+    when count(*) = 0 then 'Sin duplicados'
+    else 'duplicados=' || count(*)::text
+  end as detalle
+from (
+  select
+    restaurant_id,
+    regexp_replace(lower(coalesce(referencia, '')), '[^[:alnum:]]', '', 'g') as referencia_normalizada
+  from public.productos
+  where regexp_replace(lower(coalesce(referencia, '')), '[^[:alnum:]]', '', 'g') <> ''
+  group by restaurant_id, regexp_replace(lower(coalesce(referencia, '')), '[^[:alnum:]]', '', 'g')
+  having count(*) > 1
+) duplicates
 
 order by bloque, elemento;
