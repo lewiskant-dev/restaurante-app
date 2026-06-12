@@ -88,6 +88,7 @@ export function useRecetaTpvManagement({
     {}
   )
   const [tpvGuardandoMapeo, setTpvGuardandoMapeo] = useState('')
+  const [tpvArticulosIgnorados, setTpvArticulosIgnorados] = useState<string[]>([])
   const [tpvAnaliticaRange, setTpvAnaliticaRange] = useState<'7d' | '30d' | '90d'>('30d')
   const [tpvAnalitica, setTpvAnalitica] = useState<TpvAnaliticaResumen>({
     range_key: '30d',
@@ -127,6 +128,7 @@ export function useRecetaTpvManagement({
   }
 
   const tpvPendientesMapeo = useMemo(() => {
+    const ignoredKeys = new Set(tpvArticulosIgnorados)
     const recetasActivas = recetas.filter((receta) => receta.activo !== false)
     const recetasMap = new Map(
       recetasActivas
@@ -141,7 +143,7 @@ export function useRecetaTpvManagement({
 
     tpvVentasCrudas.forEach((venta) => {
       const key = normalizeText(venta.producto_externo)
-      if (!key || recetasMap.has(key)) return
+      if (!key || ignoredKeys.has(key) || recetasMap.has(key)) return
 
       const existente = agrupadas.get(key)
       const sugerencias = [...recetasActivas]
@@ -165,7 +167,34 @@ export function useRecetaTpvManagement({
     return Array.from(agrupadas.values()).sort((a, b) =>
       a.producto_externo.localeCompare(b.producto_externo)
     )
-  }, [tpvVentasCrudas, recetas])
+  }, [tpvArticulosIgnorados, tpvVentasCrudas, recetas])
+
+  const tpvIgnoredSummary = useMemo(() => {
+    const ignoredKeys = new Set(tpvArticulosIgnorados)
+    const ignoredArticles = new Map<string, { producto_externo: string; cantidad: number; lineas: number }>()
+
+    tpvVentasCrudas.forEach((venta) => {
+      const key = normalizeText(venta.producto_externo)
+      if (!key || !ignoredKeys.has(key)) return
+
+      const current = ignoredArticles.get(key) ?? {
+        producto_externo: venta.producto_externo,
+        cantidad: 0,
+        lineas: 0,
+      }
+      current.cantidad += Number(venta.cantidad || 0)
+      current.lineas += 1
+      ignoredArticles.set(key, current)
+    })
+
+    return {
+      articulos: Array.from(ignoredArticles.values()).sort((a, b) =>
+        a.producto_externo.localeCompare(b.producto_externo)
+      ),
+      lineas: Array.from(ignoredArticles.values()).reduce((acc, item) => acc + item.lineas, 0),
+      unidades: Array.from(ignoredArticles.values()).reduce((acc, item) => acc + item.cantidad, 0),
+    }
+  }, [tpvArticulosIgnorados, tpvVentasCrudas])
 
   const recetasEnriquecidas = useMemo(() => {
     const productosMap = new Map(productos.map((producto) => [producto.id, producto]))
@@ -863,6 +892,20 @@ export function useRecetaTpvManagement({
     setRecetaModalOpen(true)
   }
 
+  function openCrearRecetaDesdeTpv(productoExterno: string) {
+    if (!requirePermission('receta_manage', 'No tienes permisos para gestionar recetas')) {
+      return
+    }
+
+    const nombre = productoExterno.trim()
+    resetRecetaForm()
+    setRecetaNombre(nombre)
+    setRecetaNombreTPV(nombre)
+    setRecetaActiva(true)
+    onError('')
+    setRecetaModalOpen(true)
+  }
+
   async function openEditarReceta(receta: Receta) {
     if (!requirePermission('receta_manage', 'No tienes permisos para gestionar recetas')) {
       return
@@ -1084,6 +1127,9 @@ export function useRecetaTpvManagement({
         [productoExterno]: result.receta_id,
         [result.nombre_tpv]: result.receta_id,
       }))
+      setTpvArticulosIgnorados((prev) =>
+        prev.filter((key) => key !== normalizeText(productoExterno))
+      )
       await loadRecetas()
       onToast(`Mapeo guardado para ${result.nombre_tpv}`)
     } catch (err) {
@@ -1093,12 +1139,34 @@ export function useRecetaTpvManagement({
     }
   }
 
+  function ignorarArticuloTPV(productoExterno: string) {
+    const key = normalizeText(productoExterno)
+    if (!key) return
+
+    setTpvArticulosIgnorados((prev) => (prev.includes(key) ? prev : [...prev, key]))
+    setTpvMapeosSeleccionados((prev) => {
+      const next = { ...prev }
+      delete next[productoExterno]
+      return next
+    })
+    onToast(`Artículo ignorado: ${productoExterno}`)
+  }
+
+  function restaurarArticuloTPV(productoExterno: string) {
+    const key = normalizeText(productoExterno)
+    if (!key) return
+
+    setTpvArticulosIgnorados((prev) => prev.filter((item) => item !== key))
+    onToast(`Artículo recuperado: ${productoExterno}`)
+  }
+
   function selectTpvFile(file: File | null) {
     setTpvFile(file)
     setTpvVentasCrudas([])
     setTpvFileHash('')
     setTpvImportacionId(null)
     setTpvMapeosSeleccionados({})
+    setTpvArticulosIgnorados([])
   }
 
   async function importarCSVTPV() {
@@ -1155,7 +1223,15 @@ export function useRecetaTpvManagement({
         return
       }
 
-      const ventas = tpvVentasCrudas
+      const ignoredKeys = new Set(tpvArticulosIgnorados)
+      const ventas = tpvVentasCrudas.filter(
+        (venta) => !ignoredKeys.has(normalizeText(venta.producto_externo))
+      )
+
+      if (ventas.length === 0) {
+        throw new Error('No hay líneas TPV aplicables. Recupera algún artículo ignorado o carga otro CSV.')
+      }
+
       const fileHash = tpvFileHash || (await createTpvCsvFingerprint(await tpvFile.text()))
 
       const { data: createData, error: createError } = await supabase.rpc(
@@ -1202,10 +1278,12 @@ export function useRecetaTpvManagement({
         entidad: 'tpv',
         entidad_id: importacion.importacion_id,
         accion: 'importar_csv',
-        detalle: `Importación TPV aplicada: ${tpvFile.name} · Líneas válidas: ${tpvResult.ventas_total} · Con receta: ${tpvResult.ventas_con_receta} · Sin receta: ${tpvResult.ventas_sin_receta} · Recetas sin ingredientes: ${tpvResult.recetas_sin_ingredientes} · Productos afectados: ${tpvResult.productos_afectados} · Consumos generados: ${tpvResult.consumos_generados}`,
+        detalle: `Importación TPV aplicada: ${tpvFile.name} · Líneas válidas: ${tpvResult.ventas_total} · Ignoradas: ${tpvIgnoredSummary.lineas} · Con receta: ${tpvResult.ventas_con_receta} · Sin receta: ${tpvResult.ventas_sin_receta} · Recetas sin ingredientes: ${tpvResult.recetas_sin_ingredientes} · Productos afectados: ${tpvResult.productos_afectados} · Consumos generados: ${tpvResult.consumos_generados}`,
         payload_despues: {
           archivo: tpvFile.name,
           filas: tpvResult.ventas_total,
+          filas_ignoradas: tpvIgnoredSummary.lineas,
+          articulos_ignorados: tpvIgnoredSummary.articulos,
           ventas_con_receta: tpvResult.ventas_con_receta,
           ventas_sin_receta: tpvResult.ventas_sin_receta,
           recetas_sin_ingredientes: tpvResult.recetas_sin_ingredientes,
@@ -1252,6 +1330,7 @@ export function useRecetaTpvManagement({
     setTpvFileHash('')
     setTpvImportaciones([])
     setTpvMapeosSeleccionados({})
+    setTpvArticulosIgnorados([])
     setTpvGuardandoMapeo('')
   }
 
@@ -1274,6 +1353,8 @@ export function useRecetaTpvManagement({
     tpvImportacionId,
     tpvImportaciones,
     tpvMapeosSeleccionados,
+    tpvArticulosIgnorados,
+    tpvIgnoredSummary,
     tpvGuardandoMapeo,
     tpvAnaliticaRange,
     tpvPendientesMapeo,
@@ -1293,10 +1374,13 @@ export function useRecetaTpvManagement({
     removeRecetaLinea,
     updateRecetaLinea,
     openCrearReceta,
+    openCrearRecetaDesdeTpv,
     openEditarReceta,
     guardarReceta,
     toggleActivaReceta,
     guardarMapeoTPV,
+    ignorarArticuloTPV,
+    restaurarArticuloTPV,
     importarCSVTPV,
     aplicarImportacionTPV,
     resetRecetaTpvState,

@@ -22,6 +22,11 @@ type TpvTabProps = {
   tpvImportacionId: string | null
   tpvImportaciones: TpvImportacion[]
   tpvPendientesMapeo: PendienteMapeo[]
+  tpvIgnoredSummary: {
+    articulos: Array<{ producto_externo: string; cantidad: number; lineas: number }>
+    lineas: number
+    unidades: number
+  }
   tpvMapeosSeleccionados: Record<string, string>
   tpvGuardandoMapeo: string
   tpvAnaliticaRange: '7d' | '30d' | '90d'
@@ -34,6 +39,9 @@ type TpvTabProps = {
   onAnaliticaRangeChange: (value: '7d' | '30d' | '90d') => void
   onMapeoSeleccionadoChange: (productoExterno: string, recetaId: string) => void
   onGuardarMapeo: (productoExterno: string, recetaId: string) => void
+  onCrearRecetaDesdeTpv: (productoExterno: string) => void
+  onIgnorarArticulo: (productoExterno: string) => void
+  onRestaurarArticulo: (productoExterno: string) => void
 }
 
 export function TpvTab({
@@ -43,6 +51,7 @@ export function TpvTab({
   tpvImportacionId,
   tpvImportaciones,
   tpvPendientesMapeo,
+  tpvIgnoredSummary,
   tpvMapeosSeleccionados,
   tpvGuardandoMapeo,
   tpvAnaliticaRange,
@@ -55,6 +64,9 @@ export function TpvTab({
   onAnaliticaRangeChange,
   onMapeoSeleccionadoChange,
   onGuardarMapeo,
+  onCrearRecetaDesdeTpv,
+  onIgnorarArticulo,
+  onRestaurarArticulo,
 }: TpvTabProps) {
   const recetasTpvMap = new Set(
     recetas
@@ -89,6 +101,7 @@ export function TpvTab({
     0
   )
   const articulosMapeados = ventasResumen.filter((item) => item.mapeado).length
+  const hasTheoreticalConsumption = tpvAnalitica.consumo_teorico_total > 0.01
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -248,6 +261,16 @@ export function TpvTab({
             </div>
           ) : null}
 
+          <div>
+            <h4 className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
+              Desviaciones por producto
+            </h4>
+            <p className="mt-1 text-[11px] leading-5 text-slate-500 sm:text-[12px]">
+              Compara lo que debería haberse consumido según ventas TPV y recetas frente a lo
+              registrado como consumo real de stock.
+            </p>
+          </div>
+
           {tpvAnalitica.productos.length === 0 ? (
             <div className="rounded-[18px] border border-dashed border-slate-200 bg-white px-4 py-8 text-center">
               <div className="text-sm font-semibold text-slate-700">
@@ -255,6 +278,17 @@ export function TpvTab({
               </div>
               <p className="mx-auto mt-1 max-w-md text-[12px] leading-5 text-slate-500">
                 Importa ventas TPV y vincula recetas para calcular desviaciones operativas.
+              </p>
+            </div>
+          ) : !hasTheoreticalConsumption ? (
+            <div className="rounded-[18px] border border-dashed border-amber-200 bg-amber-50 px-4 py-6 text-center">
+              <div className="text-sm font-semibold text-amber-900">
+                Aún no hay consumo teórico calculado
+              </div>
+              <p className="mx-auto mt-1 max-w-xl text-[12px] leading-5 text-amber-800">
+                Hay consumos reales registrados, pero todavía no existe una comparación útil desde
+                TPV. Mapea los artículos del CSV con recetas activas y asegúrate de que esas recetas
+                tengan ingredientes configurados.
               </p>
             </div>
           ) : (
@@ -690,7 +724,10 @@ export function TpvTab({
           <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
             Pendientes de mapear
           </h3>
-          <div className="text-[12px] text-slate-500">{tpvPendientesMapeo.length} artículo(s)</div>
+          <div className="text-[12px] text-slate-500">
+            {tpvPendientesMapeo.length} pendiente(s)
+            {tpvIgnoredSummary.articulos.length ? ` · ${tpvIgnoredSummary.articulos.length} ignorado(s)` : ''}
+          </div>
         </div>
 
         {tpvVentasCrudas.length === 0 ? (
@@ -699,7 +736,9 @@ export function TpvTab({
           </div>
         ) : tpvPendientesMapeo.length === 0 ? (
           <div className="py-8 text-center text-sm font-semibold text-emerald-600">
-            Todo lo cargado tiene receta asociada. Ya puedes aplicar la importación.
+            {tpvIgnoredSummary.articulos.length
+              ? 'No quedan artículos pendientes. Los ignorados no se aplicarán al stock.'
+              : 'Todo lo cargado tiene receta asociada. Ya puedes aplicar la importación.'}
           </div>
         ) : (
           <div className="space-y-3">
@@ -719,7 +758,7 @@ export function TpvTab({
                   </div>
                 </div>
 
-                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto]">
+                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto_auto]">
                   <select
                     value={
                       tpvMapeosSeleccionados[item.producto_externo] || item.sugerencias[0]?.id || ''
@@ -746,6 +785,22 @@ export function TpvTab({
                   </select>
 
                   <button
+                    type="button"
+                    onClick={() => onCrearRecetaDesdeTpv(item.producto_externo)}
+                    className={`px-4 py-2.5 text-[12px] sm:py-2.5 sm:text-[13px] ${ghostButton}`}
+                  >
+                    Crear receta
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onIgnorarArticulo(item.producto_externo)}
+                    className="rounded-[16px] bg-amber-50 px-4 py-2.5 text-[12px] font-semibold text-amber-700 transition hover:bg-amber-100 sm:py-2.5 sm:text-[13px]"
+                  >
+                    Ignorar
+                  </button>
+
+                  <button
                     onClick={() =>
                       onGuardarMapeo(
                         item.producto_externo,
@@ -762,6 +817,33 @@ export function TpvTab({
             ))}
           </div>
         )}
+
+        {tpvIgnoredSummary.articulos.length > 0 ? (
+          <div className="mt-4 rounded-[18px] border border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-[13px] font-semibold text-amber-900">
+                  Artículos ignorados en esta importación
+                </div>
+                <div className="mt-1 text-[12px] text-amber-800">
+                  {tpvIgnoredSummary.lineas} línea(s) · {formatCantidad(tpvIgnoredSummary.unidades)} unidades no se aplicarán al stock.
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {tpvIgnoredSummary.articulos.map((item) => (
+                <button
+                  key={item.producto_externo}
+                  type="button"
+                  onClick={() => onRestaurarArticulo(item.producto_externo)}
+                  className="rounded-full border border-amber-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-amber-800 shadow-sm transition hover:border-amber-300 hover:bg-amber-100"
+                >
+                  Recuperar {item.producto_externo}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="rounded-[18px] bg-amber-50 p-3 text-[12px] text-slate-700 shadow-sm sm:rounded-[20px] sm:text-[13px]">

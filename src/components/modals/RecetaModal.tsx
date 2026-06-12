@@ -2,6 +2,7 @@
 
 import type { RecetaLineaForm } from '@/features/home/types'
 import { fieldShell, ghostButton, primaryGradientButton, softPanel } from '@/components/ui/primitives'
+import { formatEuro } from '@/features/home/utils'
 import type { Producto } from '@/types'
 
 type RecetaModalProps = {
@@ -50,6 +51,16 @@ export function RecetaModal({
   onGuardar,
 }: RecetaModalProps) {
   if (!open) return null
+
+  const productosById = new Map(productos.map((producto) => [producto.id, producto]))
+  const raciones = Number(recetaRaciones) > 0 ? Number(recetaRaciones) : 1
+  const precioVenta = recetaPrecioVenta === '' ? 0 : Number(recetaPrecioVenta)
+  const recetaCosteTeorico = recetaLineas.reduce((acc, linea) => {
+    const producto = productosById.get(linea.producto_id)
+    return acc + Number(linea.cantidad || 0) * Number(producto?.coste_unitario || 0)
+  }, 0)
+  const costePorRacion = recetaCosteTeorico / raciones
+  const margenEstimado = precioVenta - costePorRacion
 
   return (
     <div
@@ -141,43 +152,95 @@ export function RecetaModal({
             </div>
 
             <div className="space-y-3">
-              {recetaLineas.map((linea, index) => (
-                <div key={index} className="rounded-[18px] border border-slate-200 bg-white p-3">
-                  <div className="space-y-3">
-                    <select
-                      value={linea.producto_id}
-                      onChange={(e) => onLineaChange(index, 'producto_id', e.target.value)}
-                      className={`w-full px-4 py-3 text-base text-slate-900 ${fieldShell}`}
-                    >
-                      <option value="">Selecciona producto</option>
-                      {productos
-                        .filter((prod) => !prod.archivado)
-                        .map((prod) => (
-                          <option key={prod.id} value={prod.id}>
-                            {prod.nombre}
-                          </option>
-                        ))}
-                    </select>
+              {recetaLineas.map((linea, index) => {
+                const productoSeleccionado = productosById.get(linea.producto_id)
+                const cantidad = Number(linea.cantidad || 0)
+                const costeUnitario = Number(productoSeleccionado?.coste_unitario || 0)
+                const costeLinea = cantidad * costeUnitario
+                const ingredienteSuperaVenta = costeLinea > precioVenta && precioVenta > 0
 
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={linea.cantidad}
-                      onChange={(e) => onLineaChange(index, 'cantidad', e.target.value)}
-                      placeholder="Cantidad que consume la receta"
-                      className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
-                    />
+                return (
+                  <div key={index} className="rounded-[18px] border border-slate-200 bg-white p-3">
+                    <div className="space-y-3">
+                      <select
+                        value={linea.producto_id}
+                        onChange={(e) => onLineaChange(index, 'producto_id', e.target.value)}
+                        className={`w-full px-4 py-3 text-base text-slate-900 ${fieldShell}`}
+                      >
+                        <option value="">Selecciona producto</option>
+                        {productos
+                          .filter((prod) => !prod.archivado)
+                          .map((prod) => (
+                            <option key={prod.id} value={prod.id}>
+                              {prod.nombre}
+                            </option>
+                          ))}
+                      </select>
 
-                    <button
-                      type="button"
-                      onClick={() => onRemoveLinea(index)}
-                      className="w-full rounded-[14px] bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100"
-                    >
-                      Eliminar ingrediente
-                    </button>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={linea.cantidad}
+                        onChange={(e) => onLineaChange(index, 'cantidad', e.target.value)}
+                        placeholder="Cantidad que consume la receta"
+                        className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
+                      />
+
+                      {productoSeleccionado ? (
+                        <div
+                          className={`rounded-[16px] px-3 py-2 text-[12px] leading-5 ${
+                            ingredienteSuperaVenta
+                              ? 'border border-amber-200 bg-amber-50 text-amber-800'
+                              : 'bg-slate-50 text-slate-500'
+                          }`}
+                        >
+                          <div className="font-semibold text-slate-700">
+                            Coste ingrediente: {formatEuro(costeLinea)}
+                          </div>
+                          <div>
+                            {cantidad || 0} {productoSeleccionado.unidad || 'uds'} ×{' '}
+                            {formatEuro(costeUnitario)} / {productoSeleccionado.unidad || 'ud'}
+                          </div>
+                          {ingredienteSuperaVenta ? (
+                            <div className="mt-1 font-medium">
+                              Este ingrediente ya supera el precio de venta. Revisa si el coste del
+                              producto es por caja/lote o si la cantidad de receta debe ser menor.
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={() => onRemoveLinea(index)}
+                        className="w-full rounded-[14px] bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100"
+                      >
+                        Eliminar ingrediente
+                      </button>
+                    </div>
                   </div>
+                )
+              })}
+            </div>
+
+            <div
+              className={`mt-4 rounded-[20px] border px-4 py-3 text-sm ${
+                margenEstimado < 0
+                  ? 'border-amber-200 bg-amber-50 text-amber-900'
+                  : 'border-emerald-100 bg-emerald-50 text-emerald-900'
+              }`}
+            >
+              <div className="font-semibold">Resumen de margen</div>
+              <div className="mt-1 text-[12px] leading-5">
+                Coste teórico: {formatEuro(recetaCosteTeorico)} · Coste/ración:{' '}
+                {formatEuro(costePorRacion)} · Venta: {formatEuro(precioVenta)} · Margen:{' '}
+                {formatEuro(margenEstimado)}
+              </div>
+              {margenEstimado < 0 ? (
+                <div className="mt-1 text-[12px] font-medium">
+                  Margen negativo. Revisa cantidades o el coste unitario de los productos usados.
                 </div>
-              ))}
+              ) : null}
             </div>
           </div>
         </div>

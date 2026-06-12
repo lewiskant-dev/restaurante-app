@@ -1,9 +1,11 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import { ActionMenu } from '@/components/ui/ActionMenu'
-import { primaryGradientButton, softPanel, surfaceCard } from '@/components/ui/primitives'
+import { fieldShell, primaryGradientButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 import type { Receta } from '@/features/home/types'
 import { formatEuro } from '@/features/home/utils'
+import { normalizeSearchText } from '@/lib/userInputPolicy'
 
 type RecetasTabProps = {
   loadingRecetas: boolean
@@ -20,6 +22,21 @@ export function RecetasTab({
   onOpenEditarReceta,
   onToggleActivaReceta,
 }: RecetasTabProps) {
+  const [busquedaReceta, setBusquedaReceta] = useState('')
+  const recetasFiltradas = useMemo(() => {
+    const query = normalizeSearchText(busquedaReceta)
+    if (!query) return recetas
+
+    return recetas.filter((receta) => {
+      const estado = receta.activo === false ? 'inactiva' : 'activa'
+      return [
+        receta.nombre,
+        receta.nombre_tpv || '',
+        estado,
+      ].some((value) => normalizeSearchText(value).includes(query))
+    })
+  }, [busquedaReceta, recetas])
+
   const activas = recetas.filter((item) => item.activo !== false).length
   const costeTeoricoTotal = recetas.reduce((acc, receta) => acc + Number(receta.coste_teorico || 0), 0)
   const costePorRacionMedio =
@@ -110,6 +127,22 @@ export function RecetasTab({
       </div>
 
       <div className={`p-3 sm:p-5 ${surfaceCard}`}>
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <label className={`flex min-h-[46px] items-center gap-3 px-4 py-2.5 lg:max-w-md lg:flex-1 ${fieldShell}`}>
+            <span className="text-slate-400">⌕</span>
+            <input
+              type="search"
+              value={busquedaReceta}
+              onChange={(event) => setBusquedaReceta(event.target.value)}
+              placeholder="Buscar receta o nombre TPV..."
+              className="w-full bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
+            />
+          </label>
+          <div className="text-[12px] text-slate-500">
+            {recetasFiltradas.length} de {recetas.length} recetas
+          </div>
+        </div>
+
         {loadingRecetas && (
           <div className="grid gap-2.5">
             {Array.from({ length: 4 }).map((_, index) => (
@@ -150,8 +183,17 @@ export function RecetasTab({
           </div>
         )}
 
+        {!loadingRecetas && recetas.length > 0 && recetasFiltradas.length === 0 && (
+          <div className="py-10 text-center">
+            <div className="text-sm font-semibold text-slate-700">No hay recetas con esa búsqueda</div>
+            <p className="mt-1 text-[12px] text-slate-500">
+              Prueba por nombre de receta, nombre TPV, activa o inactiva.
+            </p>
+          </div>
+        )}
+
         {!loadingRecetas &&
-          recetas.map((receta) => (
+          recetasFiltradas.map((receta) => (
             <div
               key={receta.id}
               className={`mb-2.5 p-3 last:mb-0 sm:mb-3 sm:p-4 ${softPanel}`}
@@ -184,8 +226,22 @@ export function RecetasTab({
                     <span>·</span>
                     <span>Coste/ración: {formatEuro(Number(receta.coste_por_racion || 0))}</span>
                     <span>·</span>
-                    <span>Margen: {formatEuro(Number(receta.margen_estimado || 0))}</span>
+                    <span
+                      className={
+                        Number(receta.margen_estimado || 0) < 0
+                          ? 'font-semibold text-amber-600'
+                          : undefined
+                      }
+                    >
+                      Margen: {formatEuro(Number(receta.margen_estimado || 0))}
+                    </span>
                   </div>
+                  {Number(receta.margen_estimado || 0) < 0 ? (
+                    <div className="mt-2 rounded-[14px] border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium leading-5 text-amber-800">
+                      Margen negativo: revisa si el coste unitario del producto está definido por
+                      caja/lote o si la cantidad de ingrediente es demasiado alta.
+                    </div>
+                  ) : null}
                 </div>
 
                 <ActionMenu>
