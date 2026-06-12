@@ -396,11 +396,11 @@ export function useRecetaTpvManagement({
       ] = await Promise.all([
         supabase
           .from('tpv_ventas_crudas')
-          .select('producto_externo,cantidad,importe_total,fecha,created_at')
+          .select('importacion_id,producto_externo,cantidad,importe_total,fecha,created_at')
           .eq('restaurant_id', currentRestaurantId),
         supabase
           .from('movimientos_stock')
-          .select('producto_id,cantidad,created_at,tipo,origen_tipo,categoria_consumo')
+          .select('producto_id,cantidad,created_at,tipo,origen_tipo,origen_id,categoria_consumo')
           .eq('restaurant_id', currentRestaurantId)
           .eq('tipo', 'consumo')
           .eq('origen_tipo', 'tpv')
@@ -425,68 +425,75 @@ export function useRecetaTpvManagement({
         throw comprasError
       }
 
-      ;((ventasData ?? []) as VentaTPVCruda[])
-        .filter((venta) => {
-          const ventaDate = formatOCRDateToInput(venta.created_at || venta.fecha)
-          return ventaDate >= startDate && ventaDate < endDate
-        })
-        .forEach((venta) => {
-          const receta = recetasMap.get(normalizeText(venta.producto_externo))
-          const unidadesVendidas = Number(venta.cantidad || 0)
-          const ventaImporteTotal = Number(venta.importe_total || 0)
+      const ventasEnPeriodo = ((ventasData ?? []) as VentaTPVCruda[]).filter((venta) => {
+        const ventaDate = formatOCRDateToInput(venta.created_at || venta.fecha)
+        return ventaDate >= startDate && ventaDate < endDate
+      })
+      const importacionIdsEnPeriodo = new Set(
+        ventasEnPeriodo
+          .map((venta) => venta.importacion_id)
+          .filter((importacionId): importacionId is string => Boolean(importacionId))
+      )
 
-          if (!receta) {
-            if (ventaImporteTotal > 0) {
-              ventasEstimadasTotal += ventaImporteTotal
-            }
-            return
+      ventasEnPeriodo.forEach((venta) => {
+        const receta = recetasMap.get(normalizeText(venta.producto_externo))
+        const unidadesVendidas = Number(venta.cantidad || 0)
+        const ventaImporteTotal = Number(venta.importe_total || 0)
+
+        if (!receta) {
+          if (ventaImporteTotal > 0) {
+            ventasEstimadasTotal += ventaImporteTotal
           }
+          return
+        }
 
-          const costePorRacion =
-            Number(receta.coste_teorico || 0) / Math.max(Number(receta.raciones || 1), 1)
-          const ventasReceta =
-            ventaImporteTotal > 0 ? ventaImporteTotal : Number(receta.precio_venta || 0) * unidadesVendidas
-          const costeReceta = costePorRacion * unidadesVendidas
-          ventasEstimadasTotal += ventasReceta
-          costeTeoricoVendidoTotal += costeReceta
+        const costePorRacion =
+          Number(receta.coste_teorico || 0) / Math.max(Number(receta.raciones || 1), 1)
+        const ventasReceta =
+          ventaImporteTotal > 0
+            ? ventaImporteTotal
+            : Number(receta.precio_venta || 0) * unidadesVendidas
+        const costeReceta = costePorRacion * unidadesVendidas
+        ventasEstimadasTotal += ventasReceta
+        costeTeoricoVendidoTotal += costeReceta
 
-          const currentRecipe = recipePerformance.get(receta.id) ?? {
-            receta_id: receta.id,
-            receta_nombre: receta.nombre,
-            unidades_vendidas: 0,
-            ventas_estimadas: 0,
-            coste_teorico_vendido: 0,
-            margen_estimado: 0,
-          }
-          currentRecipe.unidades_vendidas += unidadesVendidas
-          currentRecipe.ventas_estimadas += ventasReceta
-          currentRecipe.coste_teorico_vendido += costeReceta
-          currentRecipe.margen_estimado =
-            currentRecipe.ventas_estimadas - currentRecipe.coste_teorico_vendido
-          recipePerformance.set(receta.id, currentRecipe)
+        const currentRecipe = recipePerformance.get(receta.id) ?? {
+          receta_id: receta.id,
+          receta_nombre: receta.nombre,
+          unidades_vendidas: 0,
+          ventas_estimadas: 0,
+          coste_teorico_vendido: 0,
+          margen_estimado: 0,
+        }
+        currentRecipe.unidades_vendidas += unidadesVendidas
+        currentRecipe.ventas_estimadas += ventasReceta
+        currentRecipe.coste_teorico_vendido += costeReceta
+        currentRecipe.margen_estimado =
+          currentRecipe.ventas_estimadas - currentRecipe.coste_teorico_vendido
+        recipePerformance.set(receta.id, currentRecipe)
 
-          const lineas = lineasMap.get(receta.id) ?? []
-          const categoryCandidates: Array<{
-            categoria: string | null | undefined
-            cantidad: number
-            costeUnitario: number
-          }> = []
-          lineas.forEach((linea) => {
-            const consumo = Number(linea.cantidad || 0) * unidadesVendidas
-            if (!linea.producto_id || consumo <= 0) return
-            const producto = productosMap.get(linea.producto_id)
-            categoryCandidates.push({
-              categoria: producto?.categoria,
-              cantidad: Number(linea.cantidad || 0),
-              costeUnitario: Number(producto?.coste_unitario || 0),
-            })
-            theoreticalByProduct.set(
-              linea.producto_id,
-              Number(theoreticalByProduct.get(linea.producto_id) || 0) + consumo
-            )
+        const lineas = lineasMap.get(receta.id) ?? []
+        const categoryCandidates: Array<{
+          categoria: string | null | undefined
+          cantidad: number
+          costeUnitario: number
+        }> = []
+        lineas.forEach((linea) => {
+          const consumo = Number(linea.cantidad || 0) * unidadesVendidas
+          if (!linea.producto_id || consumo <= 0) return
+          const producto = productosMap.get(linea.producto_id)
+          categoryCandidates.push({
+            categoria: producto?.categoria,
+            cantidad: Number(linea.cantidad || 0),
+            costeUnitario: Number(producto?.coste_unitario || 0),
           })
-          recipeDominantCategory.set(receta.id, getDominantCategory(categoryCandidates))
+          theoreticalByProduct.set(
+            linea.producto_id,
+            Number(theoreticalByProduct.get(linea.producto_id) || 0) + consumo
+          )
         })
+        recipeDominantCategory.set(receta.id, getDominantCategory(categoryCandidates))
+      })
 
       ;((movimientosData ?? []) as Array<{
         producto_id: string
@@ -494,14 +501,19 @@ export function useRecetaTpvManagement({
         created_at: string
         tipo: 'consumo'
         origen_tipo: 'tpv'
+        origen_id: string | null
         categoria_consumo: string | null
-      }>).forEach((movimiento) => {
-        actualByProduct.set(
-          movimiento.producto_id,
-          Number(actualByProduct.get(movimiento.producto_id) || 0) +
-            Number(movimiento.cantidad || 0)
+      }>)
+        .filter((movimiento) =>
+          movimiento.origen_id ? importacionIdsEnPeriodo.has(movimiento.origen_id) : false
         )
-      })
+        .forEach((movimiento) => {
+          actualByProduct.set(
+            movimiento.producto_id,
+            Number(actualByProduct.get(movimiento.producto_id) || 0) +
+              Number(movimiento.cantidad || 0)
+          )
+        })
 
       const productIds = new Set<string>([
         ...Array.from(theoreticalByProduct.keys()),
