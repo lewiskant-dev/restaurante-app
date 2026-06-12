@@ -74,7 +74,9 @@ export type MovimientoConProducto = MovimientoStock & {
 export type VentaTPVCruda = {
   producto_externo: string
   cantidad: number
+  importe_total?: number | null
   fecha: string
+  created_at?: string | null
   raw: string
 }
 

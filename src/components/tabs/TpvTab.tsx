@@ -149,7 +149,7 @@ export function TpvTab({
         <div className="grid gap-3 md:grid-cols-4">
           <div className={`p-3 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Ventas estimadas
+              Ventas TPV registradas
             </div>
             <div className="mt-1 text-[1.5rem] font-semibold text-emerald-600">
               {tpvAnalitica.ventas_estimadas_total.toLocaleString('es-ES', {
@@ -157,6 +157,9 @@ export function TpvTab({
                 maximumFractionDigits: 2,
               })}{' '}
               €
+            </div>
+            <div className="mt-1 text-[11px] leading-4 text-slate-400">
+              Importe CSV o precio de receta por unidades importadas.
             </div>
           </div>
           <div className={`p-3 ${softPanel}`}>

@@ -177,6 +177,44 @@ left join information_schema.columns c
 union all
 
 select
+  'COLUMNA' as bloque,
+  'tpv_ventas_crudas.importe_total' as elemento,
+  case
+    when c.column_name is null then 'FALTA'
+    else 'OK'
+  end as estado,
+  coalesce(
+    'tipo=' || c.data_type || ', nullable=' || c.is_nullable || ', default=' || coalesce(c.column_default, 'sin default'),
+    'No encontrada'
+  ) as detalle
+from (values (true)) as expected(exists_marker)
+left join information_schema.columns c
+  on c.table_schema = 'public'
+ and c.table_name = 'tpv_ventas_crudas'
+ and c.column_name = 'importe_total'
+
+union all
+
+select
+  'COLUMNA' as bloque,
+  'tpv_ventas_crudas.created_at' as elemento,
+  case
+    when c.column_name is null then 'FALTA'
+    else 'OK'
+  end as estado,
+  coalesce(
+    'tipo=' || c.data_type || ', nullable=' || c.is_nullable || ', default=' || coalesce(c.column_default, 'sin default'),
+    'No encontrada'
+  ) as detalle
+from (values (true)) as expected(exists_marker)
+left join information_schema.columns c
+  on c.table_schema = 'public'
+ and c.table_name = 'tpv_ventas_crudas'
+ and c.column_name = 'created_at'
+
+union all
+
+select
   'CONSTRAINT' as bloque,
   'movimientos_stock_categoria_consumo_check' as elemento,
   case

@@ -341,10 +341,17 @@ export function useRecetaTpvManagement({
     const recetasMapeadasActivas = recetasBase.filter(
       (receta) => receta.activo !== false && receta.nombre_tpv
     )
-    recetasBase.forEach((receta) => {
-      if (receta.nombre_tpv && receta.activo !== false) {
-        recetasMap.set(normalizeText(receta.nombre_tpv), receta)
+    const addRecetaAlias = (alias: string | null | undefined, receta: Receta) => {
+      const key = normalizeText(alias || '')
+      if (key && !recetasMap.has(key)) {
+        recetasMap.set(key, receta)
       }
+    }
+
+    recetasBase.forEach((receta) => {
+      if (receta.activo === false) return
+      addRecetaAlias(receta.nombre_tpv, receta)
+      addRecetaAlias(receta.nombre, receta)
     })
 
     const lineasMap = new Map<string, RecetaLinea[]>()
@@ -385,7 +392,7 @@ export function useRecetaTpvManagement({
       ] = await Promise.all([
         supabase
           .from('tpv_ventas_crudas')
-          .select('producto_externo,cantidad,fecha')
+          .select('producto_externo,cantidad,importe_total,fecha,created_at')
           .eq('restaurant_id', currentRestaurantId),
         supabase
           .from('movimientos_stock')
@@ -415,17 +422,25 @@ export function useRecetaTpvManagement({
 
       ;((ventasData ?? []) as VentaTPVCruda[])
         .filter((venta) => {
-          const ventaDate = formatOCRDateToInput(venta.fecha)
+          const ventaDate = formatOCRDateToInput(venta.created_at || venta.fecha)
           return ventaDate >= startDate && ventaDate < endDate
         })
         .forEach((venta) => {
           const receta = recetasMap.get(normalizeText(venta.producto_externo))
-          if (!receta) return
-
           const unidadesVendidas = Number(venta.cantidad || 0)
+          const ventaImporteTotal = Number(venta.importe_total || 0)
+
+          if (!receta) {
+            if (ventaImporteTotal > 0) {
+              ventasEstimadasTotal += ventaImporteTotal
+            }
+            return
+          }
+
           const costePorRacion =
             Number(receta.coste_teorico || 0) / Math.max(Number(receta.raciones || 1), 1)
-          const ventasReceta = Number(receta.precio_venta || 0) * unidadesVendidas
+          const ventasReceta =
+            ventaImporteTotal > 0 ? ventaImporteTotal : Number(receta.precio_venta || 0) * unidadesVendidas
           const costeReceta = costePorRacion * unidadesVendidas
           ventasEstimadasTotal += ventasReceta
           costeTeoricoVendidoTotal += costeReceta

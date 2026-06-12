@@ -4,6 +4,12 @@
 alter table if exists public.tpv_importaciones
   add column if not exists archivo_hash text;
 
+alter table if exists public.tpv_ventas_crudas
+  add column if not exists importe_total numeric(12,2);
+
+alter table if exists public.tpv_ventas_crudas
+  add column if not exists created_at timestamptz not null default now();
+
 create unique index if not exists tpv_importaciones_restaurant_hash_idx
   on public.tpv_importaciones (restaurant_id, archivo_hash)
   where archivo_hash is not null;
@@ -109,6 +115,7 @@ begin
     from jsonb_to_recordset(p_ventas) as x(
       producto_externo text,
       cantidad numeric,
+      importe_total numeric,
       fecha text,
       raw text
     )
@@ -116,6 +123,7 @@ begin
     if nullif(trim(coalesce(venta.producto_externo, '')), '') is null
       or venta.cantidad is null
       or venta.cantidad <= 0
+      or coalesce(venta.importe_total, 0) < 0
       or nullif(trim(coalesce(venta.fecha, '')), '') is null then
       raise exception 'La importación TPV contiene una venta no válida';
     end if;
@@ -125,6 +133,7 @@ begin
       importacion_id,
       producto_externo,
       cantidad,
+      importe_total,
       fecha,
       raw
     )
@@ -133,6 +142,7 @@ begin
       importacion_result.id,
       trim(venta.producto_externo),
       venta.cantidad,
+      nullif(venta.importe_total, 0),
       venta.fecha::timestamptz,
       jsonb_build_object(
         'linea', coalesce(venta.raw, ''),

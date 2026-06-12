@@ -92,6 +92,15 @@ export function parseTpvDate(value: string, fallbackDate = new Date()) {
   return `${formatCsvDateToInput(clean)}T12:00:00.000Z`
 }
 
+function parseCsvNumber(value: string) {
+  const cleaned = value
+    .replace(/[^\d,.-]/g, '')
+    .replace(/\.(?=\d{3}(?:\D|$))/g, '')
+    .replace(',', '.')
+
+  return Number(cleaned || '0')
+}
+
 export async function createTpvCsvFingerprint(fileText: string) {
   const normalizedText = fileText.replace(/\r\n/g, '\n').trim()
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalizedText))
@@ -121,6 +130,25 @@ export function parseTpvCsvText(fileText: string, fallbackDate = new Date()) {
     (col) => col === 'cantidad' || col.includes('unidades') || col === 'uds'
   )
   const fechaIndex = normalizedHeaderCols.findIndex((col) => col.includes('fecha'))
+  const valueColumnIndexes = normalizedHeaderCols
+    .map((col, index) => ({ col, index }))
+    .filter(({ index }) => index !== articuloIndex && index !== cantidadIndex && index !== fechaIndex)
+  const importeIndex =
+    valueColumnIndexes.find(
+      ({ col }) =>
+        col.includes('importe') ||
+        col.includes('total') ||
+        col.includes('venta') ||
+        col.includes('bruto')
+    )?.index ?? -1
+  const precioUnitarioIndex =
+    valueColumnIndexes.find(
+      ({ col }) =>
+        col.includes('precio') ||
+        col.includes('pvp') ||
+        col.includes('unitario') ||
+        col === 'precio ud'
+    )?.index ?? -1
 
   if (articuloIndex === -1 || cantidadIndex === -1) {
     throw new Error(
@@ -132,15 +160,20 @@ export function parseTpvCsvText(fileText: string, fallbackDate = new Date()) {
     .map((linea) => {
       const cols = parseCsvLine(linea, delimiter)
       const producto = cols[articuloIndex] || ''
-      const cantidad = Number((cols[cantidadIndex] || '0').replace(',', '.'))
+      const cantidad = parseCsvNumber(cols[cantidadIndex] || '0')
       const fecha =
         fechaIndex >= 0 ? parseTpvDate(cols[fechaIndex] || '', fallbackDate) : fallbackDate.toISOString()
+      const importeTotal = importeIndex >= 0 ? parseCsvNumber(cols[importeIndex] || '0') : 0
+      const precioUnitario =
+        precioUnitarioIndex >= 0 ? parseCsvNumber(cols[precioUnitarioIndex] || '0') : 0
 
       if (!producto || !cantidad || cantidad <= 0) return null
 
       return {
         producto_externo: producto,
         cantidad,
+        importe_total:
+          importeTotal > 0 ? importeTotal : precioUnitario > 0 ? precioUnitario * cantidad : null,
         fecha,
         raw: linea,
       }

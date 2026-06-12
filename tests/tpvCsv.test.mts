@@ -34,10 +34,25 @@ test('parseTpvCsvText detecta columnas alternativas y normaliza fechas', () => {
     {
       producto_externo: 'Coca-Cola Zero, lata',
       cantidad: 2.5,
+      importe_total: null,
       fecha: '2026-04-23T12:00:00.000Z',
       raw: '"Coca-Cola Zero, lata","2,5",23/04/2026',
     },
   ])
+})
+
+test('parseTpvCsvText detecta importe total o precio unitario', () => {
+  const ventasConTotal = parseTpvCsvText(
+    'Articulo;Cantidad;Importe total;Fecha\nCoca-Cola;2;4,90;23/04/2026',
+    fallbackDate
+  )
+  const ventasConPrecio = parseTpvCsvText(
+    'Articulo;Cantidad;PVP;Fecha\nAgua;3;1,50;23/04/2026',
+    fallbackDate
+  )
+
+  assert.equal(ventasConTotal[0].importe_total, 4.9)
+  assert.equal(ventasConPrecio[0].importe_total, 4.5)
 })
 
 test('parseTpvCsvText usa fecha de respaldo si el CSV no trae fecha', () => {
