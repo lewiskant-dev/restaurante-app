@@ -57,6 +57,7 @@ type InventoryValueCandidate = {
   stock_minimo: number
   coste_unitario?: number | null
   ultimo_precio_compra?: number | null
+  activo?: boolean | null
   archivado?: boolean | null
 }
 
@@ -72,7 +73,7 @@ export type InventoryFinancialSummary = {
 export function buildInventoryFinancialSummary(
   products: InventoryValueCandidate[]
 ): InventoryFinancialSummary {
-  const activeProducts = products.filter((product) => !product.archivado)
+  const activeProducts = products.filter((product) => product.activo !== false && !product.archivado)
 
   return activeProducts.reduce<InventoryFinancialSummary>(
     (summary, product) => {
@@ -122,7 +123,7 @@ export function buildReorderRecommendations(
   products: InventoryValueCandidate[]
 ): ReorderRecommendation[] {
   return products
-    .filter((product) => !product.archivado)
+    .filter((product) => product.activo !== false && !product.archivado)
     .map((product) => {
       const stockActual = Math.max(0, Number(product.stock_actual || 0))
       const stockMinimo = Math.max(0, Number(product.stock_minimo || 0))

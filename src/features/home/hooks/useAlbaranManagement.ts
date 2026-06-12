@@ -146,10 +146,12 @@ export function useAlbaranManagement({
     const objetivo = normalizeText(nombreProveedor)
     if (!objetivo) return ''
 
-    const exacto = proveedores.find((prov) => normalizeText(prov.nombre || '') === objetivo)
+    const proveedoresDisponibles = proveedores.filter((prov) => prov.activo !== false && !prov.archivado)
+
+    const exacto = proveedoresDisponibles.find((prov) => normalizeText(prov.nombre || '') === objetivo)
     if (exacto) return exacto.id
 
-    const parcial = proveedores.find((prov) => {
+    const parcial = proveedoresDisponibles.find((prov) => {
       const nombre = normalizeText(prov.nombre || '')
       return nombre.includes(objetivo) || objetivo.includes(nombre)
     })
@@ -164,15 +166,19 @@ export function useAlbaranManagement({
     const mapeoGuardado = mapeosProductos.find(
       (mapeo) => normalizeText(mapeo.nombre_externo || '') === objetivo && mapeo.producto_id
     )
-    if (mapeoGuardado?.producto_id) {
-      return { productoId: mapeoGuardado.producto_id, estado: 'aprendido' as const }
+    const productoMapeado = productos.find(
+      (prod) =>
+        prod.id === mapeoGuardado?.producto_id && prod.activo !== false && !prod.archivado
+    )
+    if (productoMapeado) {
+      return { productoId: productoMapeado.id, estado: 'aprendido' as const }
     }
 
     let mejorId = ''
     let mejorScore = 0
 
     productos
-      .filter((prod) => !prod.archivado)
+      .filter((prod) => prod.activo !== false && !prod.archivado)
       .forEach((prod) => {
         const nombre = normalizeText(prod.nombre || '')
         let score = 0
@@ -330,7 +336,7 @@ export function useAlbaranManagement({
         setAlbaranProveedorId(proveedorId)
       }
 
-      const lineasDetectadas = (resultado.lineas || []).map((linea) => ({
+      const lineasDetectadas: AlbaranLineaForm[] = (resultado.lineas || []).map((linea) => ({
         producto_id: findProductoIdFromOCR(linea.nombre || ''),
         cantidad: String(linea.cantidad ?? ''),
         precio_unitario: String(linea.precio_unitario ?? ''),
@@ -531,8 +537,8 @@ export function useAlbaranManagement({
     }
 
     const proveedor = proveedores.find((p) => p.id === albaranProveedorId)
-    if (!proveedor) {
-      onError('Proveedor no válido')
+    if (!proveedor || proveedor.activo === false || proveedor.archivado) {
+      onError('Proveedor no válido o archivado')
       return
     }
 
@@ -547,11 +553,18 @@ export function useAlbaranManagement({
     })
 
     const hayLineaInvalida = lineasPreparadas.some(
-      (l) => !l.producto || !l.producto_id || !l.cantidad || l.cantidad <= 0 || l.precio_unitario < 0
+      (l) =>
+        !l.producto ||
+        l.producto.activo === false ||
+        l.producto.archivado ||
+        !l.producto_id ||
+        !l.cantidad ||
+        l.cantidad <= 0 ||
+        l.precio_unitario < 0
     )
 
     if (hayLineaInvalida) {
-      onError('Revisa las líneas del albarán')
+      onError('Revisa las líneas del albarán. Usa solo productos activos y no archivados.')
       return
     }
 

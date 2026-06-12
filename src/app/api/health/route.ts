@@ -16,6 +16,8 @@ const DATABASE_CHECKS = [
   { name: 'table:movimientos_stock', table: 'movimientos_stock', column: 'id', required: true },
   { name: 'table:albaranes', table: 'albaranes', column: 'id', required: true },
   { name: 'table:auditoria', table: 'auditoria', column: 'id', required: true },
+  { name: 'table:tpv_importaciones', table: 'tpv_importaciones', column: 'id', required: true },
+  { name: 'table:tpv_ventas_crudas', table: 'tpv_ventas_crudas', column: 'id', required: true },
   {
     name: 'table:productos_precios_historial',
     table: 'productos_precios_historial',
@@ -35,6 +37,18 @@ const DATABASE_CHECKS = [
     name: 'column:tpv_importaciones.archivo_hash',
     table: 'tpv_importaciones',
     column: 'archivo_hash',
+    required: false,
+  },
+  {
+    name: 'column:tpv_ventas_crudas.importe_total',
+    table: 'tpv_ventas_crudas',
+    column: 'importe_total',
+    required: false,
+  },
+  {
+    name: 'column:tpv_ventas_crudas.created_at',
+    table: 'tpv_ventas_crudas',
+    column: 'created_at',
     required: false,
   },
 ] as const

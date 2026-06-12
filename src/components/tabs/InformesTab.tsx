@@ -237,7 +237,7 @@ export function InformesTab({
   )
   const wasteSummary = buildWasteFinancialSummary(movimientos, wasteCutoff.toISOString())
   const topInventoryProducts = [...productos]
-    .filter((producto) => !producto.archivado)
+    .filter((producto) => producto.activo !== false && !producto.archivado)
     .map((producto) => {
       const unitCost = Number(producto.ultimo_precio_compra ?? producto.coste_unitario ?? 0)
       return {

@@ -38,8 +38,14 @@ create index if not exists recetas_lineas_restaurant_producto_idx
 create index if not exists tpv_ventas_restaurant_fecha_idx
   on public.tpv_ventas_crudas (restaurant_id, fecha);
 
+create index if not exists tpv_ventas_restaurant_created_at_idx
+  on public.tpv_ventas_crudas (restaurant_id, created_at desc);
+
 create index if not exists tpv_ventas_restaurant_producto_fecha_idx
   on public.tpv_ventas_crudas (restaurant_id, producto_externo, fecha);
+
+create index if not exists tpv_ventas_restaurant_producto_created_at_idx
+  on public.tpv_ventas_crudas (restaurant_id, producto_externo, created_at desc);
 
 create index if not exists tpv_ventas_restaurant_importacion_idx
   on public.tpv_ventas_crudas (restaurant_id, importacion_id);

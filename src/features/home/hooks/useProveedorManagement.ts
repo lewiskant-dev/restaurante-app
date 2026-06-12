@@ -57,8 +57,9 @@ export function useProveedorManagement({
     const q = deferredBusquedaProveedor.trim().toLowerCase()
     return proveedores
       .filter((p) => {
-        if (proveedorEstado === 'activos' && p.archivado) return false
-        if (proveedorEstado === 'archivados' && !p.archivado) return false
+        const proveedorActivo = p.activo !== false && !p.archivado
+        if (proveedorEstado === 'activos' && !proveedorActivo) return false
+        if (proveedorEstado === 'archivados' && proveedorActivo) return false
         return true
       })
       .filter((p) => {
@@ -164,7 +165,7 @@ export function useProveedorManagement({
     const normalizedNombre = normalizeText(payload.nombre)
     const normalizedCif = normalizeText(payload.cif)
     const proveedorDuplicado = proveedores.find((proveedor) => {
-      if (proveedor.id === proveedorEditId || proveedor.archivado) return false
+      if (proveedor.id === proveedorEditId || proveedor.activo === false || proveedor.archivado) return false
 
       const sameName = normalizeText(proveedor.nombre || '') === normalizedNombre
       const sameCif = normalizedCif && normalizeText(proveedor.cif || '') === normalizedCif

@@ -92,11 +92,12 @@ export function useStockManagement({
     const q = normalizeSearchText(deferredBusqueda)
     return productos
       .filter((p) => {
-        if (productoEstado === 'activos' && p.archivado) return false
-        if (productoEstado === 'archivados' && !p.archivado) return false
+        const productoActivo = p.activo !== false && !p.archivado
+        if (productoEstado === 'activos' && !productoActivo) return false
+        if (productoEstado === 'archivados' && productoActivo) return false
         if (
           productoEstado === 'stock_bajo' &&
-          (p.archivado || p.stock_minimo <= 0 || p.stock_actual > p.stock_minimo)
+          (!productoActivo || p.stock_minimo <= 0 || p.stock_actual > p.stock_minimo)
         ) {
           return false
         }
@@ -135,9 +136,9 @@ export function useStockManagement({
     })
   }, [movimientos, deferredBusquedaMov])
 
-  const totalProductos = productos.filter((p) => !p.archivado).length
+  const totalProductos = productos.filter((p) => p.activo !== false && !p.archivado).length
   const stockBajo = productos.filter(
-    (p) => !p.archivado && p.stock_minimo > 0 && p.stock_actual <= p.stock_minimo
+    (p) => p.activo !== false && !p.archivado && p.stock_minimo > 0 && p.stock_actual <= p.stock_minimo
   ).length
   const movimientosHoy = movimientos.filter(
     (m) => (m.created_at || '').slice(0, 10) === todayLocalInputDate()
@@ -146,7 +147,7 @@ export function useStockManagement({
     new Set([
       ...PRODUCT_CATEGORY_OPTIONS,
       ...productos
-        .filter((p) => !p.archivado)
+        .filter((p) => p.activo !== false && !p.archivado)
         .map((p) => normalizeProductCategory(p.categoria || 'Otros'))
         .filter(Boolean),
     ])
@@ -154,7 +155,7 @@ export function useStockManagement({
   const unidadesProducto = Array.from(
     new Set(
       productos
-        .filter((p) => !p.archivado)
+        .filter((p) => p.activo !== false && !p.archivado)
         .map((p) => p.unidad || 'uds')
         .filter(Boolean)
     )
@@ -162,7 +163,7 @@ export function useStockManagement({
 
   const productosStockBajo = useMemo(() => {
     return productos
-      .filter((p) => !p.archivado && p.stock_minimo > 0 && p.stock_actual <= p.stock_minimo)
+      .filter((p) => p.activo !== false && !p.archivado && p.stock_minimo > 0 && p.stock_actual <= p.stock_minimo)
       .sort((a, b) => {
         const aGap = Number(a.stock_minimo || 0) - Number(a.stock_actual || 0)
         const bGap = Number(b.stock_minimo || 0) - Number(b.stock_actual || 0)

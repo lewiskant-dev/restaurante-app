@@ -121,7 +121,7 @@ export function AlbaranFormTab({
             >
               <option value="">Selecciona proveedor</option>
               {proveedores
-                .filter((prov) => !prov.archivado)
+                .filter((prov) => prov.activo !== false && !prov.archivado)
                 .map((prov) => (
                   <option key={prov.id} value={prov.id}>
                     {prov.nombre}
@@ -212,7 +212,7 @@ export function AlbaranFormTab({
                   >
                     <option value="">Selecciona producto</option>
                     {productos
-                      .filter((prod) => !prod.archivado)
+                      .filter((prod) => prod.activo !== false && !prod.archivado)
                       .map((prod) => (
                         <option key={prod.id} value={prod.id}>
                           {prod.nombre}

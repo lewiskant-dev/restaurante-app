@@ -511,7 +511,7 @@ export function useRecetaTpvManagement({
       const productosAnaliticaTodos = Array.from(productIds)
         .map((productoId) => {
           const producto = productosMap.get(productoId)
-          if (!producto || producto.archivado) return null
+          if (!producto || producto.activo === false || producto.archivado) return null
 
           const consumoTeorico = Number(theoreticalByProduct.get(productoId) || 0)
           const consumoReal = Number(actualByProduct.get(productoId) || 0)

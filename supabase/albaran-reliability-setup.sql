@@ -105,10 +105,12 @@ begin
   into proveedor_actual
   from public.proveedores
   where id = p_proveedor_id
-    and restaurant_id = target_restaurant_id;
+    and restaurant_id = target_restaurant_id
+    and activo is not false
+    and coalesce(archivado, false) = false;
 
   if not found then
-    raise exception 'Proveedor no encontrado en el restaurante activo';
+    raise exception 'Proveedor no encontrado o archivado en el restaurante activo';
   end if;
 
   if p_albaran_id is not null then
@@ -241,10 +243,12 @@ begin
     from public.productos
     where id = linea.producto_id
       and restaurant_id = target_restaurant_id
+      and activo is not false
+      and coalesce(archivado, false) = false
     for update;
 
     if not found then
-      raise exception 'Producto no encontrado en el restaurante activo';
+      raise exception 'Producto no encontrado o archivado en el restaurante activo';
     end if;
 
     insert into public.albaran_lineas (
@@ -486,6 +490,7 @@ begin
     from public.productos
     where id = p_producto_id
       and restaurant_id = target_restaurant_id
+      and activo is not false
       and coalesce(archivado, false) = false
   ) then
     raise exception 'Producto no encontrado en el restaurante activo';

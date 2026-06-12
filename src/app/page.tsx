@@ -1500,7 +1500,7 @@ export default function HomePage() {
     ]
 
     const filasProductos = productos
-      .filter((producto) => !producto.archivado)
+      .filter((producto) => producto.activo !== false && !producto.archivado)
       .map((producto) => {
         const costeUnitario = Number(producto.ultimo_precio_compra ?? producto.coste_unitario ?? 0)
         const stockActual = Math.max(0, Number(producto.stock_actual || 0))

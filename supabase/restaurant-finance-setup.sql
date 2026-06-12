@@ -267,6 +267,7 @@ begin
     ) as coste_unitario
   ) c
   where p.restaurant_id = target_restaurant_id
+    and p.activo is not false
     and coalesce(p.archivado, false) = false
   on conflict (restaurant_id, fecha)
   do update set
@@ -322,6 +323,7 @@ begin
     ) as coste_unitario
   ) c
   where p.restaurant_id = target_restaurant_id
+    and p.activo is not false
     and coalesce(p.archivado, false) = false;
 
   return new_cierre_id;
