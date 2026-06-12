@@ -103,7 +103,11 @@ function_inventory as (
     bool_or(
       pg_get_functiondef(p.oid) ilike '%no tienes permisos para gestionar productos%'
       and pg_get_functiondef(p.oid) ilike '%producto_referencia_duplicada%'
-    ) as producto_atomic_safe,
+    ) as producto_save_safe,
+    bool_or(
+      pg_get_functiondef(p.oid) ilike '%no tienes permisos para gestionar productos%'
+      and pg_get_functiondef(p.oid) ilike '%activo = not coalesce(p_archivado, false)%'
+    ) as producto_estado_safe,
     bool_or(pg_get_functiondef(p.oid) ilike '%no tienes permisos para gestionar proveedores%') as proveedor_atomic_safe
   from pg_proc p
   where p.pronamespace = 'public'::regnamespace
@@ -145,7 +149,8 @@ select
     when e.function_name = 'guardar_receta_atomica' and not coalesce(i.receta_atomic_safe, false) then 'REVISAR_VERSION_ANTIGUA'
     when e.function_name = 'cambiar_estado_receta_atomica' and not coalesce(i.receta_estado_safe, false) then 'REVISAR_VERSION_ANTIGUA'
     when e.function_name = 'crear_cierre_inventario' and not coalesce(i.cierre_restaurant_safe, false) then 'REVISAR_VERSION_ANTIGUA'
-    when e.function_name in ('guardar_producto_atomico', 'cambiar_estado_producto_atomico') and not coalesce(i.producto_atomic_safe, false) then 'REVISAR_VERSION_ANTIGUA'
+    when e.function_name = 'guardar_producto_atomico' and not coalesce(i.producto_save_safe, false) then 'REVISAR_VERSION_ANTIGUA'
+    when e.function_name = 'cambiar_estado_producto_atomico' and not coalesce(i.producto_estado_safe, false) then 'REVISAR_VERSION_ANTIGUA'
     when e.function_name in ('guardar_proveedor_atomico', 'cambiar_estado_proveedor_atomico') and not coalesce(i.proveedor_atomic_safe, false) then 'REVISAR_VERSION_ANTIGUA'
     else 'OK'
   end as estado,

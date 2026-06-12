@@ -119,10 +119,10 @@ export function TpvTab({
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
-                Consumo teórico vs real
+                Consumo TPV previsto vs aplicado
               </h3>
               <p className="mt-1 text-[12px] text-slate-500 sm:text-[13px]">
-                Comparativa operativa en {tpvAnalitica.periodo_label.toLowerCase()} según TPV, recetas y movimientos de stock.
+                Compara el consumo calculado desde recetas frente al stock descontado al aplicar TPV.
               </p>
             </div>
             <select
@@ -203,18 +203,18 @@ export function TpvTab({
           </div>
           <div className={`p-3 md:col-span-2 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Consumo real registrado
+              Consumo TPV aplicado
             </div>
             <div className="mt-1 text-[1.5rem] font-semibold text-slate-900">
               {formatCantidad(tpvAnalitica.consumo_real_total)}
             </div>
             <div className="mt-1 text-[11px] leading-4 text-slate-400">
-              Suma de consumos reales registrados en stock.
+              Suma de consumos de stock generados por importaciones TPV.
             </div>
           </div>
           <div className={`p-3 md:col-span-2 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Diferencia real - teórico
+              Diferencia aplicado - previsto
             </div>
             <div
               className={`mt-1 text-[1.5rem] font-semibold ${
@@ -252,7 +252,7 @@ export function TpvTab({
               {hasTheoreticalConsumption ? tpvAnalitica.productos_con_desviacion : 'Pendiente'}
             </div>
             <div className="mt-1 text-[11px] leading-4 text-slate-400">
-              Productos donde el consumo real no coincide con el teórico.
+              Productos donde el stock aplicado por TPV no coincide con el previsto.
             </div>
           </div>
         </div>
@@ -293,8 +293,8 @@ export function TpvTab({
               Desviaciones por producto
             </h4>
             <p className="mt-1 text-[11px] leading-5 text-slate-500 sm:text-[12px]">
-              Compara lo que debería haberse consumido según ventas TPV y recetas frente a lo
-              registrado como consumo real de stock.
+              Compara lo que debería haberse consumido según ventas TPV y recetas frente al stock
+              descontado al aplicar esas importaciones.
             </p>
           </div>
 
@@ -313,9 +313,9 @@ export function TpvTab({
                 Aún no hay consumo teórico calculado
               </div>
               <p className="mx-auto mt-1 max-w-xl text-[12px] leading-5 text-amber-800">
-                Hay consumos reales registrados, pero todavía no existe una comparación útil desde
-                TPV. Mapea los artículos del CSV con recetas activas y asegúrate de que esas recetas
-                tengan ingredientes configurados.
+                Hay consumos TPV aplicados, pero todavía no existe una comparación útil desde
+                recetas. Mapea los artículos del CSV con recetas activas y asegúrate de que esas
+                recetas tengan ingredientes configurados.
               </p>
             </div>
           ) : (
@@ -342,7 +342,7 @@ export function TpvTab({
                 </div>
                 <div>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                    Real
+                    Aplicado
                   </div>
                   <div className="mt-1 text-sm font-semibold text-slate-900">
                     {formatCantidad(item.consumo_real)}

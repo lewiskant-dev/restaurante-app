@@ -396,9 +396,10 @@ export function useRecetaTpvManagement({
           .eq('restaurant_id', currentRestaurantId),
         supabase
           .from('movimientos_stock')
-          .select('producto_id,cantidad,created_at,tipo')
+          .select('producto_id,cantidad,created_at,tipo,origen_tipo,categoria_consumo')
           .eq('restaurant_id', currentRestaurantId)
           .eq('tipo', 'consumo')
+          .eq('origen_tipo', 'tpv')
           .gte('created_at', startIso)
           .lt('created_at', endIso),
         supabase
@@ -488,6 +489,8 @@ export function useRecetaTpvManagement({
         cantidad: number
         created_at: string
         tipo: 'consumo'
+        origen_tipo: 'tpv'
+        categoria_consumo: string | null
       }>).forEach((movimiento) => {
         actualByProduct.set(
           movimiento.producto_id,
@@ -501,9 +504,11 @@ export function useRecetaTpvManagement({
         ...Array.from(actualByProduct.keys()),
       ])
 
-      const productosAnalitica = Array.from(productIds)
+      const productosAnaliticaTodos = Array.from(productIds)
         .map((productoId) => {
           const producto = productosMap.get(productoId)
+          if (!producto || producto.archivado) return null
+
           const consumoTeorico = Number(theoreticalByProduct.get(productoId) || 0)
           const consumoReal = Number(actualByProduct.get(productoId) || 0)
           const desviacion = consumoReal - consumoTeorico
@@ -517,19 +522,22 @@ export function useRecetaTpvManagement({
             desviacion,
           }
         })
+        .filter((item): item is TpvAnaliticaResumen['productos'][number] => item !== null)
         .filter((item) => item.consumo_teorico > 0 || item.consumo_real > 0)
+
+      const productosAnalitica = [...productosAnaliticaTodos]
         .sort((a, b) => Math.abs(b.desviacion) - Math.abs(a.desviacion))
         .slice(0, 8)
 
-      const consumoTeoricoTotal = Array.from(theoreticalByProduct.values()).reduce(
-        (acc, value) => acc + Number(value || 0),
+      const consumoTeoricoTotal = productosAnaliticaTodos.reduce(
+        (acc, item) => acc + Number(item.consumo_teorico || 0),
         0
       )
-      const consumoRealTotal = Array.from(actualByProduct.values()).reduce(
-        (acc, value) => acc + Number(value || 0),
+      const consumoRealTotal = productosAnaliticaTodos.reduce(
+        (acc, item) => acc + Number(item.consumo_real || 0),
         0
       )
-      const productosConDesviacion = productosAnalitica.filter(
+      const productosConDesviacion = productosAnaliticaTodos.filter(
         (item) => Math.abs(item.desviacion) > 0.01
       ).length
 
