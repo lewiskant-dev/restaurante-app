@@ -189,43 +189,67 @@ export function TpvTab({
           </div>
           <div className={`p-3 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Teórico
+              Consumo teórico TPV
             </div>
             <div className="mt-1 text-[1.5rem] font-semibold text-blue-600">
               {formatCantidad(tpvAnalitica.consumo_teorico_total)}
             </div>
+            <div className="mt-1 text-[11px] leading-4 text-slate-400">
+              Calculado desde ventas TPV y recetas con ingredientes.
+            </div>
           </div>
           <div className={`p-3 md:col-span-2 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Real
+              Consumo real registrado
             </div>
             <div className="mt-1 text-[1.5rem] font-semibold text-slate-900">
               {formatCantidad(tpvAnalitica.consumo_real_total)}
             </div>
+            <div className="mt-1 text-[11px] leading-4 text-slate-400">
+              Suma de consumos reales registrados en stock.
+            </div>
           </div>
           <div className={`p-3 md:col-span-2 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Desviación
+              Diferencia real - teórico
             </div>
             <div
               className={`mt-1 text-[1.5rem] font-semibold ${
-                tpvAnalitica.desviacion_total > 0.01
+                !hasTheoreticalConsumption
+                  ? 'text-slate-400'
+                  : tpvAnalitica.desviacion_total > 0.01
                   ? 'text-red-600'
                   : tpvAnalitica.desviacion_total < -0.01
                     ? 'text-amber-600'
                     : 'text-emerald-600'
               }`}
             >
-              {tpvAnalitica.desviacion_total > 0 ? '+' : ''}
-              {formatCantidad(tpvAnalitica.desviacion_total)}
+              {hasTheoreticalConsumption ? (
+                <>
+                  {tpvAnalitica.desviacion_total > 0 ? '+' : ''}
+                  {formatCantidad(tpvAnalitica.desviacion_total)}
+                </>
+              ) : (
+                'Pendiente'
+              )}
+            </div>
+            <div className="mt-1 text-[11px] leading-4 text-slate-400">
+              Solo se calcula cuando hay recetas TPV mapeadas con ingredientes.
             </div>
           </div>
           <div className={`p-3 md:col-span-2 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Productos a revisar
+              Productos con diferencia
             </div>
-            <div className="mt-1 text-[1.5rem] font-semibold text-violet-600">
-              {tpvAnalitica.productos_con_desviacion}
+            <div
+              className={`mt-1 text-[1.5rem] font-semibold ${
+                hasTheoreticalConsumption ? 'text-violet-600' : 'text-slate-400'
+              }`}
+            >
+              {hasTheoreticalConsumption ? tpvAnalitica.productos_con_desviacion : 'Pendiente'}
+            </div>
+            <div className="mt-1 text-[11px] leading-4 text-slate-400">
+              Productos donde el consumo real no coincide con el teórico.
             </div>
           </div>
         </div>
