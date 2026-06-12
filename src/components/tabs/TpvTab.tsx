@@ -70,8 +70,10 @@ export function TpvTab({
 }: TpvTabProps) {
   const recetasTpvMap = new Set(
     recetas
-      .filter((receta) => receta.activo !== false && receta.nombre_tpv)
-      .map((receta) => normalizeText(receta.nombre_tpv || ''))
+      .filter((receta) => receta.activo !== false)
+      .flatMap((receta) => [receta.nombre_tpv, receta.nombre])
+      .map((alias) => normalizeText(alias || ''))
+      .filter(Boolean)
   )
   const ventasAgrupadas = new Map<string, { producto: string; cantidad: number; lineas: number; mapeado: boolean }>()
 

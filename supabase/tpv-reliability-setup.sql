@@ -232,9 +232,16 @@ begin
     from public.recetas
     where restaurant_id = target_restaurant_id
       and activo is not false
-      and nombre_tpv is not null
-      and public.normalize_tpv_text(nombre_tpv) = public.normalize_tpv_text(venta.producto_externo)
-    order by created_at desc
+      and (
+        public.normalize_tpv_text(nombre_tpv) = public.normalize_tpv_text(venta.producto_externo)
+        or public.normalize_tpv_text(nombre) = public.normalize_tpv_text(venta.producto_externo)
+      )
+    order by
+      case
+        when public.normalize_tpv_text(nombre_tpv) = public.normalize_tpv_text(venta.producto_externo) then 0
+        else 1
+      end,
+      created_at desc
     limit 1;
 
     if not found then
@@ -273,6 +280,8 @@ begin
       from public.productos
       where id = linea.producto_id
         and restaurant_id = target_restaurant_id
+        and activo is not false
+        and archivado is not true
       for update;
 
       if not found then

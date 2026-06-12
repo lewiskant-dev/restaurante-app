@@ -24,6 +24,7 @@ declare
   target_receta_id uuid;
   linea record;
   lineas_count integer := 0;
+  producto_ids uuid[] := array[]::uuid[];
 begin
   target_restaurant_id := coalesce(p_restaurant_id, public.current_restaurant_id());
 
@@ -99,11 +100,16 @@ begin
       raise exception 'La receta contiene una línea no válida';
     end if;
 
+    if linea.producto_id = any(producto_ids) then
+      raise exception 'La receta contiene ingredientes duplicados';
+    end if;
+
     if not exists (
       select 1
       from public.productos
       where id = linea.producto_id
         and restaurant_id = target_restaurant_id
+        and activo is not false
         and coalesce(archivado, false) = false
     ) then
       raise exception 'La receta contiene un producto no disponible en el restaurante activo';
@@ -123,6 +129,7 @@ begin
     );
 
     lineas_count := lineas_count + 1;
+    producto_ids := array_append(producto_ids, linea.producto_id);
   end loop;
 
   if lineas_count = 0 then

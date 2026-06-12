@@ -21,6 +21,9 @@ as $$
 declare
   target_restaurant_id uuid;
   proveedor_result public.proveedores%rowtype;
+  proveedor_duplicado public.proveedores%rowtype;
+  normalized_nombre text;
+  normalized_cif text;
 begin
   target_restaurant_id := coalesce(p_restaurant_id, public.current_restaurant_id());
 
@@ -32,6 +35,29 @@ begin
 
   if nullif(trim(coalesce(p_nombre, '')), '') is null then
     raise exception 'El nombre del proveedor es obligatorio';
+  end if;
+
+  normalized_nombre := lower(regexp_replace(trim(coalesce(p_nombre, '')), '\s+', ' ', 'g'));
+  normalized_cif := lower(regexp_replace(coalesce(p_cif, ''), '[^[:alnum:]]', '', 'g'));
+
+  select *
+  into proveedor_duplicado
+  from public.proveedores
+  where restaurant_id = target_restaurant_id
+    and id is distinct from p_proveedor_id
+    and coalesce(archivado, false) = false
+    and (
+      lower(regexp_replace(trim(coalesce(nombre, '')), '\s+', ' ', 'g')) = normalized_nombre
+      or (
+        normalized_cif <> ''
+        and lower(regexp_replace(coalesce(cif, ''), '[^[:alnum:]]', '', 'g')) = normalized_cif
+      )
+    )
+  limit 1;
+
+  if proveedor_duplicado.id is not null then
+    raise exception 'Ya existe un proveedor activo similar: %', proveedor_duplicado.nombre
+      using errcode = '23505';
   end if;
 
   if p_proveedor_id is not null then

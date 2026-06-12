@@ -169,7 +169,7 @@ export function RecetaModal({
                       >
                         <option value="">Selecciona producto</option>
                         {productos
-                          .filter((prod) => !prod.archivado)
+                          .filter((prod) => prod.activo !== false && !prod.archivado)
                           .map((prod) => (
                             <option key={prod.id} value={prod.id}>
                               {prod.nombre}

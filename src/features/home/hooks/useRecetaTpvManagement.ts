@@ -130,11 +130,15 @@ export function useRecetaTpvManagement({
   const tpvPendientesMapeo = useMemo(() => {
     const ignoredKeys = new Set(tpvArticulosIgnorados)
     const recetasActivas = recetas.filter((receta) => receta.activo !== false)
-    const recetasMap = new Map(
-      recetasActivas
-        .filter((receta) => receta.nombre_tpv)
-        .map((receta) => [normalizeText(receta.nombre_tpv || ''), receta.id])
-    )
+    const recetasMap = new Map<string, string>()
+    recetasActivas.forEach((receta) => {
+      ;[receta.nombre_tpv, receta.nombre].forEach((alias) => {
+        const key = normalizeText(alias || '')
+        if (key && !recetasMap.has(key)) {
+          recetasMap.set(key, receta.id)
+        }
+      })
+    })
 
     const agrupadas = new Map<
       string,
@@ -995,6 +999,32 @@ export function useRecetaTpvManagement({
 
     if (!lineasPreparadas.length) {
       onError('Añade al menos una línea válida a la receta')
+      return
+    }
+
+    const productosActivos = new Set(
+      productos
+        .filter((producto) => producto.activo !== false && !producto.archivado)
+        .map((producto) => producto.id)
+    )
+    const productoDuplicado = lineasPreparadas.find(
+      (linea, index) =>
+        lineasPreparadas.findIndex((current) => current.producto_id === linea.producto_id) !== index
+    )
+
+    if (productoDuplicado) {
+      const producto = productos.find((item) => item.id === productoDuplicado.producto_id)
+      onError(`La receta tiene el ingrediente duplicado: ${producto?.nombre || 'producto'}`)
+      return
+    }
+
+    const productoNoDisponible = lineasPreparadas.find(
+      (linea) => !productosActivos.has(linea.producto_id)
+    )
+
+    if (productoNoDisponible) {
+      const producto = productos.find((item) => item.id === productoNoDisponible.producto_id)
+      onError(`El ingrediente no está activo o está archivado: ${producto?.nombre || 'producto'}`)
       return
     }
 

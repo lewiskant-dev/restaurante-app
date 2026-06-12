@@ -25,5 +25,9 @@ export function getAtomicProveedorError(error: unknown) {
     return 'Falta activar la operación segura de proveedores en Supabase. Aplica proveedor-reliability-setup.sql.'
   }
 
+  if (/ya existe un proveedor/i.test(message)) {
+    return message
+  }
+
   return message || 'No se pudo guardar el proveedor'
 }

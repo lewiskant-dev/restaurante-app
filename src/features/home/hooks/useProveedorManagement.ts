@@ -1,6 +1,7 @@
 import { useDeferredValue, useMemo, useState } from 'react'
 import { initialProveedorForm } from '@/features/home/constants'
 import type { PermissionKey, ProveedorForm } from '@/features/home/types'
+import { normalizeText } from '@/features/home/utils'
 import { getAtomicProveedorError, parseAtomicProveedorResult } from '@/lib/proveedorTransaction'
 import { supabase } from '@/lib/supabase'
 import type { Proveedor } from '@/types'
@@ -152,9 +153,6 @@ export function useProveedorManagement({
       return
     }
 
-    setProveedorSaving(true)
-    onError('')
-
     const payload = {
       nombre: proveedorForm.nombre.trim(),
       cif: proveedorForm.cif.trim(),
@@ -162,6 +160,24 @@ export function useProveedorManagement({
       email: proveedorForm.email.trim(),
       notas: proveedorForm.notas.trim(),
     }
+
+    const normalizedNombre = normalizeText(payload.nombre)
+    const normalizedCif = normalizeText(payload.cif)
+    const proveedorDuplicado = proveedores.find((proveedor) => {
+      if (proveedor.id === proveedorEditId || proveedor.archivado) return false
+
+      const sameName = normalizeText(proveedor.nombre || '') === normalizedNombre
+      const sameCif = normalizedCif && normalizeText(proveedor.cif || '') === normalizedCif
+      return sameName || sameCif
+    })
+
+    if (proveedorDuplicado) {
+      onError(`Ya existe un proveedor activo similar: ${proveedorDuplicado.nombre}`)
+      return
+    }
+
+    setProveedorSaving(true)
+    onError('')
 
     try {
       const restaurantId = requireActiveRestaurant()

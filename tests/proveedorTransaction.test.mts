@@ -32,3 +32,10 @@ test('getAtomicProveedorError explica cuando falta la RPC', () => {
     /proveedor-reliability-setup.sql/
   )
 })
+
+test('getAtomicProveedorError conserva mensajes de proveedor duplicado', () => {
+  assert.match(
+    getAtomicProveedorError(new Error('Ya existe un proveedor activo similar: Central')),
+    /proveedor activo similar/
+  )
+})
