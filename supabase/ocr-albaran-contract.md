@@ -12,6 +12,11 @@ La Edge Function `ocr-albaran` debe devolver precios pensados para actualizar st
 - `precio_unitario`: si es posible, `importe_total / (cantidad * unidades_por_pack)`
 - `precio_pack`: opcional, precio bruto/de pack si aparece en la columna `Precio`
 
+Precisión:
+
+- `precio_unitario` debe conservar hasta `6` decimales. No redondear a 2 ni a 4 decimales antes de guardar.
+- Los importes de línea, IVA y total del documento se muestran a 2 decimales, pero el coste unitario interno debe conservar precisión para evitar descuadres acumulados.
+
 Regla para Distridam/ICiRed:
 
 - Si `unidad_medida` es `CAJ`, asumir `24` unidades por caja cuando el nombre no indique otra cosa.

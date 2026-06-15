@@ -300,7 +300,7 @@ export function AlbaranFormTab({
 
                     <input
                       type="number"
-                      step="0.01"
+                      step="0.000001"
                       value={linea.precio_unitario}
                       onChange={(e) =>
                         onLineaFieldChange(index, 'precio_unitario', e.target.value)

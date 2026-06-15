@@ -353,7 +353,7 @@ export function useAlbaranManagement({
           producto_id: findProductoIdFromOCR(linea.nombre || ''),
           cantidad: String(lineaNormalizada.cantidad_normalizada || ''),
           precio_unitario: String(
-            Number(lineaNormalizada.precio_unitario_normalizado || 0).toFixed(4)
+            Number(lineaNormalizada.precio_unitario_normalizado || 0).toFixed(6)
           ),
           iva_porcentaje: lineaNormalizada.iva_porcentaje_normalizado
             ? String(lineaNormalizada.iva_porcentaje_normalizado)
@@ -492,7 +492,8 @@ export function useAlbaranManagement({
             cantidad: String(l.cantidad ?? ''),
             precio_unitario: String(l.precio_unitario ?? ''),
             iva_porcentaje: String(l.iva_porcentaje ?? ''),
-            nombre_detectado: l.nombre_producto || '',
+            nombre_detectado: '',
+            mapeo_estado: 'manual' as const,
           }))
         : [{ ...initialLinea }]
     )

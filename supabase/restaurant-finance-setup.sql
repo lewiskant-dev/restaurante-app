@@ -5,10 +5,14 @@
 -- 3. Preparar márgenes y desviaciones en fases posteriores.
 
 alter table if exists public.productos
-  add column if not exists coste_unitario numeric(12,4) not null default 0;
+  add column if not exists coste_unitario numeric(14,6) not null default 0;
 
 alter table if exists public.productos
-  add column if not exists ultimo_precio_compra numeric(12,4);
+  add column if not exists ultimo_precio_compra numeric(14,6);
+
+alter table if exists public.productos
+  alter column coste_unitario type numeric(14,6),
+  alter column ultimo_precio_compra type numeric(14,6);
 
 alter table if exists public.productos
   add column if not exists ultima_compra_at date;
@@ -47,7 +51,7 @@ create table if not exists public.productos_precios_historial (
   proveedor_nombre text,
   fecha_compra date not null,
   cantidad numeric(12,4) not null default 0,
-  precio_unitario numeric(12,4) not null,
+  precio_unitario numeric(14,6) not null,
   created_at timestamptz not null default now()
 );
 
@@ -124,7 +128,7 @@ create table if not exists public.inventario_cierre_lineas (
   unidad text not null default 'uds',
   stock_actual numeric(12,4) not null default 0,
   stock_minimo numeric(12,4) not null default 0,
-  coste_unitario numeric(12,4) not null default 0,
+  coste_unitario numeric(14,6) not null default 0,
   valor_stock numeric(14,4) not null default 0,
   coste_reposicion_minima numeric(14,4) not null default 0,
   valor_sobre_minimo numeric(14,4) not null default 0,

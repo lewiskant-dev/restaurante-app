@@ -21,9 +21,13 @@ where coalesce(total, 0) > 0
 alter table if exists public.albaran_lineas
   add column if not exists iva_porcentaje numeric(5,2) not null default 0,
   add column if not exists iva_importe numeric(14,4) not null default 0,
-  add column if not exists precio_unitario_con_iva numeric(12,4) not null default 0,
+  add column if not exists precio_unitario_con_iva numeric(14,6) not null default 0,
   add column if not exists subtotal_sin_iva numeric(14,4) not null default 0,
   add column if not exists subtotal_con_iva numeric(14,4) not null default 0;
+
+alter table if exists public.albaran_lineas
+  alter column precio_unitario type numeric(14,6),
+  alter column precio_unitario_con_iva type numeric(14,6);
 
 update public.albaran_lineas
 set
@@ -34,14 +38,23 @@ where coalesce(subtotal, 0) > 0
   and (coalesce(subtotal_sin_iva, 0) = 0 or coalesce(subtotal_con_iva, 0) = 0);
 
 alter table if exists public.productos
-  add column if not exists ultimo_precio_compra_con_iva numeric(12,4);
+  add column if not exists ultimo_precio_compra_con_iva numeric(14,6);
+
+alter table if exists public.productos
+  alter column coste_unitario type numeric(14,6),
+  alter column ultimo_precio_compra type numeric(14,6),
+  alter column ultimo_precio_compra_con_iva type numeric(14,6);
 
 alter table if exists public.productos_precios_historial
   add column if not exists iva_porcentaje numeric(5,2) not null default 0,
   add column if not exists iva_importe numeric(14,4) not null default 0,
-  add column if not exists precio_unitario_con_iva numeric(12,4) not null default 0,
+  add column if not exists precio_unitario_con_iva numeric(14,6) not null default 0,
   add column if not exists subtotal_sin_iva numeric(14,4) not null default 0,
   add column if not exists subtotal_con_iva numeric(14,4) not null default 0;
+
+alter table if exists public.productos_precios_historial
+  alter column precio_unitario type numeric(14,6),
+  alter column precio_unitario_con_iva type numeric(14,6);
 
 update public.productos_precios_historial
 set
