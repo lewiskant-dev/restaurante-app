@@ -459,7 +459,9 @@ export function useRecetaTpvManagement({
           .lt('created_at', endIso),
         supabase
           .from('productos_precios_historial')
-          .select('producto_id,proveedor_nombre,fecha_compra,cantidad,precio_unitario,productos(nombre)')
+          .select(
+            'producto_id,proveedor_nombre,fecha_compra,cantidad,precio_unitario,iva_porcentaje,precio_unitario_con_iva,subtotal_sin_iva,subtotal_con_iva,productos(nombre)'
+          )
           .eq('restaurant_id', currentRestaurantId)
           .gte('fecha_compra', startDate)
           .lt('fecha_compra', endDate),
@@ -679,6 +681,7 @@ export function useRecetaTpvManagement({
         Pick<
           ProductoPrecioHistorial,
           'producto_id' | 'proveedor_nombre' | 'fecha_compra' | 'cantidad' | 'precio_unitario'
+          | 'iva_porcentaje' | 'precio_unitario_con_iva' | 'subtotal_sin_iva' | 'subtotal_con_iva'
         > & {
           productos?: { nombre?: string | null } | null
         }
@@ -697,7 +700,12 @@ export function useRecetaTpvManagement({
         }
 
         current.cantidad_comprada += Number(compra.cantidad || 0)
-        current.coste_total += Number(compra.cantidad || 0) * Number(compra.precio_unitario || 0)
+        const subtotalConIva =
+          Number(compra.subtotal_con_iva || 0) ||
+          Number(compra.cantidad || 0) *
+            Number(compra.precio_unitario_con_iva || compra.precio_unitario || 0)
+
+        current.coste_total += subtotalConIva
         current.historial_precios.push({
           fecha_compra: compra.fecha_compra,
           precio_unitario: Number(compra.precio_unitario || 0),

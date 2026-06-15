@@ -25,6 +25,8 @@ type AlbaranFormTabProps = {
   albaranOCRResumen: string
   albaranOCRTotalDetectado: number | null
   totalAlbaran: number
+  totalAlbaranSinIva: number
+  totalAlbaranIva: number
   lineasOCRPendientes: number
   albaranSaving: boolean
   onNumeroChange: (value: string) => void
@@ -37,7 +39,7 @@ type AlbaranFormTabProps = {
   onSelectProducto: (index: number, productoId: string, fromOcr: boolean) => void
   onLineaFieldChange: (
     index: number,
-    field: 'cantidad' | 'precio_unitario' | 'producto_id',
+    field: 'cantidad' | 'precio_unitario' | 'iva_porcentaje' | 'producto_id',
     value: string
   ) => void
   onRemoveLinea: (index: number) => void
@@ -64,6 +66,8 @@ export function AlbaranFormTab({
   albaranOCRResumen,
   albaranOCRTotalDetectado,
   totalAlbaran,
+  totalAlbaranSinIva,
+  totalAlbaranIva,
   lineasOCRPendientes,
   albaranSaving,
   onNumeroChange,
@@ -211,6 +215,9 @@ export function AlbaranFormTab({
 
           {albaranLineas.map((linea, index) => {
             const subtotal = Number(linea.cantidad || 0) * Number(linea.precio_unitario || 0)
+            const ivaPorcentaje = Number(linea.iva_porcentaje || 0)
+            const ivaImporte = subtotal * (Number.isFinite(ivaPorcentaje) ? ivaPorcentaje / 100 : 0)
+            const subtotalConIva = subtotal + ivaImporte
 
             return (
               <div
@@ -281,7 +288,7 @@ export function AlbaranFormTab({
                     </div>
                   ) : null}
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-3 sm:grid-cols-[1fr_1fr_0.75fr]">
                     <input
                       type="number"
                       step="0.01"
@@ -298,14 +305,37 @@ export function AlbaranFormTab({
                       onChange={(e) =>
                         onLineaFieldChange(index, 'precio_unitario', e.target.value)
                       }
-                      placeholder="Precio unitario"
+                      placeholder="Coste unitario sin IVA"
+                      className={`w-full px-4 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
+                    />
+
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={linea.iva_porcentaje}
+                      onChange={(e) =>
+                        onLineaFieldChange(index, 'iva_porcentaje', e.target.value)
+                      }
+                      placeholder="IVA %"
                       className={`w-full px-4 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-medium text-slate-500">Subtotal</div>
-                    <div className="text-sm font-semibold text-slate-900">{subtotal.toFixed(2)} €</div>
+                  <div className="grid gap-2 rounded-[16px] bg-white/70 px-3 py-2 text-[12px] sm:grid-cols-3">
+                    <div>
+                      <div className="font-medium text-slate-400">Base imponible</div>
+                      <div className="font-semibold text-slate-900">{subtotal.toFixed(2)} €</div>
+                    </div>
+                    <div>
+                      <div className="font-medium text-slate-400">IVA compra</div>
+                      <div className="font-semibold text-slate-900">
+                        {ivaImporte.toFixed(2)} € {ivaPorcentaje ? `(${ivaPorcentaje}%)` : ''}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="font-medium text-slate-400">Desembolso</div>
+                      <div className="font-semibold text-slate-900">{subtotalConIva.toFixed(2)} €</div>
+                    </div>
                   </div>
 
                   <button
@@ -322,9 +352,25 @@ export function AlbaranFormTab({
       </div>
 
       <div className={`p-4 sm:p-5 ${surfaceCard}`}>
-        <div className="flex items-center justify-between">
-          <span className="text-[15px] font-semibold text-slate-900">Total</span>
-          <span className="text-[17px] font-bold text-blue-600">{totalAlbaran.toFixed(2)} €</span>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[14px] font-medium text-slate-500">Base imponible</span>
+            <span className="text-[15px] font-semibold text-slate-900">
+              {totalAlbaranSinIva.toFixed(2)} €
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[14px] font-medium text-slate-500">IVA soportado</span>
+            <span className="text-[15px] font-semibold text-slate-900">
+              {totalAlbaranIva.toFixed(2)} €
+            </span>
+          </div>
+          <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+            <span className="text-[15px] font-semibold text-slate-900">Total albarán</span>
+            <span className="text-[17px] font-bold text-blue-600">
+              {totalAlbaran.toFixed(2)} €
+            </span>
+          </div>
         </div>
 
         {albaranOCRTotalDetectado ? (

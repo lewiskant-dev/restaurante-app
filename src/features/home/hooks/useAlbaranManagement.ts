@@ -108,9 +108,15 @@ export function useAlbaranManagement({
       })
   }, [albaranes, busquedaAlbaran, albaranEstado, albaranDesde, albaranHasta])
 
-  const totalAlbaran = albaranLineas.reduce((acc, linea) => {
+  const totalAlbaranSinIva = albaranLineas.reduce((acc, linea) => {
     return acc + Number(linea.cantidad || 0) * Number(linea.precio_unitario || 0)
   }, 0)
+  const totalAlbaranIva = albaranLineas.reduce((acc, linea) => {
+    const subtotal = Number(linea.cantidad || 0) * Number(linea.precio_unitario || 0)
+    const ivaPorcentaje = Number(linea.iva_porcentaje || 0)
+    return acc + subtotal * (Number.isFinite(ivaPorcentaje) ? ivaPorcentaje / 100 : 0)
+  }, 0)
+  const totalAlbaran = totalAlbaranSinIva + totalAlbaranIva
 
   const lineasOCRPendientes = albaranLineas.filter(
     (linea) => !!linea.nombre_detectado && !linea.producto_id
@@ -349,6 +355,9 @@ export function useAlbaranManagement({
           precio_unitario: String(
             Number(lineaNormalizada.precio_unitario_normalizado || 0).toFixed(4)
           ),
+          iva_porcentaje: lineaNormalizada.iva_porcentaje_normalizado
+            ? String(lineaNormalizada.iva_porcentaje_normalizado)
+            : '',
           nombre_detectado: linea.nombre || '',
           ocr_aviso: lineaNormalizada.aviso,
         }
@@ -482,6 +491,7 @@ export function useAlbaranManagement({
             producto_id: l.producto_id || '',
             cantidad: String(l.cantidad ?? ''),
             precio_unitario: String(l.precio_unitario ?? ''),
+            iva_porcentaje: String(l.iva_porcentaje ?? ''),
             nombre_detectado: l.nombre_producto || '',
           }))
         : [{ ...initialLinea }]
@@ -562,6 +572,7 @@ export function useAlbaranManagement({
         producto_id: linea.producto_id,
         cantidad: Number(linea.cantidad),
         precio_unitario: Number(linea.precio_unitario),
+        iva_porcentaje: Number(linea.iva_porcentaje || 0),
       }
     })
 
@@ -574,6 +585,7 @@ export function useAlbaranManagement({
         !l.cantidad ||
         l.cantidad <= 0 ||
         l.precio_unitario < 0
+        || l.iva_porcentaje < 0
     )
 
     if (hayLineaInvalida) {
@@ -610,6 +622,7 @@ export function useAlbaranManagement({
         nombre_producto: l.producto!.nombre,
         cantidad: l.cantidad,
         precio_unitario: l.precio_unitario,
+        iva_porcentaje: l.iva_porcentaje,
       }))
 
       const { data, error } = await supabase.rpc('guardar_albaran_atomico', {
@@ -642,10 +655,13 @@ export function useAlbaranManagement({
           fecha: albaranFecha,
           notas: albaranNotas.trim(),
           total,
+          total_sin_iva: totalAlbaranSinIva,
+          total_iva: totalAlbaranIva,
           lineas: lineasPreparadas.map((l) => ({
             producto: l.producto?.nombre,
             cantidad: l.cantidad,
             precio_unitario: l.precio_unitario,
+            iva_porcentaje: l.iva_porcentaje,
           })),
         },
       })
@@ -704,6 +720,8 @@ export function useAlbaranManagement({
     detalleAlbaran,
     albaranesFiltrados,
     totalAlbaran,
+    totalAlbaranSinIva,
+    totalAlbaranIva,
     lineasOCRPendientes,
     setBusquedaAlbaran,
     setAlbaranEstado,

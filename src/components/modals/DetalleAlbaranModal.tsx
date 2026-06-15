@@ -74,9 +74,23 @@ export function DetalleAlbaranModal({
               <span className="font-medium text-slate-900">{formatFecha(detalleAlbaran.fecha)}</span>
             </div>
             <div className="flex justify-between py-1 text-sm">
-              <span className="text-slate-500">Total</span>
+              <span className="text-slate-500">Base imponible</span>
+              <span className="font-medium text-slate-900">
+                {formatEuro(Number(detalleAlbaran.total_sin_iva ?? detalleAlbaran.total ?? 0))}
+              </span>
+            </div>
+            <div className="flex justify-between py-1 text-sm">
+              <span className="text-slate-500">IVA soportado</span>
+              <span className="font-medium text-slate-900">
+                {formatEuro(Number(detalleAlbaran.total_iva || 0))}
+              </span>
+            </div>
+            <div className="flex justify-between border-t border-slate-200 pt-2 text-sm">
+              <span className="text-slate-500">Total con IVA</span>
               <span className="font-semibold text-blue-600">
-                {formatEuro(Number(detalleAlbaran.total || 0))}
+                {formatEuro(
+                  Number(detalleAlbaran.total_con_iva ?? detalleAlbaran.total ?? 0)
+                )}
               </span>
             </div>
             {detalleAlbaran.anulado ? (
@@ -122,10 +136,20 @@ export function DetalleAlbaranModal({
                   <div className="text-sm font-semibold text-slate-900">{linea.nombre_producto}</div>
                   <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
                     <span>
-                      {linea.cantidad} × {formatEuro(Number(linea.precio_unitario))}
+                      {linea.cantidad} × {formatEuro(Number(linea.precio_unitario))} sin IVA
                     </span>
                     <span className="font-semibold text-slate-900">
-                      {formatEuro(Number(linea.subtotal))}
+                      {formatEuro(Number(linea.subtotal_sin_iva ?? linea.subtotal))}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
+                    <span>IVA {Number(linea.iva_porcentaje || 0).toLocaleString('es-ES')}%</span>
+                    <span>{formatEuro(Number(linea.iva_importe || 0))}</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
+                    <span>Desembolso</span>
+                    <span className="font-semibold text-slate-900">
+                      {formatEuro(Number(linea.subtotal_con_iva ?? linea.subtotal))}
                     </span>
                   </div>
                 </div>

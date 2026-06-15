@@ -50,6 +50,7 @@ export type AlbaranLineaForm = {
   producto_id: string
   cantidad: string
   precio_unitario: string
+  iva_porcentaje: string
   nombre_detectado?: string
   ocr_aviso?: string
   mapeo_estado?: 'automatico' | 'aprendido' | 'manual' | 'pendiente'
@@ -191,7 +192,9 @@ export type OCRAlbaranLinea = {
   nombre: string
   cantidad: number
   precio_unitario: number
+  unidad_medida?: string | null
   importe_total?: number | null
+  iva_porcentaje?: number | null
   precio_pack?: number | null
   unidades_por_pack?: number | null
 }
@@ -278,6 +281,11 @@ export type ProductoPrecioHistorial = {
   fecha_compra: string
   cantidad: number
   precio_unitario: number
+  iva_porcentaje?: number | null
+  iva_importe?: number | null
+  precio_unitario_con_iva?: number | null
+  subtotal_sin_iva?: number | null
+  subtotal_con_iva?: number | null
   created_at: string
 }
 

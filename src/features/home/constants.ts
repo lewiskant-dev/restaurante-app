@@ -95,6 +95,7 @@ export const initialLinea: AlbaranLineaForm = {
   producto_id: '',
   cantidad: '',
   precio_unitario: '',
+  iva_porcentaje: '',
   nombre_detectado: '',
   mapeo_estado: 'manual',
 }

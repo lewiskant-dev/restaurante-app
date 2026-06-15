@@ -8,6 +8,7 @@ export type Producto = {
   stock_minimo: number
   coste_unitario?: number
   ultimo_precio_compra?: number | null
+  ultimo_precio_compra_con_iva?: number | null
   ultima_compra_at?: string | null
   ultimo_proveedor_id?: string | null
   ultimo_proveedor_nombre?: string | null
@@ -56,6 +57,9 @@ export type Albaran = {
   fecha: string
   notas: string
   total: number
+  total_sin_iva?: number | null
+  total_iva?: number | null
+  total_con_iva?: number | null
   foto_url: string
   ocr_texto: string
   anulado: boolean
@@ -71,6 +75,11 @@ export type AlbaranLinea = {
   nombre_producto: string
   cantidad: number
   precio_unitario: number
+  iva_porcentaje?: number | null
+  iva_importe?: number | null
+  precio_unitario_con_iva?: number | null
+  subtotal_sin_iva?: number | null
+  subtotal_con_iva?: number | null
   subtotal: number
   created_at: string
 }

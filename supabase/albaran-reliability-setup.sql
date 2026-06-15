@@ -1,6 +1,56 @@
 -- Guarda, edita y anula albaranes sin dejar stock, líneas o movimientos a medias.
 -- Requiere restaurant-finance-setup.sql y stock-reliability-setup.sql.
 
+alter table if exists public.albaranes
+  add column if not exists total_sin_iva numeric(14,4) not null default 0,
+  add column if not exists total_iva numeric(14,4) not null default 0,
+  add column if not exists total_con_iva numeric(14,4) not null default 0;
+
+alter table if exists public.albaranes
+  alter column total_sin_iva set default 0,
+  alter column total_iva set default 0,
+  alter column total_con_iva set default 0;
+
+update public.albaranes
+set
+  total_sin_iva = coalesce(nullif(total_sin_iva, 0), coalesce(total, 0)),
+  total_con_iva = coalesce(nullif(total_con_iva, 0), coalesce(total, 0))
+where coalesce(total, 0) > 0
+  and (coalesce(total_sin_iva, 0) = 0 or coalesce(total_con_iva, 0) = 0);
+
+alter table if exists public.albaran_lineas
+  add column if not exists iva_porcentaje numeric(5,2) not null default 0,
+  add column if not exists iva_importe numeric(14,4) not null default 0,
+  add column if not exists precio_unitario_con_iva numeric(12,4) not null default 0,
+  add column if not exists subtotal_sin_iva numeric(14,4) not null default 0,
+  add column if not exists subtotal_con_iva numeric(14,4) not null default 0;
+
+update public.albaran_lineas
+set
+  subtotal_sin_iva = coalesce(nullif(subtotal_sin_iva, 0), coalesce(subtotal, cantidad * precio_unitario, 0)),
+  precio_unitario_con_iva = coalesce(nullif(precio_unitario_con_iva, 0), coalesce(precio_unitario, 0)),
+  subtotal_con_iva = coalesce(nullif(subtotal_con_iva, 0), coalesce(subtotal, cantidad * precio_unitario, 0))
+where coalesce(subtotal, 0) > 0
+  and (coalesce(subtotal_sin_iva, 0) = 0 or coalesce(subtotal_con_iva, 0) = 0);
+
+alter table if exists public.productos
+  add column if not exists ultimo_precio_compra_con_iva numeric(12,4);
+
+alter table if exists public.productos_precios_historial
+  add column if not exists iva_porcentaje numeric(5,2) not null default 0,
+  add column if not exists iva_importe numeric(14,4) not null default 0,
+  add column if not exists precio_unitario_con_iva numeric(12,4) not null default 0,
+  add column if not exists subtotal_sin_iva numeric(14,4) not null default 0,
+  add column if not exists subtotal_con_iva numeric(14,4) not null default 0;
+
+update public.productos_precios_historial
+set
+  precio_unitario_con_iva = coalesce(nullif(precio_unitario_con_iva, 0), coalesce(precio_unitario, 0)),
+  subtotal_sin_iva = coalesce(nullif(subtotal_sin_iva, 0), coalesce(cantidad * precio_unitario, 0)),
+  subtotal_con_iva = coalesce(nullif(subtotal_con_iva, 0), coalesce(cantidad * precio_unitario, 0))
+where coalesce(precio_unitario, 0) > 0
+  and (coalesce(precio_unitario_con_iva, 0) = 0 or coalesce(subtotal_con_iva, 0) = 0);
+
 create or replace function public.recalcular_ultima_compra_producto(
   p_producto_id uuid,
   p_restaurant_id uuid
@@ -32,6 +82,7 @@ begin
     set
       coste_unitario = ultima_compra.precio_unitario,
       ultimo_precio_compra = ultima_compra.precio_unitario,
+      ultimo_precio_compra_con_iva = nullif(ultima_compra.precio_unitario_con_iva, 0),
       ultima_compra_at = ultima_compra.fecha_compra,
       ultimo_proveedor_id = ultima_compra.proveedor_id,
       ultimo_proveedor_nombre = ultima_compra.proveedor_nombre
@@ -77,7 +128,10 @@ declare
   producto_actual public.productos%rowtype;
   old_product record;
   target_albaran_id uuid;
-  target_total numeric := 0;
+  target_total_sin_iva numeric := 0;
+  target_total_iva numeric := 0;
+  target_total_con_iva numeric := 0;
+  linea_iva numeric := 0;
   old_product_ids uuid[] := array[]::uuid[];
   affected_product_id uuid;
 begin
@@ -214,6 +268,7 @@ begin
         producto_id uuid,
         cantidad numeric,
         precio_unitario numeric,
+        iva_porcentaje numeric,
         nombre_producto text
       )
       where x.producto_id = p.id
@@ -227,6 +282,7 @@ begin
       producto_id uuid,
       cantidad numeric,
       precio_unitario numeric,
+      iva_porcentaje numeric,
       nombre_producto text
     )
   loop
@@ -237,6 +293,8 @@ begin
       or linea.precio_unitario < 0 then
       raise exception 'El albarán contiene una línea no válida';
     end if;
+
+    linea_iva := greatest(coalesce(linea.iva_porcentaje, 0), 0);
 
     select *
     into producto_actual
@@ -258,6 +316,11 @@ begin
       nombre_producto,
       cantidad,
       precio_unitario,
+      iva_porcentaje,
+      iva_importe,
+      precio_unitario_con_iva,
+      subtotal_sin_iva,
+      subtotal_con_iva,
       subtotal
     )
     values (
@@ -267,6 +330,11 @@ begin
       producto_actual.nombre,
       linea.cantidad,
       linea.precio_unitario,
+      linea_iva,
+      (linea.cantidad * linea.precio_unitario) * (linea_iva / 100),
+      linea.precio_unitario * (1 + (linea_iva / 100)),
+      linea.cantidad * linea.precio_unitario,
+      (linea.cantidad * linea.precio_unitario) * (1 + (linea_iva / 100)),
       linea.cantidad * linea.precio_unitario
     );
 
@@ -275,6 +343,7 @@ begin
       stock_actual = coalesce(stock_actual, 0) + linea.cantidad,
       coste_unitario = linea.precio_unitario,
       ultimo_precio_compra = linea.precio_unitario,
+      ultimo_precio_compra_con_iva = linea.precio_unitario * (1 + (linea_iva / 100)),
       ultima_compra_at = p_fecha,
       ultimo_proveedor_id = proveedor_actual.id,
       ultimo_proveedor_nombre = proveedor_actual.nombre
@@ -289,7 +358,12 @@ begin
       proveedor_nombre,
       fecha_compra,
       cantidad,
-      precio_unitario
+      precio_unitario,
+      iva_porcentaje,
+      iva_importe,
+      precio_unitario_con_iva,
+      subtotal_sin_iva,
+      subtotal_con_iva
     )
     values (
       target_restaurant_id,
@@ -299,7 +373,12 @@ begin
       proveedor_actual.nombre,
       p_fecha,
       linea.cantidad,
-      linea.precio_unitario
+      linea.precio_unitario,
+      linea_iva,
+      (linea.cantidad * linea.precio_unitario) * (linea_iva / 100),
+      linea.precio_unitario * (1 + (linea_iva / 100)),
+      linea.cantidad * linea.precio_unitario,
+      (linea.cantidad * linea.precio_unitario) * (1 + (linea_iva / 100))
     );
 
     insert into public.movimientos_stock (
@@ -325,7 +404,9 @@ begin
       coalesce(producto_actual.stock_actual, 0) + linea.cantidad
     );
 
-    target_total := target_total + (linea.cantidad * linea.precio_unitario);
+    target_total_sin_iva := target_total_sin_iva + (linea.cantidad * linea.precio_unitario);
+    target_total_iva := target_total_iva + ((linea.cantidad * linea.precio_unitario) * (linea_iva / 100));
+    target_total_con_iva := target_total_sin_iva + target_total_iva;
   end loop;
 
   update public.albaranes
@@ -335,7 +416,10 @@ begin
     proveedor_nombre = proveedor_actual.nombre,
     fecha = p_fecha,
     notas = coalesce(p_notas, ''),
-    total = target_total,
+    total = target_total_con_iva,
+    total_sin_iva = target_total_sin_iva,
+    total_iva = target_total_iva,
+    total_con_iva = target_total_con_iva,
     foto_url = case
       when nullif(trim(coalesce(p_foto_url, '')), '') is not null then p_foto_url
       else foto_url
@@ -347,7 +431,10 @@ begin
 
   return jsonb_build_object(
     'albaran_id', target_albaran_id,
-    'total', target_total,
+    'total', target_total_con_iva,
+    'total_sin_iva', target_total_sin_iva,
+    'total_iva', target_total_iva,
+    'total_con_iva', target_total_con_iva,
     'lineas', jsonb_array_length(p_lineas),
     'editado', p_albaran_id is not null
   );

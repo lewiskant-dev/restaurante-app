@@ -742,6 +742,8 @@ export default function HomePage() {
     detalleAlbaran,
     albaranesFiltrados,
     totalAlbaran,
+    totalAlbaranSinIva,
+    totalAlbaranIva,
     lineasOCRPendientes,
     setBusquedaAlbaran,
     setAlbaranEstado,
@@ -2003,6 +2005,8 @@ export default function HomePage() {
             albaranOCRResumen={albaranOCRResumen}
             albaranOCRTotalDetectado={albaranOCRTotalDetectado}
             totalAlbaran={totalAlbaran}
+            totalAlbaranSinIva={totalAlbaranSinIva}
+            totalAlbaranIva={totalAlbaranIva}
             lineasOCRPendientes={lineasOCRPendientes}
             albaranSaving={albaranSaving}
             onNumeroChange={setAlbaranNumero}
