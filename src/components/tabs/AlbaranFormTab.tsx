@@ -23,6 +23,7 @@ type AlbaranFormTabProps = {
   albaranOCRLoading: boolean
   albaranFoto: File | null
   albaranOCRResumen: string
+  albaranOCRTotalDetectado: number | null
   totalAlbaran: number
   lineasOCRPendientes: number
   albaranSaving: boolean
@@ -41,6 +42,7 @@ type AlbaranFormTabProps = {
   ) => void
   onRemoveLinea: (index: number) => void
   onGuardar: () => void
+  onCancelar: () => void
   onOpenCrearProveedor: () => void
   getOCRStatusClasses: (estado?: AlbaranLineaForm['mapeo_estado']) => string
   getOCRStatusLabel: (estado?: AlbaranLineaForm['mapeo_estado']) => string
@@ -60,6 +62,7 @@ export function AlbaranFormTab({
   albaranOCRLoading,
   albaranFoto,
   albaranOCRResumen,
+  albaranOCRTotalDetectado,
   totalAlbaran,
   lineasOCRPendientes,
   albaranSaving,
@@ -74,6 +77,7 @@ export function AlbaranFormTab({
   onLineaFieldChange,
   onRemoveLinea,
   onGuardar,
+  onCancelar,
   onOpenCrearProveedor,
   getOCRStatusClasses,
   getOCRStatusLabel,
@@ -81,13 +85,22 @@ export function AlbaranFormTab({
 }: AlbaranFormTabProps) {
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-[1.9rem] font-semibold tracking-tight text-slate-950">
-          {editingAlbaranId ? 'Editar albarán' : 'Nuevo albarán'}
-        </h2>
-        <p className="mt-1.5 text-[15px] text-slate-500">
-          Registra compras manualmente o usa OCR para completar las líneas más rápido.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-[1.9rem] font-semibold tracking-tight text-slate-950">
+            {editingAlbaranId ? 'Editar albarán' : 'Nuevo albarán'}
+          </h2>
+          <p className="mt-1.5 text-[15px] text-slate-500">
+            Registra compras manualmente o usa OCR para completar las líneas más rápido.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onCancelar}
+          className={`px-4 py-2.5 text-[12px] text-slate-600 ${ghostButton}`}
+        >
+          Cancelar
+        </button>
       </div>
 
       <div className={`p-4 sm:p-5 ${surfaceCard}`}>
@@ -259,6 +272,12 @@ export function AlbaranFormTab({
                           albarán.
                         </div>
                       )}
+
+                      {linea.ocr_aviso ? (
+                        <div className="rounded-[16px] bg-sky-50 px-3 py-2 text-[12px] text-sky-700">
+                          {linea.ocr_aviso}
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
 
@@ -307,6 +326,19 @@ export function AlbaranFormTab({
           <span className="text-[15px] font-semibold text-slate-900">Total</span>
           <span className="text-[17px] font-bold text-blue-600">{totalAlbaran.toFixed(2)} €</span>
         </div>
+
+        {albaranOCRTotalDetectado ? (
+          <div
+            className={`mt-4 rounded-[16px] px-4 py-3 text-[13px] ${
+              Math.abs(totalAlbaran - albaranOCRTotalDetectado) > 0.05
+                ? 'bg-red-50 text-red-700'
+                : 'bg-emerald-50 text-emerald-700'
+            }`}
+          >
+            Total detectado en documento: {albaranOCRTotalDetectado.toFixed(2)} €. Diferencia:{' '}
+            {(totalAlbaran - albaranOCRTotalDetectado).toFixed(2)} €.
+          </div>
+        ) : null}
 
         {lineasOCRPendientes > 0 ? (
           <div className="mt-4 rounded-[16px] bg-amber-50 px-4 py-3 text-[13px] text-amber-800">

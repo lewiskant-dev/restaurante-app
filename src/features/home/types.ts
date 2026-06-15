@@ -51,6 +51,7 @@ export type AlbaranLineaForm = {
   cantidad: string
   precio_unitario: string
   nombre_detectado?: string
+  ocr_aviso?: string
   mapeo_estado?: 'automatico' | 'aprendido' | 'manual' | 'pendiente'
 }
 
@@ -190,6 +191,9 @@ export type OCRAlbaranLinea = {
   nombre: string
   cantidad: number
   precio_unitario: number
+  importe_total?: number | null
+  precio_pack?: number | null
+  unidades_por_pack?: number | null
 }
 
 export type OCRAlbaranResult = {
@@ -197,6 +201,7 @@ export type OCRAlbaranResult = {
   numero: string
   fecha: string
   lineas: OCRAlbaranLinea[]
+  total?: number | null
   resumen?: string
 }
 

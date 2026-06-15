@@ -736,6 +736,7 @@ export default function HomePage() {
     albaranSaving,
     albaranOCRLoading,
     albaranOCRResumen,
+    albaranOCRTotalDetectado,
     editingAlbaranId,
     detalleAlbaranOpen,
     detalleAlbaran,
@@ -760,6 +761,7 @@ export default function HomePage() {
     removeAlbaranLinea,
     updateAlbaranLinea,
     guardarAlbaran,
+    resetAlbaranForm,
     analizarAlbaranConOCR,
     handleProductoSeleccionadoOCR,
     getProductoNombre,
@@ -1999,6 +2001,7 @@ export default function HomePage() {
             albaranOCRLoading={albaranOCRLoading}
             albaranFoto={albaranFoto}
             albaranOCRResumen={albaranOCRResumen}
+            albaranOCRTotalDetectado={albaranOCRTotalDetectado}
             totalAlbaran={totalAlbaran}
             lineasOCRPendientes={lineasOCRPendientes}
             albaranSaving={albaranSaving}
@@ -2019,6 +2022,7 @@ export default function HomePage() {
             onLineaFieldChange={updateAlbaranLinea}
             onRemoveLinea={removeAlbaranLinea}
             onGuardar={() => void guardarAlbaran()}
+            onCancelar={resetAlbaranForm}
             onOpenCrearProveedor={openCrearProveedor}
             getOCRStatusClasses={getOCRStatusClasses}
             getOCRStatusLabel={getOCRStatusLabel}

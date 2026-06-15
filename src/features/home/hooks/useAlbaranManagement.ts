@@ -13,6 +13,7 @@ import {
   parseAtomicAlbaranResult,
   parseAtomicMapeoProductoResult,
 } from '@/lib/albaranTransaction'
+import { normalizeOCRAlbaranLinea } from '@/lib/albaranOcr'
 import { supabase } from '@/lib/supabase'
 import type { Albaran, AlbaranLinea, Producto, Proveedor } from '@/types'
 import type { PromptActionRequest } from '@/components/ui/PromptActionDialog'
@@ -74,6 +75,7 @@ export function useAlbaranManagement({
   const [albaranSaving, setAlbaranSaving] = useState(false)
   const [albaranOCRLoading, setAlbaranOCRLoading] = useState(false)
   const [albaranOCRResumen, setAlbaranOCRResumen] = useState('')
+  const [albaranOCRTotalDetectado, setAlbaranOCRTotalDetectado] = useState<number | null>(null)
   const [editingAlbaranId, setEditingAlbaranId] = useState<string | null>(null)
   const [detalleAlbaranOpen, setDetalleAlbaranOpen] = useState(false)
   const [detalleAlbaran, setDetalleAlbaran] = useState<Albaran | null>(null)
@@ -326,22 +328,31 @@ export function useAlbaranManagement({
       }
 
       const resultado = (data || {}) as OCRAlbaranResult
+      const totalDetectado = Number(resultado.total || 0)
 
       setAlbaranNumero(resultado.numero || '')
       setAlbaranFecha(formatOCRDateToInput(resultado.fecha || ''))
       setAlbaranOCRResumen(resultado.resumen || '')
+      setAlbaranOCRTotalDetectado(Number.isFinite(totalDetectado) && totalDetectado > 0 ? totalDetectado : null)
 
       const proveedorId = findProveedorIdFromOCR(resultado.proveedor || '')
       if (proveedorId) {
         setAlbaranProveedorId(proveedorId)
       }
 
-      const lineasDetectadas: AlbaranLineaForm[] = (resultado.lineas || []).map((linea) => ({
-        producto_id: findProductoIdFromOCR(linea.nombre || ''),
-        cantidad: String(linea.cantidad ?? ''),
-        precio_unitario: String(linea.precio_unitario ?? ''),
-        nombre_detectado: linea.nombre || '',
-      }))
+      const lineasDetectadas: AlbaranLineaForm[] = (resultado.lineas || []).map((linea) => {
+        const lineaNormalizada = normalizeOCRAlbaranLinea(linea)
+
+        return {
+          producto_id: findProductoIdFromOCR(linea.nombre || ''),
+          cantidad: String(lineaNormalizada.cantidad_normalizada || ''),
+          precio_unitario: String(
+            Number(lineaNormalizada.precio_unitario_normalizado || 0).toFixed(4)
+          ),
+          nombre_detectado: linea.nombre || '',
+          ocr_aviso: lineaNormalizada.aviso,
+        }
+      })
 
       if (lineasDetectadas.length > 0) {
         setAlbaranLineas(lineasDetectadas)
@@ -477,6 +488,7 @@ export function useAlbaranManagement({
     )
 
     setAlbaranOCRResumen('')
+    setAlbaranOCRTotalDetectado(null)
     setDetalleAlbaranOpen(false)
     setDetalleAlbaran(null)
     setAlbaranLineasDetalle([])
@@ -507,6 +519,7 @@ export function useAlbaranManagement({
     setAlbaranLineas([{ ...initialLinea }])
     setAlbaranFoto(null)
     setAlbaranOCRResumen('')
+    setAlbaranOCRTotalDetectado(null)
   }
 
   async function guardarAlbaran() {
@@ -685,6 +698,7 @@ export function useAlbaranManagement({
     albaranSaving,
     albaranOCRLoading,
     albaranOCRResumen,
+    albaranOCRTotalDetectado,
     editingAlbaranId,
     detalleAlbaranOpen,
     detalleAlbaran,
