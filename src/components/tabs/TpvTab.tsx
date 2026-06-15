@@ -20,6 +20,7 @@ type TpvTabProps = {
   tpvAplicando: boolean
   tpvVentasCrudas: VentaTPVCruda[]
   tpvImportacionId: string | null
+  tpvImportDate: string
   tpvImportaciones: TpvImportacion[]
   tpvPendientesMapeo: PendienteMapeo[]
   tpvIgnoredSummary: {
@@ -33,6 +34,8 @@ type TpvTabProps = {
   tpvAnalitica: TpvAnaliticaResumen
   recetas: Receta[]
   onFileChange: (file: File | null) => void
+  onImportDateChange: (value: string) => void
+  onVentaCrudaChange: (index: number, patch: Partial<VentaTPVCruda>) => void
   onImportarCsv: () => void
   onAplicarImportacion: () => void
   onExportarAnalitica: () => void
@@ -49,6 +52,7 @@ export function TpvTab({
   tpvAplicando,
   tpvVentasCrudas,
   tpvImportacionId,
+  tpvImportDate,
   tpvImportaciones,
   tpvPendientesMapeo,
   tpvIgnoredSummary,
@@ -58,6 +62,8 @@ export function TpvTab({
   tpvAnalitica,
   recetas,
   onFileChange,
+  onImportDateChange,
+  onVentaCrudaChange,
   onImportarCsv,
   onAplicarImportacion,
   onExportarAnalitica,
@@ -96,15 +102,13 @@ export function TpvTab({
   const ventasResumen = Array.from(ventasAgrupadas.values()).sort(
     (a, b) => b.cantidad - a.cantidad
   )
-  const ventasPreview = tpvVentasCrudas.slice(0, 30)
+  const ventasPreview = tpvVentasCrudas
   const ventasOcultas = Math.max(0, tpvVentasCrudas.length - ventasPreview.length)
   const totalUnidadesCsv = tpvVentasCrudas.reduce(
     (total, venta) => total + Number(venta.cantidad || 0),
     0
   )
   const articulosMapeados = ventasResumen.filter((item) => item.mapeado).length
-  const hasTheoreticalConsumption = tpvAnalitica.consumo_teorico_total > 0.01
-
   return (
     <div className="space-y-4 sm:space-y-5">
       <div>
@@ -121,10 +125,10 @@ export function TpvTab({
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
-                Consumo TPV previsto vs aplicado
+                Rendimiento TPV
               </h3>
               <p className="mt-1 text-[12px] text-slate-500 sm:text-[13px]">
-                Compara el consumo calculado desde recetas frente al stock descontado al aplicar TPV.
+                Revisa ventas importadas, margen estimado y consumo de stock descontado por TPV.
               </p>
             </div>
             <select
@@ -148,7 +152,7 @@ export function TpvTab({
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-5">
           <div className={`p-3 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
               Ventas TPV registradas
@@ -194,67 +198,24 @@ export function TpvTab({
           </div>
           <div className={`p-3 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Consumo teórico TPV
-            </div>
-            <div className="mt-1 text-[1.5rem] font-semibold text-blue-600">
-              {formatCantidad(tpvAnalitica.consumo_teorico_total)}
-            </div>
-            <div className="mt-1 text-[11px] leading-4 text-slate-400">
-              Calculado desde ventas TPV y recetas con ingredientes.
-            </div>
-          </div>
-          <div className={`p-3 md:col-span-2 ${softPanel}`}>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Consumo TPV aplicado
+              Consumo descontado
             </div>
             <div className="mt-1 text-[1.5rem] font-semibold text-slate-900">
               {formatCantidad(tpvAnalitica.consumo_real_total)}
             </div>
             <div className="mt-1 text-[11px] leading-4 text-slate-400">
-              Suma de consumos de stock generados por importaciones TPV.
+              Stock restado automáticamente al aplicar importaciones.
             </div>
           </div>
-          <div className={`p-3 md:col-span-2 ${softPanel}`}>
+          <div className={`p-3 ${softPanel}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Diferencia aplicado - previsto
+              Productos descontados
             </div>
-            <div
-              className={`mt-1 text-[1.5rem] font-semibold ${
-                !hasTheoreticalConsumption
-                  ? 'text-slate-400'
-                  : tpvAnalitica.desviacion_total > 0.01
-                  ? 'text-red-600'
-                  : tpvAnalitica.desviacion_total < -0.01
-                    ? 'text-amber-600'
-                    : 'text-emerald-600'
-              }`}
-            >
-              {hasTheoreticalConsumption ? (
-                <>
-                  {tpvAnalitica.desviacion_total > 0 ? '+' : ''}
-                  {formatCantidad(tpvAnalitica.desviacion_total)}
-                </>
-              ) : (
-                'Pendiente'
-              )}
+            <div className="mt-1 text-[1.5rem] font-semibold text-violet-600">
+              {tpvAnalitica.productos_con_desviacion}
             </div>
             <div className="mt-1 text-[11px] leading-4 text-slate-400">
-              Solo se calcula cuando hay recetas TPV mapeadas con ingredientes.
-            </div>
-          </div>
-          <div className={`p-3 md:col-span-2 ${softPanel}`}>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Productos con diferencia
-            </div>
-            <div
-              className={`mt-1 text-[1.5rem] font-semibold ${
-                hasTheoreticalConsumption ? 'text-violet-600' : 'text-slate-400'
-              }`}
-            >
-              {hasTheoreticalConsumption ? tpvAnalitica.productos_con_desviacion : 'Pendiente'}
-            </div>
-            <div className="mt-1 text-[11px] leading-4 text-slate-400">
-              Productos donde el stock aplicado por TPV no coincide con el previsto.
+              Productos con movimientos de consumo generados por TPV.
             </div>
           </div>
         </div>
@@ -292,39 +253,27 @@ export function TpvTab({
 
           <div>
             <h4 className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
-              Desviaciones por producto
+              Consumo descontado por producto
             </h4>
             <p className="mt-1 text-[11px] leading-5 text-slate-500 sm:text-[12px]">
-              Compara lo que debería haberse consumido según ventas TPV y recetas frente al stock
-              descontado al aplicar esas importaciones.
+              Lista los productos cuyo stock se ha reducido al aplicar importaciones TPV.
             </p>
           </div>
 
           {tpvAnalitica.productos.length === 0 ? (
             <div className="rounded-[18px] border border-dashed border-slate-200 bg-white px-4 py-8 text-center">
               <div className="text-sm font-semibold text-slate-700">
-                Aún no hay base suficiente
+                Aún no hay consumo TPV aplicado
               </div>
               <p className="mx-auto mt-1 max-w-md text-[12px] leading-5 text-slate-500">
-                Importa ventas TPV y vincula recetas para calcular desviaciones operativas.
-              </p>
-            </div>
-          ) : !hasTheoreticalConsumption ? (
-            <div className="rounded-[18px] border border-dashed border-amber-200 bg-amber-50 px-4 py-6 text-center">
-              <div className="text-sm font-semibold text-amber-900">
-                Aún no hay consumo teórico calculado
-              </div>
-              <p className="mx-auto mt-1 max-w-xl text-[12px] leading-5 text-amber-800">
-                Hay consumos TPV aplicados, pero todavía no existe una comparación útil desde
-                recetas. Mapea los artículos del CSV con recetas activas y asegúrate de que esas
-                recetas tengan ingredientes configurados.
+                Cuando apliques una importación TPV, aquí verás qué productos se descontaron del stock.
               </p>
             </div>
           ) : (
             tpvAnalitica.productos.map((item) => (
               <div
                 key={item.producto_id}
-                className={`grid gap-3 p-3 md:grid-cols-[1.2fr_repeat(3,0.7fr)] ${softPanel}`}
+                className={`grid gap-3 p-3 md:grid-cols-[1.2fr_0.7fr] ${softPanel}`}
               >
                 <div>
                   <div className="text-[13px] font-semibold text-slate-900 sm:text-[14px]">
@@ -336,35 +285,10 @@ export function TpvTab({
                 </div>
                 <div>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                    Teórico
-                  </div>
-                  <div className="mt-1 text-sm font-semibold text-blue-600">
-                    {formatCantidad(item.consumo_teorico)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                    Aplicado
+                    Descontado
                   </div>
                   <div className="mt-1 text-sm font-semibold text-slate-900">
                     {formatCantidad(item.consumo_real)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                    Desviación
-                  </div>
-                  <div
-                    className={`mt-1 text-sm font-semibold ${
-                      item.desviacion > 0.01
-                        ? 'text-red-600'
-                        : item.desviacion < -0.01
-                          ? 'text-amber-600'
-                          : 'text-emerald-600'
-                    }`}
-                  >
-                    {item.desviacion > 0 ? '+' : ''}
-                    {formatCantidad(item.desviacion)}
                   </div>
                 </div>
               </div>
@@ -397,6 +321,10 @@ export function TpvTab({
                       <div className="text-[13px] font-semibold text-slate-900">{item.receta_nombre}</div>
                       <div className="mt-1 text-[11px] text-slate-500">
                         Vendidas: {formatCantidad(item.unidades_vendidas)} · Ventas: {item.ventas_estimadas.toLocaleString('es-ES', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })} €
+                        {' · '}Coste: {item.coste_teorico_vendido.toLocaleString('es-ES', {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })} €
@@ -508,7 +436,7 @@ export function TpvTab({
           Primero carga el CSV y revisa las líneas. Después pulsa aplicar para descontar stock.
         </p>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
           <div>
             <label className="mb-1 block text-[12px] font-medium text-slate-600 sm:text-[13px]">
               Archivo CSV
@@ -517,6 +445,18 @@ export function TpvTab({
               type="file"
               accept=".csv,text/csv"
               onChange={(e) => onFileChange(e.target.files?.[0] || null)}
+              className={`w-full px-3.5 py-2.5 text-[12px] text-slate-700 sm:text-[13px] ${fieldShell}`}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-[12px] font-medium text-slate-600 sm:text-[13px]">
+              Fecha de importación
+            </label>
+            <input
+              type="date"
+              value={tpvImportDate}
+              onChange={(e) => onImportDateChange(e.target.value)}
               className={`w-full px-3.5 py-2.5 text-[12px] text-slate-700 sm:text-[13px] ${fieldShell}`}
             />
           </div>
@@ -557,6 +497,8 @@ export function TpvTab({
           <div className="font-semibold text-slate-900">Formato esperado</div>
           <div className="mt-1">
             Columnas que usamos del CSV. Se aceptan separadores por punto y coma, coma o tabulador.
+            Si el archivo no trae fecha útil o trae una fecha técnica como 1/1/1900, se usará la
+            fecha de importación indicada arriba.
           </div>
           <div className="mt-2 whitespace-pre-wrap rounded-[18px] bg-white p-3 font-mono text-[12px] text-slate-700 sm:rounded-[14px]">
             Articulo;Cantidad;Fecha
@@ -701,7 +643,8 @@ export function TpvTab({
                       </span>
                     </div>
                     <div className="mt-1 text-[11px] text-slate-500">
-                      {formatCantidad(item.cantidad)} uds · {item.lineas} línea{item.lineas === 1 ? '' : 's'}
+                      {formatCantidad(item.cantidad)} uds · {item.lineas} línea
+                      {item.lineas === 1 ? '' : 's'}
                     </div>
                   </div>
                 ))}
@@ -718,25 +661,77 @@ export function TpvTab({
                 key={`${venta.producto_externo}-${index}`}
                 className={`p-3 sm:p-3 ${softPanel}`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate text-[13px] font-semibold text-slate-900 sm:text-[14px]">
-                      {venta.producto_externo}
-                    </div>
-                    <div className="mt-1 text-[11px] text-slate-500 sm:text-[12px]">
-                      Fecha: {formatFechaHora(venta.fecha)}
-                    </div>
+                <div className="grid gap-3 lg:grid-cols-[minmax(220px,1.4fr)_120px_140px_150px]">
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Artículo detectado
+                    </label>
+                    <input
+                      value={venta.producto_externo}
+                      onChange={(e) =>
+                        onVentaCrudaChange(index, { producto_externo: e.target.value })
+                      }
+                      className={`w-full px-3 py-2 text-[12px] text-slate-800 sm:text-[13px] ${fieldShell}`}
+                    />
                   </div>
 
-                  <div className="text-right">
-                    <div className="text-[14px] font-bold text-blue-600 sm:text-[14px]">
-                      {venta.cantidad}
-                    </div>
-                    <div className="text-[11px] text-slate-500">unidades vendidas</div>
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Unidades
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={Number(venta.cantidad || 0)}
+                      onChange={(e) =>
+                        onVentaCrudaChange(index, { cantidad: Number(e.target.value || 0) })
+                      }
+                      className={`w-full px-3 py-2 text-[12px] font-semibold text-blue-600 sm:text-[13px] ${fieldShell}`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Venta total
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={venta.importe_total ?? ''}
+                      placeholder="Sin importe"
+                      onChange={(e) =>
+                        onVentaCrudaChange(index, {
+                          importe_total: e.target.value === '' ? null : Number(e.target.value),
+                        })
+                      }
+                      className={`w-full px-3 py-2 text-[12px] text-slate-800 sm:text-[13px] ${fieldShell}`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Fecha
+                    </label>
+                    <input
+                      type="date"
+                      value={(venta.fecha || '').slice(0, 10)}
+                      onChange={(e) =>
+                        onVentaCrudaChange(index, {
+                          fecha: `${e.target.value || (venta.fecha || '').slice(0, 10)}T12:00:00.000Z`,
+                        })
+                      }
+                      className={`w-full px-3 py-2 text-[12px] text-slate-800 sm:text-[13px] ${fieldShell}`}
+                    />
                   </div>
                 </div>
 
-                <div className="mt-2 text-[11px] text-slate-400">Línea original: {venta.raw}</div>
+                <div className="mt-2 text-[11px] text-slate-400">
+                  Fecha aplicada: {formatFechaHora(venta.fecha)}
+                  <span className="mx-1">·</span>
+                  Línea original: {venta.raw}
+                </div>
               </div>
             ))}
             {ventasOcultas > 0 ? (

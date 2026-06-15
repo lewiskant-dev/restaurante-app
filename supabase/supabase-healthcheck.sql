@@ -276,4 +276,49 @@ from (
   having count(*) > 1
 ) duplicates
 
+union all
+
+select
+  'DATOS' as bloque,
+  'tpv.movimientos_sin_importacion' as elemento,
+  case
+    when count(*) = 0 then 'OK'
+    else 'REVISAR'
+  end as estado,
+  case
+    when count(*) = 0 then 'Sin movimientos TPV huerfanos'
+    else 'movimientos=' || count(*)::text
+  end as detalle
+from public.movimientos_stock m
+where m.origen_tipo = 'tpv'
+  and m.origen_id is not null
+  and not exists (
+    select 1
+    from public.tpv_importaciones i
+    where i.id::text = m.origen_id::text
+      and i.restaurant_id = m.restaurant_id
+  )
+
+union all
+
+select
+  'DATOS' as bloque,
+  'tpv.ventas_sin_importacion' as elemento,
+  case
+    when count(*) = 0 then 'OK'
+    else 'REVISAR'
+  end as estado,
+  case
+    when count(*) = 0 then 'Sin ventas TPV huerfanas'
+    else 'ventas=' || count(*)::text
+  end as detalle
+from public.tpv_ventas_crudas v
+where v.importacion_id is not null
+  and not exists (
+    select 1
+    from public.tpv_importaciones i
+    where i.id::text = v.importacion_id::text
+      and i.restaurant_id = v.restaurant_id
+  )
+
 order by bloque, elemento;

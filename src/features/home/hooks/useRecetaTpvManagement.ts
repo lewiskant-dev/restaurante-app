@@ -10,7 +10,12 @@ import type {
   VentaTPVCruda,
   ProductoPrecioHistorial,
 } from '@/features/home/types'
-import { formatOCRDateToInput, normalizeText, scoreRecipeMatch } from '@/features/home/utils'
+import {
+  formatOCRDateToInput,
+  normalizeText,
+  scoreRecipeMatch,
+  todayLocalInputDate,
+} from '@/features/home/utils'
 import { createTpvCsvFingerprint, parseTpvCsvText } from '@/lib/tpvCsv'
 import {
   getAtomicTpvImportError,
@@ -54,6 +59,51 @@ type UseRecetaTpvManagementOptions = {
   loadAuditoria: () => Promise<void>
 }
 
+function getDirectProductCostForRecipe(recipe: Receta, productos: Producto[]) {
+  const aliases = [recipe.nombre_tpv, recipe.nombre]
+    .map((alias) => normalizeText(alias || ''))
+    .filter(Boolean)
+
+  if (aliases.length === 0) return 0
+
+  const activeProducts = productos.filter(
+    (producto) => producto.activo !== false && !producto.archivado && Number(producto.coste_unitario || 0) > 0
+  )
+  const exactMatch = activeProducts.find((producto) => aliases.includes(normalizeText(producto.nombre)))
+
+  if (exactMatch) return Number(exactMatch.coste_unitario || 0)
+
+  const partialMatches = activeProducts.filter((producto) => {
+    const productName = normalizeText(producto.nombre)
+    return aliases.some(
+      (alias) => alias.length >= 5 && (productName.includes(alias) || alias.includes(productName))
+    )
+  })
+
+  return partialMatches.length === 1 ? Number(partialMatches[0].coste_unitario || 0) : 0
+}
+
+function getRecipeCostMetrics(
+  recipe: Receta,
+  lineas: RecetaLinea[],
+  productosMap: Map<string, Producto>,
+  productos: Producto[]
+) {
+  const raciones = Math.max(Number(recipe.raciones || 1), 1)
+  const lineCost = lineas.reduce((acc, linea) => {
+    const producto = productosMap.get(linea.producto_id)
+    return acc + Number(linea.cantidad || 0) * Number(producto?.coste_unitario || 0)
+  }, 0)
+  const directProductCost = lineCost > 0 ? 0 : getDirectProductCostForRecipe(recipe, productos)
+  const costeTeorico = lineCost > 0 ? lineCost : directProductCost * raciones
+
+  return {
+    raciones,
+    costeTeorico,
+    costePorRacion: costeTeorico / raciones,
+  }
+}
+
 export function useRecetaTpvManagement({
   currentRestaurantId,
   productos,
@@ -82,6 +132,7 @@ export function useRecetaTpvManagement({
   const [tpvAplicando, setTpvAplicando] = useState(false)
   const [tpvVentasCrudas, setTpvVentasCrudas] = useState<VentaTPVCruda[]>([])
   const [tpvImportacionId, setTpvImportacionId] = useState<string | null>(null)
+  const [tpvImportDate, setTpvImportDateState] = useState(todayLocalInputDate())
   const [tpvFileHash, setTpvFileHash] = useState('')
   const [tpvImportaciones, setTpvImportaciones] = useState<TpvImportacion[]>([])
   const [tpvMapeosSeleccionados, setTpvMapeosSeleccionados] = useState<Record<string, string>>(
@@ -212,19 +263,19 @@ export function useRecetaTpvManagement({
 
     return recetas.map((receta) => {
       const lineas = linesByRecipe.get(receta.id) ?? []
-      const costeTeorico = lineas.reduce((acc, linea) => {
-        const producto = productosMap.get(linea.producto_id)
-        return acc + Number(linea.cantidad || 0) * Number(producto?.coste_unitario || 0)
-      }, 0)
+      const { raciones, costeTeorico, costePorRacion } = getRecipeCostMetrics(
+        receta,
+        lineas,
+        productosMap,
+        productos
+      )
 
       return {
         ...receta,
-        raciones: Number(receta.raciones || 1),
+        raciones,
         coste_teorico: costeTeorico,
-        coste_por_racion: costeTeorico / Math.max(Number(receta.raciones || 1), 1),
-        margen_estimado:
-          Number(receta.precio_venta || 0) -
-          costeTeorico / Math.max(Number(receta.raciones || 1), 1),
+        coste_por_racion: costePorRacion,
+        margen_estimado: Number(receta.precio_venta || 0) - costePorRacion,
         ingredientes_count: lineas.length,
       }
     })
@@ -447,8 +498,8 @@ export function useRecetaTpvManagement({
           return
         }
 
-        const costePorRacion =
-          Number(receta.coste_teorico || 0) / Math.max(Number(receta.raciones || 1), 1)
+        const lineas = lineasMap.get(receta.id) ?? []
+        const { costePorRacion } = getRecipeCostMetrics(receta, lineas, productosMap, productos)
         const ventasReceta =
           ventaImporteTotal > 0
             ? ventaImporteTotal
@@ -472,7 +523,6 @@ export function useRecetaTpvManagement({
           currentRecipe.ventas_estimadas - currentRecipe.coste_teorico_vendido
         recipePerformance.set(receta.id, currentRecipe)
 
-        const lineas = lineasMap.get(receta.id) ?? []
         const categoryCandidates: Array<{
           categoria: string | null | undefined
           cantidad: number
@@ -542,7 +592,8 @@ export function useRecetaTpvManagement({
         .filter((item) => item.consumo_teorico > 0 || item.consumo_real > 0)
 
       const productosAnalitica = [...productosAnaliticaTodos]
-        .sort((a, b) => Math.abs(b.desviacion) - Math.abs(a.desviacion))
+        .filter((item) => item.consumo_real > 0)
+        .sort((a, b) => Number(b.consumo_real || 0) - Number(a.consumo_real || 0))
         .slice(0, 8)
 
       const consumoTeoricoTotal = productosAnaliticaTodos.reduce(
@@ -554,7 +605,7 @@ export function useRecetaTpvManagement({
         0
       )
       const productosConDesviacion = productosAnaliticaTodos.filter(
-        (item) => Math.abs(item.desviacion) > 0.01
+        (item) => Number(item.consumo_real || 0) > 0
       ).length
 
       const recetasRentables = Array.from(recipePerformance.values())
@@ -754,19 +805,6 @@ export function useRecetaTpvManagement({
       }
     }
 
-    const worstProduct = currentWindow.productos[0]
-    if (worstProduct && worstProduct.consumo_teorico > 0) {
-      const worstDeviationRatio = Math.abs(worstProduct.desviacion) / worstProduct.consumo_teorico
-      if (worstDeviationRatio >= 0.15) {
-        alertas.push({
-          id: `desviacion-${worstProduct.producto_id}`,
-          severidad: worstDeviationRatio >= 0.3 ? 'alta' : 'media',
-          titulo: 'Desviación operativa relevante',
-          detalle: `${worstProduct.producto_nombre} presenta una desviación del ${(worstDeviationRatio * 100).toFixed(1)}% respecto al consumo teórico.`,
-        })
-      }
-    }
-
     if (
       currentWindow.ventasEstimadasTotal > 0 &&
       currentWindow.compras_periodo.total_coste > currentWindow.ventasEstimadasTotal
@@ -843,7 +881,7 @@ export function useRecetaTpvManagement({
         currentWindow.ventasEstimadasTotal - currentWindow.costeTeoricoVendidoTotal,
       consumo_teorico_total: currentWindow.consumoTeoricoTotal,
       consumo_real_total: currentWindow.consumoRealTotal,
-      desviacion_total: currentWindow.consumoRealTotal - currentWindow.consumoTeoricoTotal,
+      desviacion_total: 0,
       productos_con_desviacion: currentWindow.productosConDesviacion,
       productos: currentWindow.productos,
       recetas_rentables: currentWindow.recetas_rentables,
@@ -866,8 +904,8 @@ export function useRecetaTpvManagement({
           previousWindow.ventasEstimadasTotal - previousWindow.costeTeoricoVendidoTotal
         ),
         desviacion_total: buildComparativaMetrica(
-          currentWindow.consumoRealTotal - currentWindow.consumoTeoricoTotal,
-          previousWindow.consumoRealTotal - previousWindow.consumoTeoricoTotal
+          0,
+          0
         ),
         compras_total_coste: buildComparativaMetrica(
           currentWindow.compras_periodo.total_coste,
@@ -1232,6 +1270,23 @@ export function useRecetaTpvManagement({
     setTpvImportacionId(null)
     setTpvMapeosSeleccionados({})
     setTpvArticulosIgnorados([])
+    setTpvImportDateState(todayLocalInputDate())
+  }
+
+  function setTpvImportDate(value: string) {
+    setTpvImportDateState(value || todayLocalInputDate())
+    setTpvVentasCrudas([])
+    setTpvFileHash('')
+    setTpvImportacionId(null)
+    setTpvMapeosSeleccionados({})
+    setTpvArticulosIgnorados([])
+  }
+
+  function updateTpvVentaCruda(index: number, patch: Partial<VentaTPVCruda>) {
+    setTpvVentasCrudas((prev) =>
+      prev.map((venta, ventaIndex) => (ventaIndex === index ? { ...venta, ...patch } : venta))
+    )
+    setTpvImportacionId(null)
   }
 
   async function importarCSVTPV() {
@@ -1249,7 +1304,8 @@ export function useRecetaTpvManagement({
 
     try {
       const fileText = await tpvFile.text()
-      const ventas = parseTpvCsvText(fileText)
+      const fallbackDate = new Date(`${tpvImportDate || todayLocalInputDate()}T12:00:00.000Z`)
+      const ventas = parseTpvCsvText(fileText, fallbackDate)
       const fileHash = await createTpvCsvFingerprint(fileText)
       setTpvVentasCrudas(ventas)
       setTpvFileHash(fileHash)
@@ -1392,6 +1448,7 @@ export function useRecetaTpvManagement({
     setTpvAplicando(false)
     setTpvVentasCrudas([])
     setTpvImportacionId(null)
+    setTpvImportDateState(todayLocalInputDate())
     setTpvFileHash('')
     setTpvImportaciones([])
     setTpvMapeosSeleccionados({})
@@ -1416,6 +1473,7 @@ export function useRecetaTpvManagement({
     tpvAplicando,
     tpvVentasCrudas,
     tpvImportacionId,
+    tpvImportDate,
     tpvImportaciones,
     tpvMapeosSeleccionados,
     tpvArticulosIgnorados,
@@ -1430,6 +1488,8 @@ export function useRecetaTpvManagement({
     setRecetaPrecioVenta,
     setRecetaActiva,
     setTpvFile: selectTpvFile,
+    setTpvImportDate,
+    updateTpvVentaCruda,
     setTpvAnaliticaRange,
     setTpvMapeosSeleccionados,
     loadRecetas,

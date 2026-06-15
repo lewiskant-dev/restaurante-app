@@ -6,8 +6,8 @@ function todayLocalInputDate() {
   return local.toISOString().slice(0, 10)
 }
 
-function formatCsvDateToInput(value: string) {
-  if (!value) return todayLocalInputDate()
+function formatCsvDateToInput(value: string, fallbackInputDate = todayLocalInputDate()) {
+  if (!value) return fallbackInputDate
 
   const clean = value.trim()
 
@@ -28,7 +28,15 @@ function formatCsvDateToInput(value: string) {
     return parsed.toISOString().slice(0, 10)
   }
 
-  return todayLocalInputDate()
+  return fallbackInputDate
+}
+
+function isUsableTpvDate(inputDate: string, fallbackInputDate: string) {
+  if (!inputDate) return false
+  if (inputDate === fallbackInputDate) return false
+
+  const year = Number(inputDate.slice(0, 4))
+  return Number.isFinite(year) && year > 2000
 }
 
 function normalizeCsvHeader(value: string) {
@@ -89,7 +97,13 @@ export function parseTpvDate(value: string, fallbackDate = new Date()) {
   const clean = value.trim()
   if (!clean) return fallbackDate.toISOString()
 
-  return `${formatCsvDateToInput(clean)}T12:00:00.000Z`
+  const fallbackInputDate = fallbackDate.toISOString().slice(0, 10)
+  const parsedInputDate = formatCsvDateToInput(clean, fallbackInputDate)
+  const inputDate = isUsableTpvDate(parsedInputDate, fallbackInputDate)
+    ? parsedInputDate
+    : fallbackInputDate
+
+  return `${inputDate}T12:00:00.000Z`
 }
 
 function parseCsvNumber(value: string) {

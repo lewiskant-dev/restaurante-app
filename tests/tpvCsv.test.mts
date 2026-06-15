@@ -61,6 +61,16 @@ test('parseTpvCsvText usa fecha de respaldo si el CSV no trae fecha', () => {
   assert.equal(ventas[0].fecha, '2026-04-01T10:00:00.000Z')
 })
 
+test('parseTpvCsvText ignora fechas tecnicas del TPV y usa la fecha de importacion', () => {
+  const importDate = new Date('2026-04-24T12:00:00.000Z')
+  const ventas = parseTpvCsvText(
+    'Articulo;Cantidad;Fecha;Fecha_2\nAgua Veri;9;1/1/1900;1/1/1900',
+    importDate
+  )
+
+  assert.equal(ventas[0].fecha, '2026-04-24T12:00:00.000Z')
+})
+
 test('createTpvCsvFingerprint normaliza saltos de linea pero distingue contenido', async () => {
   const windowsHash = await createTpvCsvFingerprint('Articulo;Cantidad\r\nCoca-Cola;2\r\n')
   const unixHash = await createTpvCsvFingerprint('Articulo;Cantidad\nCoca-Cola;2')

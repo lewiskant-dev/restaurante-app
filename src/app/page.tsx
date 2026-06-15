@@ -798,6 +798,7 @@ export default function HomePage() {
     tpvAplicando,
     tpvVentasCrudas,
     tpvImportacionId,
+    tpvImportDate,
     tpvImportaciones,
     tpvMapeosSeleccionados,
     tpvIgnoredSummary,
@@ -811,6 +812,8 @@ export default function HomePage() {
     setRecetaPrecioVenta,
     setRecetaActiva,
     setTpvFile,
+    setTpvImportDate,
+    updateTpvVentaCruda,
     setTpvAnaliticaRange,
     setTpvMapeosSeleccionados,
     loadRecetas,
@@ -1332,7 +1335,7 @@ export default function HomePage() {
 
   function exportarAnaliticaTpvCSV() {
     const filasResumen = getFilasResumenAnalitica()
-    const filasProductos = getFilasDesviacionesAnalitica()
+    const filasProductos = getFilasConsumoTpvAnalitica()
     const filasRentabilidad = getFilasRentabilidadAnalitica()
     const filasCompras = getFilasComprasAnalitica()
     const filasInventario = getFilasInventarioFinanciero()
@@ -1399,24 +1402,16 @@ export default function HomePage() {
         concepto: 'consumo_real_total',
         valor: tpvAnalitica.consumo_real_total,
       },
-      {
-        bloque: 'resumen',
-        periodo: tpvAnalitica.periodo_label,
-        concepto: 'desviacion_total',
-        valor: tpvAnalitica.desviacion_total,
-      },
     ]
   }
 
-  function getFilasDesviacionesAnalitica() {
+  function getFilasConsumoTpvAnalitica() {
     return tpvAnalitica.productos.map((item) => ({
-      bloque: 'desviacion_producto',
+      bloque: 'consumo_tpv_producto',
       periodo: tpvAnalitica.periodo_label,
       producto: item.producto_nombre,
       unidad: item.unidad,
-      consumo_teorico: item.consumo_teorico,
-      consumo_real: item.consumo_real,
-      desviacion: item.desviacion,
+      consumo_descontado: item.consumo_real,
     }))
   }
 
@@ -1644,8 +1639,8 @@ export default function HomePage() {
 
   function exportarDesviacionesAnaliticaCSV() {
     descargarCSV(
-      `informe_desviaciones_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
-      getFilasDesviacionesAnalitica()
+      `informe_consumo_tpv_${tpvAnalitica.range_key}_${todayLocalInputDate()}.csv`,
+      getFilasConsumoTpvAnalitica()
     )
   }
 
@@ -2228,6 +2223,7 @@ export default function HomePage() {
             tpvAplicando={tpvAplicando}
             tpvVentasCrudas={tpvVentasCrudas}
             tpvImportacionId={tpvImportacionId}
+            tpvImportDate={tpvImportDate}
             tpvImportaciones={tpvImportaciones}
             tpvPendientesMapeo={tpvPendientesMapeo}
             tpvIgnoredSummary={tpvIgnoredSummary}
@@ -2237,6 +2233,8 @@ export default function HomePage() {
             tpvAnalitica={tpvAnalitica}
             recetas={recetas}
             onFileChange={handleTpvFileChange}
+            onImportDateChange={setTpvImportDate}
+            onVentaCrudaChange={updateTpvVentaCruda}
             onImportarCsv={() => void importarCSVTPV()}
             onAplicarImportacion={() => void aplicarImportacionTPV()}
             onExportarAnalitica={exportarAnaliticaTpvCSV}

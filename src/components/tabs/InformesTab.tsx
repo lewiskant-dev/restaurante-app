@@ -272,13 +272,6 @@ export function InformesTab({
       metric: tpvAnalitica.comparativa.compras_total_coste,
       currency: true,
     },
-    {
-      key: 'desviacion',
-      label: 'Desviación total',
-      metric: tpvAnalitica.comparativa.desviacion_total,
-      currency: false,
-      inverted: true,
-    },
   ]
 
   return (
@@ -920,7 +913,7 @@ export function InformesTab({
                 onClick={onExportarDesviaciones}
                 className={`px-4 py-3 text-left text-[12px] ${ghostButton}`}
               >
-                Desviaciones CSV
+                Consumo TPV CSV
               </button>
               <button
                 type="button"
