@@ -197,6 +197,9 @@ export type OCRAlbaranLinea = {
   iva_porcentaje?: number | null
   precio_pack?: number | null
   unidades_por_pack?: number | null
+  raw?: string | null
+  linea_original?: string | null
+  texto_original?: string | null
 }
 
 export type OCRAlbaranResult = {

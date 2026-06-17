@@ -75,6 +75,40 @@ test('detectMeasureUnit detecta CAJ pegado al nombre', () => {
   assert.equal(detectMeasureUnit('DAMM LEMON BARRIL 20L.', 'BRL'), 'BRL')
 })
 
+test('normalizeOCRAlbaranLinea recupera UM, importe e IVA en líneas Distridam completas', () => {
+  const normalized = normalizeOCRAlbaranLinea(
+    {
+      nombre: 'FREE DAMM TOSTADA 1/3 RET. PP',
+      cantidad: 2,
+      precio_unitario: 7.92,
+      raw: 'FDT13 FREE DAMM TOSTADA 1/3 RET. CAJ 2 40,38 15,84 0,05 64,96 21,00 PP',
+    },
+    { proveedor: 'Distridam, S.L.' }
+  )
+
+  assert.equal(normalized.cantidad_normalizada, 48)
+  assert.equal(normalized.unidades_por_pack, 24)
+  assert.equal(Number(normalized.precio_unitario_normalizado.toFixed(6)), 1.353333)
+  assert.equal(normalized.iva_porcentaje_normalizado, 21)
+  assert.equal(Number(normalized.importe_linea_con_iva.toFixed(2)), 78.60)
+})
+
+test('normalizeOCRAlbaranLinea aplica reglas Distridam aunque falte UM en la respuesta', () => {
+  const normalized = normalizeOCRAlbaranLinea(
+    {
+      nombre: 'FREE DAMM TOSTADA 1/3 RET. PP',
+      cantidad: 2,
+      precio_unitario: 64.96,
+      importe_total: 64.96,
+      iva_porcentaje: 21,
+    },
+    { proveedor: 'ICiRed' }
+  )
+
+  assert.equal(normalized.cantidad_normalizada, 48)
+  assert.equal(Number(normalized.precio_unitario_normalizado.toFixed(6)), 1.353333)
+})
+
 test('normalizeOCRAlbaranLinea separa coste sin IVA, IVA y coste con IVA', () => {
   const normalized = normalizeOCRAlbaranLinea({
     nombre: 'PRODUCTO EJEMPLO',

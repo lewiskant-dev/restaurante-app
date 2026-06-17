@@ -11,6 +11,26 @@ La Edge Function `ocr-albaran` debe devolver precios pensados para actualizar st
 - `iva_porcentaje`: porcentaje de IVA de la línea, columna `IVA`; por ejemplo `21`, `10` o `4`
 - `precio_unitario`: si es posible, `importe_total / (cantidad * unidades_por_pack)`
 - `precio_pack`: opcional, precio bruto/de pack si aparece en la columna `Precio`
+- `raw` o `linea_original`: texto completo de la fila detectada. Es obligatorio cuando haya dudas, porque Nexo lo usa como respaldo para recuperar `UM`, `Importe` e `IVA`.
+
+Nunca usar:
+
+- La columna `Dto` como `precio_unitario`, `importe_total` ni base imponible.
+- La columna `Precio` como total de línea si existe columna `Importe`.
+
+Ejemplo Distridam/ICiRed:
+
+`FDT13 FREE DAMM TOSTADA 1/3 RET. CAJ 2 40,38 15,84 0,05 64,96 21,00 PP`
+
+Debe interpretarse como:
+
+- `unidad_medida`: `CAJ`
+- `cantidad`: `2`
+- `precio_pack`: `40.38`
+- `importe_total`: `64.96`
+- `iva_porcentaje`: `21`
+- `unidades_por_pack`: `24` por ser `CAJ` no agua sin unidades explícitas
+- `precio_unitario`: `64.96 / (2 * 24) = 1.353333`
 
 Precisión:
 

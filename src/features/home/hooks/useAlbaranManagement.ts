@@ -347,7 +347,9 @@ export function useAlbaranManagement({
       }
 
       const lineasDetectadas: AlbaranLineaForm[] = (resultado.lineas || []).map((linea) => {
-        const lineaNormalizada = normalizeOCRAlbaranLinea(linea)
+        const lineaNormalizada = normalizeOCRAlbaranLinea(linea, {
+          proveedor: resultado.proveedor,
+        })
 
         return {
           producto_id: findProductoIdFromOCR(linea.nombre || ''),
