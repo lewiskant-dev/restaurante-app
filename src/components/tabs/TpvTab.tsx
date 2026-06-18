@@ -36,6 +36,7 @@ type TpvTabProps = {
   onFileChange: (file: File | null) => void
   onImportDateChange: (value: string) => void
   onVentaCrudaChange: (index: number, patch: Partial<VentaTPVCruda>) => void
+  onVentaCrudaRemove: (index: number) => void
   onImportarCsv: () => void
   onAplicarImportacion: () => void
   onExportarAnalitica: () => void
@@ -64,6 +65,7 @@ export function TpvTab({
   onFileChange,
   onImportDateChange,
   onVentaCrudaChange,
+  onVentaCrudaRemove,
   onImportarCsv,
   onAplicarImportacion,
   onExportarAnalitica,
@@ -106,6 +108,10 @@ export function TpvTab({
   const ventasOcultas = Math.max(0, tpvVentasCrudas.length - ventasPreview.length)
   const totalUnidadesCsv = tpvVentasCrudas.reduce(
     (total, venta) => total + Number(venta.cantidad || 0),
+    0
+  )
+  const totalVentaBrutaCsv = tpvVentasCrudas.reduce(
+    (total, venta) => total + Number(venta.importe_total || 0),
     0
   )
   const articulosMapeados = ventasResumen.filter((item) => item.mapeado).length
@@ -497,13 +503,14 @@ export function TpvTab({
           <div className="font-semibold text-slate-900">Formato esperado</div>
           <div className="mt-1">
             Columnas que usamos del CSV. Se aceptan separadores por punto y coma, coma o tabulador.
-            Si el archivo no trae fecha útil o trae una fecha técnica como 1/1/1900, se usará la
-            fecha de importación indicada arriba.
+            Para ventas priorizamos <span className="font-semibold">Importe Bruto</span> como total
+            final vendido. Si el archivo no trae fecha útil o trae una fecha técnica como 1/1/1900,
+            se usará la fecha de importación indicada arriba.
           </div>
           <div className="mt-2 whitespace-pre-wrap rounded-[18px] bg-white p-3 font-mono text-[12px] text-slate-700 sm:rounded-[14px]">
-            Articulo;Cantidad;Fecha
-            {'\n'}Coca-Cola;9;1/4/2026
-            {'\n'}Coca-Cola Zero;6;1/4/2026
+            Articulo;Cantidad;Importe Bruto;Fecha
+            {'\n'}Coca-Cola;9;22,50;1/4/2026
+            {'\n'}Coca-Cola Zero;6;15,00;1/4/2026
           </div>
         </div>
       </div>
@@ -581,7 +588,7 @@ export function TpvTab({
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className="grid gap-3 md:grid-cols-5">
               <div className={`p-3 ${softPanel}`}>
                 <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
                   Líneas válidas
@@ -604,6 +611,18 @@ export function TpvTab({
                 </div>
                 <div className="mt-1 text-[1.35rem] font-semibold text-emerald-600">
                   {formatCantidad(totalUnidadesCsv)}
+                </div>
+              </div>
+              <div className={`p-3 ${softPanel}`}>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  Venta bruta CSV
+                </div>
+                <div className="mt-1 text-[1.35rem] font-semibold text-emerald-600">
+                  {totalVentaBrutaCsv.toLocaleString('es-ES', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{' '}
+                  €
                 </div>
               </div>
               <div className={`p-3 ${softPanel}`}>
@@ -693,7 +712,7 @@ export function TpvTab({
 
                   <div>
                     <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                      Venta total
+                      Venta bruta/final
                     </label>
                     <input
                       type="number"
@@ -727,10 +746,19 @@ export function TpvTab({
                   </div>
                 </div>
 
-                <div className="mt-2 text-[11px] text-slate-400">
-                  Fecha aplicada: {formatFechaHora(venta.fecha)}
-                  <span className="mx-1">·</span>
-                  Línea original: {venta.raw}
+                <div className="mt-2 flex flex-col gap-2 text-[11px] text-slate-400 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    Fecha aplicada: {formatFechaHora(venta.fecha)}
+                    <span className="mx-1">·</span>
+                    Línea original: {venta.raw}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onVentaCrudaRemove(index)}
+                    className="shrink-0 self-start rounded-full border border-red-100 bg-red-50 px-3 py-1 text-[11px] font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-100"
+                  >
+                    Quitar línea
+                  </button>
                 </div>
               </div>
             ))}

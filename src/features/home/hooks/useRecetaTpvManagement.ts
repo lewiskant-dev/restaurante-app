@@ -1297,6 +1297,11 @@ export function useRecetaTpvManagement({
     setTpvImportacionId(null)
   }
 
+  function removeTpvVentaCruda(index: number) {
+    setTpvVentasCrudas((prev) => prev.filter((_, ventaIndex) => ventaIndex !== index))
+    setTpvImportacionId(null)
+  }
+
   async function importarCSVTPV() {
     if (!requirePermission('tpv_manage', 'No tienes permisos para importar TPV')) {
       return
@@ -1498,6 +1503,7 @@ export function useRecetaTpvManagement({
     setTpvFile: selectTpvFile,
     setTpvImportDate,
     updateTpvVentaCruda,
+    removeTpvVentaCruda,
     setTpvAnaliticaRange,
     setTpvMapeosSeleccionados,
     loadRecetas,

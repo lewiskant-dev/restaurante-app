@@ -55,6 +55,20 @@ test('parseTpvCsvText detecta importe total o precio unitario', () => {
   assert.equal(ventasConPrecio[0].importe_total, 4.5)
 })
 
+test('parseTpvCsvText prioriza Importe Bruto frente a Importe para ventas TPV', () => {
+  const ventas = parseTpvCsvText(
+    [
+      'Grupo;Marca;Articulo;Cantidad;Importe;Importe Bruto;Fecha',
+      'Casa Hernandez;Casa Hernandez;Coca-Cola;4;9,08;10,00;1/1/1900',
+      'Casa Hernandez;Casa Hernandez;Estrella Damm Copa;30;49,94;55,00;1/1/1900',
+    ].join('\n'),
+    fallbackDate
+  )
+
+  assert.equal(ventas[0].importe_total, 10)
+  assert.equal(ventas[1].importe_total, 55)
+})
+
 test('parseTpvCsvText usa fecha de respaldo si el CSV no trae fecha', () => {
   const ventas = parseTpvCsvText('Descripcion\tUds\nTarta queso\t3', fallbackDate)
 

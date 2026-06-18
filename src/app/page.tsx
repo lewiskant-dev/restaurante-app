@@ -818,6 +818,7 @@ export default function HomePage() {
     setTpvFile,
     setTpvImportDate,
     updateTpvVentaCruda,
+    removeTpvVentaCruda,
     setTpvAnaliticaRange,
     setTpvMapeosSeleccionados,
     loadRecetas,
@@ -2243,6 +2244,7 @@ export default function HomePage() {
             onFileChange={handleTpvFileChange}
             onImportDateChange={setTpvImportDate}
             onVentaCrudaChange={updateTpvVentaCruda}
+            onVentaCrudaRemove={removeTpvVentaCruda}
             onImportarCsv={() => void importarCSVTPV()}
             onAplicarImportacion={() => void aplicarImportacionTPV()}
             onExportarAnalitica={exportarAnaliticaTpvCSV}

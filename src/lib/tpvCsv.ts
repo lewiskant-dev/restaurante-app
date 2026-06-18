@@ -150,10 +150,19 @@ export function parseTpvCsvText(fileText: string, fallbackDate = new Date()) {
   const importeIndex =
     valueColumnIndexes.find(
       ({ col }) =>
+        col === 'importe bruto' ||
+        col === 'importe bruto total' ||
+        (col.includes('importe') && col.includes('bruto'))
+    )?.index ??
+    valueColumnIndexes.find(
+      ({ col }) =>
+        (col.includes('total') || col.includes('venta')) && col.includes('bruto')
+    )?.index ??
+    valueColumnIndexes.find(
+      ({ col }) =>
         col.includes('importe') ||
         col.includes('total') ||
-        col.includes('venta') ||
-        col.includes('bruto')
+        col.includes('venta')
     )?.index ?? -1
   const precioUnitarioIndex =
     valueColumnIndexes.find(
