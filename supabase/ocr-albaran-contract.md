@@ -29,7 +29,7 @@ Debe interpretarse como:
 - `precio_pack`: `40.38`
 - `importe_total`: `64.96`
 - `iva_porcentaje`: `21`
-- `unidades_por_pack`: `24` por ser `CAJ` no agua sin unidades explícitas
+- `unidades_por_pack`: `24` por ser `CAJ` y no ser agua, sin unidades explícitas
 - `precio_unitario`: `64.96 / (2 * 24) = 1.353333`
 
 Precisión:
@@ -39,8 +39,8 @@ Precisión:
 
 Regla para Distridam/ICiRed:
 
-- Si `unidad_medida` es `CAJ`, asumir `24` unidades por caja cuando el nombre no indique otra cosa.
-- Excepción: si `unidad_medida` es `CAJ` y el producto es de agua, asumir `20` unidades por caja cuando el nombre no indique otra cosa.
+- Si `unidad_medida` es `CAJ` y el producto es de agua, asumir `20` unidades por caja cuando el nombre no indique otra cosa.
+- Si `unidad_medida` es `CAJ` y el producto no es de agua, asumir `24` unidades por caja cuando el nombre no indique otra cosa.
 - Si el nombre indica `6U`, `12U`, `24U`, etc., esa cifra tiene prioridad sobre el valor por defecto.
 - Si `unidad_medida` es `BRL`, no multiplicar: un barril cuenta como `1` unidad de stock.
 

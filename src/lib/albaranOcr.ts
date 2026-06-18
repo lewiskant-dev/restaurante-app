@@ -121,14 +121,14 @@ export function inferUnitsPerPack(
   options?: NormalizeOCRAlbaranOptions
 ) {
   const configuredUnits = parsePositiveNumber(explicitUnits)
-  if (configuredUnits > 1) return configuredUnits
-
   const detectedUnits = detectUnitsPerPack(text)
   if (detectedUnits > 1) return detectedUnits
 
   if (detectMeasureUnit(text, explicitUnit, options) !== 'CAJ') return 1
 
-  return normalizeMeasureUnit(text).includes('AGUA') ? 20 : 24
+  if (normalizeMeasureUnit(text).includes('AGUA')) return 20
+
+  return configuredUnits > 1 ? configuredUnits : 24
 }
 
 export function normalizeOCRAlbaranLinea(

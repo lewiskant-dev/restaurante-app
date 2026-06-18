@@ -49,6 +49,7 @@ test('inferUnitsPerPack asume 24 unidades por caja si UM es CAJ y no hay unidade
 test('inferUnitsPerPack asume 20 unidades por caja en aguas si no hay unidades explicitas', () => {
   assert.equal(inferUnitsPerPack('AGUA VERI 1/2 VIDRIO RET.', 'CAJ'), 20)
   assert.equal(inferUnitsPerPack('AGUA PIRINEA 1/2 GAS RET', 'CAJ'), 20)
+  assert.equal(inferUnitsPerPack('AGUA VERI 1/2 VIDRIO RET.', 'CAJ', 24), 20)
 })
 
 test('inferUnitsPerPack respeta unidades explicitas antes que CAJ y no multiplica barriles', () => {
@@ -107,6 +108,25 @@ test('normalizeOCRAlbaranLinea aplica reglas Distridam aunque falte UM en la res
 
   assert.equal(normalized.cantidad_normalizada, 48)
   assert.equal(Number(normalized.precio_unitario_normalizado.toFixed(6)), 1.353333)
+})
+
+test('normalizeOCRAlbaranLinea corrige aguas Distridam a cajas de 20 si el OCR sugiere 24 sin texto explicito', () => {
+  const normalized = normalizeOCRAlbaranLinea(
+    {
+      nombre: 'AGUA VERI 1/2 VIDRIO RET.',
+      unidad_medida: 'CAJ',
+      cantidad: 4,
+      precio_unitario: 20,
+      importe_total: 20,
+      iva_porcentaje: 10,
+      unidades_por_pack: 24,
+    },
+    { proveedor: 'Distridam, S.L.' }
+  )
+
+  assert.equal(normalized.unidades_por_pack, 20)
+  assert.equal(normalized.cantidad_normalizada, 80)
+  assert.equal(Number(normalized.precio_unitario_normalizado.toFixed(6)), 0.25)
 })
 
 test('normalizeOCRAlbaranLinea separa coste sin IVA, IVA y coste con IVA', () => {
