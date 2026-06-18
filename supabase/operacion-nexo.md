@@ -38,6 +38,8 @@ Si `warnings` contiene `table:productos_precios_historial`, `table:inventario_ci
 
 Si aparecen `column:productos.imagen_url`, `column:productos.icono` o `bucket:albaranes`, revisa [product-media-setup.sql](/Users/jorge/restaurante-app/supabase/product-media-setup.sql:1) y las policies de storage antes de usar imágenes o adjuntos.
 
+Si aparece o quieres activar `Nexo Guest Experience`, aplica [guest-experience-setup.sql](/Users/jorge/restaurante-app/supabase/guest-experience-setup.sql:1). Esa migración crea la tabla `guest_menu_items`, habilita lectura pública segura para QR y mantiene la edición privada limitada a `administrador` y `master`.
+
 Si aparece `rpc:guardar_producto_atomico` o `rpc:cambiar_estado_producto_atomico`, aplica [product-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/product-reliability-setup.sql:1) antes de crear o editar productos reales.
 
 Si aparece `rpc:sincronizar_usuario_restaurantes`, vuelve a aplicar [multi-restaurant-setup.sql](/Users/jorge/restaurante-app/supabase/multi-restaurant-setup.sql:1). Esa función mantiene la tabla `usuario_restaurantes` sincronizada de forma transaccional.
@@ -71,6 +73,14 @@ Después de aplicar SQL críticos, ejecuta [supabase-healthcheck.sql](/Users/jor
 5. Crear el primer usuario `administrador` de ese restaurante.
 6. Asignarle ese restaurante y marcarlo como activo.
 7. Entrar con ese administrador y crear el resto del equipo.
+
+## Activar carta pública QR
+
+1. Aplicar [guest-experience-setup.sql](/Users/jorge/restaurante-app/supabase/guest-experience-setup.sql:1).
+2. Crear filas en `guest_menu_items` asociadas al `restaurant_id`.
+3. Marcar `publicado = true` solo en los elementos visibles para clientes.
+4. Compartir el QR apuntando a `/g/<slug-restaurante>`.
+5. Mantener `producto_id` vinculado cuando el elemento exista también en stock para cruzar futuras métricas de margen, conversión y recomendaciones.
 
 ## Reseteo operativo sin perder la estructura
 

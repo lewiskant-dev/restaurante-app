@@ -49,6 +49,7 @@ export function MobileBottomNav({
     visibleTabsByGroup.control.find((tab) => tab === 'historial') ||
     visibleTabsByGroup.gestion.find((tab) => tab === 'proveedores') ||
     visibleTabsByGroup.gestion.find((tab) => tab === 'recetas') ||
+    visibleTabsByGroup.gestion.find((tab) => tab === 'carta') ||
     visibleTabsByGroup.gestion[0] ||
     'stock'
 
@@ -60,6 +61,7 @@ export function MobileBottomNav({
     'informes',
     'proveedores',
     'recetas',
+    'carta',
   ])
 
 

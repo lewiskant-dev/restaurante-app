@@ -13,6 +13,7 @@ export type TabKey =
   | 'albaran'
   | 'albaranes'
   | 'proveedores'
+  | 'carta'
   | 'usuarios'
   | 'auditoria'
   | 'informes'
@@ -31,6 +32,7 @@ export type PermissionKey =
   | 'proveedor_manage'
   | 'receta_manage'
   | 'tpv_manage'
+  | 'guest_menu_manage'
   | 'auditoria_view'
   | 'user_manage'
 

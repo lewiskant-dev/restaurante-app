@@ -27,6 +27,7 @@ import { ProfilePanel } from '@/components/profile/ProfilePanel'
 import { AlbaranFormTab } from '@/components/tabs/AlbaranFormTab'
 import { AlbaranesTab } from '@/components/tabs/AlbaranesTab'
 import { AuditoriaTab } from '@/components/tabs/AuditoriaTab'
+import { CartaTab } from '@/components/tabs/CartaTab'
 import HistorialTab from '@/components/tabs/HistorialTab'
 import { InformesTab } from '@/components/tabs/InformesTab'
 import { ProveedoresTab } from '@/components/tabs/ProveedoresTab'
@@ -46,6 +47,7 @@ import type {
 } from '@/features/home/types'
 import { useAlbaranManagement } from '@/features/home/hooks/useAlbaranManagement'
 import { useAuthProfile } from '@/features/home/hooks/useAuthProfile'
+import { useGuestMenuManagement } from '@/features/home/hooks/useGuestMenuManagement'
 import { useManagedUsers } from '@/features/home/hooks/useManagedUsers'
 import { useProveedorManagement } from '@/features/home/hooks/useProveedorManagement'
 import { useRecetaTpvManagement } from '@/features/home/hooks/useRecetaTpvManagement'
@@ -304,6 +306,7 @@ export default function HomePage() {
     resetProveedorState()
     resetAlbaranState()
     resetRecetaTpvState()
+    resetGuestMenuState()
     resetManagedUsersState()
     setInventarioCierres([])
     setLoadingInventarioCierres(false)
@@ -509,6 +512,12 @@ export default function HomePage() {
       resetRecetaTpvState()
     }
 
+    if (hasPermission(role, 'guest_menu_manage')) {
+      tasks.push(loadGuestMenuItems())
+    } else {
+      resetGuestMenuState()
+    }
+
     if (hasPermission(role, 'tpv_manage')) {
       tasks.push(loadMapeosProductos(), loadInventarioCierres(), loadTpvImportaciones())
     } else {
@@ -684,6 +693,31 @@ export default function HomePage() {
     requirePermission,
     registrarAuditoria,
     confirmAction: requestConfirmAction,
+  })
+
+  const {
+    guestMenuItems,
+    loadingGuestMenu,
+    guestMenuSaving,
+    guestMenuEditId,
+    guestMenuForm,
+    publicGuestMenuItems,
+    loadGuestMenuItems,
+    setGuestMenuFormField,
+    selectGuestMenuProduct,
+    openNewGuestMenuItem,
+    openEditGuestMenuItem,
+    saveGuestMenuItem,
+    toggleGuestMenuPublished,
+    resetGuestMenuForm,
+    resetGuestMenuState,
+  } = useGuestMenuManagement({
+    currentRestaurantId: activeRestaurantId,
+    productos,
+    onError: setError,
+    onToast: setToast,
+    requirePermission,
+    registrarAuditoria,
   })
 
   const {
@@ -1169,6 +1203,8 @@ export default function HomePage() {
     currentRestaurantScope,
     accessibleRestaurants
   )
+  const activeRestaurantSlug =
+    accessibleRestaurants.find((restaurant) => restaurant.id === activeRestaurantId)?.slug || ''
   const hasAnyAssignedRestaurant = accessibleRestaurants.length > 0
   const hasAnyActiveRestaurant = accessibleRestaurants.some((restaurant) => restaurant.activo)
   const isCheckingRestaurantAccess =
@@ -2051,6 +2087,27 @@ export default function HomePage() {
             onEstadoChange={setAlbaranEstado}
             onExportar={exportarAlbaranesCSV}
             onOpenDetalle={(albaran) => void openDetalleAlbaran(albaran)}
+          />
+        )}
+
+        {tab === 'carta' && (
+          <CartaTab
+            restaurantSlug={activeRestaurantSlug}
+            productos={productos}
+            guestMenuItems={guestMenuItems}
+            loadingGuestMenu={loadingGuestMenu}
+            guestMenuSaving={guestMenuSaving}
+            guestMenuEditId={guestMenuEditId}
+            guestMenuForm={guestMenuForm}
+            publicGuestMenuItems={publicGuestMenuItems}
+            onLoad={() => void loadGuestMenuItems()}
+            onNew={() => openNewGuestMenuItem()}
+            onEdit={openEditGuestMenuItem}
+            onSave={() => void saveGuestMenuItem()}
+            onCancel={resetGuestMenuForm}
+            onTogglePublished={(item) => void toggleGuestMenuPublished(item)}
+            onFormChange={setGuestMenuFormField}
+            onProductSelect={selectGuestMenuProduct}
           />
         )}
 

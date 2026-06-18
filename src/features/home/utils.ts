@@ -15,6 +15,7 @@ export const tabKeys: TabKey[] = [
   'albaran',
   'albaranes',
   'proveedores',
+  'carta',
   'usuarios',
   'auditoria',
   'informes',
@@ -38,7 +39,7 @@ export const mainTabConfig: Record<
   gestion: {
     label: 'Gestión',
     subtitle: 'Compras y catálogo',
-    tabs: ['albaranes', 'proveedores', 'recetas', 'usuarios'],
+    tabs: ['albaranes', 'proveedores', 'recetas', 'carta', 'usuarios'],
   },
   control: {
     label: 'Control',
@@ -358,6 +359,7 @@ export function canAccessTab(role: UserRole, tab: TabKey) {
   if (tab === 'stock' || tab === 'historial') return true
   if (tab === 'albaran' || tab === 'albaranes') return hasPermission(role, 'albaran_manage')
   if (tab === 'proveedores') return hasPermission(role, 'proveedor_manage')
+  if (tab === 'carta') return hasPermission(role, 'guest_menu_manage')
   if (tab === 'recetas') return hasPermission(role, 'receta_manage')
   if (tab === 'tpv') return hasPermission(role, 'tpv_manage')
   if (tab === 'auditoria') return hasPermission(role, 'auditoria_view')
@@ -411,6 +413,7 @@ export function getTabLabel(tab: TabKey) {
   if (tab === 'tpv') return 'TPV'
   if (tab === 'albaranes') return 'Albaranes'
   if (tab === 'proveedores') return 'Proveedores'
+  if (tab === 'carta') return 'Carta'
   if (tab === 'recetas') return 'Recetas'
   if (tab === 'usuarios') return 'Usuarios'
   if (tab === 'historial') return 'Historial'

@@ -33,11 +33,12 @@ Ejecutar en `SQL Editor`, en este orden:
 8. [product-media-setup.sql](/Users/jorge/restaurante-app/supabase/product-media-setup.sql:1)
 9. [product-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/product-reliability-setup.sql:1)
 10. [proveedor-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/proveedor-reliability-setup.sql:1)
-11. [performance-indexes.sql](/Users/jorge/restaurante-app/supabase/performance-indexes.sql:1)
+11. [guest-experience-setup.sql](/Users/jorge/restaurante-app/supabase/guest-experience-setup.sql:1)
+12. [performance-indexes.sql](/Users/jorge/restaurante-app/supabase/performance-indexes.sql:1)
 
 Si quieres empezar con datos operativos vacíos, ejecutar después:
 
-12. [reset-operational-data.sql](/Users/jorge/restaurante-app/supabase/reset-operational-data.sql:1)
+13. [reset-operational-data.sql](/Users/jorge/restaurante-app/supabase/reset-operational-data.sql:1)
 
 No ejecutes `reset-operational-data.sql` si ya hay productos, proveedores, albaranes, TPV o recetas reales que quieras conservar.
 
@@ -123,6 +124,12 @@ Piezas recomendadas para adjuntos e imágenes:
 
 - columnas `productos.imagen_url` y `productos.icono`
 - bucket `albaranes`
+
+Piezas recomendadas para Nexo Guest Experience:
+
+- tabla `guest_menu_items`
+- policies públicas de lectura para restaurantes activos y elementos publicados
+- ruta pública `/g/<slug-restaurante>` para QR sin login
 
 Piezas obligatorias para importaciones TPV seguras:
 

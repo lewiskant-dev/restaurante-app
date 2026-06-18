@@ -138,6 +138,21 @@ function getTabIcon(tab: TabKey, className = 'h-[18px] w-[18px]') {
       />
     )
   }
+  if (tab === 'carta') {
+    return (
+      <Icon
+        path={
+          <>
+            <path d="M5 4h14v16H5z" />
+            <path d="M8 8h8" />
+            <path d="M8 12h5" />
+            <path d="M8 16h6" />
+          </>
+        }
+        className={className}
+      />
+    )
+  }
   if (tab === 'historial') {
     return (
       <Icon
