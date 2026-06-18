@@ -1281,6 +1281,11 @@ export function useRecetaTpvManagement({
     setTpvImportDateState(todayLocalInputDate())
   }
 
+  function resetTpvImportDraft() {
+    selectTpvFile(null)
+    onToast('Importación TPV descartada')
+  }
+
   function setTpvImportDate(value: string) {
     setTpvImportDateState(value || todayLocalInputDate())
     setTpvVentasCrudas([])
@@ -1501,6 +1506,7 @@ export function useRecetaTpvManagement({
     setRecetaPrecioVenta,
     setRecetaActiva,
     setTpvFile: selectTpvFile,
+    resetTpvImportDraft,
     setTpvImportDate,
     updateTpvVentaCruda,
     removeTpvVentaCruda,

@@ -1,5 +1,7 @@
 'use client'
 
+import { useRef } from 'react'
+
 import type {
   Receta,
   TpvAnaliticaResumen,
@@ -20,6 +22,7 @@ type TpvTabProps = {
   tpvAplicando: boolean
   tpvVentasCrudas: VentaTPVCruda[]
   tpvImportacionId: string | null
+  tpvImportDraftActive: boolean
   tpvImportDate: string
   tpvImportaciones: TpvImportacion[]
   tpvPendientesMapeo: PendienteMapeo[]
@@ -34,6 +37,7 @@ type TpvTabProps = {
   tpvAnalitica: TpvAnaliticaResumen
   recetas: Receta[]
   onFileChange: (file: File | null) => void
+  onResetImport: () => void
   onImportDateChange: (value: string) => void
   onVentaCrudaChange: (index: number, patch: Partial<VentaTPVCruda>) => void
   onVentaCrudaRemove: (index: number) => void
@@ -53,6 +57,7 @@ export function TpvTab({
   tpvAplicando,
   tpvVentasCrudas,
   tpvImportacionId,
+  tpvImportDraftActive,
   tpvImportDate,
   tpvImportaciones,
   tpvPendientesMapeo,
@@ -63,6 +68,7 @@ export function TpvTab({
   tpvAnalitica,
   recetas,
   onFileChange,
+  onResetImport,
   onImportDateChange,
   onVentaCrudaChange,
   onVentaCrudaRemove,
@@ -115,6 +121,14 @@ export function TpvTab({
     0
   )
   const articulosMapeados = ventasResumen.filter((item) => item.mapeado).length
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  function handleResetImport() {
+    if (!tpvImportDraftActive) return
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    onResetImport()
+  }
+
   return (
     <div className="space-y-4 sm:space-y-5">
       <div>
@@ -448,6 +462,7 @@ export function TpvTab({
               Archivo CSV
             </label>
             <input
+              ref={fileInputRef}
               type="file"
               accept=".csv,text/csv"
               onChange={(e) => onFileChange(e.target.files?.[0] || null)}
@@ -477,7 +492,7 @@ export function TpvTab({
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]">
           <button
             onClick={onImportarCsv}
             disabled={tpvImportando}
@@ -495,7 +510,16 @@ export function TpvTab({
               ? 'Aplicando importación...'
               : tpvImportacionId
                 ? 'Importación aplicada'
-                : 'Aplicar importación'}
+              : 'Aplicar importación'}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleResetImport}
+            disabled={tpvImportando || tpvAplicando || !tpvImportDraftActive}
+            className={`w-full px-4 py-2.5 text-[12px] text-slate-600 disabled:cursor-not-allowed disabled:opacity-60 sm:text-[13px] ${ghostButton}`}
+          >
+            Descartar
           </button>
         </div>
 

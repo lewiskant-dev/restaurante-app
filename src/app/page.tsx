@@ -798,6 +798,7 @@ export default function HomePage() {
     recetaPrecioVenta,
     recetaActiva,
     recetaLineas,
+    tpvFile,
     tpvImportando,
     tpvAplicando,
     tpvVentasCrudas,
@@ -816,6 +817,7 @@ export default function HomePage() {
     setRecetaPrecioVenta,
     setRecetaActiva,
     setTpvFile,
+    resetTpvImportDraft,
     setTpvImportDate,
     updateTpvVentaCruda,
     removeTpvVentaCruda,
@@ -2232,6 +2234,7 @@ export default function HomePage() {
             tpvAplicando={tpvAplicando}
             tpvVentasCrudas={tpvVentasCrudas}
             tpvImportacionId={tpvImportacionId}
+            tpvImportDraftActive={Boolean(tpvFile) || tpvVentasCrudas.length > 0 || Boolean(tpvImportacionId)}
             tpvImportDate={tpvImportDate}
             tpvImportaciones={tpvImportaciones}
             tpvPendientesMapeo={tpvPendientesMapeo}
@@ -2242,6 +2245,7 @@ export default function HomePage() {
             tpvAnalitica={tpvAnalitica}
             recetas={recetas}
             onFileChange={handleTpvFileChange}
+            onResetImport={resetTpvImportDraft}
             onImportDateChange={setTpvImportDate}
             onVentaCrudaChange={updateTpvVentaCruda}
             onVentaCrudaRemove={removeTpvVentaCruda}
