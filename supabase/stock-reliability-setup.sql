@@ -4,6 +4,18 @@ alter table if exists public.movimientos_stock
   add column if not exists categoria_consumo text not null default '';
 
 alter table if exists public.movimientos_stock
+  add column if not exists anulado boolean not null default false;
+
+alter table if exists public.movimientos_stock
+  add column if not exists anulado_at timestamptz;
+
+alter table if exists public.movimientos_stock
+  add column if not exists anulado_motivo text not null default '';
+
+alter table if exists public.movimientos_stock
+  add column if not exists anulado_por uuid;
+
+alter table if exists public.movimientos_stock
   drop constraint if exists movimientos_stock_categoria_consumo_check;
 
 alter table if exists public.movimientos_stock
@@ -137,3 +149,98 @@ comment on function public.registrar_movimiento_stock_atomico(uuid, text, numeri
 
 revoke all on function public.registrar_movimiento_stock_atomico(uuid, text, numeric, numeric, text, text, text, uuid, uuid) from public;
 grant execute on function public.registrar_movimiento_stock_atomico(uuid, text, numeric, numeric, text, text, text, uuid, uuid) to authenticated;
+
+drop function if exists public.anular_movimiento_stock_atomico(uuid, text, uuid);
+
+create or replace function public.anular_movimiento_stock_atomico(
+  p_movimiento_id uuid,
+  p_motivo text default '',
+  p_restaurant_id uuid default null
+)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  target_restaurant_id uuid;
+  movimiento_actual public.movimientos_stock%rowtype;
+  producto_actual public.productos%rowtype;
+begin
+  target_restaurant_id := coalesce(p_restaurant_id, public.current_restaurant_id());
+
+  if target_restaurant_id is null then
+    raise exception 'No hay restaurante activo para anular el movimiento';
+  end if;
+
+  if not public.user_has_restaurant_access(target_restaurant_id) then
+    raise exception 'No tienes acceso al restaurante activo';
+  end if;
+
+  if not public.has_any_app_role(array['encargado', 'administrador', 'master']) then
+    raise exception 'No tienes permisos para anular movimientos de stock';
+  end if;
+
+  select *
+  into movimiento_actual
+  from public.movimientos_stock
+  where id = p_movimiento_id
+    and restaurant_id = target_restaurant_id
+  for update;
+
+  if not found then
+    raise exception 'Movimiento no encontrado en el restaurante activo';
+  end if;
+
+  if coalesce(movimiento_actual.anulado, false) then
+    raise exception 'Este movimiento ya está anulado';
+  end if;
+
+  if coalesce(movimiento_actual.origen_tipo, '') not in ('', 'manual') then
+    raise exception 'Solo se pueden anular desde Historial los movimientos manuales. Anula el albarán o la importación TPV de origen.';
+  end if;
+
+  select *
+  into producto_actual
+  from public.productos
+  where id = movimiento_actual.producto_id
+    and restaurant_id = target_restaurant_id
+  for update;
+
+  if not found then
+    raise exception 'Producto del movimiento no encontrado';
+  end if;
+
+  if abs(coalesce(producto_actual.stock_actual, 0) - coalesce(movimiento_actual.stock_despues, 0)) > 0.000001 then
+    raise exception 'No se puede anular porque el producto ya tiene movimientos posteriores. Haz un ajuste manual para corregir el stock.';
+  end if;
+
+  update public.productos
+  set stock_actual = greatest(coalesce(movimiento_actual.stock_antes, 0), 0)
+  where id = producto_actual.id
+    and restaurant_id = target_restaurant_id;
+
+  update public.movimientos_stock
+  set
+    anulado = true,
+    anulado_at = now(),
+    anulado_motivo = coalesce(nullif(trim(p_motivo), ''), 'Anulado desde Historial'),
+    anulado_por = auth.uid()
+  where id = movimiento_actual.id
+    and restaurant_id = target_restaurant_id;
+
+  return jsonb_build_object(
+    'movimiento_id', movimiento_actual.id,
+    'producto_id', producto_actual.id,
+    'stock_antes', movimiento_actual.stock_despues,
+    'stock_despues', movimiento_actual.stock_antes,
+    'cantidad', movimiento_actual.cantidad
+  );
+end;
+$$;
+
+comment on function public.anular_movimiento_stock_atomico(uuid, text, uuid) is
+  'Anula un movimiento manual de stock y restaura el producto al stock anterior si no hay movimientos posteriores.';
+
+revoke all on function public.anular_movimiento_stock_atomico(uuid, text, uuid) from public;
+grant execute on function public.anular_movimiento_stock_atomico(uuid, text, uuid) to authenticated;

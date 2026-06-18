@@ -100,6 +100,7 @@ Función obligatoria esperada:
 - `sincronizar_usuario_restaurantes`
 - `guardar_restaurante_atomico`
 - `registrar_movimiento_stock_atomico`
+- `anular_movimiento_stock_atomico`
 - `guardar_albaran_atomico`
 - `anular_albaran_atomico`
 - `guardar_mapeo_producto_atomico`
@@ -147,6 +148,7 @@ Operaciones obligatorias para mantener stock e historial sincronizados:
 - función `guardar_proveedor_atomico` de `proveedor-reliability-setup.sql`
 - función `cambiar_estado_proveedor_atomico` de `proveedor-reliability-setup.sql`
 - función `registrar_movimiento_stock_atomico` de `stock-reliability-setup.sql`
+- función `anular_movimiento_stock_atomico` de `stock-reliability-setup.sql`
 - función `guardar_albaran_atomico` de `albaran-reliability-setup.sql`
 - función `guardar_mapeo_producto_atomico` de `albaran-reliability-setup.sql`
 - función `guardar_receta_atomica` de `receta-reliability-setup.sql`

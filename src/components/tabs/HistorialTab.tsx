@@ -10,6 +10,7 @@ type HistorialTabProps = {
   loadingMovimientos: boolean
   onBusquedaChange: (value: string) => void
   onExportar: () => void
+  onAnularMovimiento: (movimiento: MovimientoConProducto) => void
 }
 
 export default function HistorialTab({
@@ -18,6 +19,7 @@ export default function HistorialTab({
   loadingMovimientos,
   onBusquedaChange,
   onExportar,
+  onAnularMovimiento,
 }: HistorialTabProps) {
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -82,11 +84,13 @@ export default function HistorialTab({
         )}
 
         {!loadingMovimientos &&
-          movimientosFiltrados.map((mov) => (
-            <div
-              key={mov.id}
-              className={`mb-2 px-3 py-3 last:mb-0 sm:px-4 sm:py-3.5 ${softPanel}`}
-            >
+          movimientosFiltrados.map((mov) => {
+            const canAnular = !mov.anulado && (!mov.origen_tipo || mov.origen_tipo === 'manual')
+            return (
+              <div
+                key={mov.id}
+                className={`mb-2 px-3 py-3 last:mb-0 sm:px-4 sm:py-3.5 ${softPanel}`}
+              >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[13px] font-semibold text-slate-900 sm:text-[14px]">
@@ -98,6 +102,11 @@ export default function HistorialTab({
                   {mov.categoria_consumo === 'merma' && (
                     <div className="mt-1 inline-flex rounded-full border border-red-100 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
                       Merma
+                    </div>
+                  )}
+                  {mov.anulado && (
+                    <div className="mt-1 inline-flex rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                      Anulado
                     </div>
                   )}
                   <div className="mt-1 text-[10px] text-slate-400 sm:text-[11px]">
@@ -119,10 +128,20 @@ export default function HistorialTab({
                     {mov.cantidad}
                   </div>
                   <div className="text-[10px] text-slate-500 sm:text-[11px]">{mov.productos?.unidad || ''}</div>
+                  {canAnular ? (
+                    <button
+                      type="button"
+                      onClick={() => onAnularMovimiento(mov)}
+                      className="mt-2 rounded-full border border-red-100 bg-red-50 px-3 py-1 text-[10px] font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-100"
+                    >
+                      Anular
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </div>
-          ))}
+            )
+          })}
       </div>
     </div>
   )

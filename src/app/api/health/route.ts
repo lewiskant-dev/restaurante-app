@@ -51,6 +51,12 @@ const DATABASE_CHECKS = [
     column: 'created_at',
     required: false,
   },
+  {
+    name: 'column:movimientos_stock.anulado',
+    table: 'movimientos_stock',
+    column: 'anulado',
+    required: false,
+  },
 ] as const
 
 const STORAGE_BUCKET_CHECKS = [
@@ -77,6 +83,16 @@ const RPC_CHECKS = [
       p_restaurant_id: null,
     },
     required: true,
+  },
+  {
+    name: 'rpc:anular_movimiento_stock_atomico',
+    rpc: 'anular_movimiento_stock_atomico',
+    args: {
+      p_movimiento_id: null,
+      p_motivo: 'healthcheck',
+      p_restaurant_id: null,
+    },
+    required: false,
   },
   {
     name: 'rpc:sincronizar_usuario_restaurantes',

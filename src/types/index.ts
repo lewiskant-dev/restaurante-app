@@ -32,6 +32,10 @@ export type MovimientoStock = {
   origen_id: string | null
   stock_antes: number
   stock_despues: number
+  anulado?: boolean
+  anulado_at?: string | null
+  anulado_motivo?: string
+  anulado_por?: string | null
   created_at: string
 }
 

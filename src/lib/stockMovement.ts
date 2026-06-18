@@ -41,7 +41,7 @@ export function getAtomicStockMovementError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error || '')
 
   if (
-    /registrar_movimiento_stock_atomico|schema cache|could not find the function/i.test(message)
+    /registrar_movimiento_stock_atomico|anular_movimiento_stock_atomico|schema cache|could not find the function/i.test(message)
   ) {
     return 'Falta activar la operación segura de stock en Supabase. Aplica stock-reliability-setup.sql.'
   }

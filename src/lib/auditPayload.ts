@@ -70,6 +70,7 @@ function isAllowedAction(entity: AuditEntity, action: unknown): action is AuditA
       action === 'reactivar' ||
       action === 'consumo' ||
       action === 'ajuste_stock' ||
+      action === 'anular_movimiento' ||
       action === 'deshacer_archivar'
     )
   }

@@ -738,6 +738,70 @@ export function useStockManagement({
     }
   }
 
+  async function anularMovimientoStock(movimiento: MovimientoConProducto) {
+    if (!requirePermission('stock_adjust', 'No tienes permisos para anular movimientos')) {
+      return
+    }
+
+    if (movimiento.anulado) {
+      onError('Este movimiento ya está anulado')
+      return
+    }
+
+    if (movimiento.origen_tipo && movimiento.origen_tipo !== 'manual') {
+      onError('Este movimiento viene de un albarán o TPV. Anula el documento de origen para mantener la trazabilidad.')
+      return
+    }
+
+    const confirmed = confirmAction
+      ? await confirmAction({
+          title: 'Anular movimiento',
+          description: `Se restaurará el stock de "${movimiento.productos?.nombre || 'Producto'}" de ${movimiento.stock_despues} a ${movimiento.stock_antes}. Solo se permite si no hay movimientos posteriores.`,
+          confirmLabel: 'Anular movimiento',
+          cancelLabel: 'Cancelar',
+          tone: 'danger',
+        })
+      : true
+
+    if (!confirmed) return
+
+    const restaurantId = requireActiveRestaurant()
+    if (!restaurantId) return
+
+    try {
+      const { data, error } = await supabase.rpc('anular_movimiento_stock_atomico', {
+        p_movimiento_id: movimiento.id,
+        p_motivo: 'Anulado desde Historial',
+        p_restaurant_id: restaurantId,
+      })
+
+      if (error) throw new Error(error.message)
+      const result = parseAtomicStockMovementResult(data)
+
+      await registrarAuditoria({
+        entidad: 'producto',
+        entidad_id: movimiento.producto_id,
+        accion: 'anular_movimiento',
+        detalle: `Movimiento anulado: ${movimiento.productos?.nombre || 'Producto'} · Stock restaurado de ${result.stock_antes} a ${result.stock_despues}`,
+        payload_antes: {
+          movimiento_id: movimiento.id,
+          producto: movimiento.productos?.nombre || '',
+          stock_actual: result.stock_antes,
+        },
+        payload_despues: {
+          movimiento_id: movimiento.id,
+          producto: movimiento.productos?.nombre || '',
+          stock_actual: result.stock_despues,
+        },
+      })
+
+      onToast('Movimiento anulado y stock restaurado')
+      await Promise.all([loadProductos(), loadMovimientos()])
+    } catch (err) {
+      onError(getAtomicStockMovementError(err))
+    }
+  }
+
   function resetStockState() {
     setProductos([])
     setMovimientos([])
@@ -815,6 +879,7 @@ export function useStockManagement({
     openConsumoModal,
     closeConsumoModal,
     registrarConsumo,
+    anularMovimientoStock,
     resetStockState,
   }
 }

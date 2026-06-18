@@ -685,6 +685,7 @@ export default function HomePage() {
     openConsumoModal,
     closeConsumoModal,
     registrarConsumo,
+    anularMovimientoStock,
     resetStockState,
   } = useStockManagement({
     currentRestaurantId: activeRestaurantId,
@@ -1342,6 +1343,9 @@ export default function HomePage() {
         stock_antes: m.stock_antes,
         stock_despues: m.stock_despues,
         origen_tipo: m.origen_tipo,
+        anulado: m.anulado || false,
+        anulado_at: m.anulado_at || '',
+        anulado_motivo: m.anulado_motivo || '',
       }))
     )
   }
@@ -2025,6 +2029,7 @@ export default function HomePage() {
             loadingMovimientos={loadingMovimientos}
             onBusquedaChange={setBusquedaMov}
             onExportar={exportarMovimientosCSV}
+            onAnularMovimiento={(movimiento) => void anularMovimientoStock(movimiento)}
           />
         )}
 

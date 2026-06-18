@@ -19,6 +19,11 @@ with expected_functions(function_name, expected_count, expected_args) as (
       'p_producto_id uuid, p_tipo text, p_cantidad numeric, p_stock_objetivo numeric, p_motivo text, p_categoria_consumo text, p_origen_tipo text, p_origen_id uuid, p_restaurant_id uuid'
     ),
     (
+      'anular_movimiento_stock_atomico',
+      1,
+      'p_movimiento_id uuid, p_motivo text, p_restaurant_id uuid'
+    ),
+    (
       'guardar_albaran_atomico',
       1,
       'p_albaran_id uuid, p_numero text, p_proveedor_id uuid, p_fecha date, p_notas text, p_foto_url text, p_lineas jsonb, p_restaurant_id uuid'

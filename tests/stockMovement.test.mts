@@ -34,4 +34,8 @@ test('getAtomicStockMovementError explica cuando falta la RPC', () => {
     getAtomicStockMovementError(new Error('Could not find the function registrar_movimiento_stock_atomico')),
     /stock-reliability-setup.sql/
   )
+  assert.match(
+    getAtomicStockMovementError(new Error('Could not find the function anular_movimiento_stock_atomico')),
+    /stock-reliability-setup.sql/
+  )
 })
