@@ -27,9 +27,11 @@ export type GuestMenuFilters = {
   query?: string
   tipo?: GuestMenuKind | 'todos'
   maxPrice?: number | null
-  cuerpo?: string
-  tanino?: string
   maridaje?: string
+  uva?: string
+  origen?: string
+  bodega?: string
+  categoria?: string
 }
 
 function normalizeGuestText(value: string | null | undefined) {
@@ -50,16 +52,20 @@ function includesNormalized(values: Array<string | null | undefined>, query: str
 export function filterGuestMenuItems(items: GuestMenuItem[], filters: GuestMenuFilters) {
   const query = filters.query?.trim() || ''
   const tipo = filters.tipo || 'todos'
-  const cuerpo = normalizeGuestText(filters.cuerpo)
-  const tanino = normalizeGuestText(filters.tanino)
   const maridaje = normalizeGuestText(filters.maridaje)
+  const uva = normalizeGuestText(filters.uva)
+  const origen = normalizeGuestText(filters.origen)
+  const bodega = normalizeGuestText(filters.bodega)
+  const categoria = normalizeGuestText(filters.categoria)
 
   return items
     .filter((item) => {
       if (tipo !== 'todos' && item.tipo !== tipo) return false
       if (filters.maxPrice && item.precio !== null && item.precio > filters.maxPrice) return false
-      if (cuerpo && normalizeGuestText(item.cuerpo) !== cuerpo) return false
-      if (tanino && normalizeGuestText(item.tanino) !== tanino) return false
+      if (uva && normalizeGuestText(item.uva) !== uva) return false
+      if (origen && normalizeGuestText(item.origen) !== origen) return false
+      if (bodega && normalizeGuestText(item.bodega) !== bodega) return false
+      if (categoria && normalizeGuestText(item.categoria) !== categoria) return false
       if (maridaje && !item.maridajes.some((value) => normalizeGuestText(value) === maridaje)) {
         return false
       }
@@ -74,8 +80,6 @@ export function filterGuestMenuItems(items: GuestMenuItem[], filters: GuestMenuF
             item.anada,
             item.origen,
             item.uva,
-            item.cuerpo,
-            item.tanino,
             ...item.maridajes,
             ...item.etiquetas,
           ],
@@ -100,8 +104,10 @@ export function getGuestMenuFilterOptions(items: GuestMenuItem[]) {
     )
 
   return {
-    cuerpos: unique(items.map((item) => item.cuerpo || '')),
-    taninos: unique(items.map((item) => item.tanino || '')),
+    uvas: unique(items.map((item) => item.uva || '')),
+    origenes: unique(items.map((item) => item.origen || '')),
+    bodegas: unique(items.map((item) => item.bodega || '')),
+    categorias: unique(items.map((item) => item.categoria || '')),
     maridajes: unique(items.flatMap((item) => item.maridajes)),
   }
 }

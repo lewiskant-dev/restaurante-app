@@ -42,10 +42,13 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
     query: '',
     tipo: 'todos',
     maxPrice: null,
-    cuerpo: '',
-    tanino: '',
     maridaje: '',
+    uva: '',
+    origen: '',
+    bodega: '',
+    categoria: '',
   })
+  const [selectedItem, setSelectedItem] = useState<GuestMenuItem | null>(null)
 
   const options = useMemo(() => getGuestMenuFilterOptions(items), [items])
   const filteredItems = useMemo(() => filterGuestMenuItems(items, filters), [filters, items])
@@ -60,9 +63,11 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
       query: '',
       tipo: 'todos',
       maxPrice: null,
-      cuerpo: '',
-      tanino: '',
       maridaje: '',
+      uva: '',
+      origen: '',
+      bodega: '',
+      categoria: '',
     })
   }
 
@@ -80,9 +85,6 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                 {restaurantName}
               </h1>
             </div>
-          </div>
-          <div className="hidden rounded-full border border-black/10 bg-white/60 px-4 py-2 text-[12px] font-medium text-[#6f6254] shadow-sm sm:block">
-            Carta interactiva
           </div>
         </header>
 
@@ -165,37 +167,6 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                 </select>
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-2">
-                <select
-                  value={filters.cuerpo || ''}
-                  onChange={(event) => updateFilter('cuerpo', event.target.value)}
-                  className="rounded-[18px] border border-white/10 bg-white/10 px-4 py-3 text-[13px] text-white outline-none"
-                >
-                  <option className="text-slate-900" value="">
-                    Cualquier cuerpo
-                  </option>
-                  {options.cuerpos.map((cuerpo) => (
-                    <option key={cuerpo} className="text-slate-900" value={cuerpo}>
-                      {cuerpo}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  value={filters.tanino || ''}
-                  onChange={(event) => updateFilter('tanino', event.target.value)}
-                  className="rounded-[18px] border border-white/10 bg-white/10 px-4 py-3 text-[13px] text-white outline-none"
-                >
-                  <option className="text-slate-900" value="">
-                    Cualquier tanino
-                  </option>
-                  {options.taninos.map((tanino) => (
-                    <option key={tanino} className="text-slate-900" value={tanino}>
-                      {tanino}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
           </div>
 
@@ -219,7 +190,11 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
             </div>
 
             {featuredItem ? (
-              <div className="mt-6 overflow-hidden rounded-[28px] bg-[#f7efe3]">
+              <button
+                type="button"
+                onClick={() => setSelectedItem(featuredItem)}
+                className="mt-6 w-full overflow-hidden rounded-[28px] bg-[#f7efe3] text-left transition hover:-translate-y-0.5 hover:shadow-[0_20px_54px_rgba(36,27,18,0.12)]"
+              >
                 <div className="bg-gradient-to-br from-[#f7efe3] via-[#efe3d2] to-[#dcc2a0] px-8 py-6">
                   {featuredItem.foto_url ? (
                     <BottleImage
@@ -248,6 +223,9 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                     {featuredItem.descripcion ||
                       'Una opción seleccionada para acompañar la experiencia del restaurante.'}
                   </p>
+                  <div className="mt-3 text-[12px] font-semibold text-[#9a8060]">
+                    Ver ficha completa
+                  </div>
                   <div className="mt-5 grid gap-2 text-[12px] sm:grid-cols-2">
                     {featuredItem.bodega ? <InfoPill label="Bodega" value={featuredItem.bodega} /> : null}
                     {featuredItem.anada ? <InfoPill label="Añada" value={featuredItem.anada} /> : null}
@@ -257,7 +235,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                     {featuredItem.origen ? <InfoPill label="Origen" value={featuredItem.origen} /> : null}
                   </div>
                 </div>
-              </div>
+              </button>
             ) : (
               <div className="mt-8 rounded-[28px] border border-dashed border-black/10 bg-white/60 px-6 py-14 text-center text-[#7b6f61]">
                 Prueba a relajar filtros o buscar por otra sensación.
@@ -267,18 +245,60 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
         </section>
 
         <section className="mt-6">
-          <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <h2 className="text-[1.25rem] font-semibold tracking-tight">
               {filteredItems.length} resultado{filteredItems.length === 1 ? '' : 's'}
             </h2>
             <div className="text-[12px] text-[#8b7a68]">Carta pública del restaurante</div>
           </div>
 
+          <div className="mb-4 grid gap-2 rounded-[28px] border border-black/8 bg-white/55 p-3 shadow-[0_12px_42px_rgba(36,27,18,0.06)] sm:grid-cols-2 lg:grid-cols-3">
+            <FilterSelect
+              label="Uva"
+              value={filters.uva || ''}
+              options={options.uvas}
+              onChange={(value) => updateFilter('uva', value)}
+            />
+            <FilterSelect
+              label="Región / DO"
+              value={filters.origen || ''}
+              options={options.origenes}
+              onChange={(value) => updateFilter('origen', value)}
+            />
+            <FilterSelect
+              label="Bodega"
+              value={filters.bodega || ''}
+              options={options.bodegas}
+              onChange={(value) => updateFilter('bodega', value)}
+            />
+            <FilterSelect
+              label="Maridaje"
+              value={filters.maridaje || ''}
+              options={options.maridajes}
+              onChange={(value) => updateFilter('maridaje', value)}
+            />
+            <FilterSelect
+              label="Categoría"
+              value={filters.categoria || ''}
+              options={options.categorias}
+              onChange={(value) => updateFilter('categoria', value)}
+            />
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="rounded-[18px] border border-black/10 bg-[#151515] px-4 py-3 text-[12px] font-semibold text-white transition hover:bg-black"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {filteredItems.map((item) => (
-              <article
+              <button
+                type="button"
                 key={item.id}
-                className="rounded-[28px] border border-black/8 bg-white/72 p-4 shadow-[0_12px_42px_rgba(36,27,18,0.08)]"
+                onClick={() => setSelectedItem(item)}
+                className="rounded-[28px] border border-black/8 bg-white/72 p-4 text-left shadow-[0_12px_42px_rgba(36,27,18,0.08)] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_18px_50px_rgba(36,27,18,0.12)]"
               >
                 <div className="flex items-start gap-4">
                   <div className="h-20 w-20 shrink-0 overflow-hidden rounded-[22px] bg-[#efe6d8]">
@@ -299,7 +319,8 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                       {item.descripcion || item.categoria}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-1.5">
-                      {[item.cuerpo, item.tanino, ...item.maridajes.slice(0, 2)]
+                      {item.maridajes
+                        .slice(0, 2)
                         .filter(Boolean)
                         .map((tag) => (
                           <span
@@ -312,12 +333,139 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                     </div>
                   </div>
                 </div>
-              </article>
+              </button>
             ))}
           </div>
         </section>
       </div>
+
+      {selectedItem ? <GuestItemModal item={selectedItem} onClose={() => setSelectedItem(null)} /> : null}
     </main>
+  )
+}
+
+function FilterSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: string
+  options: string[]
+  onChange: (value: string) => void
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9a8060]">
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="rounded-[18px] border border-black/10 bg-white px-4 py-3 text-[13px] font-semibold text-[#2a241e] outline-none transition focus:border-[#9a8060]"
+      >
+        <option value="">Todos</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+function GuestItemModal({ item, onClose }: { item: GuestMenuItem; onClose: () => void }) {
+  const details = [
+    ['Tipo', getKindLabel(item.tipo)],
+    ['Bodega', item.bodega],
+    ['Añada', item.anada],
+    ['Región / DO', item.origen],
+    ['Uva', item.uva],
+    ['Temperatura', item.temperatura],
+  ].filter(([, value]) => Boolean(value)) as Array<[string, string]>
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end bg-black/42 p-3 backdrop-blur-sm sm:items-center sm:p-6">
+      <div className="mx-auto grid max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-[34px] bg-[#f7efe3] shadow-[0_30px_90px_rgba(0,0,0,0.32)] lg:grid-cols-[0.88fr_1.12fr]">
+        <div className="bg-gradient-to-br from-[#f8f1e7] via-[#eadcc9] to-[#d2ad82] px-8 py-8">
+          {item.foto_url ? (
+            <BottleImage
+              src={item.foto_url}
+              alt={item.nombre}
+              className="mx-auto h-[52vh] min-h-[320px] w-full"
+              imageClassName="drop-shadow-[0_28px_44px_rgba(45,28,18,0.26)]"
+            />
+          ) : (
+            <div className="flex h-[52vh] min-h-[320px] items-center justify-center rounded-[28px] bg-white/35 text-[4rem] font-semibold text-[#9a8060]">
+              {getKindLabel(item.tipo).slice(0, 1)}
+            </div>
+          )}
+        </div>
+
+        <div className="overflow-y-auto bg-white px-6 py-6 sm:px-8">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#9a8060]">
+                {item.categoria}
+              </div>
+              <h2 className="mt-2 text-[2rem] font-semibold leading-tight tracking-tight text-[#171717]">
+                {item.nombre}
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-black/10 bg-white px-4 py-2 text-[12px] font-semibold text-[#5e5348] transition hover:bg-[#f7f1e8]"
+            >
+              Cerrar
+            </button>
+          </div>
+
+          <div className="mt-4 inline-flex rounded-full bg-[#f4ede3] px-4 py-2 text-[16px] font-bold text-[#151515]">
+            {formatPrice(item.precio)}
+          </div>
+
+          <p className="mt-6 text-[15px] leading-7 text-[#6a5e52]">
+            {item.descripcion ||
+              'Ficha de carta preparada para consultar estilo, servicio y recomendación de maridaje.'}
+          </p>
+
+          <div className="mt-6 grid gap-2 sm:grid-cols-2">
+            {details.map(([label, value]) => (
+              <InfoPill key={label} label={label} value={value} />
+            ))}
+          </div>
+
+          {item.maridajes.length > 0 ? (
+            <TagGroup title="Maridajes" values={item.maridajes} />
+          ) : null}
+
+          {item.etiquetas.length > 0 ? <TagGroup title="Notas y estilo" values={item.etiquetas} /> : null}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TagGroup({ title, values }: { title: string; values: string[] }) {
+  return (
+    <div className="mt-6">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a8060]">
+        {title}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {values.map((value) => (
+          <span
+            key={value}
+            className="rounded-full bg-[#f4ede3] px-3 py-1.5 text-[12px] font-semibold text-[#78644f]"
+          >
+            {value}
+          </span>
+        ))}
+      </div>
+    </div>
   )
 }
 

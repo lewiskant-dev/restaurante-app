@@ -79,8 +79,8 @@ test('filterGuestMenuItems combina tipo, precio y perfil de vino', () => {
   const result = filterGuestMenuItems(baseItems, {
     tipo: 'vino',
     maxPrice: 40,
-    cuerpo: 'Medio',
-    tanino: 'Suave',
+    uva: 'Tempranillo',
+    origen: 'Rioja',
     maridaje: 'Carne',
   })
 
@@ -96,7 +96,9 @@ test('filterGuestMenuItems busca sin depender de tildes', () => {
 test('getGuestMenuFilterOptions devuelve opciones unicas ordenadas', () => {
   const options = getGuestMenuFilterOptions(baseItems)
 
-  assert.deepEqual(options.cuerpos, ['Alto', 'Medio'])
-  assert.deepEqual(options.taninos, ['Marcado', 'Suave'])
+  assert.deepEqual(options.uvas, ['Tempranillo'])
+  assert.deepEqual(options.origenes, ['Ribera del Duero', 'Rioja'])
+  assert.deepEqual(options.bodegas, ['Bodega Norte', 'Pago de Carraovejas'])
+  assert.deepEqual(options.categorias, ['Cócteles', 'Vinos'])
   assert.deepEqual(options.maridajes, ['Aperitivo', 'Carne', 'Quesos'])
 })

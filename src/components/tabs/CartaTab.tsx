@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import type {
   GuestMenuAdminItem,
   GuestMenuForm,
@@ -63,8 +64,33 @@ export function CartaTab({
   onImageFileChange,
   onProductSelect,
 }: CartaTabProps) {
+  const [productSearch, setProductSearch] = useState('')
   const publicUrl = restaurantSlug ? `/g/${restaurantSlug}` : ''
-  const productosActivos = productos.filter((producto) => producto.activo !== false && !producto.archivado)
+  const productosActivos = useMemo(
+    () => productos.filter((producto) => producto.activo !== false && !producto.archivado),
+    [productos]
+  )
+  const productosFiltrados = useMemo(() => {
+    const query = productSearch
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+
+    if (!query) return productosActivos
+
+    return productosActivos.filter((producto) =>
+      [producto.nombre, producto.referencia, producto.categoria]
+        .filter(Boolean)
+        .some((value) =>
+          String(value)
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .includes(query)
+        )
+    )
+  }, [productSearch, productosActivos])
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -136,18 +162,26 @@ export function CartaTab({
         </div>
 
         <div className="grid gap-3 lg:grid-cols-3">
-          <select
-            value={guestMenuForm.producto_id}
-            onChange={(event) => onProductSelect(event.target.value)}
-            className={`px-4 py-3 text-[13px] text-slate-900 ${fieldShell}`}
-          >
-            <option value="">Sin producto vinculado</option>
-            {productosActivos.map((producto) => (
-              <option key={producto.id} value={producto.id}>
-                {producto.nombre}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-2">
+            <input
+              value={productSearch}
+              onChange={(event) => setProductSearch(event.target.value)}
+              placeholder="Buscar producto por nombre, referencia o categoría"
+              className={`w-full px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
+            />
+            <select
+              value={guestMenuForm.producto_id}
+              onChange={(event) => onProductSelect(event.target.value)}
+              className={`w-full px-4 py-3 text-[13px] text-slate-900 ${fieldShell}`}
+            >
+              <option value="">Sin producto vinculado</option>
+              {productosFiltrados.map((producto) => (
+                <option key={producto.id} value={producto.id}>
+                  {producto.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
           <input
             value={guestMenuForm.nombre_publico}
             onChange={(event) => onFormChange('nombre_publico', event.target.value)}
@@ -197,7 +231,7 @@ export function CartaTab({
           />
         </div>
 
-        <div className="mt-3 grid gap-3 lg:grid-cols-4">
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
           <input
             value={guestMenuForm.origen}
             onChange={(event) => onFormChange('origen', event.target.value)}
@@ -208,18 +242,6 @@ export function CartaTab({
             value={guestMenuForm.uva}
             onChange={(event) => onFormChange('uva', event.target.value)}
             placeholder="Uva"
-            className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
-          />
-          <input
-            value={guestMenuForm.cuerpo}
-            onChange={(event) => onFormChange('cuerpo', event.target.value)}
-            placeholder="Cuerpo"
-            className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
-          />
-          <input
-            value={guestMenuForm.tanino}
-            onChange={(event) => onFormChange('tanino', event.target.value)}
-            placeholder="Tanino"
             className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
         </div>
