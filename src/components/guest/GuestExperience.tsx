@@ -107,6 +107,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                 value={filters.query || ''}
                 onChange={(event) => updateFilter('query', event.target.value)}
                 placeholder="Ej. parecido a Ribera, suave, para carne..."
+                style={{ color: '#ffffff' }}
                 className="w-full rounded-[22px] border border-white/10 bg-white/10 px-4 py-3 text-[15px] text-white outline-none placeholder:text-white/38"
               />
 
