@@ -471,7 +471,7 @@ export function CartaTab({
           <input
             value={guestMenuForm.temperatura}
             onChange={(event) => onFormChange('temperatura', event.target.value)}
-            placeholder="Temperatura"
+            placeholder="Grado alcohólico"
             className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
           <input

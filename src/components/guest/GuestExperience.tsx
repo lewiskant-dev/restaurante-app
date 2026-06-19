@@ -230,7 +230,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                     {featuredItem.bodega ? <InfoPill label="Bodega" value={featuredItem.bodega} /> : null}
                     {featuredItem.anada ? <InfoPill label="Añada" value={featuredItem.anada} /> : null}
                     {featuredItem.temperatura ? (
-                      <InfoPill label="Temperatura" value={featuredItem.temperatura} />
+                      <InfoPill label="Grado alcohólico" value={featuredItem.temperatura} />
                     ) : null}
                     {featuredItem.origen ? <InfoPill label="Origen" value={featuredItem.origen} /> : null}
                   </div>
@@ -393,31 +393,31 @@ function GuestItemModal({ item, onClose }: { item: GuestMenuItem; onClose: () =>
     ['Región', item.origen],
     ['Tipo', getKindLabel(item.tipo)],
     ['Uvas', splitGuestGrapes(item.uva).join(', ') || item.uva],
-    ['Temperatura', item.temperatura],
+    ['Grado alcohólico', item.temperatura],
   ].filter(([, value]) => Boolean(value)) as Array<[string, string]>
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/42 p-3 backdrop-blur-sm sm:p-6">
       <div className="mx-auto my-4 grid w-full max-w-6xl overflow-hidden rounded-[34px] bg-[#fffaf2] shadow-[0_30px_90px_rgba(0,0,0,0.32)] lg:my-8 lg:max-h-[88vh] lg:grid-cols-[0.36fr_0.64fr]">
-        <aside className="border-black/5 bg-[#f7efe3] px-6 py-6 lg:max-h-[88vh] lg:overflow-y-auto lg:border-r">
+        <aside className="border-black/5 bg-[#f7efe3] px-5 py-5 lg:border-r">
           {item.foto_url ? (
             <BottleImage
               src={item.foto_url}
               alt={item.nombre}
-              className="mx-auto h-[48vh] min-h-[300px] w-full"
+              className="mx-auto h-[32vh] min-h-[230px] max-h-[330px] w-full"
             />
           ) : (
-            <div className="flex h-[48vh] min-h-[300px] items-center justify-center rounded-[28px] bg-white/45 text-[4rem] font-semibold text-[#9a8060]">
+            <div className="flex h-[32vh] min-h-[230px] max-h-[330px] items-center justify-center rounded-[28px] bg-white/45 text-[4rem] font-semibold text-[#9a8060]">
               {getKindLabel(item.tipo).slice(0, 1)}
             </div>
           )}
 
-          <div className="mt-5 text-[2rem] font-semibold tracking-tight text-[#171717]">
+          <div className="mt-4 text-[1.8rem] font-semibold tracking-tight text-[#171717]">
             {formatPrice(item.precio)}
           </div>
           <div className="text-[12px] font-medium text-[#9a8060]">IVA incluido</div>
 
-          <div className="mt-6 space-y-3">
+          <div className="mt-4 space-y-2.5">
             {details.map(([label, value]) => (
               <SideDetail key={label} label={label} value={value} />
             ))}
@@ -649,7 +649,7 @@ function SideDetail({ label, value }: { label: string; value: string }) {
       <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a48b68]">
         {label}
       </div>
-      <div className="mt-1 text-[13px] font-semibold text-[#2f2822]">{value}</div>
+      <div className="mt-0.5 text-[12px] font-semibold leading-snug text-[#2f2822]">{value}</div>
     </div>
   )
 }

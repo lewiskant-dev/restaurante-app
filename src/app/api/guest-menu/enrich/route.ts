@@ -176,7 +176,7 @@ Vino:
 - Añada: ${wine.anada || 'desconocida'}
 - Origen / DO: ${wine.origen || 'desconocido'}
 - Uvas: ${wine.uva || 'desconocidas'}
-- Temperatura sugerida actual: ${wine.temperatura || 'desconocida'}
+- Grado alcohólico actual: ${wine.temperatura || 'desconocido'}
 - Maridajes actuales: ${wine.maridajes || 'sin datos'}
 - Etiquetas actuales: ${wine.etiquetas || 'sin datos'}
 - Descripción actual: ${wine.descripcion || 'sin datos'}
@@ -194,12 +194,13 @@ Formato exacto:
   },
   "notas_cata": ["Frutos rojos", "Vainilla", "Tabaco"],
   "maridajes": ["Carnes a la brasa", "Quesos curados"],
-  "temperatura": "14-16 °C"
+  "temperatura": "14% vol."
 }
 
 Reglas:
 - Cada value debe ser entero de 1 a 6.
 - Usa notas de cata concretas y entendibles por cliente: frutos rojos, ciruela, vainilla, cacao, tabaco, cítricos, flores blancas, mineral, hierbas, especias, etc.
+- En "temperatura" devuelve el grado alcohólico aproximado o real si lo encuentras. Si no estás seguro, usa "".
 - No inventes una ficha exacta si no estás seguro: usa el estilo probable por bodega, DO, uva y tipo, pero evita afirmaciones demasiado específicas.
 - Si hay duda, prioriza utilidad para cliente y coherencia gastronómica.
 - No incluyas texto fuera del JSON.
