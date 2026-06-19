@@ -6,6 +6,7 @@ import {
   getGuestMenuKindLabel,
   getGuestMenuFilterOptions,
   isWineKind,
+  splitGuestGrapes,
   type GuestMenuFilters,
   type GuestMenuItem,
   type GuestMenuKind,
@@ -383,41 +384,54 @@ function FilterSelect({
 }
 
 function GuestItemModal({ item, onClose }: { item: GuestMenuItem; onClose: () => void }) {
+  const profile = buildWineProfile(item)
+  const tasteNotes = buildTasteNotes(item)
+  const pairings = item.maridajes.slice(0, 6)
   const details = [
-    ['Tipo', getKindLabel(item.tipo)],
     ['Bodega', item.bodega],
-    ['Añada', item.anada],
-    ['Región / DO', item.origen],
-    ['Uvas', item.uva],
+    ['Región', item.origen],
+    ['Tipo', getKindLabel(item.tipo)],
+    ['Uvas', splitGuestGrapes(item.uva).join(', ') || item.uva],
     ['Temperatura', item.temperatura],
   ].filter(([, value]) => Boolean(value)) as Array<[string, string]>
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/42 p-3 backdrop-blur-sm sm:items-center sm:p-6">
-      <div className="mx-auto grid max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-[34px] bg-[#f7efe3] shadow-[0_30px_90px_rgba(0,0,0,0.32)] lg:grid-cols-[0.88fr_1.12fr]">
-        <div className="bg-[#f4eadc] px-8 py-8">
+      <div className="mx-auto grid max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-[34px] bg-[#fffaf2] shadow-[0_30px_90px_rgba(0,0,0,0.32)] lg:grid-cols-[0.36fr_0.64fr]">
+        <aside className="overflow-y-auto border-black/5 bg-[#f7efe3] px-6 py-6 lg:border-r">
           {item.foto_url ? (
             <BottleImage
               src={item.foto_url}
               alt={item.nombre}
-              className="mx-auto h-[52vh] min-h-[320px] w-full"
+              className="mx-auto h-[48vh] min-h-[300px] w-full"
             />
           ) : (
-            <div className="flex h-[52vh] min-h-[320px] items-center justify-center rounded-[28px] bg-white/35 text-[4rem] font-semibold text-[#9a8060]">
+            <div className="flex h-[48vh] min-h-[300px] items-center justify-center rounded-[28px] bg-white/45 text-[4rem] font-semibold text-[#9a8060]">
               {getKindLabel(item.tipo).slice(0, 1)}
             </div>
           )}
-        </div>
 
-        <div className="overflow-y-auto bg-white px-6 py-6 sm:px-8">
+          <div className="mt-5 text-[2rem] font-semibold tracking-tight text-[#171717]">
+            {formatPrice(item.precio)}
+          </div>
+          <div className="text-[12px] font-medium text-[#9a8060]">IVA incluido</div>
+
+          <div className="mt-6 space-y-3">
+            {details.map(([label, value]) => (
+              <SideDetail key={label} label={label} value={value} />
+            ))}
+          </div>
+        </aside>
+
+        <div className="overflow-y-auto bg-[#fffaf2] px-6 py-6 sm:px-8">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#9a8060]">
-                {item.categoria}
-              </div>
-              <h2 className="mt-2 text-[2rem] font-semibold leading-tight tracking-tight text-[#171717]">
+              <h2 className="text-[2.25rem] font-semibold leading-tight tracking-tight text-[#171717] sm:text-[2.8rem]">
                 {item.nombre}
               </h2>
+              <div className="mt-2 text-[1.05rem] font-medium text-[#4b4037]">
+                {[item.origen, item.anada].filter(Boolean).join(' · ') || getKindLabel(item.tipo)}
+              </div>
             </div>
             <button
               type="button"
@@ -428,28 +442,167 @@ function GuestItemModal({ item, onClose }: { item: GuestMenuItem; onClose: () =>
             </button>
           </div>
 
-          <div className="mt-4 inline-flex rounded-full bg-[#f4ede3] px-4 py-2 text-[16px] font-bold text-[#151515]">
-            {formatPrice(item.precio)}
-          </div>
+          <section className="mt-6 rounded-[24px] bg-[#f7efe3] px-5 py-5 shadow-[0_18px_46px_rgba(36,27,18,0.06)]">
+            <div className="text-[14px] font-semibold text-[#9a3f45]">En pocas palabras</div>
+            <p className="mt-3 text-[15px] leading-7 text-[#4f463e]">
+              {item.descripcion ||
+                'Una selección pensada para acompañar la experiencia del restaurante con equilibrio, expresión y servicio cuidado.'}
+            </p>
+          </section>
 
-          <p className="mt-6 text-[15px] leading-7 text-[#6a5e52]">
-            {item.descripcion ||
-              'Ficha de carta preparada para consultar estilo, servicio y recomendación de maridaje.'}
-          </p>
+          {isWineKind(item.tipo) ? (
+            <section className="mt-7">
+              <div className="flex items-end justify-between gap-4">
+                <h3 className="text-[1.25rem] font-semibold tracking-tight text-[#171717]">
+                  Perfil del vino
+                </h3>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a48b68]">
+                  Estimado
+                </span>
+              </div>
+              <div className="mt-3 overflow-hidden rounded-[20px] border border-black/8 bg-white">
+                {profile.map((row) => (
+                  <WineProfileRow key={row.label} {...row} />
+                ))}
+              </div>
+            </section>
+          ) : null}
 
-          <div className="mt-6 grid gap-2 sm:grid-cols-2">
-            {details.map(([label, value]) => (
-              <InfoPill key={label} label={label} value={value} />
-            ))}
-          </div>
+          {tasteNotes.length > 0 ? (
+            <section className="mt-7 rounded-[24px] bg-[#f7efe3] px-5 py-5">
+              <h3 className="text-[1.1rem] font-semibold tracking-tight text-[#171717]">
+                Cómo sabe
+              </h3>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {tasteNotes.map((note) => (
+                  <FlavorPill key={note} value={note} />
+                ))}
+              </div>
+            </section>
+          ) : null}
 
-          {item.maridajes.length > 0 ? (
-            <TagGroup title="Maridajes" values={item.maridajes} />
+          {pairings.length > 0 ? (
+            <section className="mt-7">
+              <h3 className="text-[1.1rem] font-semibold tracking-tight text-[#171717]">
+                Marida perfecto con
+              </h3>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {pairings.map((pairing) => (
+                  <div
+                    key={pairing}
+                    className="rounded-[18px] border border-black/8 bg-white px-4 py-3 text-[13px] font-semibold text-[#4f463e]"
+                  >
+                    {pairing}
+                  </div>
+                ))}
+              </div>
+            </section>
           ) : null}
 
           {item.etiquetas.length > 0 ? <TagGroup title="Notas y estilo" values={item.etiquetas} /> : null}
         </div>
       </div>
+    </div>
+  )
+}
+
+function buildWineProfile(item: GuestMenuItem) {
+  const text = [item.nombre, item.descripcion, item.uva, item.origen, item.bodega, ...item.etiquetas]
+    .join(' ')
+    .toLowerCase()
+
+  const hasAny = (words: string[]) => words.some((word) => text.includes(word))
+  const isWhite = item.tipo === 'vino_blanco' || hasAny(['blanco', 'albariño', 'verdejo'])
+  const isSparkling = item.tipo === 'vino_espumoso' || hasAny(['espumoso', 'cava', 'champagne'])
+
+  return [
+    {
+      label: 'Intensidad',
+      value: hasAny(['potente', 'intenso', 'reserva', 'crianza']) ? 5 : isWhite ? 3 : 4,
+      text: hasAny(['potente', 'intenso']) ? 'Alta' : 'Media',
+      color: '#743197',
+    },
+    {
+      label: 'Fruta',
+      value: hasAny(['afrutado', 'fruta', 'fresco', 'joven']) ? 5 : 4,
+      text: hasAny(['afrutado', 'fruta', 'fresco']) ? 'Alta' : 'Media +',
+      color: '#c9368f',
+    },
+    {
+      label: 'Cuerpo',
+      value: hasAny(['potente', 'cuerpo', 'estructura']) ? 5 : isWhite || isSparkling ? 2 : 3,
+      text: hasAny(['potente', 'estructura']) ? 'Medio +' : isWhite || isSparkling ? 'Ligero' : 'Medio',
+      color: '#df5147',
+    },
+    {
+      label: 'Madera',
+      value: hasAny(['madera', 'roble', 'crianza', 'reserva', 'vainilla']) ? 3 : 1,
+      text: hasAny(['madera', 'roble', 'crianza', 'reserva']) ? 'Media' : 'Baja',
+      color: '#b77a43',
+    },
+    {
+      label: 'Acidez',
+      value: isWhite || isSparkling || hasAny(['fresco', 'atlántico', 'cítrico']) ? 5 : 3,
+      text: isWhite || isSparkling || hasAny(['fresco']) ? 'Alta' : 'Media',
+      color: '#e8bd20',
+    },
+    {
+      label: 'Dulzor',
+      value: hasAny(['dulce', 'moscatel']) ? 4 : 1,
+      text: hasAny(['dulce', 'moscatel']) ? 'Medio' : 'Seco',
+      color: '#279c91',
+    },
+  ]
+}
+
+function buildTasteNotes(item: GuestMenuItem) {
+  const notes = item.etiquetas.length > 0 ? item.etiquetas : splitGuestGrapes(item.uva)
+  return notes.slice(0, 5)
+}
+
+function WineProfileRow({
+  label,
+  value,
+  text,
+  color,
+}: {
+  label: string
+  value: number
+  text: string
+  color: string
+}) {
+  return (
+    <div className="grid grid-cols-[92px_1fr_64px] items-center gap-3 border-b border-black/6 px-4 py-3 last:border-b-0">
+      <div className="text-[13px] font-semibold text-[#3d342d]">{label}</div>
+      <div className="grid grid-cols-6 gap-1.5">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <span
+            key={index}
+            className="h-2.5 rounded-full"
+            style={{ backgroundColor: index < value ? color : '#e3dfd8' }}
+          />
+        ))}
+      </div>
+      <div className="text-right text-[12px] font-semibold text-[#4f463e]">{text}</div>
+    </div>
+  )
+}
+
+function FlavorPill({ value }: { value: string }) {
+  return (
+    <div className="rounded-[18px] bg-white px-3 py-3 text-center text-[12px] font-semibold text-[#5f5349] shadow-[0_8px_20px_rgba(36,27,18,0.05)]">
+      {value}
+    </div>
+  )
+}
+
+function SideDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a48b68]">
+        {label}
+      </div>
+      <div className="mt-1 text-[13px] font-semibold text-[#2f2822]">{value}</div>
     </div>
   )
 }
