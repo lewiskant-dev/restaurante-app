@@ -220,13 +220,13 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
 
             {featuredItem ? (
               <div className="mt-6 overflow-hidden rounded-[28px] bg-[#f7efe3]">
-                <div className="aspect-[16/9] bg-gradient-to-br from-[#2b1b1a] via-[#6f2a20] to-[#d9ad72]">
+                <div className="bg-gradient-to-br from-[#f7efe3] via-[#efe3d2] to-[#dcc2a0] px-8 py-6">
                   {featuredItem.foto_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <BottleImage
                       src={featuredItem.foto_url}
                       alt={featuredItem.nombre}
-                      className="h-full w-full object-cover"
+                      className="mx-auto h-[340px] max-h-[42vh] w-full"
+                      imageClassName="drop-shadow-[0_22px_34px_rgba(45,28,18,0.22)]"
                     />
                   ) : null}
                 </div>
@@ -283,8 +283,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                 <div className="flex items-start gap-4">
                   <div className="h-20 w-20 shrink-0 overflow-hidden rounded-[22px] bg-[#efe6d8]">
                     {item.foto_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.foto_url} alt={item.nombre} className="h-full w-full object-cover" />
+                      <BottleImage src={item.foto_url} alt={item.nombre} className="h-full w-full p-1.5" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-[22px]">
                         {item.tipo === 'vino' ? 'V' : item.tipo === 'coctel' ? 'C' : 'N'}
@@ -319,6 +318,29 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
         </section>
       </div>
     </main>
+  )
+}
+
+function BottleImage({
+  src,
+  alt,
+  className = '',
+  imageClassName = '',
+}: {
+  src: string
+  alt: string
+  className?: string
+  imageClassName?: string
+}) {
+  return (
+    <div className={`flex items-center justify-center overflow-hidden ${className}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        className={`h-full max-h-full w-full max-w-full object-contain object-center ${imageClassName}`}
+      />
+    </div>
   )
 }
 
