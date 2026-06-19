@@ -252,30 +252,38 @@ export function CartaTab({
           className={`mt-3 min-h-28 w-full px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
         />
 
-        <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_auto]">
+        <div className={`mt-3 space-y-3 p-3 ${softPanel}`}>
+          <div className="flex flex-col gap-1">
+            <span className="text-[12px] font-semibold text-slate-800">Foto de la ficha</span>
+            <span className="text-[11px] text-slate-400">
+              Sube una imagen propia o pega una URL externa si ya la tienes.
+            </span>
+          </div>
           <input
             value={guestMenuForm.foto_url}
             onChange={(event) => onFormChange('foto_url', event.target.value)}
-            placeholder="URL de foto o se completará al subir archivo"
-            className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
+            placeholder="URL de foto opcional"
+            className={`w-full px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
-          <label
-            className={`flex cursor-pointer items-center justify-center px-4 py-3 text-center text-[12px] font-semibold ${ghostButton}`}
-          >
-            Subir foto
-            <input
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(event) => onImageFileChange(event.target.files?.[0] ?? null)}
-            />
-          </label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label
+              className={`inline-flex cursor-pointer items-center justify-center px-4 py-3 text-center text-[12px] font-semibold ${ghostButton}`}
+            >
+              Seleccionar imagen
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(event) => onImageFileChange(event.target.files?.[0] ?? null)}
+              />
+            </label>
+            <span className="text-[11px] text-slate-400">
+              {guestMenuImageFile
+                ? `Preparada: ${guestMenuImageFile.name}. Se subirá al guardar.`
+                : 'Formatos recomendados: JPG, PNG o WEBP.'}
+            </span>
+          </div>
         </div>
-        <p className="mt-2 text-[11px] text-slate-400">
-          {guestMenuImageFile
-            ? `Foto preparada: ${guestMenuImageFile.name}. Se subirá al guardar.`
-            : 'Recomendado: foto propia de la botella o imagen facilitada por bodega/proveedor.'}
-        </p>
 
         <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-3">
