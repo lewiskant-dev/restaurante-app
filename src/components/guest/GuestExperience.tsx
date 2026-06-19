@@ -20,12 +20,7 @@ type GuestExperienceProps = {
 const typeOptions: Array<{ value: GuestMenuFilters['tipo']; label: string }> = [
   { value: 'todos', label: 'Todo' },
   { value: 'vinos', label: 'Vinos' },
-  { value: 'vino_tinto', label: 'Tintos' },
-  { value: 'vino_blanco', label: 'Blancos' },
-  { value: 'vino_espumoso', label: 'Espumosos' },
-  { value: 'vino_rosado', label: 'Rosados' },
   { value: 'coctel', label: 'Cócteles' },
-  { value: 'bebida', label: 'Bebidas' },
 ]
 
 function formatPrice(value: number | null) {
@@ -114,7 +109,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                 className="w-full rounded-[22px] border border-white/10 bg-white/10 px-4 py-3 text-[15px] text-white outline-none placeholder:text-white/38"
               />
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-2 sm:grid-cols-3">
                 {typeOptions.map((option) => (
                   <button
                     key={option.value}
@@ -140,7 +135,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                       event.target.value ? Number(event.target.value) : null
                     )
                   }
-                  className="rounded-[18px] border border-white/10 bg-white/10 px-4 py-3 text-[13px] text-white outline-none"
+                  className="rounded-[18px] border border-white/15 bg-white px-4 py-3 text-[13px] font-semibold text-[#151515] outline-none"
                 >
                   <option className="text-slate-900" value="">
                     Cualquier precio
@@ -159,7 +154,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                 <select
                   value={filters.maridaje || ''}
                   onChange={(event) => updateFilter('maridaje', event.target.value)}
-                  className="rounded-[18px] border border-white/10 bg-white/10 px-4 py-3 text-[13px] text-white outline-none"
+                  className="rounded-[18px] border border-white/15 bg-white px-4 py-3 text-[13px] font-semibold text-[#151515] outline-none"
                 >
                   <option className="text-slate-900" value="">
                     Cualquier plato

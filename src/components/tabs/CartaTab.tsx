@@ -57,6 +57,85 @@ function normalizeProductSearch(value: string | number | null | undefined) {
     .trim()
 }
 
+function uniqueSorted(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.map((value) => value?.trim() || '').filter(Boolean))).sort((a, b) =>
+    a.localeCompare(b, 'es')
+  )
+}
+
+function ReusableTextCombobox({
+  id,
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  id: string
+  value: string
+  onChange: (value: string) => void
+  options: string[]
+  placeholder: string
+}) {
+  const [open, setOpen] = useState(false)
+  const filteredOptions = options
+    .filter((option) => normalizeProductSearch(option).includes(normalizeProductSearch(value)))
+    .slice(0, 30)
+
+  return (
+    <div
+      className="relative self-start"
+      onBlur={() => {
+        window.setTimeout(() => setOpen(false), 120)
+      }}
+    >
+      <input
+        value={value}
+        onFocus={() => setOpen(true)}
+        onChange={(event) => {
+          onChange(event.target.value)
+          setOpen(true)
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') setOpen(false)
+        }}
+        placeholder={placeholder}
+        role="combobox"
+        aria-controls={id}
+        aria-expanded={open}
+        className={`w-full px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
+      />
+
+      {open && options.length > 0 ? (
+        <div
+          id={id}
+          role="listbox"
+          className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-40 max-h-64 overflow-y-auto rounded-[18px] border border-slate-200 bg-white p-2 shadow-[0_18px_42px_rgba(15,23,42,0.16)]"
+        >
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => {
+                  onChange(option)
+                  setOpen(false)
+                }}
+                className="w-full rounded-[14px] px-3 py-2 text-left text-[13px] font-semibold text-slate-900 transition hover:bg-blue-50"
+              >
+                {option}
+              </button>
+            ))
+          ) : (
+            <div className="px-3 py-4 text-center text-[12px] text-slate-400">
+              Se guardará como nuevo valor al guardar la ficha.
+            </div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export function CartaTab({
   restaurantSlug,
   productos,
@@ -105,6 +184,14 @@ export function CartaTab({
       Array.from(new Set(guestMenuItems.flatMap((item) => splitGuestGrapes(item.uva)))).sort((a, b) =>
         a.localeCompare(b, 'es')
       ),
+    [guestMenuItems]
+  )
+  const wineryOptions = useMemo(
+    () => uniqueSorted(guestMenuItems.map((item) => item.bodega)),
+    [guestMenuItems]
+  )
+  const originOptions = useMemo(
+    () => uniqueSorted(guestMenuItems.map((item) => item.origen)),
     [guestMenuItems]
   )
   const selectedGrapes = splitGuestGrapes(guestMenuForm.uva)
@@ -312,7 +399,7 @@ export function CartaTab({
           </select>
         </div>
 
-        <div className="mt-3 grid gap-3 lg:grid-cols-4">
+        <div className="mt-3 grid items-start gap-3 lg:grid-cols-4">
           <input
             value={guestMenuForm.categoria_publica}
             onChange={(event) => onFormChange('categoria_publica', event.target.value)}
@@ -328,11 +415,12 @@ export function CartaTab({
             placeholder="Precio venta"
             className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
-          <input
+          <ReusableTextCombobox
+            id="guest-menu-winery-options"
             value={guestMenuForm.bodega}
-            onChange={(event) => onFormChange('bodega', event.target.value)}
+            onChange={(value) => onFormChange('bodega', value)}
+            options={wineryOptions}
             placeholder="Bodega"
-            className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
           <input
             value={guestMenuForm.anada}
@@ -342,12 +430,13 @@ export function CartaTab({
           />
         </div>
 
-        <div className="mt-3 grid gap-3 lg:grid-cols-2">
-          <input
+        <div className="mt-3 grid items-start gap-3 lg:grid-cols-2">
+          <ReusableTextCombobox
+            id="guest-menu-origin-options"
             value={guestMenuForm.origen}
-            onChange={(event) => onFormChange('origen', event.target.value)}
+            onChange={(value) => onFormChange('origen', value)}
+            options={originOptions}
             placeholder="Origen / DO"
-            className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
           <div className="space-y-2">
             <input
