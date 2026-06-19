@@ -24,6 +24,8 @@ type GuestMenuRow = {
   temperatura: string | null
   maridajes: string[] | null
   etiquetas: string[] | null
+  perfil_vino: GuestMenuItem['perfil_vino'] | null
+  notas_cata: string[] | null
   destacado: boolean
   orden: number
 }
@@ -48,6 +50,8 @@ function mapGuestMenuRow(row: GuestMenuRow): GuestMenuItem {
     temperatura: row.temperatura,
     maridajes: row.maridajes ?? [],
     etiquetas: row.etiquetas ?? [],
+    perfil_vino: row.perfil_vino ?? null,
+    notas_cata: row.notas_cata ?? [],
     destacado: row.destacado,
     orden: row.orden,
   }
@@ -74,7 +78,7 @@ export default async function GuestRestaurantPage({
   const { data: rows, error: menuError } = await supabase
     .from('guest_menu_items')
     .select(
-      'id,restaurant_id,producto_id,nombre_publico,categoria_publica,tipo,descripcion,foto_url,precio,bodega,anada,origen,uva,cuerpo,tanino,temperatura,maridajes,etiquetas,destacado,orden'
+      'id,restaurant_id,producto_id,nombre_publico,categoria_publica,tipo,descripcion,foto_url,precio,bodega,anada,origen,uva,cuerpo,tanino,temperatura,maridajes,etiquetas,perfil_vino,notas_cata,destacado,orden'
     )
     .eq('restaurant_id', restaurant.id)
     .eq('publicado', true)

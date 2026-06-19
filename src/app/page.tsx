@@ -700,6 +700,7 @@ export default function HomePage() {
     guestMenuItems,
     loadingGuestMenu,
     guestMenuSaving,
+    guestMenuEnriching,
     guestMenuEditId,
     guestMenuForm,
     guestMenuImageFile,
@@ -711,6 +712,7 @@ export default function HomePage() {
     openNewGuestMenuItem,
     openEditGuestMenuItem,
     saveGuestMenuItem,
+    enrichGuestMenuWithAI,
     toggleGuestMenuPublished,
     resetGuestMenuForm,
     resetGuestMenuState,
@@ -2104,6 +2106,7 @@ export default function HomePage() {
             guestMenuItems={guestMenuItems}
             loadingGuestMenu={loadingGuestMenu}
             guestMenuSaving={guestMenuSaving}
+            guestMenuEnriching={guestMenuEnriching}
             guestMenuEditId={guestMenuEditId}
             guestMenuForm={guestMenuForm}
             guestMenuImageFile={guestMenuImageFile}
@@ -2112,6 +2115,7 @@ export default function HomePage() {
             onNew={() => openNewGuestMenuItem()}
             onEdit={openEditGuestMenuItem}
             onSave={() => void saveGuestMenuItem()}
+            onEnrichWithAI={() => void enrichGuestMenuWithAI()}
             onCancel={resetGuestMenuForm}
             onTogglePublished={(item) => void toggleGuestMenuPublished(item)}
             onFormChange={setGuestMenuFormField}

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import type { GuestMenuItem, GuestMenuKind } from '@/lib/guestExperience'
+import { isWineKind } from '@/lib/guestExperience'
+import type { GuestMenuItem, GuestMenuKind, GuestWineProfile } from '@/lib/guestExperience'
 import { supabase } from '@/lib/supabase'
 import type { Producto } from '@/types'
 import type { PermissionKey } from '@/features/home/types'
@@ -45,6 +46,8 @@ export type GuestMenuForm = {
   temperatura: string
   maridajes: string
   etiquetas: string
+  perfil_vino: GuestWineProfile | null
+  notas_cata: string
   destacado: boolean
   publicado: boolean
   orden: string
@@ -67,6 +70,8 @@ const initialGuestMenuForm: GuestMenuForm = {
   temperatura: '',
   maridajes: '',
   etiquetas: '',
+  perfil_vino: null,
+  notas_cata: '',
   destacado: false,
   publicado: false,
   orden: '100',
@@ -81,6 +86,10 @@ function splitList(value: string) {
 
 function joinList(value: string[] | null | undefined) {
   return (value ?? []).join(', ')
+}
+
+function normalizeStoredProfile(value: GuestWineProfile | null | undefined) {
+  return value && Object.keys(value).length > 0 ? value : null
 }
 
 function inferGuestKind(producto: Producto | undefined): GuestMenuKind {
@@ -102,6 +111,7 @@ export function useGuestMenuManagement({
   const [guestMenuItems, setGuestMenuItems] = useState<GuestMenuAdminItem[]>([])
   const [loadingGuestMenu, setLoadingGuestMenu] = useState(false)
   const [guestMenuSaving, setGuestMenuSaving] = useState(false)
+  const [guestMenuEnriching, setGuestMenuEnriching] = useState(false)
   const [guestMenuEditId, setGuestMenuEditId] = useState<string | null>(null)
   const [guestMenuForm, setGuestMenuForm] = useState<GuestMenuForm>(initialGuestMenuForm)
   const [guestMenuImageFile, setGuestMenuImageFile] = useState<File | null>(null)
@@ -160,6 +170,8 @@ export function useGuestMenuManagement({
         temperatura: item.temperatura,
         maridajes: item.maridajes ?? [],
         etiquetas: item.etiquetas ?? [],
+        perfil_vino: normalizeStoredProfile(item.perfil_vino),
+        notas_cata: item.notas_cata ?? [],
         destacado: item.destacado,
         orden: item.orden,
         publicado: item.publicado,
@@ -228,6 +240,8 @@ export function useGuestMenuManagement({
       temperatura: item.temperatura || '',
       maridajes: joinList(item.maridajes),
       etiquetas: joinList(item.etiquetas),
+      perfil_vino: normalizeStoredProfile(item.perfil_vino),
+      notas_cata: joinList(item.notas_cata),
       destacado: item.destacado,
       publicado: item.publicado,
       orden: String(item.orden),
@@ -290,6 +304,8 @@ export function useGuestMenuManagement({
         temperatura: guestMenuForm.temperatura.trim() || null,
         maridajes: splitList(guestMenuForm.maridajes),
         etiquetas: splitList(guestMenuForm.etiquetas),
+        perfil_vino: guestMenuForm.perfil_vino ?? {},
+        notas_cata: splitList(guestMenuForm.notas_cata),
         destacado: guestMenuForm.destacado,
         publicado: guestMenuForm.publicado,
         orden: Number(guestMenuForm.orden || 100),
@@ -339,10 +355,83 @@ export function useGuestMenuManagement({
     await loadGuestMenuItems()
   }
 
+  async function enrichGuestMenuWithAI() {
+    if (!requirePermission('guest_menu_manage', 'No tienes permisos para gestionar la carta')) {
+      return
+    }
+
+    if (!isWineKind(guestMenuForm.tipo)) {
+      onError('El perfil IA está pensado para fichas de vino')
+      return
+    }
+
+    if (!guestMenuForm.nombre_publico.trim()) {
+      onError('Indica el nombre público antes de generar el perfil IA')
+      return
+    }
+
+    setGuestMenuEnriching(true)
+    onError('')
+
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError) throw sessionError
+
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('Inicia sesión de nuevo para usar la IA')
+
+      const response = await fetch('/api/guest-menu/enrich', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          wine: {
+            nombre: guestMenuForm.nombre_publico,
+            tipo: guestMenuForm.tipo,
+            descripcion: guestMenuForm.descripcion,
+            bodega: guestMenuForm.bodega,
+            anada: guestMenuForm.anada,
+            origen: guestMenuForm.origen,
+            uva: guestMenuForm.uva,
+            temperatura: guestMenuForm.temperatura,
+            maridajes: guestMenuForm.maridajes,
+            etiquetas: guestMenuForm.etiquetas,
+          },
+        }),
+      })
+
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result?.error || 'No se pudo generar el perfil IA')
+      }
+
+      setGuestMenuForm((current) => ({
+        ...current,
+        descripcion: result.descripcion || current.descripcion,
+        perfil_vino: result.perfil_vino || current.perfil_vino,
+        notas_cata: joinList(result.notas_cata),
+        maridajes:
+          current.maridajes.trim() || !Array.isArray(result.maridajes)
+            ? current.maridajes
+            : joinList(result.maridajes),
+        temperatura: current.temperatura.trim() || !result.temperatura ? current.temperatura : result.temperatura,
+      }))
+
+      onToast('Perfil IA generado. Revisa la ficha y guarda los cambios.')
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'No se pudo generar el perfil IA')
+    } finally {
+      setGuestMenuEnriching(false)
+    }
+  }
+
   function resetGuestMenuState() {
     setGuestMenuItems([])
     setLoadingGuestMenu(false)
     setGuestMenuSaving(false)
+    setGuestMenuEnriching(false)
     resetGuestMenuForm()
   }
 
@@ -350,6 +439,7 @@ export function useGuestMenuManagement({
     guestMenuItems,
     loadingGuestMenu,
     guestMenuSaving,
+    guestMenuEnriching,
     guestMenuEditId,
     guestMenuForm,
     guestMenuImageFile,
@@ -361,6 +451,7 @@ export function useGuestMenuManagement({
     openNewGuestMenuItem,
     openEditGuestMenuItem,
     saveGuestMenuItem,
+    enrichGuestMenuWithAI,
     toggleGuestMenuPublished,
     resetGuestMenuForm,
     resetGuestMenuState,

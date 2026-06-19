@@ -387,6 +387,7 @@ function GuestItemModal({ item, onClose }: { item: GuestMenuItem; onClose: () =>
   const profile = buildWineProfile(item)
   const tasteNotes = buildTasteNotes(item)
   const pairings = item.maridajes.slice(0, 6)
+  const hasAiProfile = Boolean(item.perfil_vino && Object.keys(item.perfil_vino).length > 0)
   const details = [
     ['Bodega', item.bodega],
     ['Región', item.origen],
@@ -396,9 +397,9 @@ function GuestItemModal({ item, onClose }: { item: GuestMenuItem; onClose: () =>
   ].filter(([, value]) => Boolean(value)) as Array<[string, string]>
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/42 p-3 backdrop-blur-sm sm:items-center sm:p-6">
-      <div className="mx-auto grid max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-[34px] bg-[#fffaf2] shadow-[0_30px_90px_rgba(0,0,0,0.32)] lg:grid-cols-[0.36fr_0.64fr]">
-        <aside className="overflow-y-auto border-black/5 bg-[#f7efe3] px-6 py-6 lg:border-r">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/42 p-3 backdrop-blur-sm sm:p-6">
+      <div className="mx-auto my-4 grid w-full max-w-6xl overflow-hidden rounded-[34px] bg-[#fffaf2] shadow-[0_30px_90px_rgba(0,0,0,0.32)] lg:my-8 lg:max-h-[88vh] lg:grid-cols-[0.36fr_0.64fr]">
+        <aside className="border-black/5 bg-[#f7efe3] px-6 py-6 lg:max-h-[88vh] lg:overflow-y-auto lg:border-r">
           {item.foto_url ? (
             <BottleImage
               src={item.foto_url}
@@ -423,7 +424,7 @@ function GuestItemModal({ item, onClose }: { item: GuestMenuItem; onClose: () =>
           </div>
         </aside>
 
-        <div className="overflow-y-auto bg-[#fffaf2] px-6 py-6 sm:px-8">
+        <div className="bg-[#fffaf2] px-6 py-6 sm:px-8 lg:max-h-[88vh] lg:overflow-y-auto">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-[2.25rem] font-semibold leading-tight tracking-tight text-[#171717] sm:text-[2.8rem]">
@@ -457,7 +458,7 @@ function GuestItemModal({ item, onClose }: { item: GuestMenuItem; onClose: () =>
                   Perfil del vino
                 </h3>
                 <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a48b68]">
-                  Estimado
+                  {hasAiProfile ? 'IA' : 'Estimado'}
                 </span>
               </div>
               <div className="mt-3 overflow-hidden rounded-[20px] border border-black/8 bg-white">
@@ -507,6 +508,47 @@ function GuestItemModal({ item, onClose }: { item: GuestMenuItem; onClose: () =>
 }
 
 function buildWineProfile(item: GuestMenuItem) {
+  if (item.perfil_vino && Object.keys(item.perfil_vino).length > 0) {
+    return [
+      {
+        label: 'Intensidad',
+        value: item.perfil_vino.intensidad?.value ?? 3,
+        text: item.perfil_vino.intensidad?.label || 'Media',
+        color: '#743197',
+      },
+      {
+        label: 'Fruta',
+        value: item.perfil_vino.fruta?.value ?? 4,
+        text: item.perfil_vino.fruta?.label || 'Media +',
+        color: '#c9368f',
+      },
+      {
+        label: 'Cuerpo',
+        value: item.perfil_vino.cuerpo?.value ?? 3,
+        text: item.perfil_vino.cuerpo?.label || 'Medio',
+        color: '#df5147',
+      },
+      {
+        label: 'Madera',
+        value: item.perfil_vino.madera?.value ?? 1,
+        text: item.perfil_vino.madera?.label || 'Baja',
+        color: '#b77a43',
+      },
+      {
+        label: 'Acidez',
+        value: item.perfil_vino.acidez?.value ?? 3,
+        text: item.perfil_vino.acidez?.label || 'Media',
+        color: '#e8bd20',
+      },
+      {
+        label: 'Dulzor',
+        value: item.perfil_vino.dulzor?.value ?? 1,
+        text: item.perfil_vino.dulzor?.label || 'Seco',
+        color: '#279c91',
+      },
+    ]
+  }
+
   const text = [item.nombre, item.descripcion, item.uva, item.origen, item.bodega, ...item.etiquetas]
     .join(' ')
     .toLowerCase()
@@ -556,7 +598,12 @@ function buildWineProfile(item: GuestMenuItem) {
 }
 
 function buildTasteNotes(item: GuestMenuItem) {
-  const notes = item.etiquetas.length > 0 ? item.etiquetas : splitGuestGrapes(item.uva)
+  const notes =
+    item.notas_cata && item.notas_cata.length > 0
+      ? item.notas_cata
+      : item.etiquetas.length > 0
+        ? item.etiquetas
+        : splitGuestGrapes(item.uva)
   return notes.slice(0, 5)
 }
 

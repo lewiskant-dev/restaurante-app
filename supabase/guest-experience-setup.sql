@@ -24,6 +24,8 @@ create table if not exists public.guest_menu_items (
   temperatura text,
   maridajes text[] not null default array[]::text[],
   etiquetas text[] not null default array[]::text[],
+  perfil_vino jsonb not null default '{}'::jsonb,
+  notas_cata text[] not null default array[]::text[],
   destacado boolean not null default false,
   publicado boolean not null default false,
   orden integer not null default 100,
@@ -43,6 +45,12 @@ create table if not exists public.guest_menu_items (
   ),
   constraint guest_menu_items_precio_check check (precio is null or precio >= 0)
 );
+
+alter table public.guest_menu_items
+add column if not exists perfil_vino jsonb not null default '{}'::jsonb;
+
+alter table public.guest_menu_items
+add column if not exists notas_cata text[] not null default array[]::text[];
 
 alter table public.guest_menu_items
 drop constraint if exists guest_menu_items_tipo_check;

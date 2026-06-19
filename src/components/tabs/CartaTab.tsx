@@ -5,7 +5,7 @@ import type {
   GuestMenuAdminItem,
   GuestMenuForm,
 } from '@/features/home/hooks/useGuestMenuManagement'
-import { splitGuestGrapes } from '@/lib/guestExperience'
+import { isWineKind, splitGuestGrapes } from '@/lib/guestExperience'
 import { fieldShell, ghostButton, primaryGradientButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 import type { Producto } from '@/types'
 
@@ -15,6 +15,7 @@ type CartaTabProps = {
   guestMenuItems: GuestMenuAdminItem[]
   loadingGuestMenu: boolean
   guestMenuSaving: boolean
+  guestMenuEnriching: boolean
   guestMenuEditId: string | null
   guestMenuForm: GuestMenuForm
   guestMenuImageFile: File | null
@@ -23,6 +24,7 @@ type CartaTabProps = {
   onNew: () => void
   onEdit: (item: GuestMenuAdminItem) => void
   onSave: () => void
+  onEnrichWithAI: () => void
   onCancel: () => void
   onTogglePublished: (item: GuestMenuAdminItem) => void
   onFormChange: <Key extends keyof GuestMenuForm>(field: Key, value: GuestMenuForm[Key]) => void
@@ -142,6 +144,7 @@ export function CartaTab({
   guestMenuItems,
   loadingGuestMenu,
   guestMenuSaving,
+  guestMenuEnriching,
   guestMenuEditId,
   guestMenuForm,
   guestMenuImageFile,
@@ -150,6 +153,7 @@ export function CartaTab({
   onNew,
   onEdit,
   onSave,
+  onEnrichWithAI,
   onCancel,
   onTogglePublished,
   onFormChange,
@@ -195,6 +199,7 @@ export function CartaTab({
     [guestMenuItems]
   )
   const selectedGrapes = splitGuestGrapes(guestMenuForm.uva)
+  const canEnrichWithAI = isWineKind(guestMenuForm.tipo) && Boolean(guestMenuForm.nombre_publico.trim())
   const grapeSuggestions = grapeOptions
     .filter(
       (grape) =>
@@ -483,6 +488,34 @@ export function CartaTab({
           />
         </div>
 
+        <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_auto]">
+          <input
+            value={guestMenuForm.notas_cata}
+            onChange={(event) => onFormChange('notas_cata', event.target.value)}
+            placeholder="Cómo sabe: frutos rojos, vainilla, tabaco..."
+            className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
+          />
+          <button
+            type="button"
+            onClick={onEnrichWithAI}
+            disabled={guestMenuEnriching || !canEnrichWithAI}
+            title={
+              canEnrichWithAI
+                ? 'Genera perfil de vino y notas de cata con IA'
+                : 'Indica un nombre y selecciona un tipo de vino'
+            }
+            className={`px-4 py-3 text-[12px] disabled:cursor-not-allowed disabled:opacity-50 ${ghostButton}`}
+          >
+            {guestMenuEnriching ? 'Generando IA...' : 'Generar perfil IA'}
+          </button>
+        </div>
+
+        {guestMenuForm.perfil_vino && Object.keys(guestMenuForm.perfil_vino).length > 0 ? (
+          <div className="mt-2 rounded-[18px] bg-emerald-50 px-4 py-2 text-[12px] font-semibold text-emerald-700">
+            Perfil de vino generado. Revisa la ficha y guarda los cambios.
+          </div>
+        ) : null}
+
         <textarea
           value={guestMenuForm.descripcion}
           onChange={(event) => onFormChange('descripcion', event.target.value)}
@@ -609,6 +642,11 @@ export function CartaTab({
                     {item.destacado ? (
                       <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700">
                         Destacado
+                      </span>
+                    ) : null}
+                    {item.perfil_vino && Object.keys(item.perfil_vino).length > 0 ? (
+                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-semibold text-blue-700">
+                        Perfil IA
                       </span>
                     ) : null}
                   </div>

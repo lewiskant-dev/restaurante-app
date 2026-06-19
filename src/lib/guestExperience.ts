@@ -8,6 +8,15 @@ export type GuestMenuKind =
   | 'bebida'
   | 'otro'
 
+export type GuestWineProfileMetric = {
+  value: number
+  label: string
+}
+
+export type GuestWineProfile = Partial<
+  Record<'intensidad' | 'fruta' | 'cuerpo' | 'madera' | 'acidez' | 'dulzor', GuestWineProfileMetric>
+>
+
 export type GuestMenuItem = {
   id: string
   restaurant_id: string
@@ -27,6 +36,8 @@ export type GuestMenuItem = {
   temperatura: string | null
   maridajes: string[]
   etiquetas: string[]
+  perfil_vino?: GuestWineProfile | null
+  notas_cata?: string[]
   destacado: boolean
   orden: number
 }
