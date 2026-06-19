@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import {
   filterGuestMenuItems,
+  getGuestMenuKindLabel,
   getGuestMenuFilterOptions,
   isWineKind,
   type GuestMenuFilters,
@@ -36,14 +37,7 @@ function formatPrice(value: number | null) {
 }
 
 function getKindLabel(value: GuestMenuKind) {
-  if (value === 'vino') return 'Vino'
-  if (value === 'vino_tinto') return 'Vino tinto'
-  if (value === 'vino_blanco') return 'Vino blanco'
-  if (value === 'vino_espumoso') return 'Vino espumoso'
-  if (value === 'vino_rosado') return 'Vino rosado'
-  if (value === 'coctel') return 'Cóctel'
-  if (value === 'bebida') return 'Bebida'
-  return 'Carta'
+  return getGuestMenuKindLabel(value)
 }
 
 export function GuestExperience({ restaurantName, items }: GuestExperienceProps) {
@@ -56,6 +50,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
     origen: '',
     bodega: '',
     categoria: '',
+    tipoCarta: '',
   })
   const [selectedItem, setSelectedItem] = useState<GuestMenuItem | null>(null)
 
@@ -77,6 +72,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
       origen: '',
       bodega: '',
       categoria: '',
+      tipoCarta: '',
     })
   }
 
@@ -286,10 +282,13 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
               onChange={(value) => updateFilter('maridaje', value)}
             />
             <FilterSelect
-              label="Categoría"
-              value={filters.categoria || ''}
-              options={options.categorias}
-              onChange={(value) => updateFilter('categoria', value)}
+              label="Tipo de vino"
+              value={filters.tipoCarta || ''}
+              options={options.tiposCarta.map((tipo) => ({
+                value: tipo,
+                label: getGuestMenuKindLabel(tipo),
+              }))}
+              onChange={(value) => updateFilter('tipoCarta', value as GuestMenuFilters['tipoCarta'])}
             />
             <button
               type="button"
@@ -360,7 +359,7 @@ function FilterSelect({
 }: {
   label: string
   value: string
-  options: string[]
+  options: Array<string | { value: string; label: string }>
   onChange: (value: string) => void
 }) {
   return (
@@ -374,11 +373,15 @@ function FilterSelect({
         className="rounded-[18px] border border-black/10 bg-white px-4 py-3 text-[13px] font-semibold text-[#2a241e] outline-none transition focus:border-[#9a8060]"
       >
         <option value="">Todos</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
+        {options.map((option) => {
+          const normalizedOption = typeof option === 'string' ? { value: option, label: option } : option
+
+          return (
+            <option key={normalizedOption.value} value={normalizedOption.value}>
+              {normalizedOption.label}
+            </option>
+          )
+        })}
       </select>
     </label>
   )
@@ -390,7 +393,7 @@ function GuestItemModal({ item, onClose }: { item: GuestMenuItem; onClose: () =>
     ['Bodega', item.bodega],
     ['Añada', item.anada],
     ['Región / DO', item.origen],
-    ['Uva', item.uva],
+    ['Uvas', item.uva],
     ['Temperatura', item.temperatura],
   ].filter(([, value]) => Boolean(value)) as Array<[string, string]>
 

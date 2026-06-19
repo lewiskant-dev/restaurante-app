@@ -5,6 +5,7 @@ import type {
   GuestMenuAdminItem,
   GuestMenuForm,
 } from '@/features/home/hooks/useGuestMenuManagement'
+import { splitGuestGrapes } from '@/lib/guestExperience'
 import { fieldShell, ghostButton, primaryGradientButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 import type { Producto } from '@/types'
 
@@ -99,6 +100,22 @@ export function CartaTab({
         .some((value) => normalizeProductSearch(value).includes(query))
     )
   }, [productSearch, productosActivos])
+  const grapeOptions = useMemo(
+    () =>
+      Array.from(new Set(guestMenuItems.flatMap((item) => splitGuestGrapes(item.uva)))).sort((a, b) =>
+        a.localeCompare(b, 'es')
+      ),
+    [guestMenuItems]
+  )
+  const selectedGrapes = splitGuestGrapes(guestMenuForm.uva)
+  const grapeSuggestions = grapeOptions
+    .filter(
+      (grape) =>
+        !selectedGrapes.some(
+          (selectedGrape) => normalizeProductSearch(selectedGrape) === normalizeProductSearch(grape)
+        )
+    )
+    .slice(0, 10)
 
   const productInputValue =
     productDropdownOpen || !selectedProduct ? productSearch : selectedProduct.nombre
@@ -121,6 +138,10 @@ export function CartaTab({
   function resetProductCombobox() {
     setProductSearch('')
     setProductDropdownOpen(false)
+  }
+
+  function addGrapeToForm(grape: string) {
+    onFormChange('uva', [...selectedGrapes, grape].join(', '))
   }
 
   return (
@@ -328,12 +349,28 @@ export function CartaTab({
             placeholder="Origen / DO"
             className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
-          <input
-            value={guestMenuForm.uva}
-            onChange={(event) => onFormChange('uva', event.target.value)}
-            placeholder="Uva"
-            className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
-          />
+          <div className="space-y-2">
+            <input
+              value={guestMenuForm.uva}
+              onChange={(event) => onFormChange('uva', event.target.value)}
+              placeholder="Uvas separadas por coma"
+              className={`w-full px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
+            />
+            {grapeSuggestions.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {grapeSuggestions.map((grape) => (
+                  <button
+                    key={grape}
+                    type="button"
+                    onClick={() => addGrapeToForm(grape)}
+                    className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-500 transition hover:bg-blue-50 hover:text-blue-600"
+                  >
+                    + {grape}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div className="mt-3 grid gap-3 lg:grid-cols-3">

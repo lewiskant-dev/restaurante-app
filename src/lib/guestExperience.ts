@@ -40,6 +40,7 @@ export type GuestMenuFilters = {
   origen?: string
   bodega?: string
   categoria?: string
+  tipoCarta?: GuestMenuKind | ''
 }
 
 function normalizeGuestText(value: string | null | undefined) {
@@ -57,6 +58,13 @@ function includesNormalized(values: Array<string | null | undefined>, query: str
   return values.some((value) => normalizeGuestText(value).includes(normalizedQuery))
 }
 
+export function splitGuestGrapes(value: string | null | undefined) {
+  return (value || '')
+    .split(/[,;]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
 export function filterGuestMenuItems(items: GuestMenuItem[], filters: GuestMenuFilters) {
   const query = filters.query?.trim() || ''
   const tipo = filters.tipo || 'todos'
@@ -65,16 +73,20 @@ export function filterGuestMenuItems(items: GuestMenuItem[], filters: GuestMenuF
   const origen = normalizeGuestText(filters.origen)
   const bodega = normalizeGuestText(filters.bodega)
   const categoria = normalizeGuestText(filters.categoria)
+  const tipoCarta = filters.tipoCarta || ''
 
   return items
     .filter((item) => {
       if (tipo === 'vinos' && !isWineKind(item.tipo)) return false
       if (tipo !== 'todos' && tipo !== 'vinos' && item.tipo !== tipo) return false
       if (filters.maxPrice && item.precio !== null && item.precio > filters.maxPrice) return false
-      if (uva && normalizeGuestText(item.uva) !== uva) return false
+      if (uva && !splitGuestGrapes(item.uva).some((value) => normalizeGuestText(value) === uva)) {
+        return false
+      }
       if (origen && normalizeGuestText(item.origen) !== origen) return false
       if (bodega && normalizeGuestText(item.bodega) !== bodega) return false
       if (categoria && normalizeGuestText(item.categoria) !== categoria) return false
+      if (tipoCarta && item.tipo !== tipoCarta) return false
       if (maridaje && !item.maridajes.some((value) => normalizeGuestText(value) === maridaje)) {
         return false
       }
@@ -116,6 +128,17 @@ export function isWineKind(value: GuestMenuKind) {
   )
 }
 
+export function getGuestMenuKindLabel(value: GuestMenuKind) {
+  if (value === 'vino') return 'Vino'
+  if (value === 'vino_tinto') return 'Vino tinto'
+  if (value === 'vino_blanco') return 'Vino blanco'
+  if (value === 'vino_espumoso') return 'Vino espumoso'
+  if (value === 'vino_rosado') return 'Vino rosado'
+  if (value === 'coctel') return 'Cóctel'
+  if (value === 'bebida') return 'Bebida'
+  return 'Carta'
+}
+
 export function getGuestMenuFilterOptions(items: GuestMenuItem[]) {
   const unique = (values: string[]) =>
     Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).sort((a, b) =>
@@ -123,10 +146,13 @@ export function getGuestMenuFilterOptions(items: GuestMenuItem[]) {
     )
 
   return {
-    uvas: unique(items.map((item) => item.uva || '')),
+    uvas: unique(items.flatMap((item) => splitGuestGrapes(item.uva))),
     origenes: unique(items.map((item) => item.origen || '')),
     bodegas: unique(items.map((item) => item.bodega || '')),
     categorias: unique(items.map((item) => item.categoria || '')),
+    tiposCarta: Array.from(new Set(items.map((item) => item.tipo))).sort((a, b) =>
+      getGuestMenuKindLabel(a).localeCompare(getGuestMenuKindLabel(b), 'es')
+    ),
     maridajes: unique(items.flatMap((item) => item.maridajes)),
   }
 }

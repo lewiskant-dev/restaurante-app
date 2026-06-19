@@ -20,7 +20,7 @@ const baseItems: GuestMenuItem[] = [
     bodega: 'Bodega Norte',
     anada: '2019',
     origen: 'Rioja',
-    uva: 'Tempranillo',
+    uva: 'Tempranillo, Garnacha',
     cuerpo: 'Medio',
     tanino: 'Suave',
     temperatura: '16-18 ºC',
@@ -118,6 +118,7 @@ test('filterGuestMenuItems busca sin depender de tildes', () => {
 test('filterGuestMenuItems permite agrupar vinos y filtrar subtipos', () => {
   const allWines = filterGuestMenuItems(baseItems, { tipo: 'vinos' })
   const whiteWines = filterGuestMenuItems(baseItems, { tipo: 'vino_blanco' })
+  const whiteWinesFromCatalogFilter = filterGuestMenuItems(baseItems, { tipoCarta: 'vino_blanco' })
 
   assert.deepEqual(allWines.map((item) => item.nombre), [
     'Rioja Reserva',
@@ -125,14 +126,22 @@ test('filterGuestMenuItems permite agrupar vinos y filtrar subtipos', () => {
     'Albariño Atlántico',
   ])
   assert.deepEqual(whiteWines.map((item) => item.nombre), ['Albariño Atlántico'])
+  assert.deepEqual(whiteWinesFromCatalogFilter.map((item) => item.nombre), ['Albariño Atlántico'])
+})
+
+test('filterGuestMenuItems filtra vinos con varias uvas por cada variedad', () => {
+  const result = filterGuestMenuItems(baseItems, { uva: 'Garnacha' })
+
+  assert.deepEqual(result.map((item) => item.nombre), ['Rioja Reserva'])
 })
 
 test('getGuestMenuFilterOptions devuelve opciones unicas ordenadas', () => {
   const options = getGuestMenuFilterOptions(baseItems)
 
-  assert.deepEqual(options.uvas, ['Albariño', 'Tempranillo'])
+  assert.deepEqual(options.uvas, ['Albariño', 'Garnacha', 'Tempranillo'])
   assert.deepEqual(options.origenes, ['Rías Baixas', 'Ribera del Duero', 'Rioja'])
   assert.deepEqual(options.bodegas, ['Bodega Atlántica', 'Bodega Norte', 'Pago de Carraovejas'])
   assert.deepEqual(options.categorias, ['Cócteles', 'Vinos'])
+  assert.deepEqual(options.tiposCarta, ['coctel', 'vino', 'vino_blanco'])
   assert.deepEqual(options.maridajes, ['Aperitivo', 'Carne', 'Pescado', 'Quesos'])
 })
