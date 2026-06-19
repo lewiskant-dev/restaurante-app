@@ -161,27 +161,26 @@ export function CartaTab({
           </button>
         </div>
 
-        <div className="grid gap-3 lg:grid-cols-3">
-          <div className="space-y-2">
-            <input
-              value={productSearch}
-              onChange={(event) => setProductSearch(event.target.value)}
-              placeholder="Buscar producto por nombre, referencia o categoría"
-              className={`w-full px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
-            />
-            <select
-              value={guestMenuForm.producto_id}
-              onChange={(event) => onProductSelect(event.target.value)}
-              className={`w-full px-4 py-3 text-[13px] text-slate-900 ${fieldShell}`}
-            >
-              <option value="">Sin producto vinculado</option>
-              {productosFiltrados.map((producto) => (
-                <option key={producto.id} value={producto.id}>
-                  {producto.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
+        <input
+          value={productSearch}
+          onChange={(event) => setProductSearch(event.target.value)}
+          placeholder="Buscar producto por nombre, referencia o categoría"
+          className={`w-full px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
+        />
+
+        <div className="mt-3 grid gap-3 lg:grid-cols-3">
+          <select
+            value={guestMenuForm.producto_id}
+            onChange={(event) => onProductSelect(event.target.value)}
+            className={`px-4 py-3 text-[13px] text-slate-900 ${fieldShell}`}
+          >
+            <option value="">Sin producto vinculado</option>
+            {productosFiltrados.map((producto) => (
+              <option key={producto.id} value={producto.id}>
+                {producto.nombre}
+              </option>
+            ))}
+          </select>
           <input
             value={guestMenuForm.nombre_publico}
             onChange={(event) => onFormChange('nombre_publico', event.target.value)}

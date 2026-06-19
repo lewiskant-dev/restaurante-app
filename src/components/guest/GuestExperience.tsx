@@ -195,13 +195,12 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                 onClick={() => setSelectedItem(featuredItem)}
                 className="mt-6 w-full overflow-hidden rounded-[28px] bg-[#f7efe3] text-left transition hover:-translate-y-0.5 hover:shadow-[0_20px_54px_rgba(36,27,18,0.12)]"
               >
-                <div className="bg-gradient-to-br from-[#f7efe3] via-[#efe3d2] to-[#dcc2a0] px-8 py-6">
+                <div className="bg-[#f4eadc] px-8 py-6">
                   {featuredItem.foto_url ? (
                     <BottleImage
                       src={featuredItem.foto_url}
                       alt={featuredItem.nombre}
                       className="mx-auto h-[340px] max-h-[42vh] w-full"
-                      imageClassName="drop-shadow-[0_22px_34px_rgba(45,28,18,0.22)]"
                     />
                   ) : null}
                 </div>
@@ -389,13 +388,12 @@ function GuestItemModal({ item, onClose }: { item: GuestMenuItem; onClose: () =>
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/42 p-3 backdrop-blur-sm sm:items-center sm:p-6">
       <div className="mx-auto grid max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-[34px] bg-[#f7efe3] shadow-[0_30px_90px_rgba(0,0,0,0.32)] lg:grid-cols-[0.88fr_1.12fr]">
-        <div className="bg-gradient-to-br from-[#f8f1e7] via-[#eadcc9] to-[#d2ad82] px-8 py-8">
+        <div className="bg-[#f4eadc] px-8 py-8">
           {item.foto_url ? (
             <BottleImage
               src={item.foto_url}
               alt={item.nombre}
               className="mx-auto h-[52vh] min-h-[320px] w-full"
-              imageClassName="drop-shadow-[0_28px_44px_rgba(45,28,18,0.26)]"
             />
           ) : (
             <div className="flex h-[52vh] min-h-[320px] items-center justify-center rounded-[28px] bg-white/35 text-[4rem] font-semibold text-[#9a8060]">
