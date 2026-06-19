@@ -1,4 +1,12 @@
-export type GuestMenuKind = 'vino' | 'coctel' | 'bebida' | 'otro'
+export type GuestMenuKind =
+  | 'vino'
+  | 'vino_tinto'
+  | 'vino_blanco'
+  | 'vino_espumoso'
+  | 'vino_rosado'
+  | 'coctel'
+  | 'bebida'
+  | 'otro'
 
 export type GuestMenuItem = {
   id: string
@@ -25,7 +33,7 @@ export type GuestMenuItem = {
 
 export type GuestMenuFilters = {
   query?: string
-  tipo?: GuestMenuKind | 'todos'
+  tipo?: GuestMenuKind | 'todos' | 'vinos'
   maxPrice?: number | null
   maridaje?: string
   uva?: string
@@ -60,7 +68,8 @@ export function filterGuestMenuItems(items: GuestMenuItem[], filters: GuestMenuF
 
   return items
     .filter((item) => {
-      if (tipo !== 'todos' && item.tipo !== tipo) return false
+      if (tipo === 'vinos' && !isWineKind(item.tipo)) return false
+      if (tipo !== 'todos' && tipo !== 'vinos' && item.tipo !== tipo) return false
       if (filters.maxPrice && item.precio !== null && item.precio > filters.maxPrice) return false
       if (uva && normalizeGuestText(item.uva) !== uva) return false
       if (origen && normalizeGuestText(item.origen) !== origen) return false
@@ -95,6 +104,16 @@ export function filterGuestMenuItems(items: GuestMenuItem[], filters: GuestMenuF
       if (a.destacado !== b.destacado) return a.destacado ? -1 : 1
       return a.orden - b.orden || a.nombre.localeCompare(b.nombre, 'es')
     })
+}
+
+export function isWineKind(value: GuestMenuKind) {
+  return (
+    value === 'vino' ||
+    value === 'vino_tinto' ||
+    value === 'vino_blanco' ||
+    value === 'vino_espumoso' ||
+    value === 'vino_rosado'
+  )
 }
 
 export function getGuestMenuFilterOptions(items: GuestMenuItem[]) {

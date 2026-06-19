@@ -52,6 +52,28 @@ const baseItems: GuestMenuItem[] = [
     orden: 1,
   },
   {
+    id: '4',
+    restaurant_id: 'restaurant-1',
+    producto_id: 'product-4',
+    nombre: 'Albariño Atlántico',
+    categoria: 'Vinos',
+    tipo: 'vino_blanco',
+    descripcion: 'Blanco fresco y salino.',
+    foto_url: null,
+    precio: 28,
+    bodega: 'Bodega Atlántica',
+    anada: '2024',
+    origen: 'Rías Baixas',
+    uva: 'Albariño',
+    cuerpo: null,
+    tanino: null,
+    temperatura: '8-10 ºC',
+    maridajes: ['Pescado'],
+    etiquetas: ['fresco'],
+    destacado: false,
+    orden: 4,
+  },
+  {
     id: '3',
     restaurant_id: 'restaurant-1',
     producto_id: 'product-3',
@@ -93,12 +115,24 @@ test('filterGuestMenuItems busca sin depender de tildes', () => {
   assert.deepEqual(result.map((item) => item.nombre), ['Negroni'])
 })
 
+test('filterGuestMenuItems permite agrupar vinos y filtrar subtipos', () => {
+  const allWines = filterGuestMenuItems(baseItems, { tipo: 'vinos' })
+  const whiteWines = filterGuestMenuItems(baseItems, { tipo: 'vino_blanco' })
+
+  assert.deepEqual(allWines.map((item) => item.nombre), [
+    'Rioja Reserva',
+    'Pago de Carraovejas',
+    'Albariño Atlántico',
+  ])
+  assert.deepEqual(whiteWines.map((item) => item.nombre), ['Albariño Atlántico'])
+})
+
 test('getGuestMenuFilterOptions devuelve opciones unicas ordenadas', () => {
   const options = getGuestMenuFilterOptions(baseItems)
 
-  assert.deepEqual(options.uvas, ['Tempranillo'])
-  assert.deepEqual(options.origenes, ['Ribera del Duero', 'Rioja'])
-  assert.deepEqual(options.bodegas, ['Bodega Norte', 'Pago de Carraovejas'])
+  assert.deepEqual(options.uvas, ['Albariño', 'Tempranillo'])
+  assert.deepEqual(options.origenes, ['Rías Baixas', 'Ribera del Duero', 'Rioja'])
+  assert.deepEqual(options.bodegas, ['Bodega Atlántica', 'Bodega Norte', 'Pago de Carraovejas'])
   assert.deepEqual(options.categorias, ['Cócteles', 'Vinos'])
-  assert.deepEqual(options.maridajes, ['Aperitivo', 'Carne', 'Quesos'])
+  assert.deepEqual(options.maridajes, ['Aperitivo', 'Carne', 'Pescado', 'Quesos'])
 })

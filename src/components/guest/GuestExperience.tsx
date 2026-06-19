@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import {
   filterGuestMenuItems,
   getGuestMenuFilterOptions,
+  isWineKind,
   type GuestMenuFilters,
   type GuestMenuItem,
   type GuestMenuKind,
@@ -15,9 +16,13 @@ type GuestExperienceProps = {
   items: GuestMenuItem[]
 }
 
-const typeOptions: Array<{ value: GuestMenuKind | 'todos'; label: string }> = [
+const typeOptions: Array<{ value: GuestMenuFilters['tipo']; label: string }> = [
   { value: 'todos', label: 'Todo' },
-  { value: 'vino', label: 'Vinos' },
+  { value: 'vinos', label: 'Vinos' },
+  { value: 'vino_tinto', label: 'Tintos' },
+  { value: 'vino_blanco', label: 'Blancos' },
+  { value: 'vino_espumoso', label: 'Espumosos' },
+  { value: 'vino_rosado', label: 'Rosados' },
   { value: 'coctel', label: 'Cócteles' },
   { value: 'bebida', label: 'Bebidas' },
 ]
@@ -32,6 +37,10 @@ function formatPrice(value: number | null) {
 
 function getKindLabel(value: GuestMenuKind) {
   if (value === 'vino') return 'Vino'
+  if (value === 'vino_tinto') return 'Vino tinto'
+  if (value === 'vino_blanco') return 'Vino blanco'
+  if (value === 'vino_espumoso') return 'Vino espumoso'
+  if (value === 'vino_rosado') return 'Vino rosado'
   if (value === 'coctel') return 'Cóctel'
   if (value === 'bebida') return 'Bebida'
   return 'Carta'
@@ -305,7 +314,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                       <BottleImage src={item.foto_url} alt={item.nombre} className="h-full w-full p-1.5" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-[22px]">
-                        {item.tipo === 'vino' ? 'V' : item.tipo === 'coctel' ? 'C' : 'N'}
+                        {isWineKind(item.tipo) ? 'V' : item.tipo === 'coctel' ? 'C' : 'N'}
                       </div>
                     )}
                   </div>

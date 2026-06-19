@@ -31,6 +31,10 @@ type CartaTabProps = {
 
 const typeOptions = [
   { value: 'vino', label: 'Vino' },
+  { value: 'vino_tinto', label: 'Vino tinto' },
+  { value: 'vino_blanco', label: 'Vino blanco' },
+  { value: 'vino_espumoso', label: 'Vino espumoso' },
+  { value: 'vino_rosado', label: 'Vino rosado' },
   { value: 'coctel', label: 'Cóctel' },
   { value: 'bebida', label: 'Bebida' },
   { value: 'otro', label: 'Otro' },
@@ -42,6 +46,14 @@ function formatPrice(value: number | null) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })} €`
+}
+
+function normalizeProductSearch(value: string | number | null | undefined) {
+  return String(value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
 }
 
 export function CartaTab({
@@ -65,32 +77,51 @@ export function CartaTab({
   onProductSelect,
 }: CartaTabProps) {
   const [productSearch, setProductSearch] = useState('')
+  const [productDropdownOpen, setProductDropdownOpen] = useState(false)
+  const productListboxId = 'guest-menu-product-options'
   const publicUrl = restaurantSlug ? `/g/${restaurantSlug}` : ''
   const productosActivos = useMemo(
     () => productos.filter((producto) => producto.activo !== false && !producto.archivado),
     [productos]
   )
+  const selectedProduct = useMemo(
+    () => productosActivos.find((producto) => producto.id === guestMenuForm.producto_id),
+    [guestMenuForm.producto_id, productosActivos]
+  )
   const productosFiltrados = useMemo(() => {
-    const query = productSearch
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim()
+    const query = normalizeProductSearch(productSearch)
 
     if (!query) return productosActivos
 
     return productosActivos.filter((producto) =>
       [producto.nombre, producto.referencia, producto.categoria]
         .filter(Boolean)
-        .some((value) =>
-          String(value)
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .includes(query)
-        )
+        .some((value) => normalizeProductSearch(value).includes(query))
     )
   }, [productSearch, productosActivos])
+
+  const productInputValue =
+    productDropdownOpen || !selectedProduct ? productSearch : selectedProduct.nombre
+
+  function handleProductSearchChange(value: string) {
+    setProductSearch(value)
+    setProductDropdownOpen(true)
+
+    if (guestMenuForm.producto_id && value !== selectedProduct?.nombre) {
+      onProductSelect('')
+    }
+  }
+
+  function handleProductSelect(producto: Producto | null) {
+    onProductSelect(producto?.id || '')
+    setProductSearch(producto?.nombre || '')
+    setProductDropdownOpen(false)
+  }
+
+  function resetProductCombobox() {
+    setProductSearch('')
+    setProductDropdownOpen(false)
+  }
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -156,31 +187,91 @@ export function CartaTab({
               Vincula la ficha a un producto de stock para cruzar después ventas, margen y recomendaciones.
             </p>
           </div>
-          <button type="button" onClick={onNew} className={`px-4 py-2 text-[12px] ${ghostButton}`}>
+          <button
+            type="button"
+            onClick={() => {
+              resetProductCombobox()
+              onNew()
+            }}
+            className={`px-4 py-2 text-[12px] ${ghostButton}`}
+          >
             Nueva
           </button>
         </div>
 
-        <input
-          value={productSearch}
-          onChange={(event) => setProductSearch(event.target.value)}
-          placeholder="Buscar producto por nombre, referencia o categoría"
-          className={`w-full px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
-        />
-
-        <div className="mt-3 grid gap-3 lg:grid-cols-3">
-          <select
-            value={guestMenuForm.producto_id}
-            onChange={(event) => onProductSelect(event.target.value)}
-            className={`px-4 py-3 text-[13px] text-slate-900 ${fieldShell}`}
+        <div className="grid gap-3 lg:grid-cols-3">
+          <div
+            className="relative"
+            onBlur={() => {
+              window.setTimeout(() => setProductDropdownOpen(false), 120)
+            }}
           >
-            <option value="">Sin producto vinculado</option>
-            {productosFiltrados.map((producto) => (
-              <option key={producto.id} value={producto.id}>
-                {producto.nombre}
-              </option>
-            ))}
-          </select>
+            <input
+              value={productInputValue}
+              onFocus={() => {
+                setProductSearch(selectedProduct?.nombre || productSearch)
+                setProductDropdownOpen(true)
+              }}
+              onChange={(event) => handleProductSearchChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setProductDropdownOpen(false)
+              }}
+              placeholder="Buscar y vincular producto de stock"
+              role="combobox"
+              aria-controls={productListboxId}
+              aria-expanded={productDropdownOpen}
+              className={`w-full px-4 py-3 pr-24 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
+            />
+            {guestMenuForm.producto_id ? (
+              <button
+                type="button"
+                onClick={() => handleProductSelect(null)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-500 transition hover:bg-slate-200"
+              >
+                Quitar
+              </button>
+            ) : null}
+
+            {productDropdownOpen ? (
+              <div
+                id={productListboxId}
+                role="listbox"
+                className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-40 max-h-72 overflow-y-auto rounded-[18px] border border-slate-200 bg-white p-2 shadow-[0_18px_42px_rgba(15,23,42,0.16)]"
+              >
+                <button
+                  type="button"
+                  onClick={() => handleProductSelect(null)}
+                  className="w-full rounded-[14px] px-3 py-2 text-left text-[12px] font-semibold text-slate-500 transition hover:bg-slate-50"
+                >
+                  Sin producto vinculado
+                </button>
+
+                {productosFiltrados.length > 0 ? (
+                  productosFiltrados.slice(0, 40).map((producto) => (
+                    <button
+                      key={producto.id}
+                      type="button"
+                      onClick={() => handleProductSelect(producto)}
+                      className={`w-full rounded-[14px] px-3 py-2 text-left transition hover:bg-blue-50 ${
+                        producto.id === guestMenuForm.producto_id ? 'bg-blue-50' : ''
+                      }`}
+                    >
+                      <span className="block text-[13px] font-semibold text-slate-900">
+                        {producto.nombre}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] text-slate-400">
+                        {producto.referencia || 'Sin referencia'} · {producto.categoria || 'Sin categoría'}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-3 py-4 text-center text-[12px] text-slate-400">
+                    No hay productos que coincidan con la búsqueda.
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
           <input
             value={guestMenuForm.nombre_publico}
             onChange={(event) => onFormChange('nombre_publico', event.target.value)}
@@ -334,7 +425,14 @@ export function CartaTab({
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row">
-            <button type="button" onClick={onCancel} className={`px-4 py-2.5 text-[12px] ${ghostButton}`}>
+            <button
+              type="button"
+              onClick={() => {
+                resetProductCombobox()
+                onCancel()
+              }}
+              className={`px-4 py-2.5 text-[12px] ${ghostButton}`}
+            >
               Cancelar
             </button>
             <button

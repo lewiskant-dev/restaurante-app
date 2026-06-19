@@ -29,8 +29,36 @@ create table if not exists public.guest_menu_items (
   orden integer not null default 100,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint guest_menu_items_tipo_check check (tipo in ('vino', 'coctel', 'bebida', 'otro')),
+  constraint guest_menu_items_tipo_check check (
+    tipo in (
+      'vino',
+      'vino_tinto',
+      'vino_blanco',
+      'vino_espumoso',
+      'vino_rosado',
+      'coctel',
+      'bebida',
+      'otro'
+    )
+  ),
   constraint guest_menu_items_precio_check check (precio is null or precio >= 0)
+);
+
+alter table public.guest_menu_items
+drop constraint if exists guest_menu_items_tipo_check;
+
+alter table public.guest_menu_items
+add constraint guest_menu_items_tipo_check check (
+  tipo in (
+    'vino',
+    'vino_tinto',
+    'vino_blanco',
+    'vino_espumoso',
+    'vino_rosado',
+    'coctel',
+    'bebida',
+    'otro'
+  )
 );
 
 create index if not exists guest_menu_items_restaurant_public_idx
