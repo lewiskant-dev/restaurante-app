@@ -40,6 +40,10 @@ create index if not exists guest_menu_items_producto_idx
   on public.guest_menu_items(producto_id)
   where producto_id is not null;
 
+insert into storage.buckets (id, name, public)
+values ('guest-menu', 'guest-menu', true)
+on conflict (id) do update set public = excluded.public;
+
 drop trigger if exists guest_menu_items_assign_restaurant_id on public.guest_menu_items;
 create trigger guest_menu_items_assign_restaurant_id
 before insert on public.guest_menu_items
@@ -98,6 +102,31 @@ using (
 )
 with check (
   public.user_has_restaurant_access(restaurant_id)
+  and public.has_any_app_role(array['administrador', 'master'])
+);
+
+drop policy if exists "guest menu images public read" on storage.objects;
+create policy "guest menu images public read"
+on storage.objects
+for select
+to anon, authenticated
+using (bucket_id = 'guest-menu');
+
+drop policy if exists "guest menu images admin write" on storage.objects;
+create policy "guest menu images admin write"
+on storage.objects
+for all
+to authenticated
+using (
+  bucket_id = 'guest-menu'
+  and array_length(storage.foldername(name), 1) >= 1
+  and public.user_has_restaurant_access(((storage.foldername(name))[1])::uuid)
+  and public.has_any_app_role(array['administrador', 'master'])
+)
+with check (
+  bucket_id = 'guest-menu'
+  and array_length(storage.foldername(name), 1) >= 1
+  and public.user_has_restaurant_access(((storage.foldername(name))[1])::uuid)
   and public.has_any_app_role(array['administrador', 'master'])
 );
 

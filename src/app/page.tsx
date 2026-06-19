@@ -702,9 +702,11 @@ export default function HomePage() {
     guestMenuSaving,
     guestMenuEditId,
     guestMenuForm,
+    guestMenuImageFile,
     publicGuestMenuItems,
     loadGuestMenuItems,
     setGuestMenuFormField,
+    setGuestMenuImageFile,
     selectGuestMenuProduct,
     openNewGuestMenuItem,
     openEditGuestMenuItem,
@@ -2104,6 +2106,7 @@ export default function HomePage() {
             guestMenuSaving={guestMenuSaving}
             guestMenuEditId={guestMenuEditId}
             guestMenuForm={guestMenuForm}
+            guestMenuImageFile={guestMenuImageFile}
             publicGuestMenuItems={publicGuestMenuItems}
             onLoad={() => void loadGuestMenuItems()}
             onNew={() => openNewGuestMenuItem()}
@@ -2112,6 +2115,7 @@ export default function HomePage() {
             onCancel={resetGuestMenuForm}
             onTogglePublished={(item) => void toggleGuestMenuPublished(item)}
             onFormChange={setGuestMenuFormField}
+            onImageFileChange={setGuestMenuImageFile}
             onProductSelect={selectGuestMenuProduct}
           />
         )}

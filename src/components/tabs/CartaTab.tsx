@@ -15,6 +15,7 @@ type CartaTabProps = {
   guestMenuSaving: boolean
   guestMenuEditId: string | null
   guestMenuForm: GuestMenuForm
+  guestMenuImageFile: File | null
   publicGuestMenuItems: number
   onLoad: () => void
   onNew: () => void
@@ -23,6 +24,7 @@ type CartaTabProps = {
   onCancel: () => void
   onTogglePublished: (item: GuestMenuAdminItem) => void
   onFormChange: <Key extends keyof GuestMenuForm>(field: Key, value: GuestMenuForm[Key]) => void
+  onImageFileChange: (file: File | null) => void
   onProductSelect: (productId: string) => void
 }
 
@@ -49,6 +51,7 @@ export function CartaTab({
   guestMenuSaving,
   guestMenuEditId,
   guestMenuForm,
+  guestMenuImageFile,
   publicGuestMenuItems,
   onLoad,
   onNew,
@@ -57,6 +60,7 @@ export function CartaTab({
   onCancel,
   onTogglePublished,
   onFormChange,
+  onImageFileChange,
   onProductSelect,
 }: CartaTabProps) {
   const publicUrl = restaurantSlug ? `/g/${restaurantSlug}` : ''
@@ -248,12 +252,30 @@ export function CartaTab({
           className={`mt-3 min-h-28 w-full px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
         />
 
-        <input
-          value={guestMenuForm.foto_url}
-          onChange={(event) => onFormChange('foto_url', event.target.value)}
-          placeholder="URL de foto"
-          className={`mt-3 w-full px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
-        />
+        <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_auto]">
+          <input
+            value={guestMenuForm.foto_url}
+            onChange={(event) => onFormChange('foto_url', event.target.value)}
+            placeholder="URL de foto o se completará al subir archivo"
+            className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
+          />
+          <label
+            className={`flex cursor-pointer items-center justify-center px-4 py-3 text-center text-[12px] font-semibold ${ghostButton}`}
+          >
+            Subir foto
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(event) => onImageFileChange(event.target.files?.[0] ?? null)}
+            />
+          </label>
+        </div>
+        <p className="mt-2 text-[11px] text-slate-400">
+          {guestMenuImageFile
+            ? `Foto preparada: ${guestMenuImageFile.name}. Se subirá al guardar.`
+            : 'Recomendado: foto propia de la botella o imagen facilitada por bodega/proveedor.'}
+        </p>
 
         <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-3">

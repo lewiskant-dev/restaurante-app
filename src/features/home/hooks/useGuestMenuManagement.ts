@@ -104,6 +104,7 @@ export function useGuestMenuManagement({
   const [guestMenuSaving, setGuestMenuSaving] = useState(false)
   const [guestMenuEditId, setGuestMenuEditId] = useState<string | null>(null)
   const [guestMenuForm, setGuestMenuForm] = useState<GuestMenuForm>(initialGuestMenuForm)
+  const [guestMenuImageFile, setGuestMenuImageFile] = useState<File | null>(null)
 
   const publicGuestMenuItems = useMemo(
     () => guestMenuItems.filter((item) => item.publicado).length,
@@ -172,6 +173,7 @@ export function useGuestMenuManagement({
   function resetGuestMenuForm() {
     setGuestMenuEditId(null)
     setGuestMenuForm(initialGuestMenuForm)
+    setGuestMenuImageFile(null)
   }
 
   function setGuestMenuFormField<Key extends keyof GuestMenuForm>(
@@ -195,6 +197,7 @@ export function useGuestMenuManagement({
 
   function openNewGuestMenuItem(producto?: Producto) {
     setGuestMenuEditId(null)
+    setGuestMenuImageFile(null)
     setGuestMenuForm({
       ...initialGuestMenuForm,
       producto_id: producto?.id || '',
@@ -207,6 +210,7 @@ export function useGuestMenuManagement({
 
   function openEditGuestMenuItem(item: GuestMenuAdminItem) {
     setGuestMenuEditId(item.id)
+    setGuestMenuImageFile(null)
     setGuestMenuForm({
       producto_id: item.producto_id || '',
       nombre_publico: item.nombre,
@@ -247,6 +251,27 @@ export function useGuestMenuManagement({
     onError('')
 
     try {
+      let fotoUrl = guestMenuForm.foto_url.trim() || null
+
+      if (guestMenuImageFile) {
+        const safeName = guestMenuImageFile.name.replace(/[^\w.-]+/g, '_')
+        const fileName = `${restaurantId}/${Date.now()}_${safeName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('guest-menu')
+          .upload(fileName, guestMenuImageFile, {
+            contentType: guestMenuImageFile.type || undefined,
+            upsert: false,
+          })
+
+        if (uploadError) {
+          throw new Error(`No se pudo subir la foto de carta: ${uploadError.message}`)
+        }
+
+        const { data: publicUrlData } = supabase.storage.from('guest-menu').getPublicUrl(fileName)
+        fotoUrl = publicUrlData.publicUrl
+      }
+
       const payload = {
         restaurant_id: restaurantId,
         producto_id: guestMenuForm.producto_id || null,
@@ -254,7 +279,7 @@ export function useGuestMenuManagement({
         categoria_publica: guestMenuForm.categoria_publica.trim() || 'Carta',
         tipo: guestMenuForm.tipo,
         descripcion: guestMenuForm.descripcion.trim() || null,
-        foto_url: guestMenuForm.foto_url.trim() || null,
+        foto_url: fotoUrl,
         precio: guestMenuForm.precio === '' ? null : Number(guestMenuForm.precio),
         bodega: guestMenuForm.bodega.trim() || null,
         anada: guestMenuForm.anada.trim() || null,
@@ -327,9 +352,11 @@ export function useGuestMenuManagement({
     guestMenuSaving,
     guestMenuEditId,
     guestMenuForm,
+    guestMenuImageFile,
     publicGuestMenuItems,
     loadGuestMenuItems,
     setGuestMenuFormField,
+    setGuestMenuImageFile,
     selectGuestMenuProduct,
     openNewGuestMenuItem,
     openEditGuestMenuItem,
