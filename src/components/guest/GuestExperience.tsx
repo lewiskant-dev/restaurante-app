@@ -290,7 +290,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
             <button
               type="button"
               onClick={resetFilters}
-              className="rounded-[18px] border border-black/10 bg-[#151515] px-4 py-3 text-[12px] font-semibold text-white transition hover:bg-black"
+              className="min-h-[46px] self-end rounded-[18px] border border-black/10 bg-[#151515] px-4 py-3 text-[12px] font-semibold text-white transition hover:bg-black"
             >
               Limpiar filtros
             </button>

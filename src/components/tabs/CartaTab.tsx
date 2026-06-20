@@ -329,11 +329,13 @@ export function CartaTab({
               onKeyDown={(event) => {
                 if (event.key === 'Escape') setProductDropdownOpen(false)
               }}
-              placeholder="Buscar y vincular producto de stock"
+              placeholder="Buscar producto de stock..."
               role="combobox"
               aria-controls={productListboxId}
               aria-expanded={productDropdownOpen}
-              className={`w-full px-4 py-3 pr-24 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
+              className={`w-full px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${
+                guestMenuForm.producto_id ? 'pr-24' : 'pr-4'
+              } ${fieldShell}`}
             />
             {guestMenuForm.producto_id ? (
               <button
