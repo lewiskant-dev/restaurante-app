@@ -6,7 +6,7 @@ import type {
   GuestMenuForm,
 } from '@/features/home/hooks/useGuestMenuManagement'
 import type { Receta } from '@/features/home/types'
-import { isWineKind, splitGuestGrapes } from '@/lib/guestExperience'
+import { isInitialGuestRecommendation, isWineKind, splitGuestGrapes } from '@/lib/guestExperience'
 import { fieldShell, ghostButton, primaryGradientButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 import type { Producto } from '@/types'
 
@@ -635,6 +635,14 @@ export function CartaTab({
               />
               Destacado
             </label>
+            <label className="flex items-center gap-2 text-[13px] font-medium text-slate-700">
+              <input
+                type="checkbox"
+                checked={guestMenuForm.recomendacion_inicial}
+                onChange={(event) => onFormChange('recomendacion_inicial', event.target.checked)}
+              />
+              Recomendación inicial
+            </label>
             <input
               type="number"
               value={guestMenuForm.orden}
@@ -703,6 +711,11 @@ export function CartaTab({
                     {item.destacado ? (
                       <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700">
                         Destacado
+                      </span>
+                    ) : null}
+                    {isInitialGuestRecommendation(item) ? (
+                      <span className="rounded-full bg-purple-50 px-2.5 py-1 text-[10px] font-semibold text-purple-700">
+                        Recomendación inicial
                       </span>
                     ) : null}
                     {item.perfil_vino && Object.keys(item.perfil_vino).length > 0 ? (

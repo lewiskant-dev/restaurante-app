@@ -1,5 +1,10 @@
 import { useMemo, useState } from 'react'
-import { isWineKind } from '@/lib/guestExperience'
+import {
+  GUEST_INITIAL_RECOMMENDATION_TAG,
+  getPublicGuestTags,
+  isInitialGuestRecommendation,
+  isWineKind,
+} from '@/lib/guestExperience'
 import type { GuestMenuItem, GuestMenuKind, GuestWineProfile } from '@/lib/guestExperience'
 import { supabase } from '@/lib/supabase'
 import type { Producto } from '@/types'
@@ -48,6 +53,7 @@ export type GuestMenuForm = {
   etiquetas: string
   perfil_vino: GuestWineProfile | null
   notas_cata: string
+  recomendacion_inicial: boolean
   destacado: boolean
   publicado: boolean
   orden: string
@@ -72,6 +78,7 @@ const initialGuestMenuForm: GuestMenuForm = {
   etiquetas: '',
   perfil_vino: null,
   notas_cata: '',
+  recomendacion_inicial: false,
   destacado: false,
   publicado: false,
   orden: '100',
@@ -239,9 +246,10 @@ export function useGuestMenuManagement({
       tanino: item.tanino || '',
       temperatura: item.temperatura || '',
       maridajes: joinList(item.maridajes),
-      etiquetas: joinList(item.etiquetas),
+      etiquetas: joinList(getPublicGuestTags(item.etiquetas)),
       perfil_vino: normalizeStoredProfile(item.perfil_vino),
       notas_cata: joinList(item.notas_cata),
+      recomendacion_inicial: isInitialGuestRecommendation(item),
       destacado: item.destacado,
       publicado: item.publicado,
       orden: String(item.orden),
@@ -286,6 +294,11 @@ export function useGuestMenuManagement({
         fotoUrl = publicUrlData.publicUrl
       }
 
+      const publicTags = getPublicGuestTags(splitList(guestMenuForm.etiquetas))
+      const etiquetas = guestMenuForm.recomendacion_inicial
+        ? [...publicTags, GUEST_INITIAL_RECOMMENDATION_TAG]
+        : publicTags
+
       const payload = {
         restaurant_id: restaurantId,
         producto_id: guestMenuForm.producto_id || null,
@@ -303,7 +316,7 @@ export function useGuestMenuManagement({
         tanino: guestMenuForm.tanino.trim() || null,
         temperatura: guestMenuForm.temperatura.trim() || null,
         maridajes: splitList(guestMenuForm.maridajes),
-        etiquetas: splitList(guestMenuForm.etiquetas),
+        etiquetas,
         perfil_vino: guestMenuForm.perfil_vino ?? {},
         notas_cata: splitList(guestMenuForm.notas_cata),
         destacado: guestMenuForm.destacado,

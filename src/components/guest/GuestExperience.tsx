@@ -5,6 +5,8 @@ import {
   filterGuestMenuItems,
   getGuestMenuKindLabel,
   getGuestMenuFilterOptions,
+  getPublicGuestTags,
+  isInitialGuestRecommendation,
   isWineKind,
   splitGuestGrapes,
   type GuestMenuFilters,
@@ -123,7 +125,7 @@ function getSurpriseScore(item: GuestMenuItem, wines: GuestMenuItem[]) {
     item.descripcion,
     item.origen,
     item.uva,
-    ...item.etiquetas,
+    ...getPublicGuestTags(item.etiquetas),
     ...(item.notas_cata ?? []),
   ]
     .map((value) => normalizeGuestText(value))
@@ -196,6 +198,19 @@ function rotateItems<T>(items: T[], seed: number) {
 function getOpeningRecommendations(items: GuestMenuItem[], seed: number) {
   const wines = items.filter((item) => isWineKind(item.tipo))
   if (wines.length === 0) return []
+  const manualPool = wines.filter(isInitialGuestRecommendation)
+
+  if (manualPool.length > 0) {
+    const rankedManualPool = [...manualPool].sort((a, b) => {
+      if (a.destacado !== b.destacado) return a.destacado ? -1 : 1
+      return a.orden - b.orden || a.nombre.localeCompare(b.nombre, 'es')
+    })
+    const manualIds = new Set(rankedManualPool.map((item) => item.id))
+    return [
+      ...rotateItems(rankedManualPool, seed),
+      ...wines.filter((item) => !manualIds.has(item.id)),
+    ]
+  }
 
   const ranked = [...wines].sort((a, b) => {
     const scoreA =
@@ -466,6 +481,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
 
   function surpriseSommelier() {
     setSommelierMode('surprise')
+    setSommelierPreferences(initialSommelierPreferences)
     setRecommendationSeed((current) => current + 1)
   }
 
@@ -494,10 +510,6 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
             <h2 className="mt-4 text-[2.4rem] font-semibold leading-[0.95] tracking-tight sm:text-[3.6rem]">
               ¿Qué te apetece hoy?
             </h2>
-            <p className="mt-5 max-w-md text-[15px] leading-7 text-white/68">
-              Escríbelo como se lo dirías al sommelier: un tinto suave para carne, algo fresco
-              para pescado o una copa afrutada sin demasiada potencia.
-            </p>
 
             <div className="mt-7 space-y-3">
               <div>
@@ -941,7 +953,9 @@ function GuestItemModal({ item, onClose }: { item: GuestMenuItem; onClose: () =>
             </section>
           ) : null}
 
-          {item.etiquetas.length > 0 ? <TagGroup title="Notas y estilo" values={item.etiquetas} /> : null}
+          {getPublicGuestTags(item.etiquetas).length > 0 ? (
+            <TagGroup title="Notas y estilo" values={getPublicGuestTags(item.etiquetas)} />
+          ) : null}
         </div>
       </div>
     </div>

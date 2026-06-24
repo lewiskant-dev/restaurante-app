@@ -54,6 +54,8 @@ export type GuestMenuFilters = {
   tipoCarta?: GuestMenuKind | ''
 }
 
+export const GUEST_INITIAL_RECOMMENDATION_TAG = '__nexo_recomendacion_inicial'
+
 function normalizeGuestText(value: string | null | undefined) {
   return (value || '')
     .toLowerCase()
@@ -76,6 +78,18 @@ function includesAnyNormalized(values: Array<string | null | undefined>, terms: 
   return terms.some((term) => haystack.includes(term))
 }
 
+export function getPublicGuestTags(values: string[] | null | undefined) {
+  return (values ?? []).filter(
+    (value) => normalizeGuestText(value) !== normalizeGuestText(GUEST_INITIAL_RECOMMENDATION_TAG)
+  )
+}
+
+export function isInitialGuestRecommendation(item: GuestMenuItem) {
+  return (item.etiquetas ?? []).some(
+    (value) => normalizeGuestText(value) === normalizeGuestText(GUEST_INITIAL_RECOMMENDATION_TAG)
+  )
+}
+
 function getGuestItemSearchValues(item: GuestMenuItem) {
   return [
     item.nombre,
@@ -89,7 +103,7 @@ function getGuestItemSearchValues(item: GuestMenuItem) {
     item.tanino,
     item.temperatura,
     ...item.maridajes,
-    ...item.etiquetas,
+    ...getPublicGuestTags(item.etiquetas),
     ...(item.notas_cata ?? []),
   ]
 }
