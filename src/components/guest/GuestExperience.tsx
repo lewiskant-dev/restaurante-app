@@ -20,9 +20,10 @@ type GuestExperienceProps = {
 
 type SommelierScale = '' | 'low' | 'medium' | 'high'
 type SommelierSweetness = '' | 'dry' | 'balanced' | 'sweet'
+type SommelierWineType = GuestMenuKind | '' | 'surprise'
 
 type SommelierPreferences = {
-  tipo: GuestMenuKind | ''
+  tipo: SommelierWineType
   intensidad: SommelierScale
   cuerpo: SommelierScale
   madera: SommelierScale
@@ -43,8 +44,8 @@ const initialSommelierPreferences: SommelierPreferences = {
   maxPrice: null,
 }
 
-const wineTypeOptions: Array<{ value: SommelierPreferences['tipo']; label: string }> = [
-  { value: '', label: 'Me dejo guiar' },
+const wineTypeOptions: Array<{ value: SommelierWineType; label: string }> = [
+  { value: 'surprise', label: 'Sorpréndeme' },
   { value: 'vino_tinto', label: 'Tinto' },
   { value: 'vino_blanco', label: 'Blanco' },
   { value: 'vino_espumoso', label: 'Espumoso' },
@@ -96,12 +97,72 @@ function scoreProfileMetric(current: number | undefined, target: number | null) 
   return Math.max(0, 6 - Math.abs(normalizedCurrent - target))
 }
 
+function normalizeGuestText(value: string | null | undefined) {
+  return (value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+}
+
+function getSurpriseScore(item: GuestMenuItem, wines: GuestMenuItem[]) {
+  const originFrequency = item.origen
+    ? wines.filter((wine) => normalizeGuestText(wine.origen) === normalizeGuestText(item.origen)).length
+    : wines.length
+  const grapes = splitGuestGrapes(item.uva)
+  const rareGrapes = grapes.filter(
+    (grape) =>
+      wines.filter((wine) =>
+        splitGuestGrapes(wine.uva).some(
+          (wineGrape) => normalizeGuestText(wineGrape) === normalizeGuestText(grape)
+        )
+      ).length <= 1
+  )
+  const text = [
+    item.nombre,
+    item.descripcion,
+    item.origen,
+    item.uva,
+    ...item.etiquetas,
+    ...(item.notas_cata ?? []),
+  ]
+    .map((value) => normalizeGuestText(value))
+    .join(' ')
+  const unusualTerms = [
+    'natural',
+    'ancestral',
+    'orange',
+    'brut nature',
+    'pet nat',
+    'volcanico',
+    'volcanica',
+    'mineral',
+    'salino',
+    'singular',
+    'autoctona',
+    'autoctono',
+    'experimental',
+    'biodinamico',
+    'ecologico',
+  ]
+
+  let score = 0
+  score += rareGrapes.length * 5
+  score += Math.max(0, 5 - originFrequency) * 2
+  if (item.tipo === 'vino_espumoso' || item.tipo === 'vino_rosado') score += 4
+  if (item.tipo === 'vino_blanco') score += 2
+  score += unusualTerms.filter((term) => text.includes(term)).length * 3
+  if (!item.destacado) score += 1
+
+  return score
+}
+
 function scoreSommelierItem(item: GuestMenuItem, preferences: SommelierPreferences) {
   if (!isWineKind(item.tipo)) return -100
 
   let score = item.destacado ? 1 : 0
 
-  if (preferences.tipo) {
+  if (preferences.tipo && preferences.tipo !== 'surprise') {
     if (item.tipo === preferences.tipo) score += 10
     else if (item.tipo === 'vino') score += 4
     else score -= 8
@@ -128,6 +189,14 @@ function scoreSommelierItem(item: GuestMenuItem, preferences: SommelierPreferenc
 function getSommelierRecommendations(items: GuestMenuItem[], preferences: SommelierPreferences) {
   const wines = items.filter((item) => isWineKind(item.tipo))
   if (wines.length === 0) return []
+
+  if (preferences.tipo === 'surprise') {
+    return [...wines].sort((a, b) => {
+      const scoreDifference = getSurpriseScore(b, wines) - getSurpriseScore(a, wines)
+      if (scoreDifference !== 0) return scoreDifference
+      return a.orden - b.orden || a.nombre.localeCompare(b.nombre, 'es')
+    })
+  }
 
   return [...wines].sort((a, b) => {
     const scoreDifference = scoreSommelierItem(b, preferences) - scoreSommelierItem(a, preferences)
@@ -173,6 +242,65 @@ function SommelierQuestion<Value extends string>({
   )
 }
 
+function SommelierDropdown<Value extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: Value
+  options: Array<{ value: Value; label: string }>
+  onChange: (value: Value) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const selectedOption = options.find((option) => option.value === value) ?? options[0]
+
+  return (
+    <div
+      className="relative"
+      onBlur={() => {
+        window.setTimeout(() => setOpen(false), 120)
+      }}
+    >
+      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/42">
+        {label}
+      </div>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex min-h-[42px] w-full items-center justify-between gap-3 rounded-[15px] bg-white px-3 py-2.5 text-left text-[12px] font-semibold text-[#151515] transition hover:bg-white/92"
+        aria-expanded={open}
+      >
+        <span className="min-w-0 truncate">{selectedOption?.label}</span>
+        <span className={`shrink-0 transition ${open ? 'rotate-180' : ''}`}>⌄</span>
+      </button>
+
+      {open ? (
+        <div className="absolute left-0 right-0 top-[calc(100%+0.45rem)] z-30 max-h-56 overflow-y-auto rounded-[16px] border border-white/12 bg-[#242424] p-1.5 shadow-[0_18px_42px_rgba(0,0,0,0.35)]">
+          {options.map((option) => (
+            <button
+              key={option.value || option.label}
+              type="button"
+              onClick={() => {
+                onChange(option.value)
+                setOpen(false)
+              }}
+              className={`w-full rounded-[12px] px-3 py-2 text-left text-[12px] font-semibold transition ${
+                value === option.value
+                  ? 'bg-white text-[#151515]'
+                  : 'text-white/72 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export function GuestExperience({ restaurantName, items }: GuestExperienceProps) {
   const [filters, setFilters] = useState<GuestMenuFilters>({
     query: '',
@@ -195,6 +323,22 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
   const sommelierRecommendations = useMemo(
     () => getSommelierRecommendations(items, sommelierPreferences),
     [items, sommelierPreferences]
+  )
+  const regionOptions = useMemo(
+    () => [
+      { value: '', label: 'Cualquier región / D.O.' },
+      ...options.origenes.map((origen) => ({ value: origen, label: origen })),
+    ],
+    [options.origenes]
+  )
+  const priceOptions = useMemo(
+    () => [
+      { value: '', label: 'Cualquier precio' },
+      { value: '25', label: 'Menos de 25 €' },
+      { value: '40', label: 'Menos de 40 €' },
+      { value: '70', label: 'Menos de 70 €' },
+    ],
+    []
   )
   const featuredItem = useMemo(
     () => sommelierRecommendations[0] ?? filteredItems[0],
@@ -269,7 +413,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                 value={sommelierPreferences.tipo}
                 options={wineTypeOptions}
                 onChange={(value) =>
-                  updateSommelierPreference('tipo', value as SommelierPreferences['tipo'])
+                  updateSommelierPreference('tipo', value)
                 }
               />
 
@@ -307,46 +451,23 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                   options={sweetnessOptions}
                   onChange={(value) => updateSommelierPreference('dulzor', value as SommelierSweetness)}
                 />
-                <select
+                <SommelierDropdown
+                  label="Región / D.O."
                   value={sommelierPreferences.origen}
-                  onChange={(event) => updateSommelierPreference('origen', event.target.value)}
-                  className="rounded-[18px] border border-white/15 bg-white px-4 py-3 text-[13px] font-semibold text-[#151515] outline-none"
-                >
-                  <option className="text-slate-900" value="">
-                    Cualquier región / D.O.
-                  </option>
-                  {options.origenes.map((origen) => (
-                    <option key={origen} className="text-slate-900" value={origen}>
-                      {origen}
-                    </option>
-                  ))}
-                </select>
+                  options={regionOptions}
+                  onChange={(value) => updateSommelierPreference('origen', value)}
+                />
               </div>
 
               <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                <select
-                  value={sommelierPreferences.maxPrice ?? ''}
-                  onChange={(event) =>
-                    updateSommelierPreference(
-                      'maxPrice',
-                      event.target.value ? Number(event.target.value) : null
-                    )
+                <SommelierDropdown
+                  label="Precio"
+                  value={sommelierPreferences.maxPrice === null ? '' : String(sommelierPreferences.maxPrice)}
+                  options={priceOptions}
+                  onChange={(value) =>
+                    updateSommelierPreference('maxPrice', value ? Number(value) : null)
                   }
-                  className="rounded-[18px] border border-white/15 bg-white px-4 py-3 text-[13px] font-semibold text-[#151515] outline-none"
-                >
-                  <option className="text-slate-900" value="">
-                    Cualquier precio
-                  </option>
-                  <option className="text-slate-900" value="25">
-                    Menos de 25 €
-                  </option>
-                  <option className="text-slate-900" value="40">
-                    Menos de 40 €
-                  </option>
-                  <option className="text-slate-900" value="70">
-                    Menos de 70 €
-                  </option>
-                </select>
+                />
 
                 <button
                   type="button"
@@ -464,7 +585,6 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
             <h2 className="text-[1.25rem] font-semibold tracking-tight">
               {filteredItems.length} resultado{filteredItems.length === 1 ? '' : 's'}
             </h2>
-            <div className="text-[12px] text-[#8b7a68]">Carta pública del restaurante</div>
           </div>
 
           <div className="mb-4 grid gap-2 rounded-[28px] border border-black/8 bg-white/55 p-3 shadow-[0_12px_42px_rgba(36,27,18,0.06)] sm:grid-cols-2 lg:grid-cols-3">
@@ -602,7 +722,6 @@ function GuestItemModal({ item, onClose }: { item: GuestMenuItem; onClose: () =>
   const profile = buildWineProfile(item)
   const tasteNotes = buildTasteNotes(item)
   const pairings = item.maridajes.slice(0, 6)
-  const hasAiProfile = Boolean(item.perfil_vino && Object.keys(item.perfil_vino).length > 0)
   const details = [
     ['Bodega', item.bodega],
     ['Región', item.origen],
@@ -668,14 +787,9 @@ function GuestItemModal({ item, onClose }: { item: GuestMenuItem; onClose: () =>
 
           {isWineKind(item.tipo) ? (
             <section className="mt-7">
-              <div className="flex items-end justify-between gap-4">
-                <h3 className="text-[1.25rem] font-semibold tracking-tight text-[#171717]">
-                  Perfil del vino
-                </h3>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a48b68]">
-                  {hasAiProfile ? 'IA' : 'Estimado'}
-                </span>
-              </div>
+              <h3 className="text-[1.25rem] font-semibold tracking-tight text-[#171717]">
+                Perfil del vino
+              </h3>
               <div className="mt-3 overflow-hidden rounded-[20px] border border-black/8 bg-white">
                 {profile.map((row) => (
                   <WineProfileRow key={row.label} {...row} />
