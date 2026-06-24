@@ -499,7 +499,7 @@ export function CartaTab({
           </div>
         </div>
 
-        <div className="mt-3 grid gap-3 lg:grid-cols-3">
+        <div className="mt-3 grid items-start gap-3 lg:grid-cols-3">
           <input
             value={guestMenuForm.temperatura}
             onChange={(event) => onFormChange('temperatura', event.target.value)}
