@@ -115,6 +115,15 @@ test('filterGuestMenuItems busca sin depender de tildes', () => {
   assert.deepEqual(result.map((item) => item.nombre), ['Negroni'])
 })
 
+test('filterGuestMenuItems interpreta peticiones naturales de sommelier', () => {
+  const result = filterGuestMenuItems(baseItems, {
+    query: 'Quiero un tinto suave pero afrutado que vaya bien con la carne',
+  })
+
+  assert.equal(result[0]?.nombre, 'Rioja Reserva')
+  assert.ok(result.some((item) => item.nombre === 'Pago de Carraovejas'))
+})
+
 test('filterGuestMenuItems permite agrupar vinos y filtrar subtipos', () => {
   const allWines = filterGuestMenuItems(baseItems, { tipo: 'vinos' })
   const whiteWines = filterGuestMenuItems(baseItems, { tipo: 'vino_blanco' })

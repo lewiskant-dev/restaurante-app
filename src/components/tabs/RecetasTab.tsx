@@ -32,6 +32,7 @@ export function RecetasTab({
       return [
         receta.nombre,
         receta.nombre_tpv || '',
+        receta.tipo_carta === 'bebida' ? 'bebida' : 'comida',
         estado,
       ].some((value) => normalizeSearchText(value).includes(query))
     })
@@ -212,6 +213,15 @@ export function RecetasTab({
                       }`}
                     >
                       {receta.activo === false ? 'Inactiva' : 'Activa'}
+                    </span>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[10px] font-semibold sm:px-3 sm:text-[12px] ${
+                        receta.tipo_carta === 'bebida'
+                          ? 'bg-blue-50 text-blue-600'
+                          : 'bg-orange-50 text-orange-600'
+                      }`}
+                    >
+                      {receta.tipo_carta === 'bebida' ? 'Bebida' : 'Comida'}
                     </span>
                   </div>
                   <div className="mt-1.5 text-[11px] text-slate-500 sm:mt-2 sm:text-[13px]">

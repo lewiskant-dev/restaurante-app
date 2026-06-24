@@ -10,6 +10,7 @@ type RecetaModalProps = {
   recetaEditId: string | null
   recetaNombre: string
   recetaNombreTPV: string
+  recetaTipoCarta: 'comida' | 'bebida'
   recetaRaciones: string
   recetaPrecioVenta: string
   recetaActiva: boolean
@@ -19,6 +20,7 @@ type RecetaModalProps = {
   onClose: () => void
   onNombreChange: (value: string) => void
   onNombreTpvChange: (value: string) => void
+  onTipoCartaChange: (value: 'comida' | 'bebida') => void
   onRacionesChange: (value: string) => void
   onPrecioVentaChange: (value: string) => void
   onActivaChange: (value: boolean) => void
@@ -33,6 +35,7 @@ export function RecetaModal({
   recetaEditId,
   recetaNombre,
   recetaNombreTPV,
+  recetaTipoCarta,
   recetaRaciones,
   recetaPrecioVenta,
   recetaActiva,
@@ -42,6 +45,7 @@ export function RecetaModal({
   onClose,
   onNombreChange,
   onNombreTpvChange,
+  onTipoCartaChange,
   onRacionesChange,
   onPrecioVentaChange,
   onActivaChange,
@@ -107,6 +111,37 @@ export function RecetaModal({
                 placeholder="Nombre del producto en TPV"
                 className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
               />
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                {[
+                  {
+                    value: 'comida' as const,
+                    label: 'Comida',
+                    description: 'Plato disponible para maridajes de la carta pública.',
+                  },
+                  {
+                    value: 'bebida' as const,
+                    label: 'Bebida',
+                    description: 'Bebida o artículo TPV que no se sugiere como plato.',
+                  },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => onTipoCartaChange(option.value)}
+                    className={`rounded-[18px] border px-4 py-3 text-left transition ${
+                      recetaTipoCarta === option.value
+                        ? 'border-blue-200 bg-blue-50 text-blue-700'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="block text-sm font-semibold">{option.label}</span>
+                    <span className="mt-1 block text-[11px] leading-4 text-slate-500">
+                      {option.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
 
               <input
                 type="number"

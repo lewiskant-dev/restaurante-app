@@ -17,6 +17,7 @@ type EnrichRequest = {
     maridajes?: string
     etiquetas?: string
   }
+  platosCarta?: string[]
 }
 
 const profileKeys = ['intensidad', 'fruta', 'cuerpo', 'madera', 'acidez', 'dulzor'] as const
@@ -92,6 +93,18 @@ function normalizeStringList(value: unknown) {
     .slice(0, 8)
 }
 
+function normalizeDishList(value: unknown) {
+  if (!Array.isArray(value)) return []
+
+  return Array.from(
+    new Set(
+      value
+        .map((item) => String(item || '').trim())
+        .filter(Boolean)
+    )
+  ).slice(0, 80)
+}
+
 function extractOutputText(raw: unknown) {
   if (!raw || typeof raw !== 'object') return ''
 
@@ -154,6 +167,7 @@ export async function POST(request: Request) {
 
     const body = (await request.json()) as EnrichRequest
     const wine = body.wine || {}
+    const platosCarta = normalizeDishList(body.platosCarta)
     const name = wine.nombre?.trim()
 
     if (!name) {
@@ -180,6 +194,9 @@ Vino:
 - Maridajes actuales: ${wine.maridajes || 'sin datos'}
 - Etiquetas actuales: ${wine.etiquetas || 'sin datos'}
 - Descripción actual: ${wine.descripcion || 'sin datos'}
+- Platos reales del restaurante disponibles para maridar: ${
+      platosCarta.length ? platosCarta.join(' | ') : 'sin platos configurados'
+    }
 
 Formato exacto:
 {
@@ -202,6 +219,9 @@ Reglas:
 - Usa notas de cata concretas y entendibles por cliente: frutos rojos, ciruela, vainilla, cacao, tabaco, cítricos, flores blancas, mineral, hierbas, especias, etc.
 - En "temperatura" devuelve el grado alcohólico aproximado o real si lo encuentras. Si no estás seguro, usa "".
 - No inventes una ficha exacta si no estás seguro: usa el estilo probable por bodega, DO, uva y tipo, pero evita afirmaciones demasiado específicas.
+- Si hay platos reales del restaurante disponibles, el array "maridajes" debe contener SOLO nombres exactos de esa lista. No propongas platos externos como sushi, carnes genéricas o quesos si no aparecen en la lista.
+- Si la lista de platos reales está vacía, puedes devolver categorías gastronómicas generales.
+- Si ningún plato real encaja claramente, devuelve un array vacío en "maridajes".
 - Si hay duda, prioriza utilidad para cliente y coherencia gastronómica.
 - No incluyas texto fuera del JSON.
 `

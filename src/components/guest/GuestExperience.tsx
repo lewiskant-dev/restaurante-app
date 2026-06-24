@@ -18,10 +18,49 @@ type GuestExperienceProps = {
   items: GuestMenuItem[]
 }
 
-const typeOptions: Array<{ value: GuestMenuFilters['tipo']; label: string }> = [
-  { value: 'todos', label: 'Todo' },
-  { value: 'vinos', label: 'Vinos' },
-  { value: 'coctel', label: 'Cócteles' },
+type SommelierScale = '' | 'low' | 'medium' | 'high'
+type SommelierSweetness = '' | 'dry' | 'balanced' | 'sweet'
+
+type SommelierPreferences = {
+  tipo: GuestMenuKind | ''
+  intensidad: SommelierScale
+  cuerpo: SommelierScale
+  madera: SommelierScale
+  acidez: SommelierScale
+  dulzor: SommelierSweetness
+  origen: string
+  maxPrice: number | null
+}
+
+const initialSommelierPreferences: SommelierPreferences = {
+  tipo: '',
+  intensidad: '',
+  cuerpo: '',
+  madera: '',
+  acidez: '',
+  dulzor: '',
+  origen: '',
+  maxPrice: null,
+}
+
+const wineTypeOptions: Array<{ value: SommelierPreferences['tipo']; label: string }> = [
+  { value: '', label: 'Me dejo guiar' },
+  { value: 'vino_tinto', label: 'Tinto' },
+  { value: 'vino_blanco', label: 'Blanco' },
+  { value: 'vino_espumoso', label: 'Espumoso' },
+  { value: 'vino_rosado', label: 'Rosado' },
+]
+
+const scaleOptions: Array<{ value: SommelierScale; label: string }> = [
+  { value: 'low', label: 'Poco' },
+  { value: 'medium', label: 'Medio' },
+  { value: 'high', label: 'Mucho' },
+]
+
+const sweetnessOptions: Array<{ value: SommelierSweetness; label: string }> = [
+  { value: 'dry', label: 'Seco' },
+  { value: 'balanced', label: 'Equilibrado' },
+  { value: 'sweet', label: 'Dulce' },
 ]
 
 function formatPrice(value: number | null) {
@@ -36,6 +75,104 @@ function getKindLabel(value: GuestMenuKind) {
   return getGuestMenuKindLabel(value)
 }
 
+function getTargetScaleValue(value: SommelierScale) {
+  if (value === 'low') return 2
+  if (value === 'medium') return 3.5
+  if (value === 'high') return 5
+  return null
+}
+
+function getTargetSweetnessValue(value: SommelierSweetness) {
+  if (value === 'dry') return 1
+  if (value === 'balanced') return 3
+  if (value === 'sweet') return 5
+  return null
+}
+
+function scoreProfileMetric(current: number | undefined, target: number | null) {
+  if (target === null) return 0
+
+  const normalizedCurrent = Number.isFinite(current) ? Number(current) : 3
+  return Math.max(0, 6 - Math.abs(normalizedCurrent - target))
+}
+
+function scoreSommelierItem(item: GuestMenuItem, preferences: SommelierPreferences) {
+  if (!isWineKind(item.tipo)) return -100
+
+  let score = item.destacado ? 1 : 0
+
+  if (preferences.tipo) {
+    if (item.tipo === preferences.tipo) score += 10
+    else if (item.tipo === 'vino') score += 4
+    else score -= 8
+  }
+
+  if (preferences.maxPrice !== null) {
+    if (item.precio !== null && item.precio <= preferences.maxPrice) score += 5
+    if (item.precio !== null && item.precio > preferences.maxPrice) score -= 12
+  }
+
+  if (preferences.origen) {
+    score += item.origen === preferences.origen ? 8 : -4
+  }
+
+  score += scoreProfileMetric(item.perfil_vino?.intensidad?.value, getTargetScaleValue(preferences.intensidad))
+  score += scoreProfileMetric(item.perfil_vino?.cuerpo?.value, getTargetScaleValue(preferences.cuerpo))
+  score += scoreProfileMetric(item.perfil_vino?.madera?.value, getTargetScaleValue(preferences.madera))
+  score += scoreProfileMetric(item.perfil_vino?.acidez?.value, getTargetScaleValue(preferences.acidez))
+  score += scoreProfileMetric(item.perfil_vino?.dulzor?.value, getTargetSweetnessValue(preferences.dulzor))
+
+  return score
+}
+
+function getSommelierRecommendations(items: GuestMenuItem[], preferences: SommelierPreferences) {
+  const wines = items.filter((item) => isWineKind(item.tipo))
+  if (wines.length === 0) return []
+
+  return [...wines].sort((a, b) => {
+    const scoreDifference = scoreSommelierItem(b, preferences) - scoreSommelierItem(a, preferences)
+    if (scoreDifference !== 0) return scoreDifference
+    if (a.destacado !== b.destacado) return a.destacado ? -1 : 1
+    return a.orden - b.orden || a.nombre.localeCompare(b.nombre, 'es')
+  })
+}
+
+function SommelierQuestion<Value extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: Value
+  options: Array<{ value: Value; label: string }>
+  onChange: (value: Value) => void
+}) {
+  return (
+    <div>
+      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/42">
+        {label}
+      </div>
+      <div className="grid gap-1.5">
+        {options.map((option) => (
+          <button
+            key={option.value || option.label}
+            type="button"
+            onClick={() => onChange(option.value)}
+            className={`rounded-[15px] px-3 py-2.5 text-left text-[12px] font-semibold transition ${
+              value === option.value
+                ? 'bg-white text-[#151515]'
+                : 'bg-white/8 text-white/68 hover:bg-white/14 hover:text-white'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function GuestExperience({ restaurantName, items }: GuestExperienceProps) {
   const [filters, setFilters] = useState<GuestMenuFilters>({
     query: '',
@@ -48,11 +185,24 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
     categoria: '',
     tipoCarta: '',
   })
+  const [sommelierPreferences, setSommelierPreferences] = useState<SommelierPreferences>(
+    initialSommelierPreferences
+  )
   const [selectedItem, setSelectedItem] = useState<GuestMenuItem | null>(null)
 
   const options = useMemo(() => getGuestMenuFilterOptions(items), [items])
   const filteredItems = useMemo(() => filterGuestMenuItems(items, filters), [filters, items])
-  const featuredItem = filteredItems[0]
+  const sommelierRecommendations = useMemo(
+    () => getSommelierRecommendations(items, sommelierPreferences),
+    [items, sommelierPreferences]
+  )
+  const featuredItem = useMemo(
+    () => sommelierRecommendations[0] ?? filteredItems[0],
+    [filteredItems, sommelierRecommendations]
+  )
+  const alternativeRecommendations = sommelierRecommendations
+    .filter((item) => item.id !== featuredItem?.id)
+    .slice(0, 2)
 
   function updateFilter<Key extends keyof GuestMenuFilters>(key: Key, value: GuestMenuFilters[Key]) {
     setFilters((current) => ({ ...current, [key]: value }))
@@ -70,6 +220,17 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
       categoria: '',
       tipoCarta: '',
     })
+  }
+
+  function updateSommelierPreference<Key extends keyof SommelierPreferences>(
+    key: Key,
+    value: SommelierPreferences[Key]
+  ) {
+    setSommelierPreferences((current) => ({ ...current, [key]: value }))
+  }
+
+  function resetSommelier() {
+    setSommelierPreferences(initialSommelierPreferences)
   }
 
   return (
@@ -92,47 +253,81 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
         <section className="mt-10 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded-[34px] bg-[#151515] p-6 text-white shadow-[0_28px_80px_rgba(36,27,18,0.16)] sm:p-8">
             <div className="text-[12px] font-semibold uppercase tracking-[0.24em] text-[#d8c3a5]">
-              Filtro inteligente
+              Sommelier Hernández
             </div>
             <h2 className="mt-4 text-[2.4rem] font-semibold leading-[0.95] tracking-tight sm:text-[3.6rem]">
-              Quiero algo para hoy.
+              ¿Qué te apetece hoy?
             </h2>
             <p className="mt-5 max-w-md text-[15px] leading-7 text-white/68">
-              Busca por estilo, plato, bodega o sensación. La carta se adapta al momento del
-              cliente sin convertir la elección en una hoja de cálculo.
+              Escríbelo como se lo dirías al sommelier: un tinto suave para carne, algo fresco
+              para pescado o una copa afrutada sin demasiada potencia.
             </p>
 
             <div className="mt-7 space-y-3">
-              <input
-                value={filters.query || ''}
-                onChange={(event) => updateFilter('query', event.target.value)}
-                placeholder="Ej. parecido a Ribera, suave, para carne..."
-                style={{ color: '#ffffff' }}
-                className="w-full rounded-[22px] border border-white/10 bg-white/10 px-4 py-3 text-[15px] text-white outline-none placeholder:text-white/38"
+              <SommelierQuestion
+                label="¿Qué tipo prefieres?"
+                value={sommelierPreferences.tipo}
+                options={wineTypeOptions}
+                onChange={(value) =>
+                  updateSommelierPreference('tipo', value as SommelierPreferences['tipo'])
+                }
               />
 
-              <div className="grid gap-2 sm:grid-cols-3">
-                {typeOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => updateFilter('tipo', option.value)}
-                    className={`rounded-[18px] px-4 py-3 text-[13px] font-semibold transition ${
-                      filters.tipo === option.value
-                        ? 'bg-white text-[#151515]'
-                        : 'bg-white/8 text-white/72 hover:bg-white/14'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <SommelierQuestion
+                  label="Intensidad"
+                  value={sommelierPreferences.intensidad}
+                  options={scaleOptions}
+                  onChange={(value) => updateSommelierPreference('intensidad', value as SommelierScale)}
+                />
+                <SommelierQuestion
+                  label="Cuerpo"
+                  value={sommelierPreferences.cuerpo}
+                  options={scaleOptions}
+                  onChange={(value) => updateSommelierPreference('cuerpo', value as SommelierScale)}
+                />
+                <SommelierQuestion
+                  label="Madera"
+                  value={sommelierPreferences.madera}
+                  options={scaleOptions}
+                  onChange={(value) => updateSommelierPreference('madera', value as SommelierScale)}
+                />
+                <SommelierQuestion
+                  label="Acidez"
+                  value={sommelierPreferences.acidez}
+                  options={scaleOptions}
+                  onChange={(value) => updateSommelierPreference('acidez', value as SommelierScale)}
+                />
               </div>
 
               <div className="grid gap-2 sm:grid-cols-2">
+                <SommelierQuestion
+                  label="Dulzor"
+                  value={sommelierPreferences.dulzor}
+                  options={sweetnessOptions}
+                  onChange={(value) => updateSommelierPreference('dulzor', value as SommelierSweetness)}
+                />
                 <select
-                  value={filters.maxPrice ?? ''}
+                  value={sommelierPreferences.origen}
+                  onChange={(event) => updateSommelierPreference('origen', event.target.value)}
+                  className="rounded-[18px] border border-white/15 bg-white px-4 py-3 text-[13px] font-semibold text-[#151515] outline-none"
+                >
+                  <option className="text-slate-900" value="">
+                    Cualquier región / D.O.
+                  </option>
+                  {options.origenes.map((origen) => (
+                    <option key={origen} className="text-slate-900" value={origen}>
+                      {origen}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <select
+                  value={sommelierPreferences.maxPrice ?? ''}
                   onChange={(event) =>
-                    updateFilter(
+                    updateSommelierPreference(
                       'maxPrice',
                       event.target.value ? Number(event.target.value) : null
                     )
@@ -153,20 +348,13 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                   </option>
                 </select>
 
-                <select
-                  value={filters.maridaje || ''}
-                  onChange={(event) => updateFilter('maridaje', event.target.value)}
-                  className="rounded-[18px] border border-white/15 bg-white px-4 py-3 text-[13px] font-semibold text-[#151515] outline-none"
+                <button
+                  type="button"
+                  onClick={resetSommelier}
+                  className="rounded-[18px] border border-white/12 bg-white/8 px-4 py-3 text-[13px] font-semibold text-white/76 transition hover:bg-white/14"
                 >
-                  <option className="text-slate-900" value="">
-                    Cualquier plato
-                  </option>
-                  {options.maridajes.map((maridaje) => (
-                    <option key={maridaje} className="text-slate-900" value={maridaje}>
-                      {maridaje}
-                    </option>
-                  ))}
-                </select>
+                  Reiniciar
+                </button>
               </div>
 
             </div>
@@ -175,16 +363,16 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
           <div className="rounded-[34px] border border-black/8 bg-white/70 p-5 shadow-[0_28px_80px_rgba(36,27,18,0.1)] backdrop-blur sm:p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#9a8060]">
-                  IA Sommelier
-                </div>
-                <h2 className="mt-2 text-[1.85rem] font-semibold tracking-tight text-[#171717]">
-                  {featuredItem ? 'Recomendación del momento' : 'Sin resultados'}
+                <h2 className="text-[1.85rem] font-semibold tracking-tight text-[#171717]">
+                  {featuredItem ? 'Recomendación del sommelier' : 'Sin resultados'}
                 </h2>
               </div>
               <button
                 type="button"
-                onClick={resetFilters}
+                onClick={() => {
+                  resetSommelier()
+                  resetFilters()
+                }}
                 className="rounded-full border border-black/10 bg-white px-4 py-2 text-[12px] font-semibold text-[#5e5348] transition hover:bg-[#f7f1e8]"
               >
                 Limpiar
@@ -192,54 +380,80 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
             </div>
 
             {featuredItem ? (
-              <button
-                type="button"
-                onClick={() => setSelectedItem(featuredItem)}
-                className="mt-6 w-full overflow-hidden rounded-[28px] bg-[#f7efe3] text-left transition hover:-translate-y-0.5 hover:shadow-[0_20px_54px_rgba(36,27,18,0.12)]"
-              >
-                <div className="bg-[#f4eadc] px-8 py-6">
-                  {featuredItem.foto_url ? (
-                    <BottleImage
-                      src={featuredItem.foto_url}
-                      alt={featuredItem.nombre}
-                      className="mx-auto h-[340px] max-h-[42vh] w-full"
-                    />
-                  ) : null}
-                </div>
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#9a8060]">
-                        {getKindLabel(featuredItem.tipo)}
-                      </div>
-                      <h3 className="mt-1 text-[1.55rem] font-semibold tracking-tight">
-                        {featuredItem.nombre}
-                      </h3>
-                    </div>
-                    <div className="rounded-full bg-white px-4 py-2 text-[15px] font-bold text-[#151515]">
-                      {formatPrice(featuredItem.precio)}
-                    </div>
-                  </div>
-                  <p className="mt-4 text-[14px] leading-6 text-[#6a5e52]">
-                    {featuredItem.descripcion ||
-                      'Una opción seleccionada para acompañar la experiencia del restaurante.'}
-                  </p>
-                  <div className="mt-3 text-[12px] font-semibold text-[#9a8060]">
-                    Ver ficha completa
-                  </div>
-                  <div className="mt-5 grid gap-2 text-[12px] sm:grid-cols-2">
-                    {featuredItem.bodega ? <InfoPill label="Bodega" value={featuredItem.bodega} /> : null}
-                    {featuredItem.anada ? <InfoPill label="Añada" value={featuredItem.anada} /> : null}
-                    {featuredItem.temperatura ? (
-                      <InfoPill label="Grado alcohólico" value={featuredItem.temperatura} />
+              <>
+                <button
+                  type="button"
+                  onClick={() => setSelectedItem(featuredItem)}
+                  className="mt-6 w-full overflow-hidden rounded-[28px] bg-[#f7efe3] text-left transition hover:-translate-y-0.5 hover:shadow-[0_20px_54px_rgba(36,27,18,0.12)]"
+                >
+                  <div className="bg-[#f4eadc] px-8 py-6">
+                    {featuredItem.foto_url ? (
+                      <BottleImage
+                        src={featuredItem.foto_url}
+                        alt={featuredItem.nombre}
+                        className="mx-auto h-[340px] max-h-[42vh] w-full"
+                      />
                     ) : null}
-                    {featuredItem.origen ? <InfoPill label="Origen" value={featuredItem.origen} /> : null}
                   </div>
-                </div>
-              </button>
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#9a8060]">
+                          {getKindLabel(featuredItem.tipo)}
+                        </div>
+                        <h3 className="mt-1 text-[1.55rem] font-semibold tracking-tight">
+                          {featuredItem.nombre}
+                        </h3>
+                      </div>
+                      <div className="rounded-full bg-white px-4 py-2 text-[15px] font-bold text-[#151515]">
+                        {formatPrice(featuredItem.precio)}
+                      </div>
+                    </div>
+                    <p className="mt-4 text-[14px] leading-6 text-[#6a5e52]">
+                      {featuredItem.descripcion ||
+                        'Una opción seleccionada para acompañar la experiencia del restaurante.'}
+                    </p>
+                    <div className="mt-3 text-[12px] font-semibold text-[#9a8060]">
+                      Ver ficha completa
+                    </div>
+                    <div className="mt-5 grid gap-2 text-[12px] sm:grid-cols-2">
+                      {featuredItem.bodega ? <InfoPill label="Bodega" value={featuredItem.bodega} /> : null}
+                      {featuredItem.anada ? <InfoPill label="Añada" value={featuredItem.anada} /> : null}
+                      {featuredItem.temperatura ? (
+                        <InfoPill label="Grado alcohólico" value={featuredItem.temperatura} />
+                      ) : null}
+                      {featuredItem.origen ? <InfoPill label="Origen" value={featuredItem.origen} /> : null}
+                    </div>
+                  </div>
+                </button>
+                {alternativeRecommendations.length > 0 ? (
+                  <div className="mt-4 rounded-[24px] bg-white/60 p-4">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a8060]">
+                      También encajan
+                    </div>
+                    <div className="mt-3 grid gap-2">
+                      {alternativeRecommendations.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setSelectedItem(item)}
+                          className="flex items-center justify-between gap-3 rounded-[18px] bg-white px-4 py-3 text-left transition hover:bg-[#f7f1e8]"
+                        >
+                          <span className="min-w-0 truncate text-[13px] font-semibold text-[#171717]">
+                            {item.nombre}
+                          </span>
+                          <span className="shrink-0 text-[12px] font-bold text-[#9a8060]">
+                            {formatPrice(item.precio)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </>
             ) : (
               <div className="mt-8 rounded-[28px] border border-dashed border-black/10 bg-white/60 px-6 py-14 text-center text-[#7b6f61]">
-                Prueba a relajar filtros o buscar por otra sensación.
+                Publica vinos en la carta para activar la recomendación.
               </div>
             )}
           </div>

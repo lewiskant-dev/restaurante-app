@@ -833,6 +833,7 @@ export default function HomePage() {
     recetaEditId,
     recetaNombre,
     recetaNombreTPV,
+    recetaTipoCarta,
     recetaRaciones,
     recetaPrecioVenta,
     recetaActiva,
@@ -852,6 +853,7 @@ export default function HomePage() {
     tpvAnalitica,
     setRecetaNombre,
     setRecetaNombreTPV,
+    setRecetaTipoCarta,
     setRecetaRaciones,
     setRecetaPrecioVenta,
     setRecetaActiva,
@@ -2103,6 +2105,7 @@ export default function HomePage() {
           <CartaTab
             restaurantSlug={activeRestaurantSlug}
             productos={productos}
+            recetas={recetas}
             guestMenuItems={guestMenuItems}
             loadingGuestMenu={loadingGuestMenu}
             guestMenuSaving={guestMenuSaving}
@@ -2115,7 +2118,7 @@ export default function HomePage() {
             onNew={() => openNewGuestMenuItem()}
             onEdit={openEditGuestMenuItem}
             onSave={() => void saveGuestMenuItem()}
-            onEnrichWithAI={() => void enrichGuestMenuWithAI()}
+            onEnrichWithAI={() => void enrichGuestMenuWithAI(recetas)}
             onCancel={resetGuestMenuForm}
             onTogglePublished={(item) => void toggleGuestMenuPublished(item)}
             onFormChange={setGuestMenuFormField}
@@ -2463,6 +2466,7 @@ export default function HomePage() {
         recetaEditId={recetaEditId}
         recetaNombre={recetaNombre}
         recetaNombreTPV={recetaNombreTPV}
+        recetaTipoCarta={recetaTipoCarta}
         recetaRaciones={recetaRaciones}
         recetaPrecioVenta={recetaPrecioVenta}
         recetaActiva={recetaActiva}
@@ -2472,6 +2476,7 @@ export default function HomePage() {
         onClose={closeRecetaModal}
         onNombreChange={setRecetaNombre}
         onNombreTpvChange={setRecetaNombreTPV}
+        onTipoCartaChange={setRecetaTipoCarta}
         onRacionesChange={setRecetaRaciones}
         onPrecioVentaChange={setRecetaPrecioVenta}
         onActivaChange={setRecetaActiva}

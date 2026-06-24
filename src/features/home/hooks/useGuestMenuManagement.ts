@@ -3,7 +3,7 @@ import { isWineKind } from '@/lib/guestExperience'
 import type { GuestMenuItem, GuestMenuKind, GuestWineProfile } from '@/lib/guestExperience'
 import { supabase } from '@/lib/supabase'
 import type { Producto } from '@/types'
-import type { PermissionKey } from '@/features/home/types'
+import type { PermissionKey, Receta } from '@/features/home/types'
 
 type AuditoriaParams = {
   entidad: string
@@ -355,7 +355,7 @@ export function useGuestMenuManagement({
     await loadGuestMenuItems()
   }
 
-  async function enrichGuestMenuWithAI() {
+  async function enrichGuestMenuWithAI(recetasCarta: Receta[] = []) {
     if (!requirePermission('guest_menu_manage', 'No tienes permisos para gestionar la carta')) {
       return
     }
@@ -374,6 +374,11 @@ export function useGuestMenuManagement({
     onError('')
 
     try {
+      const platosCarta = recetasCarta
+        .filter((receta) => receta.activo !== false && receta.tipo_carta !== 'bebida')
+        .map((receta) => receta.nombre)
+        .filter(Boolean)
+        .slice(0, 80)
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
       if (sessionError) throw sessionError
 
@@ -399,6 +404,7 @@ export function useGuestMenuManagement({
             maridajes: guestMenuForm.maridajes,
             etiquetas: guestMenuForm.etiquetas,
           },
+          platosCarta,
         }),
       })
 
@@ -407,17 +413,23 @@ export function useGuestMenuManagement({
         throw new Error(result?.error || 'No se pudo generar el perfil IA')
       }
 
-      setGuestMenuForm((current) => ({
-        ...current,
-        descripcion: result.descripcion || current.descripcion,
-        perfil_vino: result.perfil_vino || current.perfil_vino,
-        notas_cata: joinList(result.notas_cata),
-        maridajes:
-          current.maridajes.trim() || !Array.isArray(result.maridajes)
-            ? current.maridajes
-            : joinList(result.maridajes),
-        temperatura: current.temperatura.trim() || !result.temperatura ? current.temperatura : result.temperatura,
-      }))
+      setGuestMenuForm((current) => {
+        const aiMaridajes = Array.isArray(result.maridajes) ? joinList(result.maridajes) : ''
+
+        return {
+          ...current,
+          descripcion: result.descripcion || current.descripcion,
+          perfil_vino: result.perfil_vino || current.perfil_vino,
+          notas_cata: joinList(result.notas_cata),
+          maridajes:
+            platosCarta.length > 0 && aiMaridajes
+              ? aiMaridajes
+              : current.maridajes.trim() || !aiMaridajes
+                ? current.maridajes
+                : aiMaridajes,
+          temperatura: current.temperatura.trim() || !result.temperatura ? current.temperatura : result.temperatura,
+        }
+      })
 
       onToast('Perfil IA generado. Revisa la ficha y guarda los cambios.')
     } catch (error) {

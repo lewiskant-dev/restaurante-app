@@ -123,6 +123,7 @@ export function useRecetaTpvManagement({
   const [recetaEditId, setRecetaEditId] = useState<string | null>(null)
   const [recetaNombre, setRecetaNombre] = useState('')
   const [recetaNombreTPV, setRecetaNombreTPV] = useState('')
+  const [recetaTipoCarta, setRecetaTipoCarta] = useState<'comida' | 'bebida'>('comida')
   const [recetaRaciones, setRecetaRaciones] = useState('1')
   const [recetaPrecioVenta, setRecetaPrecioVenta] = useState('')
   const [recetaActiva, setRecetaActiva] = useState(true)
@@ -941,6 +942,7 @@ export function useRecetaTpvManagement({
     setRecetaEditId(null)
     setRecetaNombre('')
     setRecetaNombreTPV('')
+    setRecetaTipoCarta('comida')
     setRecetaRaciones('1')
     setRecetaPrecioVenta('')
     setRecetaActiva(true)
@@ -986,6 +988,7 @@ export function useRecetaTpvManagement({
     resetRecetaForm()
     setRecetaNombre(nombre)
     setRecetaNombreTPV(nombre)
+    setRecetaTipoCarta('bebida')
     setRecetaActiva(true)
     onError('')
     setRecetaModalOpen(true)
@@ -1000,6 +1003,7 @@ export function useRecetaTpvManagement({
     setRecetaEditId(receta.id)
     setRecetaNombre(receta.nombre || '')
     setRecetaNombreTPV(receta.nombre_tpv || '')
+    setRecetaTipoCarta(receta.tipo_carta === 'bebida' ? 'bebida' : 'comida')
     setRecetaRaciones(String(receta.raciones || 1))
     setRecetaPrecioVenta(
       receta.precio_venta === undefined || receta.precio_venta === null
@@ -1112,6 +1116,7 @@ export function useRecetaTpvManagement({
         p_receta_id: recetaEditId,
         p_nombre: recetaNombre.trim(),
         p_nombre_tpv: recetaNombreTPV.trim() || null,
+        p_tipo_carta: recetaTipoCarta,
         p_raciones: raciones,
         p_precio_venta: precioVenta,
         p_activo: recetaActiva,
@@ -1136,6 +1141,7 @@ export function useRecetaTpvManagement({
         payload_despues: {
           nombre: recetaNombre.trim(),
           nombre_tpv: recetaNombreTPV.trim() || null,
+          tipo_carta: recetaTipoCarta,
           raciones,
           precio_venta: precioVenta,
           activo: recetaActiva,
@@ -1482,6 +1488,7 @@ export function useRecetaTpvManagement({
     recetaEditId,
     recetaNombre,
     recetaNombreTPV,
+    recetaTipoCarta,
     recetaRaciones,
     recetaPrecioVenta,
     recetaActiva,
@@ -1502,6 +1509,7 @@ export function useRecetaTpvManagement({
     tpvAnalitica,
     setRecetaNombre,
     setRecetaNombreTPV,
+    setRecetaTipoCarta,
     setRecetaRaciones,
     setRecetaPrecioVenta,
     setRecetaActiva,

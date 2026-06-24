@@ -224,6 +224,7 @@ export type Receta = {
   id: string
   nombre: string
   nombre_tpv: string | null
+  tipo_carta?: 'comida' | 'bebida' | null
   activo: boolean | null
   created_at: string
   raciones?: number | null

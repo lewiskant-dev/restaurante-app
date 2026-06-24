@@ -5,6 +5,7 @@ import type {
   GuestMenuAdminItem,
   GuestMenuForm,
 } from '@/features/home/hooks/useGuestMenuManagement'
+import type { Receta } from '@/features/home/types'
 import { isWineKind, splitGuestGrapes } from '@/lib/guestExperience'
 import { fieldShell, ghostButton, primaryGradientButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 import type { Producto } from '@/types'
@@ -12,6 +13,7 @@ import type { Producto } from '@/types'
 type CartaTabProps = {
   restaurantSlug: string
   productos: Producto[]
+  recetas: Receta[]
   guestMenuItems: GuestMenuAdminItem[]
   loadingGuestMenu: boolean
   guestMenuSaving: boolean
@@ -141,6 +143,7 @@ function ReusableTextCombobox({
 export function CartaTab({
   restaurantSlug,
   productos,
+  recetas,
   guestMenuItems,
   loadingGuestMenu,
   guestMenuSaving,
@@ -190,6 +193,15 @@ export function CartaTab({
       ),
     [guestMenuItems]
   )
+  const dishOptions = useMemo(
+    () =>
+      recetas
+        .filter((receta) => receta.activo !== false && receta.tipo_carta !== 'bebida')
+        .map((receta) => receta.nombre.trim())
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, 'es')),
+    [recetas]
+  )
   const wineryOptions = useMemo(
     () => uniqueSorted(guestMenuItems.map((item) => item.bodega)),
     [guestMenuItems]
@@ -199,6 +211,14 @@ export function CartaTab({
     [guestMenuItems]
   )
   const selectedGrapes = splitGuestGrapes(guestMenuForm.uva)
+  const selectedPairings = useMemo(
+    () =>
+      guestMenuForm.maridajes
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
+    [guestMenuForm.maridajes]
+  )
   const canEnrichWithAI = isWineKind(guestMenuForm.tipo) && Boolean(guestMenuForm.nombre_publico.trim())
   const grapeSuggestions = grapeOptions
     .filter(
@@ -234,6 +254,16 @@ export function CartaTab({
 
   function addGrapeToForm(grape: string) {
     onFormChange('uva', [...selectedGrapes, grape].join(', '))
+  }
+
+  function addPairingToForm(pairing: string) {
+    const exists = selectedPairings.some(
+      (selectedPairing) => normalizeProductSearch(selectedPairing) === normalizeProductSearch(pairing)
+    )
+
+    if (!exists) {
+      onFormChange('maridajes', [...selectedPairings, pairing].join(', '))
+    }
   }
 
   return (
@@ -476,12 +506,41 @@ export function CartaTab({
             placeholder="Grado alcohólico"
             className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
-          <input
-            value={guestMenuForm.maridajes}
-            onChange={(event) => onFormChange('maridajes', event.target.value)}
-            placeholder="Maridajes separados por coma"
-            className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
-          />
+          <div className="space-y-2">
+            <input
+              value={guestMenuForm.maridajes}
+              onChange={(event) => onFormChange('maridajes', event.target.value)}
+              placeholder="Platos de maridaje separados por coma"
+              className={`w-full px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
+            />
+            {dishOptions.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {dishOptions
+                  .filter(
+                    (dish) =>
+                      !selectedPairings.some(
+                        (selectedPairing) =>
+                          normalizeProductSearch(selectedPairing) === normalizeProductSearch(dish)
+                      )
+                  )
+                  .slice(0, 8)
+                  .map((dish) => (
+                    <button
+                      key={dish}
+                      type="button"
+                      onClick={() => addPairingToForm(dish)}
+                      className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-500 transition hover:bg-blue-50 hover:text-blue-600"
+                    >
+                      + {dish}
+                    </button>
+                  ))}
+              </div>
+            ) : (
+              <div className="text-[11px] text-slate-400">
+                Marca recetas como Comida para usarlas como platos de maridaje.
+              </div>
+            )}
+          </div>
           <input
             value={guestMenuForm.etiquetas}
             onChange={(event) => onFormChange('etiquetas', event.target.value)}

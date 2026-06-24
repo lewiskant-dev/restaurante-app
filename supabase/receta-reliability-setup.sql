@@ -1,13 +1,29 @@
 -- Guarda recetas y sus ingredientes en una única transacción.
 -- Requiere multi-restaurant-setup.sql y restaurant-finance-setup.sql.
 
+alter table if exists public.recetas
+add column if not exists tipo_carta text not null default 'comida';
+
+alter table if exists public.recetas
+drop constraint if exists recetas_tipo_carta_check;
+
+alter table if exists public.recetas
+add constraint recetas_tipo_carta_check
+check (tipo_carta in ('comida', 'bebida'));
+
+update public.recetas
+set tipo_carta = 'comida'
+where tipo_carta is null or tipo_carta not in ('comida', 'bebida');
+
 drop function if exists public.guardar_receta_atomica(uuid, text, text, numeric, numeric, boolean, jsonb, uuid);
+drop function if exists public.guardar_receta_atomica(uuid, text, text, text, numeric, numeric, boolean, jsonb, uuid);
 drop function if exists public.cambiar_estado_receta_atomica(uuid, boolean, uuid);
 
 create or replace function public.guardar_receta_atomica(
   p_receta_id uuid,
   p_nombre text,
   p_nombre_tpv text default null,
+  p_tipo_carta text default 'comida',
   p_raciones numeric default 1,
   p_precio_venta numeric default 0,
   p_activo boolean default true,
@@ -46,6 +62,10 @@ begin
     raise exception 'El precio de venta no puede ser negativo';
   end if;
 
+  if coalesce(p_tipo_carta, 'comida') not in ('comida', 'bebida') then
+    raise exception 'El tipo de carta debe ser comida o bebida';
+  end if;
+
   if p_lineas is null or jsonb_typeof(p_lineas) <> 'array' or jsonb_array_length(p_lineas) = 0 then
     raise exception 'La receta debe incluir al menos un ingrediente';
   end if;
@@ -55,6 +75,7 @@ begin
     set
       nombre = trim(p_nombre),
       nombre_tpv = nullif(trim(coalesce(p_nombre_tpv, '')), ''),
+      tipo_carta = coalesce(p_tipo_carta, 'comida'),
       raciones = p_raciones,
       precio_venta = p_precio_venta,
       activo = coalesce(p_activo, true)
@@ -74,6 +95,7 @@ begin
       restaurant_id,
       nombre,
       nombre_tpv,
+      tipo_carta,
       raciones,
       precio_venta,
       activo
@@ -82,6 +104,7 @@ begin
       target_restaurant_id,
       trim(p_nombre),
       nullif(trim(coalesce(p_nombre_tpv, '')), ''),
+      coalesce(p_tipo_carta, 'comida'),
       p_raciones,
       p_precio_venta,
       coalesce(p_activo, true)
@@ -144,10 +167,10 @@ begin
 end;
 $$;
 
-revoke all on function public.guardar_receta_atomica(uuid, text, text, numeric, numeric, boolean, jsonb, uuid) from public;
-grant execute on function public.guardar_receta_atomica(uuid, text, text, numeric, numeric, boolean, jsonb, uuid) to authenticated;
+revoke all on function public.guardar_receta_atomica(uuid, text, text, text, numeric, numeric, boolean, jsonb, uuid) from public;
+grant execute on function public.guardar_receta_atomica(uuid, text, text, text, numeric, numeric, boolean, jsonb, uuid) to authenticated;
 
-comment on function public.guardar_receta_atomica(uuid, text, text, numeric, numeric, boolean, jsonb, uuid) is
+comment on function public.guardar_receta_atomica(uuid, text, text, text, numeric, numeric, boolean, jsonb, uuid) is
   'Crea o edita una receta y reemplaza sus ingredientes en una única transacción.';
 
 create or replace function public.cambiar_estado_receta_atomica(
