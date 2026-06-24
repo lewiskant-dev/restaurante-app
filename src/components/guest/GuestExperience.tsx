@@ -20,7 +20,8 @@ type GuestExperienceProps = {
 
 type SommelierScale = '' | 'low' | 'medium' | 'high'
 type SommelierSweetness = '' | 'dry' | 'balanced' | 'sweet'
-type SommelierWineType = GuestMenuKind | '' | 'surprise'
+type SommelierWineType = GuestMenuKind | ''
+type SommelierMode = 'initial' | 'guided' | 'surprise'
 
 type SommelierPreferences = {
   tipo: SommelierWineType
@@ -45,7 +46,6 @@ const initialSommelierPreferences: SommelierPreferences = {
 }
 
 const wineTypeOptions: Array<{ value: SommelierWineType; label: string }> = [
-  { value: 'surprise', label: 'Sorpréndeme' },
   { value: 'vino_tinto', label: 'Tinto' },
   { value: 'vino_blanco', label: 'Blanco' },
   { value: 'vino_espumoso', label: 'Espumoso' },
@@ -162,7 +162,7 @@ function scoreSommelierItem(item: GuestMenuItem, preferences: SommelierPreferenc
 
   let score = item.destacado ? 1 : 0
 
-  if (preferences.tipo && preferences.tipo !== 'surprise') {
+  if (preferences.tipo) {
     if (item.tipo === preferences.tipo) score += 10
     else if (item.tipo === 'vino') score += 4
     else score -= 8
@@ -186,17 +186,66 @@ function scoreSommelierItem(item: GuestMenuItem, preferences: SommelierPreferenc
   return score
 }
 
-function getSommelierRecommendations(items: GuestMenuItem[], preferences: SommelierPreferences) {
+function rotateItems<T>(items: T[], seed: number) {
+  if (items.length <= 1) return items
+
+  const offset = Math.abs(seed) % items.length
+  return [...items.slice(offset), ...items.slice(0, offset)]
+}
+
+function getOpeningRecommendations(items: GuestMenuItem[], seed: number) {
   const wines = items.filter((item) => isWineKind(item.tipo))
   if (wines.length === 0) return []
 
-  if (preferences.tipo === 'surprise') {
-    return [...wines].sort((a, b) => {
-      const scoreDifference = getSurpriseScore(b, wines) - getSurpriseScore(a, wines)
-      if (scoreDifference !== 0) return scoreDifference
-      return a.orden - b.orden || a.nombre.localeCompare(b.nombre, 'es')
-    })
-  }
+  const ranked = [...wines].sort((a, b) => {
+    const scoreA =
+      (a.destacado ? 4 : 0) +
+      (a.foto_url ? 3 : 0) +
+      (a.descripcion ? 2 : 0) +
+      (a.perfil_vino ? 2 : 0) +
+      (a.notas_cata?.length ? 1 : 0)
+    const scoreB =
+      (b.destacado ? 4 : 0) +
+      (b.foto_url ? 3 : 0) +
+      (b.descripcion ? 2 : 0) +
+      (b.perfil_vino ? 2 : 0) +
+      (b.notas_cata?.length ? 1 : 0)
+    if (scoreA !== scoreB) return scoreB - scoreA
+    return a.orden - b.orden || a.nombre.localeCompare(b.nombre, 'es')
+  })
+  const recommendationPoolSize = Math.min(Math.max(3, Math.ceil(ranked.length * 0.35)), ranked.length)
+  const recommendationPool = ranked.slice(0, recommendationPoolSize)
+
+  return [...rotateItems(recommendationPool, seed), ...ranked.slice(recommendationPoolSize)]
+}
+
+function getSurpriseRecommendations(items: GuestMenuItem[], seed: number) {
+  const wines = items.filter((item) => isWineKind(item.tipo))
+  if (wines.length === 0) return []
+
+  const ranked = [...wines].sort((a, b) => {
+    const scoreDifference = getSurpriseScore(b, wines) - getSurpriseScore(a, wines)
+    if (scoreDifference !== 0) return scoreDifference
+    return a.orden - b.orden || a.nombre.localeCompare(b.nombre, 'es')
+  })
+  const scored = ranked.map((item) => ({ item, score: getSurpriseScore(item, wines) }))
+  const bestScore = scored[0]?.score ?? 0
+  const unusualPool = scored
+    .filter(({ score }) => score > 0 && score >= bestScore - 4)
+    .map(({ item }) => item)
+  const fallbackPool = ranked.slice(0, Math.min(Math.max(3, Math.ceil(ranked.length * 0.25)), ranked.length))
+  const surprisePool = unusualPool.length >= 2 ? unusualPool : fallbackPool
+  const surpriseIds = new Set(surprisePool.map((item) => item.id))
+
+  return [
+    ...rotateItems(surprisePool, seed),
+    ...ranked.filter((item) => !surpriseIds.has(item.id)),
+  ]
+}
+
+function getSommelierRecommendations(items: GuestMenuItem[], preferences: SommelierPreferences) {
+  const wines = items.filter((item) => isWineKind(item.tipo))
+  if (wines.length === 0) return []
 
   return [...wines].sort((a, b) => {
     const scoreDifference = scoreSommelierItem(b, preferences) - scoreSommelierItem(a, preferences)
@@ -204,6 +253,29 @@ function getSommelierRecommendations(items: GuestMenuItem[], preferences: Sommel
     if (a.destacado !== b.destacado) return a.destacado ? -1 : 1
     return a.orden - b.orden || a.nombre.localeCompare(b.nombre, 'es')
   })
+}
+
+function hasSommelierPreferences(preferences: SommelierPreferences) {
+  return Boolean(
+    preferences.tipo ||
+      preferences.intensidad ||
+      preferences.cuerpo ||
+      preferences.madera ||
+      preferences.acidez ||
+      preferences.dulzor ||
+      preferences.origen ||
+      preferences.maxPrice !== null
+  )
+}
+
+function getNextRecommendationSeed() {
+  if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
+    const values = new Uint32Array(1)
+    window.crypto.getRandomValues(values)
+    return values[0]
+  }
+
+  return Date.now()
 }
 
 function SommelierQuestion<Value extends string>({
@@ -266,37 +338,39 @@ function SommelierDropdown<Value extends string>({
       <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/42">
         {label}
       </div>
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        className="flex min-h-[42px] w-full items-center justify-between gap-3 rounded-[15px] bg-white px-3 py-2.5 text-left text-[12px] font-semibold text-[#151515] transition hover:bg-white/92"
-        aria-expanded={open}
-      >
-        <span className="min-w-0 truncate">{selectedOption?.label}</span>
-        <span className={`shrink-0 transition ${open ? 'rotate-180' : ''}`}>⌄</span>
-      </button>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          className="flex min-h-[42px] w-full items-center justify-between gap-3 rounded-[15px] bg-white px-3 py-2.5 text-left text-[12px] font-semibold text-[#151515] transition hover:bg-white/92"
+          aria-expanded={open}
+        >
+          <span className="min-w-0 truncate">{selectedOption?.label}</span>
+          <span className={`shrink-0 transition ${open ? 'rotate-180' : ''}`}>⌄</span>
+        </button>
 
-      {open ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+0.45rem)] z-30 max-h-56 overflow-y-auto rounded-[16px] border border-white/12 bg-[#242424] p-1.5 shadow-[0_18px_42px_rgba(0,0,0,0.35)]">
-          {options.map((option) => (
-            <button
-              key={option.value || option.label}
-              type="button"
-              onClick={() => {
-                onChange(option.value)
-                setOpen(false)
-              }}
-              className={`w-full rounded-[12px] px-3 py-2 text-left text-[12px] font-semibold transition ${
-                value === option.value
-                  ? 'bg-white text-[#151515]'
-                  : 'text-white/72 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
+        {open ? (
+          <div className="absolute left-0 right-0 top-[calc(100%+0.45rem)] z-30 max-h-56 overflow-y-auto rounded-[16px] border border-white/12 bg-[#242424] p-1.5 shadow-[0_18px_42px_rgba(0,0,0,0.35)]">
+            {options.map((option) => (
+              <button
+                key={option.value || option.label}
+                type="button"
+                onClick={() => {
+                  onChange(option.value)
+                  setOpen(false)
+                }}
+                className={`w-full rounded-[12px] px-3 py-2 text-left text-[12px] font-semibold transition ${
+                  value === option.value
+                    ? 'bg-white text-[#151515]'
+                    : 'text-white/72 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -316,14 +390,20 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
   const [sommelierPreferences, setSommelierPreferences] = useState<SommelierPreferences>(
     initialSommelierPreferences
   )
+  const [sommelierMode, setSommelierMode] = useState<SommelierMode>('initial')
+  const [recommendationSeed, setRecommendationSeed] = useState(getNextRecommendationSeed)
   const [selectedItem, setSelectedItem] = useState<GuestMenuItem | null>(null)
 
   const options = useMemo(() => getGuestMenuFilterOptions(items), [items])
   const filteredItems = useMemo(() => filterGuestMenuItems(items, filters), [filters, items])
-  const sommelierRecommendations = useMemo(
-    () => getSommelierRecommendations(items, sommelierPreferences),
-    [items, sommelierPreferences]
-  )
+  const sommelierRecommendations = useMemo(() => {
+    if (sommelierMode === 'surprise') return getSurpriseRecommendations(items, recommendationSeed)
+    if (sommelierMode === 'initial' && !hasSommelierPreferences(sommelierPreferences)) {
+      return getOpeningRecommendations(items, recommendationSeed)
+    }
+
+    return getSommelierRecommendations(items, sommelierPreferences)
+  }, [items, recommendationSeed, sommelierMode, sommelierPreferences])
   const regionOptions = useMemo(
     () => [
       { value: '', label: 'Cualquier región / D.O.' },
@@ -344,6 +424,10 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
     () => sommelierRecommendations[0] ?? filteredItems[0],
     [filteredItems, sommelierRecommendations]
   )
+  const recommendationTitle =
+    sommelierMode === 'initial' && !hasSommelierPreferences(sommelierPreferences)
+      ? 'Prueba una de nuestras recomendaciones'
+      : 'Recomendación del sommelier'
   const alternativeRecommendations = sommelierRecommendations
     .filter((item) => item.id !== featuredItem?.id)
     .slice(0, 2)
@@ -370,11 +454,19 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
     key: Key,
     value: SommelierPreferences[Key]
   ) {
+    setSommelierMode('guided')
     setSommelierPreferences((current) => ({ ...current, [key]: value }))
   }
 
   function resetSommelier() {
+    setSommelierMode('initial')
+    setRecommendationSeed(getNextRecommendationSeed())
     setSommelierPreferences(initialSommelierPreferences)
+  }
+
+  function surpriseSommelier() {
+    setSommelierMode('surprise')
+    setRecommendationSeed((current) => current + 1)
   }
 
   return (
@@ -408,14 +500,34 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
             </p>
 
             <div className="mt-7 space-y-3">
-              <SommelierQuestion
-                label="¿Qué tipo prefieres?"
-                value={sommelierPreferences.tipo}
-                options={wineTypeOptions}
-                onChange={(value) =>
-                  updateSommelierPreference('tipo', value)
-                }
-              />
+              <div>
+                <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/42">
+                  ¿Qué tipo prefieres?
+                </div>
+                <div className="grid gap-1.5">
+                  <button
+                    type="button"
+                    onClick={surpriseSommelier}
+                    className="w-full rounded-[15px] border border-[#d8c3a5]/40 bg-[#f5efe5] px-3 py-2.5 text-left text-[12px] font-semibold text-[#151515] transition active:scale-[0.99] hover:bg-white"
+                  >
+                    Sorpréndeme
+                  </button>
+                  {wineTypeOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => updateSommelierPreference('tipo', option.value)}
+                      className={`rounded-[15px] px-3 py-2.5 text-left text-[12px] font-semibold transition ${
+                        sommelierPreferences.tipo === option.value
+                          ? 'bg-white text-[#151515]'
+                          : 'bg-white/8 text-white/68 hover:bg-white/14 hover:text-white'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <SommelierQuestion
@@ -485,7 +597,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-[1.85rem] font-semibold tracking-tight text-[#171717]">
-                  {featuredItem ? 'Recomendación del sommelier' : 'Sin resultados'}
+                  {featuredItem ? recommendationTitle : 'Sin resultados'}
                 </h2>
               </div>
               <button
