@@ -431,6 +431,10 @@ export function useGuestMenuManagement({
 
         return {
           ...current,
+          bodega: current.bodega.trim() || !result.bodega ? current.bodega : result.bodega,
+          anada: current.anada.trim() || !result.anada ? current.anada : result.anada,
+          origen: current.origen.trim() || !result.origen ? current.origen : result.origen,
+          uva: current.uva.trim() || !result.uva ? current.uva : result.uva,
           descripcion: result.descripcion || current.descripcion,
           perfil_vino: result.perfil_vino || current.perfil_vino,
           notas_cata: joinList(result.notas_cata),

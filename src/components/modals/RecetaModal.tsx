@@ -228,7 +228,7 @@ export function RecetaModal({
                   <input
                     type="range"
                     min="8"
-                    max="45"
+                    max="60"
                     step="1"
                     value={targetCostPct}
                     onChange={(event) => {

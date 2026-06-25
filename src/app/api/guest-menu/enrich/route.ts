@@ -93,6 +93,10 @@ function normalizeStringList(value: unknown) {
     .slice(0, 8)
 }
 
+function normalizeOptionalString(value: unknown) {
+  return String(value || '').trim()
+}
+
 function normalizeDishList(value: unknown) {
   if (!Array.isArray(value)) return []
 
@@ -200,6 +204,10 @@ Vino:
 
 Formato exacto:
 {
+  "bodega": "Bodega detectada o \"\"",
+  "anada": "Añada detectada o \"\"",
+  "origen": "Región, país o D.O. detectada o \"\"",
+  "uva": "Uvas detectadas separadas por coma o \"\"",
   "descripcion": "resumen breve para cliente en 1-2 frases, natural y no técnico",
   "perfil_vino": {
     "intensidad": { "value": 1, "label": "Baja" },
@@ -215,6 +223,10 @@ Formato exacto:
 }
 
 Reglas:
+- Detecta "bodega", "anada", "origen" y "uva" cuando haya información pública razonable o cuando se pueda inferir claramente del nombre.
+- En "uva" usa nombres de variedades separados por coma: "Garnacha, Cariñena, Syrah".
+- En "origen" prioriza D.O. o región vitivinícola reconocible: "Priorat", "Ribera del Duero", "Catalunya", etc.
+- En "anada" devuelve solo el año si lo encuentras, por ejemplo "2024".
 - Cada value debe ser entero de 1 a 6.
 - Usa notas de cata concretas y entendibles por cliente: frutos rojos, ciruela, vainilla, cacao, tabaco, cítricos, flores blancas, mineral, hierbas, especias, etc.
 - En "temperatura" devuelve el grado alcohólico aproximado o real si lo encuentras. Si no estás seguro, usa "".
@@ -249,11 +261,15 @@ Reglas:
     const parsed = JSON.parse(extractJson(outputText)) as Record<string, unknown>
 
     return NextResponse.json({
-      descripcion: String(parsed.descripcion || '').trim(),
+      bodega: normalizeOptionalString(parsed.bodega),
+      anada: normalizeOptionalString(parsed.anada),
+      origen: normalizeOptionalString(parsed.origen),
+      uva: normalizeOptionalString(parsed.uva),
+      descripcion: normalizeOptionalString(parsed.descripcion),
       perfil_vino: normalizeProfile(parsed.perfil_vino),
       notas_cata: normalizeStringList(parsed.notas_cata),
       maridajes: normalizeStringList(parsed.maridajes),
-      temperatura: String(parsed.temperatura || '').trim(),
+      temperatura: normalizeOptionalString(parsed.temperatura),
     })
   } catch (error) {
     return NextResponse.json(

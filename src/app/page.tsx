@@ -1222,6 +1222,9 @@ export default function HomePage() {
     showRestaurantAccessLoader && (loadingAccessibleRestaurants || switchingRestaurant)
   const userInitials = getInitials(userDisplayName || 'Usuario')
   const totalCategorias = categoriasProducto.length
+  const topSearchEnabled = ['stock', 'historial', 'proveedores', 'albaran', 'albaranes', 'auditoria', 'usuarios'].includes(
+    tab
+  )
   const topSearchPlaceholder =
     tab === 'stock'
       ? 'Buscar producto...'
@@ -1941,6 +1944,7 @@ export default function HomePage() {
 
         <div className="min-w-0 flex-1">
         <div className="mb-3 hidden items-center justify-between gap-3 rounded-[20px] border border-white/80 bg-white/88 px-3 py-2 shadow-[0_12px_30px_rgba(15,23,42,0.045)] backdrop-blur lg:flex">
+          {topSearchEnabled ? (
           <label className="flex min-w-0 max-w-[360px] flex-1 items-center gap-3 rounded-[15px] border border-slate-200 bg-white px-3.5 py-2 shadow-sm">
             <svg
               viewBox="0 0 24 24"
@@ -1962,10 +1966,10 @@ export default function HomePage() {
               placeholder={topSearchPlaceholder}
               className="w-full bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
             />
-            <span className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-400">
-              ⌘ K
-            </span>
           </label>
+          ) : (
+            <div className="flex-1" />
+          )}
 
           <div className="flex items-center gap-3">
             <NotificationsBell

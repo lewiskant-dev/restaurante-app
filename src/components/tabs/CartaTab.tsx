@@ -165,6 +165,7 @@ export function CartaTab({
 }: CartaTabProps) {
   const [productSearch, setProductSearch] = useState('')
   const [productDropdownOpen, setProductDropdownOpen] = useState(false)
+  const [guestMenuSearch, setGuestMenuSearch] = useState('')
   const productListboxId = 'guest-menu-product-options'
   const publicUrl = restaurantSlug ? `/g/${restaurantSlug}` : ''
   const productosActivos = useMemo(
@@ -184,8 +185,25 @@ export function CartaTab({
       [producto.nombre, producto.referencia, producto.categoria]
         .filter(Boolean)
         .some((value) => normalizeProductSearch(value).includes(query))
-    )
+      )
   }, [productSearch, productosActivos])
+  const filteredGuestMenuItems = useMemo(() => {
+    const query = normalizeProductSearch(guestMenuSearch)
+
+    if (!query) return guestMenuItems
+
+    return guestMenuItems.filter((item) =>
+      [
+        item.nombre,
+        item.categoria,
+        item.tipo,
+        item.bodega,
+        item.anada,
+        item.origen,
+        item.uva,
+      ].some((value) => normalizeProductSearch(value).includes(query))
+    )
+  }, [guestMenuItems, guestMenuSearch])
   const grapeOptions = useMemo(
     () =>
       Array.from(new Set(guestMenuItems.flatMap((item) => splitGuestGrapes(item.uva)))).sort((a, b) =>
@@ -359,7 +377,7 @@ export function CartaTab({
               onKeyDown={(event) => {
                 if (event.key === 'Escape') setProductDropdownOpen(false)
               }}
-              placeholder="Buscar producto de stock..."
+              placeholder="Buscar producto..."
               role="combobox"
               aria-controls={productListboxId}
               aria-expanded={productDropdownOpen}
@@ -667,7 +685,7 @@ export function CartaTab({
               type="button"
               onClick={onSave}
               disabled={guestMenuSaving}
-              className={`px-5 py-2.5 text-[12px] disabled:cursor-not-allowed disabled:opacity-60 ${primaryGradientButton}`}
+              className={`rounded-[16px] px-5 py-2.5 text-[12px] disabled:cursor-not-allowed disabled:opacity-60 ${primaryGradientButton}`}
             >
               {guestMenuSaving ? 'Guardando...' : guestMenuEditId ? 'Guardar cambios' : 'Crear ficha'}
             </button>
@@ -682,6 +700,28 @@ export function CartaTab({
           </h3>
           <span className="text-[12px] text-slate-400">{guestMenuItems.length} total</span>
         </div>
+        <label className={`mb-3 flex items-center gap-3 px-4 py-3 ${fieldShell}`}>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4 text-slate-400"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="6.5" />
+            <path d="m16 16 4 4" />
+          </svg>
+          <input
+            type="search"
+            value={guestMenuSearch}
+            onChange={(event) => setGuestMenuSearch(event.target.value)}
+            placeholder="Buscar ficha por nombre, bodega, D.O. o uva..."
+            className="w-full bg-transparent text-[13px] text-slate-900 outline-none placeholder:text-slate-400"
+          />
+        </label>
 
         {loadingGuestMenu ? (
           <div className="rounded-[18px] border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">
@@ -694,9 +734,16 @@ export function CartaTab({
               Crea la primera ficha para empezar a construir la carta QR.
             </p>
           </div>
+        ) : filteredGuestMenuItems.length === 0 ? (
+          <div className="rounded-[18px] border border-dashed border-slate-200 px-4 py-8 text-center">
+            <div className="text-sm font-semibold text-slate-700">No hay fichas que coincidan</div>
+            <p className="mt-1 text-[12px] text-slate-500">
+              Prueba con otro nombre, bodega, D.O. o variedad.
+            </p>
+          </div>
         ) : (
           <div className="space-y-2">
-            {guestMenuItems.map((item) => (
+            {filteredGuestMenuItems.map((item) => (
               <div key={item.id} className={`grid gap-3 p-3 lg:grid-cols-[1fr_auto] ${softPanel}`}>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
