@@ -14,7 +14,6 @@ const CATEGORY_ICON_PATHS: Record<string, string> = {
   'Lácteos': '/category-icons/lacteos.svg',
   Panadería: '/category-icons/panaderia.svg',
   Despensa: '/category-icons/despensa.svg',
-  'Aceites y salsas': '/category-icons/aceites-salsas.svg',
   Congelados: '/category-icons/congelados.svg',
   Limpieza: '/category-icons/limpieza.svg',
   Otros: '/category-icons/otros.svg',
@@ -37,7 +36,6 @@ const CATEGORY_ICON_TRANSFORMS: Record<
   'Lácteos': { scale: 1.26, x: '0%', y: '0%' },
   Panadería: { scale: 1.24, x: '0%', y: '0%' },
   Despensa: { scale: 1.24, x: '0%', y: '0%' },
-  'Aceites y salsas': { scale: 1.26, x: '0%', y: '0%' },
   Congelados: { scale: 1.18, x: '0%', y: '0%' },
   Limpieza: { scale: 1.22, x: '0%', y: '0%' },
   Otros: { scale: 1.18, x: '0%', y: '0%' },
@@ -65,7 +63,6 @@ export function getCategoryDescription(category: string) {
   if (normalized === 'Lácteos') return 'Quesos, leche, mantequilla y derivados.'
   if (normalized === 'Panadería') return 'Pan, masas, bollería y bases.'
   if (normalized === 'Despensa') return 'Secos, conservas, legumbres y básicos de almacén.'
-  if (normalized === 'Aceites y salsas') return 'Aceites, vinagres, salsas y condimentos líquidos.'
   if (normalized === 'Congelados') return 'Producto congelado y conservación en frío.'
   if (normalized === 'Limpieza') return 'Limpieza, higiene y consumibles no alimentarios.'
   return 'Categoría general para productos varios.'
@@ -73,21 +70,6 @@ export function getCategoryDescription(category: string) {
 
 export function getCategoryVisual(category: string) {
   const normalized = normalizeProductCategory(category)
-
-  if (normalized === 'Aceites y salsas') {
-    return {
-      hue: 'from-amber-100 to-amber-50',
-      art: (
-        <svg viewBox="0 0 48 48" className="h-10 w-10" aria-hidden="true">
-          <rect x="17.5" y="7" width="6" height="5" rx="1.8" fill="#7C4A03" />
-          <path d="M16 12h9v6h-9z" fill="#84CC16" />
-          <path d="M15 18c0-1.7 1.3-3 3-3h5c1.7 0 3 1.3 3 3v17c0 2.2-1.8 4-4 4h-3c-2.2 0-4-1.8-4-4V18Z" fill="#A3E635" stroke="#365314" strokeWidth="1.2" />
-          <path d="M28 28c0-3.8 3.2-6.5 7.3-6.5 3.4 0 5.7 1.8 6.7 4.3-.8 3.8-4 7.2-8.8 7.2-2.7 0-5.1-.7-5.2-5Z" fill="#FACC15" stroke="#A16207" strokeWidth="1.2" />
-          <path d="M27.8 28.4c1.8-1.4 4.2-2.3 6.7-2.3 2.5 0 4.8.8 6.4 2.2" stroke="#FDE68A" strokeWidth="1.2" strokeLinecap="round" />
-        </svg>
-      ),
-    }
-  }
 
   if (normalized === 'Frutas y verduras') {
     return {

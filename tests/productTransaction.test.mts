@@ -6,7 +6,7 @@ test('parseAtomicProductResult normaliza la respuesta de producto', () => {
   const result = parseAtomicProductResult({
     id: 'producto-1',
     nombre: 'Aceite',
-    categoria: 'Aceites y salsas',
+    categoria: 'Despensa',
     unidad: 'L',
     stock_actual: 10,
     stock_minimo: 2,

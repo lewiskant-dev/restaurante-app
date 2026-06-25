@@ -9,7 +9,6 @@ Coloca aquí los SVG de categorías con estos nombres:
 - `lacteos.svg`
 - `panaderia.svg`
 - `despensa.svg`
-- `aceites-salsas.svg`
 - `congelados.svg`
 - `limpieza.svg`
 - `otros.svg`
