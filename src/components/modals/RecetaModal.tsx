@@ -1,8 +1,14 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import type { RecetaLineaForm } from '@/features/home/types'
 import { fieldShell, ghostButton, primaryGradientButton, softPanel } from '@/components/ui/primitives'
 import { formatEuro } from '@/features/home/utils'
+import {
+  calculateSuggestedPvp,
+  getCurrentCostPct,
+  suggestRecipeTargetCostPct,
+} from '@/lib/recipePricing'
 import type { Producto } from '@/types'
 
 type RecetaModalProps = {
@@ -54,9 +60,10 @@ export function RecetaModal({
   onRemoveLinea,
   onGuardar,
 }: RecetaModalProps) {
-  if (!open) return null
-
-  const productosById = new Map(productos.map((producto) => [producto.id, producto]))
+  const productosById = useMemo(
+    () => new Map(productos.map((producto) => [producto.id, producto])),
+    [productos]
+  )
   const raciones = Number(recetaRaciones) > 0 ? Number(recetaRaciones) : 1
   const precioVenta = recetaPrecioVenta === '' ? 0 : Number(recetaPrecioVenta)
   const recetaCosteTeorico = recetaLineas.reduce((acc, linea) => {
@@ -65,6 +72,37 @@ export function RecetaModal({
   }, 0)
   const costePorRacion = recetaCosteTeorico / raciones
   const margenEstimado = precioVenta - costePorRacion
+  const pricingIngredients = useMemo(
+    () =>
+      recetaLineas
+        .map((linea) => productosById.get(linea.producto_id))
+        .filter((producto): producto is Producto => Boolean(producto))
+        .map((producto) => ({ nombre: producto.nombre, categoria: producto.categoria })),
+    [productosById, recetaLineas]
+  )
+  const suggestedTargetCostPct = suggestRecipeTargetCostPct({
+    recipeName: recetaNombre,
+    recipeTpvName: recetaNombreTPV,
+    tipoCarta: recetaTipoCarta,
+    costPerServing: costePorRacion,
+    ingredients: pricingIngredients,
+  })
+  const pricingProfileKey = `${open}-${recetaEditId || 'new'}-${recetaTipoCarta}-${recetaNombre}-${recetaNombreTPV}`
+  const [pricingControl, setPricingControl] = useState({
+    key: pricingProfileKey,
+    value: suggestedTargetCostPct,
+    manual: false,
+  })
+  const targetCostPct =
+    pricingControl.key === pricingProfileKey && pricingControl.manual
+      ? pricingControl.value
+      : suggestedTargetCostPct
+
+  const suggestedPvp = calculateSuggestedPvp(costePorRacion, targetCostPct)
+  const currentCostPct = getCurrentCostPct(costePorRacion, precioVenta)
+  const suggestedMargin = suggestedPvp - costePorRacion
+
+  if (!open) return null
 
   return (
     <div
@@ -162,6 +200,78 @@ export function RecetaModal({
                 placeholder="Precio de venta estimado"
                 className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
               />
+
+              <div className="rounded-[20px] border border-blue-100 bg-blue-50/70 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">Escandallo sugerido</div>
+                    <p className="mt-1 text-[12px] leading-5 text-slate-500">
+                      Nexo propone un PVP según el coste por ración y un objetivo de coste lógico
+                      para este tipo de receta.
+                    </p>
+                  </div>
+                  <div className="rounded-[18px] bg-white px-4 py-3 text-right shadow-sm">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      PVP sugerido
+                    </div>
+                    <div className="mt-1 text-xl font-semibold text-blue-700">
+                      {formatEuro(suggestedPvp)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="mb-2 flex items-center justify-between gap-3 text-[12px]">
+                    <span className="font-semibold text-slate-700">Coste objetivo</span>
+                    <span className="font-semibold text-blue-700">{targetCostPct.toFixed(0)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="8"
+                    max="45"
+                    step="1"
+                    value={targetCostPct}
+                    onChange={(event) => {
+                      setPricingControl({
+                        key: pricingProfileKey,
+                        value: Number(event.target.value),
+                        manual: true,
+                      })
+                    }}
+                    className="w-full accent-blue-600"
+                  />
+                  <div className="mt-2 flex justify-between text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">
+                    <span>Más margen</span>
+                    <span>Más ajustado</span>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-2 text-[12px] sm:grid-cols-3">
+                  <div className="rounded-[16px] bg-white px-3 py-2">
+                    <div className="font-semibold text-slate-700">Coste/ración</div>
+                    <div className="mt-1 text-slate-500">{formatEuro(costePorRacion)}</div>
+                  </div>
+                  <div className="rounded-[16px] bg-white px-3 py-2">
+                    <div className="font-semibold text-slate-700">Coste actual</div>
+                    <div className="mt-1 text-slate-500">
+                      {currentCostPct === null ? 'Sin PVP' : `${currentCostPct.toFixed(1)}%`}
+                    </div>
+                  </div>
+                  <div className="rounded-[16px] bg-white px-3 py-2">
+                    <div className="font-semibold text-slate-700">Margen sugerido</div>
+                    <div className="mt-1 text-slate-500">{formatEuro(suggestedMargin)}</div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => onPrecioVentaChange(suggestedPvp > 0 ? suggestedPvp.toFixed(2) : '')}
+                  disabled={suggestedPvp <= 0}
+                  className={`mt-4 w-full px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50 ${ghostButton}`}
+                >
+                  Aplicar PVP sugerido
+                </button>
+              </div>
 
               <label className="flex items-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700">
                 <input
