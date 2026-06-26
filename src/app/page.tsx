@@ -653,9 +653,6 @@ export default function HomePage() {
     ajusteSaving,
     productosFiltrados,
     movimientosFiltrados,
-    totalProductos,
-    stockBajo,
-    movimientosHoy,
     categoriasProducto,
     unidadesProducto,
     productosStockBajo,
@@ -1221,7 +1218,6 @@ export default function HomePage() {
   const showRestaurantAccessFeedback =
     showRestaurantAccessLoader && (loadingAccessibleRestaurants || switchingRestaurant)
   const userInitials = getInitials(userDisplayName || 'Usuario')
-  const totalCategorias = categoriasProducto.length
   const topSearchEnabled = ['stock', 'historial', 'proveedores', 'albaran', 'albaranes', 'auditoria', 'usuarios'].includes(
     tab
   )
@@ -2002,10 +1998,6 @@ export default function HomePage() {
         <section className="space-y-6 pt-5 lg:pt-0">
           {tab === 'stock' && (
             <StockTab
-              totalProductos={totalProductos}
-              stockBajo={stockBajo}
-              movimientosHoy={movimientosHoy}
-              totalCategorias={totalCategorias}
               canManageStock={canManageStock}
               canAdjustStock={canAdjustStock}
               canConsumeStock={canConsumeStock}

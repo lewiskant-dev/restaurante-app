@@ -13,6 +13,7 @@ import {
   type GuestMenuItem,
   type GuestMenuKind,
 } from '@/lib/guestExperience'
+import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import { NexoBrandMark } from '@/components/ui/NexoBrandMark'
 
 type GuestExperienceProps = {
@@ -817,28 +818,24 @@ function FilterSelect({
   options: Array<string | { value: string; label: string }>
   onChange: (value: string) => void
 }) {
+  const normalizedOptions = [
+    { value: '', label: 'Todos' },
+    ...options.map((option) => (typeof option === 'string' ? { value: option, label: option } : option)),
+  ]
+
   return (
-    <label className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1">
       <span className="px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9a8060]">
         {label}
       </span>
-      <select
+      <IntegratedSelect
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="rounded-[18px] border border-black/10 bg-white px-4 py-3 text-[13px] font-semibold text-[#2a241e] outline-none transition focus:border-[#9a8060]"
-      >
-        <option value="">Todos</option>
-        {options.map((option) => {
-          const normalizedOption = typeof option === 'string' ? { value: option, label: option } : option
-
-          return (
-            <option key={normalizedOption.value} value={normalizedOption.value}>
-              {normalizedOption.label}
-            </option>
-          )
-        })}
-      </select>
-    </label>
+        options={normalizedOptions}
+        onChange={onChange}
+        buttonClassName="rounded-[18px] border-black/10 px-4 py-3 text-[13px] font-semibold text-[#2a241e] focus-within:border-[#9a8060] focus-within:ring-[#9a8060]/10"
+        menuClassName="border-black/10"
+      />
+    </div>
   )
 }
 

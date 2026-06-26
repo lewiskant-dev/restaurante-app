@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from 'react'
 import { NotificationsBell } from '@/components/layout/NotificationsBell'
+import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import { NexoBrandMark } from '@/components/ui/NexoBrandMark'
-import { fieldShell, ghostButton } from '@/components/ui/primitives'
+import { ghostButton } from '@/components/ui/primitives'
 import type { MainTab, TabKey } from '@/features/home/types'
 import { getTabLabel, canAccessTab } from '@/features/home/utils'
 
@@ -307,6 +308,16 @@ export function AppShellHeader({
     [currentUserRole]
   )
   const showRestaurantSelector = accessibleRestaurants.length > 0
+  const restaurantOptions = accessibleRestaurants.map((restaurant) => ({
+    value: restaurant.id,
+    label:
+      switchingRestaurant && activeRestaurantId === restaurant.id
+        ? `${restaurant.nombre} · cambiando...`
+        : restaurant.activo
+          ? restaurant.nombre
+          : `${restaurant.nombre} · inactivo`,
+    disabled: !restaurant.activo,
+  }))
 
   const handleGroupTabChange = (group: MainTab, tab: TabKey) => {
     onMainTabChange(group)
@@ -332,22 +343,14 @@ export function AppShellHeader({
         </button>
 
         {showRestaurantSelector ? (
-          <select
+          <IntegratedSelect
             value={activeRestaurantId}
-            onChange={(e) => onRestaurantChange(e.target.value)}
+            options={restaurantOptions}
+            onChange={onRestaurantChange}
             disabled={switchingRestaurant || accessibleRestaurants.length <= 1}
-            className={`mt-3 w-full px-3 py-2.5 text-[12px] font-medium text-slate-700 outline-none disabled:opacity-60 ${fieldShell}`}
-          >
-            {accessibleRestaurants.map((restaurant) => (
-              <option key={restaurant.id} value={restaurant.id} disabled={!restaurant.activo}>
-                {switchingRestaurant && activeRestaurantId === restaurant.id
-                  ? `${restaurant.nombre} · cambiando...`
-                  : restaurant.activo
-                    ? restaurant.nombre
-                    : `${restaurant.nombre} · inactivo`}
-              </option>
-            ))}
-          </select>
+            className="mt-3"
+            buttonClassName="px-3 py-2.5 text-[12px] font-medium disabled:opacity-60"
+          />
         ) : null}
       </div>
 
@@ -451,22 +454,13 @@ export function AppShellHeader({
 
           {showRestaurantSelector ? (
             <div className="mt-2.5">
-              <select
+              <IntegratedSelect
                 value={activeRestaurantId}
-                onChange={(e) => onRestaurantChange(e.target.value)}
+                options={restaurantOptions}
+                onChange={onRestaurantChange}
                 disabled={switchingRestaurant || accessibleRestaurants.length <= 1}
-                className={`w-full px-3 py-2.5 text-[12px] font-medium text-slate-700 outline-none disabled:opacity-60 ${fieldShell}`}
-              >
-                {accessibleRestaurants.map((restaurant) => (
-                  <option key={restaurant.id} value={restaurant.id} disabled={!restaurant.activo}>
-                    {switchingRestaurant && activeRestaurantId === restaurant.id
-                      ? `${restaurant.nombre} · cambiando...`
-                      : restaurant.activo
-                        ? restaurant.nombre
-                        : `${restaurant.nombre} · inactivo`}
-                  </option>
-                ))}
-              </select>
+                buttonClassName="px-3 py-2.5 text-[12px] font-medium disabled:opacity-60"
+              />
             </div>
           ) : null}
 

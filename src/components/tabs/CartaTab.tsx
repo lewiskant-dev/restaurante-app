@@ -5,6 +5,7 @@ import type {
   GuestMenuAdminItem,
   GuestMenuForm,
 } from '@/features/home/hooks/useGuestMenuManagement'
+import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import type { Receta } from '@/features/home/types'
 import { isInitialGuestRecommendation, isWineKind, splitGuestGrapes } from '@/lib/guestExperience'
 import { fieldShell, ghostButton, primaryGradientButton, softPanel, surfaceCard } from '@/components/ui/primitives'
@@ -441,17 +442,12 @@ export function CartaTab({
             placeholder="Nombre público"
             className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
-          <select
+          <IntegratedSelect
             value={guestMenuForm.tipo}
-            onChange={(event) => onFormChange('tipo', event.target.value as GuestMenuForm['tipo'])}
-            className={`px-4 py-3 text-[13px] text-slate-900 ${fieldShell}`}
-          >
-            {typeOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            options={[...typeOptions]}
+            onChange={(value) => onFormChange('tipo', value as GuestMenuForm['tipo'])}
+            buttonClassName="px-4 py-3 text-[13px]"
+          />
         </div>
 
         <div className="mt-3 grid items-start gap-3 lg:grid-cols-4">

@@ -1,7 +1,16 @@
 'use client'
 
 import type { Producto } from '@/types'
+import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import { fieldShell, ghostButton, primaryGradientButton } from '@/components/ui/primitives'
+
+const ajusteMotivoOptions = [
+  { value: 'Recuento manual', label: 'Recuento manual' },
+  { value: 'Corrección de error', label: 'Corrección de error' },
+  { value: 'Merma no registrada', label: 'Merma no registrada' },
+  { value: 'Rotura no registrada', label: 'Rotura no registrada' },
+  { value: 'Otro ajuste', label: 'Otro ajuste' },
+]
 
 type AjusteStockModalProps = {
   open: boolean
@@ -61,17 +70,12 @@ export function AjusteStockModal({
             className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
 
-          <select
+          <IntegratedSelect
             value={ajusteMotivo}
-            onChange={(e) => onMotivoChange(e.target.value)}
-            className={`w-full px-4 py-3 text-base text-slate-900 ${fieldShell}`}
-          >
-            <option value="Recuento manual">Recuento manual</option>
-            <option value="Corrección de error">Corrección de error</option>
-            <option value="Merma no registrada">Merma no registrada</option>
-            <option value="Rotura no registrada">Rotura no registrada</option>
-            <option value="Otro ajuste">Otro ajuste</option>
-          </select>
+            options={ajusteMotivoOptions}
+            onChange={onMotivoChange}
+            buttonClassName="px-4 py-3 text-base"
+          />
 
           {errorMessage ? (
             <div className="rounded-[16px] border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">

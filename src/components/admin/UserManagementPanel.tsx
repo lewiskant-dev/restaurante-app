@@ -19,6 +19,7 @@ import {
   softPanel,
   surfaceCard,
 } from '@/components/ui/primitives'
+import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 
 type UserManagementPanelProps = {
   currentUserId: string
@@ -169,6 +170,21 @@ export function UserManagementPanel({
   onSaveRestaurants,
   onSaveRestaurant,
 }: UserManagementPanelProps) {
+  const roleOptions = [
+    { value: 'empleado', label: 'Empleado' },
+    { value: 'encargado', label: 'Encargado' },
+    { value: 'administrador', label: 'Administrador' },
+    ...(currentUserRole === 'master' ? [{ value: 'master', label: 'Master' }] : []),
+  ]
+  const roleFilterOptions = [{ value: 'todos', label: 'Todos los roles' }, ...roleOptions]
+  const accessFilterOptions = [
+    { value: 'todos', label: 'Todos los accesos' },
+    { value: 'sin_acceso', label: 'Sin acceso todavía' },
+    { value: 'con_acceso', label: 'Con acceso registrado' },
+    { value: 'acceso_reciente', label: 'Acceso reciente' },
+    { value: 'requiere_revision', label: 'Requieren revisión' },
+  ]
+
   return (
     <div className="space-y-4 sm:space-y-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -469,16 +485,12 @@ export function UserManagementPanel({
               newManagedUserPasswordError ? '!border-red-200 !ring-red-100' : ''
             }`}
           />
-          <select
+          <IntegratedSelect
             value={newManagedUserRole}
-            onChange={(e) => onNewRoleChange(e.target.value as UserRole)}
-            className={`px-4 py-3 text-[15px] text-slate-900 outline-none sm:py-2.5 sm:text-[13px] ${fieldShell}`}
-          >
-            <option value="empleado">Empleado</option>
-            <option value="encargado">Encargado</option>
-            <option value="administrador">Administrador</option>
-            {currentUserRole === 'master' ? <option value="master">Master</option> : null}
-          </select>
+            options={roleOptions}
+            onChange={(value) => onNewRoleChange(value as UserRole)}
+            buttonClassName="px-4 py-3 text-[15px] sm:py-2.5 sm:text-[13px]"
+          />
           <button
             type="button"
             onClick={onCreate}
@@ -536,20 +548,17 @@ export function UserManagementPanel({
                 })}
               </div>
 
-              <select
+              <IntegratedSelect
                 value={newManagedUserCurrentRestaurantId}
-                onChange={(e) => onNewManagedUserCurrentRestaurantChange(e.target.value)}
-                className="rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-[13px] text-slate-900 outline-none"
-              >
-                <option value="">Selecciona restaurante activo por defecto</option>
-                {managedRestaurants
-                  .filter((restaurant) => newManagedUserRestaurantIds.includes(restaurant.id))
-                  .map((restaurant) => (
-                    <option key={restaurant.id} value={restaurant.id}>
-                      {restaurant.nombre}
-                    </option>
-                  ))}
-              </select>
+                options={[
+                  { value: '', label: 'Selecciona restaurante activo por defecto' },
+                  ...managedRestaurants
+                    .filter((restaurant) => newManagedUserRestaurantIds.includes(restaurant.id))
+                    .map((restaurant) => ({ value: restaurant.id, label: restaurant.nombre })),
+                ]}
+                onChange={onNewManagedUserCurrentRestaurantChange}
+                buttonClassName="px-4 py-3 text-[13px]"
+              />
 
               <div
                 className={
@@ -576,29 +585,19 @@ export function UserManagementPanel({
             className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none placeholder:text-slate-400 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
           />
 
-          <select
+          <IntegratedSelect
             value={managedUserRoleFilter}
-            onChange={(e) => onRoleFilterChange(e.target.value as 'todos' | UserRole)}
-            className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
-          >
-            <option value="todos">Todos los roles</option>
-            <option value="empleado">Empleado</option>
-            <option value="encargado">Encargado</option>
-            <option value="administrador">Administrador</option>
-            {currentUserRole === 'master' ? <option value="master">Master</option> : null}
-          </select>
+            options={roleFilterOptions}
+            onChange={(value) => onRoleFilterChange(value as 'todos' | UserRole)}
+            buttonClassName="rounded-[20px] px-4 py-3 text-[15px] sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+          />
 
-          <select
+          <IntegratedSelect
             value={managedUserAccessFilter}
-            onChange={(e) => onAccessFilterChange(e.target.value as ManagedUserAccessFilter)}
-            className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
-          >
-            <option value="todos">Todos los accesos</option>
-            <option value="sin_acceso">Sin acceso todavía</option>
-            <option value="con_acceso">Con acceso registrado</option>
-            <option value="acceso_reciente">Acceso reciente</option>
-            <option value="requiere_revision">Requieren revisión</option>
-          </select>
+            options={accessFilterOptions}
+            onChange={(value) => onAccessFilterChange(value as ManagedUserAccessFilter)}
+            buttonClassName="rounded-[20px] px-4 py-3 text-[15px] sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+          />
 
           <div className="rounded-[20px] bg-slate-100 px-4 py-3 text-[14px] text-slate-600 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]">
             Visibles: {managedUsersFiltrados.length} de {managedUsers.length}
@@ -738,17 +737,14 @@ export function UserManagementPanel({
                           {getRoleLabel(managedUser.role)}
                         </div>
 
-                        <select
+                        <IntegratedSelect
                           value={managedUser.role}
                           disabled={!canEditTarget || savingManagedUserId === managedUser.id}
-                          onChange={(e) => onUpdateRole(managedUser.id, e.target.value as UserRole)}
-                          className="min-w-[210px] rounded-[14px] border border-slate-200 bg-white px-4 py-2 text-[13px] text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <option value="empleado">Empleado</option>
-                          <option value="encargado">Encargado</option>
-                          <option value="administrador">Administrador</option>
-                          {currentUserRole === 'master' ? <option value="master">Master</option> : null}
-                        </select>
+                          options={roleOptions}
+                          onChange={(value) => onUpdateRole(managedUser.id, value as UserRole)}
+                          className="min-w-[210px]"
+                          buttonClassName="rounded-[14px] px-4 py-2 text-[13px] disabled:cursor-not-allowed disabled:opacity-60"
+                        />
 
                         {canDeleteTarget ? (
                           <>
@@ -840,36 +836,26 @@ export function UserManagementPanel({
                             </div>
 
                             <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-                              <select
+                              <IntegratedSelect
                                 value={selectedCurrentRestaurantId}
-                                onChange={(e) =>
-                                  onManagedCurrentRestaurantDraftChange(
-                                    managedUser.id,
-                                    e.target.value
-                                  )
-                                }
+                                onChange={(value) => onManagedCurrentRestaurantDraftChange(managedUser.id, value)}
                                 disabled={!selectedRestaurantIds.length}
-                                className="min-w-0 flex-1 rounded-[14px] border border-slate-200 bg-white px-3 py-2 text-[12px] text-slate-900 disabled:opacity-60"
-                              >
-                                {!selectedRestaurantIds.length ? (
-                                  <option value="">Sin restaurantes asignados</option>
-                                ) : null}
-                                {managedRestaurants
-                                  .filter((restaurant) =>
-                                    selectedRestaurantIds.includes(restaurant.id)
-                                  )
-                                  .map((restaurant) => (
-                                    <option
-                                      key={restaurant.id}
-                                      value={restaurant.id}
-                                      disabled={!restaurant.activo}
-                                    >
-                                      {restaurant.activo
-                                        ? restaurant.nombre
-                                        : `${restaurant.nombre} · inactivo`}
-                                    </option>
-                                  ))}
-                              </select>
+                                options={
+                                  !selectedRestaurantIds.length
+                                    ? [{ value: '', label: 'Sin restaurantes asignados' }]
+                                    : managedRestaurants
+                                        .filter((restaurant) => selectedRestaurantIds.includes(restaurant.id))
+                                        .map((restaurant) => ({
+                                          value: restaurant.id,
+                                          label: restaurant.activo
+                                            ? restaurant.nombre
+                                            : `${restaurant.nombre} · inactivo`,
+                                          disabled: !restaurant.activo,
+                                        }))
+                                }
+                                className="min-w-0 flex-1"
+                                buttonClassName="rounded-[14px] px-3 py-2 text-[12px] disabled:opacity-60"
+                              />
 
                               <button
                                 type="button"

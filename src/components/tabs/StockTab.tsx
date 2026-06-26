@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from 'react'
 import { ActionMenu } from '@/components/ui/ActionMenu'
+import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import { normalizeProductCategory } from '@/features/home/constants'
 import { ProductCategoryBadge } from '@/components/ui/ProductCategoryVisual'
 import {
@@ -9,7 +10,6 @@ import {
   ghostButton,
   primaryGradientButton,
   softPanel,
-  surfaceCard,
   tableCell,
   tableHeaderCell,
 } from '@/components/ui/primitives'
@@ -20,10 +20,6 @@ import type { ProductoEstadoFiltro } from '@/features/home/hooks/useStockManagem
 const STOCK_PAGE_SIZE = 12
 
 type StockTabProps = {
-  totalProductos: number
-  stockBajo: number
-  movimientosHoy: number
-  totalCategorias: number
   canManageStock: boolean
   canAdjustStock: boolean
   canConsumeStock: boolean
@@ -70,31 +66,6 @@ function Icon({
       {path}
     </svg>
   )
-}
-
-function getMetricTone(tone: 'emerald' | 'blue' | 'amber' | 'violet') {
-  if (tone === 'emerald') {
-    return {
-      badge: 'bg-emerald-50 text-emerald-600',
-      value: 'text-emerald-600',
-    }
-  }
-  if (tone === 'amber') {
-    return {
-      badge: 'bg-amber-50 text-amber-500',
-      value: 'text-amber-500',
-    }
-  }
-  if (tone === 'violet') {
-    return {
-      badge: 'bg-violet-50 text-violet-600',
-      value: 'text-violet-600',
-    }
-  }
-  return {
-    badge: 'bg-blue-50 text-blue-600',
-    value: 'text-blue-600',
-  }
 }
 
 function getProductStatus(producto: Producto) {
@@ -211,10 +182,6 @@ function ProductActionMenu({
 }
 
 export default function StockTab({
-  totalProductos,
-  stockBajo,
-  movimientosHoy,
-  totalCategorias,
   canManageStock,
   canAdjustStock,
   canConsumeStock,
@@ -272,64 +239,25 @@ export default function StockTab({
       .filter((page) => page >= 1 && page <= totalPages)
       .sort((a, b) => a - b)
   }, [effectiveCurrentPage, totalPages])
-
-  const metricCards = [
-    {
-      key: 'productos',
-      value: totalProductos,
-      label: 'Productos totales',
-      subtitle: 'Creados en el sistema',
-      tone: 'emerald' as const,
-      icon: (
-        <>
-          <path d="m12 3 7 4v10l-7 4-7-4V7z" />
-          <path d="m5 7 7 4 7-4" />
-          <path d="M12 11v10" />
-        </>
-      ),
-    },
-    {
-      key: 'movimientos',
-      value: movimientosHoy,
-      label: 'Movimientos hoy',
-      subtitle: 'Entradas y salidas',
-      tone: 'blue' as const,
-      icon: (
-        <>
-          <path d="M4 16 9 11l4 4 7-8" />
-          <path d="M15 7h5v5" />
-        </>
-      ),
-    },
-    {
-      key: 'stock-bajo',
-      value: stockBajo,
-      label: 'Stock bajo',
-      subtitle: 'Por debajo del mínimo',
-      tone: 'amber' as const,
-      icon: (
-        <>
-          <path d="M12 4 3.5 19h17L12 4Z" />
-          <path d="M12 10v4" />
-          <path d="M12 17h.01" />
-        </>
-      ),
-    },
-    {
-      key: 'categorias',
-      value: totalCategorias,
-      label: 'Categorías',
-      subtitle: 'Organizadas',
-      tone: 'violet' as const,
-      icon: (
-        <>
-          <rect x="7" y="4" width="10" height="16" rx="2" />
-          <path d="M10 4.5h4" />
-          <path d="M10 10h4" />
-          <path d="M10 14h4" />
-        </>
-      ),
-    },
+  const categoryOptions = useMemo(
+    () => [
+      { value: 'todas', label: 'Todas' },
+      ...categoriasProducto.map((categoria) => ({ value: categoria, label: categoria })),
+    ],
+    [categoriasProducto]
+  )
+  const unitOptions = useMemo(
+    () => [
+      { value: 'todas', label: 'Todas' },
+      ...unidadesProducto.map((unidad) => ({ value: unidad, label: unidad })),
+    ],
+    [unidadesProducto]
+  )
+  const statusOptions = [
+    { value: 'activos', label: 'Activos' },
+    { value: 'stock_bajo', label: 'Stock bajo' },
+    { value: 'archivados', label: 'Archivados' },
+    { value: 'todos', label: 'Todos' },
   ]
 
   return (
@@ -365,43 +293,7 @@ export default function StockTab({
         ) : null}
       </div>
 
-      <div className="grid grid-cols-4 gap-2.5 lg:gap-3">
-        {metricCards.map((metric) => {
-          const tone = getMetricTone(metric.tone)
-          return (
-            <div
-              key={metric.key}
-              className={`relative min-h-[128px] overflow-hidden px-1.5 py-2.5 sm:px-4 lg:min-h-0 lg:px-3.5 lg:py-3 ${surfaceCard}`}
-            >
-              <div className="flex flex-col items-center text-center lg:flex-row lg:items-start lg:gap-2.5 lg:text-left">
-                <div className={`flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-full ${tone.badge} lg:h-[44px] lg:w-[44px]`}>
-                  <Icon path={metric.icon} className="h-[18px] w-[18px] lg:h-[22px] lg:w-[22px]" />
-                </div>
-                <div className="mt-3 min-w-0 lg:mt-0">
-                  <div className={`text-[1.45rem] font-semibold leading-none tracking-tight ${tone.value} lg:text-[1.9rem]`}>
-                    {metric.value}
-                  </div>
-                  <div className={`mt-1.5 text-[0.72rem] font-semibold leading-tight lg:text-[0.88rem] ${tone.value}`}>
-                    {metric.label}
-                  </div>
-                  <div className="mt-0.5 text-[8px] leading-tight text-slate-500 lg:text-[11px]">
-                    {metric.key === 'productos'
-                      ? 'totales'
-                      : metric.key === 'movimientos'
-                        ? 'hoy'
-                        : metric.key === 'stock-bajo'
-                          ? 'mínimo'
-                          : 'activas'}
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          )
-        })}
-      </div>
-
-      <div className={`mt-4 overflow-visible ${softPanel}`}>
+      <div className={`overflow-visible ${softPanel}`}>
         <div className="border-b border-slate-100 px-3 py-3 sm:px-5 lg:px-4 lg:py-2.5">
           <div className="hidden gap-2 xl:grid xl:grid-cols-[1.2fr_0.74fr_0.74fr_0.66fr_auto]">
             <label className={`flex items-center gap-3 px-3.5 py-2 ${fieldShell}`}>
@@ -426,60 +318,35 @@ export default function StockTab({
               />
             </label>
 
-            <label className={`px-3 py-2 ${fieldShell}`}>
-              <div className="text-[11px] font-medium text-slate-400">Categoría</div>
-              <select
-                value={categoriaFiltro}
-                onChange={(e) => {
+            <IntegratedSelect
+              label="Categoría"
+              value={categoriaFiltro}
+              options={categoryOptions}
+              onChange={(value) => {
                   setCurrentPage(1)
-                  onCategoriaFiltroChange(e.target.value)
-                }}
-                className="mt-1 w-full bg-transparent text-[13px] font-medium text-slate-800 outline-none"
-              >
-                <option value="todas">Todas</option>
-                {categoriasProducto.map((categoria) => (
-                  <option key={categoria} value={categoria}>
-                    {categoria}
-                  </option>
-                ))}
-              </select>
-            </label>
+                  onCategoriaFiltroChange(value)
+              }}
+            />
 
-            <label className={`px-3 py-2 ${fieldShell}`}>
-              <div className="text-[11px] font-medium text-slate-400">Estado</div>
-              <select
-                value={productoEstado}
-                onChange={(e) => {
+            <IntegratedSelect
+              label="Estado"
+              value={productoEstado}
+              options={statusOptions}
+              onChange={(value) => {
                   setCurrentPage(1)
-                  onProductoEstadoChange(e.target.value as ProductoEstadoFiltro)
-                }}
-                className="mt-1 w-full bg-transparent text-[13px] font-medium capitalize text-slate-800 outline-none"
-              >
-                <option value="activos">Activos</option>
-                <option value="stock_bajo">Stock bajo</option>
-                <option value="archivados">Archivados</option>
-                <option value="todos">Todos</option>
-              </select>
-            </label>
+                  onProductoEstadoChange(value as ProductoEstadoFiltro)
+              }}
+            />
 
-            <label className={`px-3 py-2 ${fieldShell}`}>
-              <div className="text-[11px] font-medium text-slate-400">Unidad</div>
-              <select
-                value={unidadFiltro}
-                onChange={(e) => {
+            <IntegratedSelect
+              label="Unidad"
+              value={unidadFiltro}
+              options={unitOptions}
+              onChange={(value) => {
                   setCurrentPage(1)
-                  onUnidadFiltroChange(e.target.value)
-                }}
-                className="mt-1 w-full bg-transparent text-[13px] font-medium text-slate-800 outline-none"
-              >
-                <option value="todas">Todas</option>
-                {unidadesProducto.map((unidad) => (
-                  <option key={unidad} value={unidad}>
-                    {unidad}
-                  </option>
-                ))}
-              </select>
-            </label>
+                  onUnidadFiltroChange(value)
+              }}
+            />
 
             <button
               type="button"
@@ -528,55 +395,41 @@ export default function StockTab({
               >
                 Todas
               </button>
-              <label className="rounded-[14px] border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-800 shadow-sm">
-                <select
-                  value={categoriaFiltro}
-                  onChange={(e) => {
+              <IntegratedSelect
+                value={categoriaFiltro}
+                options={[{ value: 'todas', label: 'Categoría' }, ...categoryOptions.slice(1)]}
+                onChange={(value) => {
                     setCurrentPage(1)
-                    onCategoriaFiltroChange(e.target.value)
-                  }}
-                  className="bg-transparent outline-none"
-                >
-                  <option value="todas">Categoría</option>
-                  {categoriasProducto.map((categoria) => (
-                    <option key={categoria} value={categoria}>
-                      {categoria}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="rounded-[14px] border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-800 shadow-sm">
-                <select
-                  value={productoEstado}
-                  onChange={(e) => {
+                    onCategoriaFiltroChange(value)
+                }}
+                buttonClassName="rounded-[14px] px-3 py-2 text-[12px]"
+                menuClassName="min-w-48"
+              />
+              <IntegratedSelect
+                value={productoEstado}
+                options={[
+                  { value: 'todos', label: 'Estado' },
+                  { value: 'activos', label: 'Activos' },
+                  { value: 'stock_bajo', label: 'Stock bajo' },
+                  { value: 'archivados', label: 'Archivados' },
+                ]}
+                onChange={(value) => {
                     setCurrentPage(1)
-                    onProductoEstadoChange(e.target.value as ProductoEstadoFiltro)
-                  }}
-                  className="bg-transparent outline-none"
-                >
-                  <option value="todos">Estado</option>
-                  <option value="activos">Activos</option>
-                  <option value="stock_bajo">Stock bajo</option>
-                  <option value="archivados">Archivados</option>
-                </select>
-              </label>
-              <label className="rounded-[14px] border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-800 shadow-sm">
-                <select
-                  value={unidadFiltro}
-                  onChange={(e) => {
+                    onProductoEstadoChange(value as ProductoEstadoFiltro)
+                }}
+                buttonClassName="rounded-[14px] px-3 py-2 text-[12px]"
+                menuClassName="min-w-44"
+              />
+              <IntegratedSelect
+                value={unidadFiltro}
+                options={[{ value: 'todas', label: 'Unidad' }, ...unitOptions.slice(1)]}
+                onChange={(value) => {
                     setCurrentPage(1)
-                    onUnidadFiltroChange(e.target.value)
-                  }}
-                  className="bg-transparent outline-none"
-                >
-                  <option value="todas">Unidad</option>
-                  {unidadesProducto.map((unidad) => (
-                    <option key={unidad} value={unidad}>
-                      {unidad}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                    onUnidadFiltroChange(value)
+                }}
+                buttonClassName="rounded-[14px] px-3 py-2 text-[12px]"
+                menuClassName="min-w-40"
+              />
             </div>
           </div>
         </div>

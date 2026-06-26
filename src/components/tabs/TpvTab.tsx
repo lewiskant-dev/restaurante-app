@@ -9,6 +9,7 @@ import type {
   VentaTPVCruda,
 } from '@/features/home/types'
 import { formatCantidad, formatFechaHora, normalizeText } from '@/features/home/utils'
+import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import { fieldShell, ghostButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 
 type PendienteMapeo = {
@@ -151,15 +152,17 @@ export function TpvTab({
                 Revisa ventas importadas, margen estimado y consumo de stock descontado por TPV.
               </p>
             </div>
-            <select
+            <IntegratedSelect
               value={tpvAnaliticaRange}
-              onChange={(e) => onAnaliticaRangeChange(e.target.value as '7d' | '30d' | '90d')}
-              className={`w-full px-3.5 py-2.5 text-[12px] text-slate-900 md:w-[180px] sm:text-[13px] ${fieldShell}`}
-            >
-              <option value="7d">Últimos 7 días</option>
-              <option value="30d">Últimos 30 días</option>
-              <option value="90d">Últimos 90 días</option>
-            </select>
+              options={[
+                { value: '7d', label: 'Últimos 7 días' },
+                { value: '30d', label: 'Últimos 30 días' },
+                { value: '90d', label: 'Últimos 90 días' },
+              ]}
+              onChange={(value) => onAnaliticaRangeChange(value as '7d' | '30d' | '90d')}
+              className="w-full md:w-[180px]"
+              buttonClassName="px-3.5 py-2.5 text-[12px] sm:text-[13px]"
+            />
           </div>
           <div className="mt-3 flex justify-end">
             <button
@@ -835,30 +838,25 @@ export function TpvTab({
                 </div>
 
                 <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto_auto]">
-                  <select
+                  <IntegratedSelect
                     value={
                       tpvMapeosSeleccionados[item.producto_externo] || item.sugerencias[0]?.id || ''
                     }
-                    onChange={(e) =>
-                      onMapeoSeleccionadoChange(item.producto_externo, e.target.value)
-                    }
-                    className={`w-full px-3.5 py-2.5 text-[12px] text-slate-900 sm:py-2.5 sm:text-[13px] ${fieldShell}`}
-                  >
-                    <option value="">Selecciona receta sugerida</option>
-                    {item.sugerencias.map((receta) => (
-                      <option key={receta.id} value={receta.id}>
-                        {receta.nombre} {receta.nombre_tpv ? `· TPV actual: ${receta.nombre_tpv}` : ''}
-                      </option>
-                    ))}
-                    {item.sugerencias.length === 0 &&
-                      recetas
-                        .filter((receta) => receta.activo !== false)
-                        .map((receta) => (
-                          <option key={receta.id} value={receta.id}>
-                            {receta.nombre}
-                          </option>
-                        ))}
-                  </select>
+                    options={[
+                      { value: '', label: 'Selecciona receta sugerida' },
+                      ...(item.sugerencias.length > 0
+                        ? item.sugerencias.map((receta) => ({
+                            value: receta.id,
+                            label: `${receta.nombre}${receta.nombre_tpv ? ` · TPV actual: ${receta.nombre_tpv}` : ''}`,
+                          }))
+                        : recetas
+                            .filter((receta) => receta.activo !== false)
+                            .map((receta) => ({ value: receta.id, label: receta.nombre }))),
+                    ]}
+                    onChange={(value) => onMapeoSeleccionadoChange(item.producto_externo, value)}
+                    searchable
+                    buttonClassName="px-3.5 py-2.5 text-[12px] sm:py-2.5 sm:text-[13px]"
+                  />
 
                   <button
                     type="button"

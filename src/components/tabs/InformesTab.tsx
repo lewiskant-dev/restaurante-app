@@ -16,7 +16,8 @@ import {
   buildWasteFinancialSummary,
   getMarginRatio,
 } from '@/lib/financialAnalytics'
-import { fieldShell, ghostButton, softPanel, surfaceCard } from '@/components/ui/primitives'
+import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
+import { ghostButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 import type { Producto } from '@/types'
 
 function formatEuro(value: number) {
@@ -408,15 +409,17 @@ export function InformesTab({
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <select
+            <IntegratedSelect
               value={tpvAnaliticaRange}
-              onChange={(e) => onAnaliticaRangeChange(e.target.value as '7d' | '30d' | '90d')}
-              className={`w-full px-3.5 py-2.5 text-[12px] text-slate-900 sm:w-[190px] sm:text-[13px] ${fieldShell}`}
-            >
-              <option value="7d">Últimos 7 días</option>
-              <option value="30d">Últimos 30 días</option>
-              <option value="90d">Últimos 90 días</option>
-            </select>
+              options={[
+                { value: '7d', label: 'Últimos 7 días' },
+                { value: '30d', label: 'Últimos 30 días' },
+                { value: '90d', label: 'Últimos 90 días' },
+              ]}
+              onChange={(value) => onAnaliticaRangeChange(value as '7d' | '30d' | '90d')}
+              className="w-full sm:w-[190px]"
+              buttonClassName="px-3.5 py-2.5 text-[12px] sm:text-[13px]"
+            />
             <button
               type="button"
               onClick={onExportarGlobal}

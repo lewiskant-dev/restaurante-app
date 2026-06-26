@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import type { NuevoProductoForm, ProductoPrecioHistorial } from '@/features/home/types'
 import { PRODUCT_CATEGORY_OPTIONS } from '@/features/home/constants'
 import { ProductCategoryBadge } from '@/components/ui/ProductCategoryVisual'
@@ -38,6 +39,18 @@ export function ProductModal({
   if (!open) return null
 
   const categoryOptions = Array.from(new Set([...PRODUCT_CATEGORY_OPTIONS, ...categoriasProducto]))
+  const categorySelectOptions = [
+    { value: '', label: 'Selecciona una categoría' },
+    ...categoryOptions.map((categoria) => ({ value: categoria, label: categoria })),
+  ]
+  const unitSelectOptions = [
+    { value: 'uds', label: 'uds' },
+    { value: 'kg', label: 'kg' },
+    { value: 'g', label: 'g' },
+    { value: 'L', label: 'L' },
+    { value: 'ml', label: 'ml' },
+    { value: 'cajas', label: 'cajas' },
+  ]
 
   async function handleImageFile(file: File | null) {
     if (!file) return
@@ -115,31 +128,19 @@ export function ProductModal({
             className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
 
-          <select
+          <IntegratedSelect
             value={productoForm.categoria}
-            onChange={(e) => onFormChange({ ...productoForm, categoria: e.target.value })}
-            className={`w-full px-4 py-3 text-base text-slate-900 ${fieldShell}`}
-          >
-            <option value="">Selecciona una categoría</option>
-            {categoryOptions.map((categoria) => (
-              <option key={categoria} value={categoria}>
-                {categoria}
-              </option>
-            ))}
-          </select>
+            options={categorySelectOptions}
+            onChange={(value) => onFormChange({ ...productoForm, categoria: value })}
+            buttonClassName="px-4 py-3 text-base"
+          />
 
-          <select
+          <IntegratedSelect
             value={productoForm.unidad}
-            onChange={(e) => onFormChange({ ...productoForm, unidad: e.target.value })}
-            className={`w-full px-4 py-3 text-base text-slate-900 ${fieldShell}`}
-          >
-            <option value="uds">uds</option>
-            <option value="kg">kg</option>
-            <option value="g">g</option>
-            <option value="L">L</option>
-            <option value="ml">ml</option>
-            <option value="cajas">cajas</option>
-          </select>
+            options={unitSelectOptions}
+            onChange={(value) => onFormChange({ ...productoForm, unidad: value })}
+            buttonClassName="px-4 py-3 text-base"
+          />
 
           <div className="grid grid-cols-2 gap-3">
             <input

@@ -1,7 +1,17 @@
 'use client'
 
 import type { Producto } from '@/types'
+import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import { fieldShell, ghostButton } from '@/components/ui/primitives'
+
+const consumoMotivoOptions = [
+  { value: 'Uso en cocina', label: 'Uso en cocina' },
+  { value: 'Venta en sala', label: 'Venta en sala' },
+  { value: 'Merma / caducado', label: 'Merma / caducado' },
+  { value: 'Inventario', label: 'Corrección de inventario' },
+  { value: 'Rotura', label: 'Rotura / accidente' },
+  { value: 'Otro', label: 'Otro' },
+]
 
 type ConsumoModalProps = {
   open: boolean
@@ -61,18 +71,12 @@ export function ConsumoModal({
             className={`w-full px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
 
-          <select
+          <IntegratedSelect
             value={consumoMotivo}
-            onChange={(e) => onMotivoChange(e.target.value)}
-            className={`w-full px-4 py-3 text-base text-slate-900 ${fieldShell}`}
-          >
-            <option value="Uso en cocina">Uso en cocina</option>
-            <option value="Venta en sala">Venta en sala</option>
-            <option value="Merma / caducado">Merma / caducado</option>
-            <option value="Inventario">Corrección de inventario</option>
-            <option value="Rotura">Rotura / accidente</option>
-            <option value="Otro">Otro</option>
-          </select>
+            options={consumoMotivoOptions}
+            onChange={onMotivoChange}
+            buttonClassName="px-4 py-3 text-base"
+          />
 
           {errorMessage ? (
             <div className="rounded-[16px] border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">

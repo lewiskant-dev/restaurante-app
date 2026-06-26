@@ -1,5 +1,6 @@
 'use client'
 
+import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import { fieldShell, ghostButton, primaryGradientButton, softPanel } from '@/components/ui/primitives'
 
 type ProfilePanelProps = {
@@ -64,6 +65,16 @@ export function ProfilePanel({
   onRestaurantChange,
 }: ProfilePanelProps) {
   if (!open) return null
+  const restaurantOptions = accessibleRestaurants.map((restaurant) => ({
+    value: restaurant.id,
+    label:
+      switchingRestaurant && activeRestaurantId === restaurant.id
+        ? `${restaurant.nombre} · cambiando...`
+        : restaurant.activo
+          ? restaurant.nombre
+          : `${restaurant.nombre} · inactivo`,
+    disabled: !restaurant.activo,
+  }))
 
   return (
     <div
@@ -130,22 +141,14 @@ export function ProfilePanel({
                 <div className="mt-1 text-sm font-medium text-slate-800">{restaurantScopeLabel}</div>
                 <div className="mt-1 text-xs text-slate-500">{restaurantScopeDetail}</div>
                 {accessibleRestaurants.length > 0 ? (
-                  <select
+                  <IntegratedSelect
                     value={activeRestaurantId}
-                    onChange={(e) => onRestaurantChange(e.target.value)}
+                    options={restaurantOptions}
+                    onChange={onRestaurantChange}
                     disabled={switchingRestaurant || accessibleRestaurants.length <= 1}
-                    className={`mt-3 w-full px-3 py-2.5 text-sm text-slate-800 outline-none disabled:opacity-60 ${fieldShell}`}
-                  >
-                    {accessibleRestaurants.map((restaurant) => (
-                      <option key={restaurant.id} value={restaurant.id} disabled={!restaurant.activo}>
-                        {switchingRestaurant && activeRestaurantId === restaurant.id
-                          ? `${restaurant.nombre} · cambiando...`
-                          : restaurant.activo
-                            ? restaurant.nombre
-                            : `${restaurant.nombre} · inactivo`}
-                      </option>
-                    ))}
-                  </select>
+                    className="mt-3"
+                    buttonClassName="px-3 py-2.5 text-sm disabled:opacity-60"
+                  />
                 ) : null}
               </div>
 

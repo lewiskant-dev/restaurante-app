@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import type { RecetaLineaForm } from '@/features/home/types'
 import { fieldShell, ghostButton, primaryGradientButton, softPanel } from '@/components/ui/primitives'
 import { formatEuro } from '@/features/home/utils'
@@ -62,6 +63,15 @@ export function RecetaModal({
 }: RecetaModalProps) {
   const productosById = useMemo(
     () => new Map(productos.map((producto) => [producto.id, producto])),
+    [productos]
+  )
+  const productoOptions = useMemo(
+    () => [
+      { value: '', label: 'Selecciona producto' },
+      ...productos
+        .filter((prod) => prod.activo !== false && !prod.archivado)
+        .map((prod) => ({ value: prod.id, label: prod.nombre })),
+    ],
     [productos]
   )
   const raciones = Number(recetaRaciones) > 0 ? Number(recetaRaciones) : 1
@@ -307,20 +317,14 @@ export function RecetaModal({
                 return (
                   <div key={index} className="rounded-[18px] border border-slate-200 bg-white p-3">
                     <div className="space-y-3">
-                      <select
+                      <IntegratedSelect
                         value={linea.producto_id}
-                        onChange={(e) => onLineaChange(index, 'producto_id', e.target.value)}
-                        className={`w-full px-4 py-3 text-base text-slate-900 ${fieldShell}`}
-                      >
-                        <option value="">Selecciona producto</option>
-                        {productos
-                          .filter((prod) => prod.activo !== false && !prod.archivado)
-                          .map((prod) => (
-                            <option key={prod.id} value={prod.id}>
-                              {prod.nombre}
-                            </option>
-                          ))}
-                      </select>
+                        options={productoOptions}
+                        onChange={(value) => onLineaChange(index, 'producto_id', value)}
+                        searchable
+                        buttonClassName="px-4 py-3 text-base"
+                        menuClassName="max-h-80"
+                      />
 
                       <input
                         type="number"

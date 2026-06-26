@@ -1,5 +1,6 @@
 'use client'
 
+import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import type { AlbaranLineaForm } from '@/features/home/types'
 import {
   fieldShell,
@@ -87,6 +88,19 @@ export function AlbaranFormTab({
   getOCRStatusLabel,
   getProductoNombre,
 }: AlbaranFormTabProps) {
+  const proveedorOptions = [
+    { value: '', label: 'Selecciona proveedor' },
+    ...proveedores
+      .filter((prov) => prov.activo !== false && !prov.archivado)
+      .map((prov) => ({ value: prov.id, label: prov.nombre })),
+  ]
+  const productoOptions = [
+    { value: '', label: 'Selecciona producto' },
+    ...productos
+      .filter((prod) => prod.activo !== false && !prod.archivado)
+      .map((prod) => ({ value: prod.id, label: prod.nombre })),
+  ]
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -131,20 +145,13 @@ export function AlbaranFormTab({
               ) : null}
             </div>
 
-            <select
+            <IntegratedSelect
               value={albaranProveedorId}
-              onChange={(e) => onProveedorIdChange(e.target.value)}
-              className={`w-full px-4 py-2.5 text-[13px] text-slate-900 ${fieldShell}`}
-            >
-              <option value="">Selecciona proveedor</option>
-              {proveedores
-                .filter((prov) => prov.activo !== false && !prov.archivado)
-                .map((prov) => (
-                  <option key={prov.id} value={prov.id}>
-                    {prov.nombre}
-                  </option>
-                ))}
-            </select>
+              options={proveedorOptions}
+              onChange={onProveedorIdChange}
+              searchable
+              buttonClassName="px-4 py-2.5 text-[13px]"
+            />
           </div>
 
           <input
@@ -225,20 +232,13 @@ export function AlbaranFormTab({
                 className={`p-3 ${softPanel}`}
               >
                 <div className="space-y-3">
-                  <select
+                  <IntegratedSelect
                     value={linea.producto_id}
-                    onChange={(e) => onSelectProducto(index, e.target.value, !!linea.nombre_detectado)}
-                    className={`w-full px-4 py-2.5 text-[13px] text-slate-900 ${fieldShell}`}
-                  >
-                    <option value="">Selecciona producto</option>
-                    {productos
-                      .filter((prod) => prod.activo !== false && !prod.archivado)
-                      .map((prod) => (
-                        <option key={prod.id} value={prod.id}>
-                          {prod.nombre}
-                        </option>
-                      ))}
-                  </select>
+                    options={productoOptions}
+                    onChange={(value) => onSelectProducto(index, value, !!linea.nombre_detectado)}
+                    searchable
+                    buttonClassName="px-4 py-2.5 text-[13px]"
+                  />
 
                   {linea.nombre_detectado ? (
                     <div className="space-y-2">
