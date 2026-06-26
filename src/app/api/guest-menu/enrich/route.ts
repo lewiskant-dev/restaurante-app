@@ -17,10 +17,24 @@ type EnrichRequest = {
     maridajes?: string
     etiquetas?: string
   }
-  platosCarta?: string[]
+  platosCarta?: Array<string | { nombre?: string; uso_maridaje?: number }>
 }
 
 const profileKeys = ['intensidad', 'fruta', 'cuerpo', 'madera', 'acidez', 'dulzor'] as const
+
+type PairingDish = {
+  nombre: string
+  uso_maridaje: number
+}
+
+function normalizePairingKey(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
 
 function normalizeRole(value: unknown): UserRole {
   const normalized = typeof value === 'string' ? value.trim().toLowerCase() : ''
@@ -93,20 +107,72 @@ function normalizeStringList(value: unknown) {
     .slice(0, 8)
 }
 
+function capitalizeFirst(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+
+  return `${trimmed.charAt(0).toLocaleUpperCase('es-ES')}${trimmed.slice(1)}`
+}
+
+function normalizeTasteNotes(value: unknown) {
+  return normalizeStringList(value).map(capitalizeFirst)
+}
+
 function normalizeOptionalString(value: unknown) {
   return String(value || '').trim()
 }
 
-function normalizeDishList(value: unknown) {
+function normalizeDishList(value: unknown): PairingDish[] {
   if (!Array.isArray(value)) return []
 
-  return Array.from(
-    new Set(
-      value
-        .map((item) => String(item || '').trim())
-        .filter(Boolean)
-    )
-  ).slice(0, 80)
+  const dishes = new Map<string, PairingDish>()
+
+  value.forEach((item) => {
+    const nombre =
+      item && typeof item === 'object'
+        ? String((item as Record<string, unknown>).nombre || '').trim()
+        : String(item || '').trim()
+    if (!nombre) return
+
+    const key = normalizePairingKey(nombre)
+    const usage =
+      item && typeof item === 'object'
+        ? Math.max(0, Number((item as Record<string, unknown>).uso_maridaje || 0) || 0)
+        : 0
+    const current = dishes.get(key)
+
+    if (!current || usage < current.uso_maridaje) {
+      dishes.set(key, { nombre, uso_maridaje: usage })
+    }
+  })
+
+  return Array.from(dishes.values()).slice(0, 80)
+}
+
+function formatDishPromptList(dishes: PairingDish[]) {
+  return dishes
+    .map((dish) => `${dish.nombre} (uso actual: ${dish.uso_maridaje})`)
+    .join(' | ')
+}
+
+function normalizePairingsFromAllowed(value: unknown, allowedDishes: PairingDish[]) {
+  const requested = normalizeStringList(value)
+
+  if (!allowedDishes.length) return requested.slice(0, 4)
+
+  const allowedByKey = new Map(
+    allowedDishes.map((dish) => [normalizePairingKey(dish.nombre), dish.nombre])
+  )
+  const accepted: string[] = []
+
+  requested.forEach((item) => {
+    const exact = allowedByKey.get(normalizePairingKey(item))
+    if (exact && !accepted.includes(exact)) {
+      accepted.push(exact)
+    }
+  })
+
+  return accepted.slice(0, 4)
 }
 
 function extractOutputText(raw: unknown) {
@@ -198,8 +264,8 @@ Vino:
 - Maridajes actuales: ${wine.maridajes || 'sin datos'}
 - Etiquetas actuales: ${wine.etiquetas || 'sin datos'}
 - Descripción actual: ${wine.descripcion || 'sin datos'}
-- Platos reales del restaurante disponibles para maridar: ${
-      platosCarta.length ? platosCarta.join(' | ') : 'sin platos configurados'
+- Platos reales del restaurante disponibles para maridar, con cuántas veces ya se han usado en otras fichas: ${
+      platosCarta.length ? formatDishPromptList(platosCarta) : 'sin platos configurados'
     }
 
 Formato exacto:
@@ -231,7 +297,10 @@ Reglas:
 - Usa notas de cata concretas y entendibles por cliente: frutos rojos, ciruela, vainilla, cacao, tabaco, cítricos, flores blancas, mineral, hierbas, especias, etc.
 - En "temperatura" devuelve el grado alcohólico aproximado o real si lo encuentras. Si no estás seguro, usa "".
 - No inventes una ficha exacta si no estás seguro: usa el estilo probable por bodega, DO, uva y tipo, pero evita afirmaciones demasiado específicas.
-- Si hay platos reales del restaurante disponibles, el array "maridajes" debe contener SOLO nombres exactos de esa lista. No propongas platos externos como sushi, carnes genéricas o quesos si no aparecen en la lista.
+- Si hay platos reales del restaurante disponibles, el array "maridajes" debe contener SOLO nombres exactos de esa lista. No propongas platos externos como sushi, carnes genéricas, quesos, arroces o pescados si no aparecen literalmente en la lista.
+- Devuelve entre 2 y 4 maridajes cuando haya suficientes platos reales compatibles. No devuelvas más de 4.
+- Para favorecer una carta variada, si varios platos encajan igual de bien, prioriza los que tengan menor "uso actual". Evita repetir siempre los platos más usados salvo que sean claramente la mejor opción para ese vino.
+- No uses un plato solo por variar: primero debe tener coherencia gastronómica con el vino.
 - Si la lista de platos reales está vacía, puedes devolver categorías gastronómicas generales.
 - Si ningún plato real encaja claramente, devuelve un array vacío en "maridajes".
 - Si hay duda, prioriza utilidad para cliente y coherencia gastronómica.
@@ -267,8 +336,8 @@ Reglas:
       uva: normalizeOptionalString(parsed.uva),
       descripcion: normalizeOptionalString(parsed.descripcion),
       perfil_vino: normalizeProfile(parsed.perfil_vino),
-      notas_cata: normalizeStringList(parsed.notas_cata),
-      maridajes: normalizeStringList(parsed.maridajes),
+      notas_cata: normalizeTasteNotes(parsed.notas_cata),
+      maridajes: normalizePairingsFromAllowed(parsed.maridajes, platosCarta),
       temperatura: normalizeOptionalString(parsed.temperatura),
     })
   } catch (error) {

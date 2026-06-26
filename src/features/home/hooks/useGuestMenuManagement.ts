@@ -95,6 +95,15 @@ function joinList(value: string[] | null | undefined) {
   return (value ?? []).join(', ')
 }
 
+function normalizePairingKey(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function normalizeStoredProfile(value: GuestWineProfile | null | undefined) {
   return value && Object.keys(value).length > 0 ? value : null
 }
@@ -387,10 +396,26 @@ export function useGuestMenuManagement({
     onError('')
 
     try {
+      const pairingUsage = new Map<string, number>()
+      guestMenuItems.forEach((item) => {
+        if (guestMenuEditId && item.id === guestMenuEditId) return
+
+        item.maridajes.forEach((pairing) => {
+          const key = normalizePairingKey(pairing)
+          if (!key) return
+          pairingUsage.set(key, (pairingUsage.get(key) ?? 0) + 1)
+        })
+      })
+
       const platosCarta = recetasCarta
         .filter((receta) => receta.activo !== false && receta.tipo_carta !== 'bebida')
-        .map((receta) => receta.nombre)
+        .map((receta) => receta.nombre.trim())
         .filter(Boolean)
+        .map((nombre) => ({
+          nombre,
+          uso_maridaje: pairingUsage.get(normalizePairingKey(nombre)) ?? 0,
+        }))
+        .sort((a, b) => a.uso_maridaje - b.uso_maridaje || a.nombre.localeCompare(b.nombre, 'es'))
         .slice(0, 80)
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
       if (sessionError) throw sessionError
