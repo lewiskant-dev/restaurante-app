@@ -711,6 +711,7 @@ export default function HomePage() {
     saveGuestMenuItem,
     enrichGuestMenuWithAI,
     toggleGuestMenuPublished,
+    deleteGuestMenuItem,
     resetGuestMenuForm,
     resetGuestMenuState,
   } = useGuestMenuManagement({
@@ -2117,6 +2118,7 @@ export default function HomePage() {
             onEnrichWithAI={() => void enrichGuestMenuWithAI(recetas)}
             onCancel={resetGuestMenuForm}
             onTogglePublished={(item) => void toggleGuestMenuPublished(item)}
+            onDelete={(item) => void deleteGuestMenuItem(item)}
             onFormChange={setGuestMenuFormField}
             onImageFileChange={setGuestMenuImageFile}
             onProductSelect={selectGuestMenuProduct}

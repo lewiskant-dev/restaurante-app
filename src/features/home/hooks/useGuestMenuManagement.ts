@@ -377,6 +377,40 @@ export function useGuestMenuManagement({
     await loadGuestMenuItems()
   }
 
+  async function deleteGuestMenuItem(item: GuestMenuAdminItem) {
+    if (!requirePermission('guest_menu_manage', 'No tienes permisos para gestionar la carta')) {
+      return
+    }
+
+    const confirmed = window.confirm(`¿Eliminar la ficha "${item.nombre}" de la carta? Esta acción no se puede deshacer.`)
+    if (!confirmed) return
+
+    const { error } = await supabase
+      .from('guest_menu_items')
+      .delete()
+      .eq('id', item.id)
+
+    if (error) {
+      onError(error.message)
+      return
+    }
+
+    await registrarAuditoria({
+      entidad: 'producto',
+      entidad_id: item.id,
+      accion: 'eliminar',
+      detalle: `Ficha de carta eliminada: ${item.nombre}`,
+      payload_antes: item,
+    })
+
+    if (guestMenuEditId === item.id) {
+      resetGuestMenuForm()
+    }
+
+    onToast('Ficha de carta eliminada')
+    await loadGuestMenuItems()
+  }
+
   async function enrichGuestMenuWithAI(recetasCarta: Receta[] = []) {
     if (!requirePermission('guest_menu_manage', 'No tienes permisos para gestionar la carta')) {
       return
@@ -507,6 +541,7 @@ export function useGuestMenuManagement({
     saveGuestMenuItem,
     enrichGuestMenuWithAI,
     toggleGuestMenuPublished,
+    deleteGuestMenuItem,
     resetGuestMenuForm,
     resetGuestMenuState,
   }

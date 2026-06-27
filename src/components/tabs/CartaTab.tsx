@@ -30,6 +30,7 @@ type CartaTabProps = {
   onEnrichWithAI: () => void
   onCancel: () => void
   onTogglePublished: (item: GuestMenuAdminItem) => void
+  onDelete: (item: GuestMenuAdminItem) => void
   onFormChange: <Key extends keyof GuestMenuForm>(field: Key, value: GuestMenuForm[Key]) => void
   onImageFileChange: (file: File | null) => void
   onProductSelect: (productId: string) => void
@@ -160,6 +161,7 @@ export function CartaTab({
   onEnrichWithAI,
   onCancel,
   onTogglePublished,
+  onDelete,
   onFormChange,
   onImageFileChange,
   onProductSelect,
@@ -787,6 +789,13 @@ export function CartaTab({
                     className={`px-4 py-2 text-[12px] ${ghostButton}`}
                   >
                     Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(item)}
+                    className="rounded-[16px] border border-red-100 bg-red-50 px-4 py-2 text-[12px] font-semibold text-red-600 shadow-[0_8px_18px_rgba(248,113,113,0.08)] transition hover:border-red-200 hover:bg-red-100"
+                  >
+                    Eliminar
                   </button>
                 </div>
               </div>
