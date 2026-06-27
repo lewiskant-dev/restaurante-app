@@ -94,6 +94,8 @@ function getGuestItemSearchValues(item: GuestMenuItem) {
   return [
     item.nombre,
     item.categoria,
+    item.tipo,
+    getGuestMenuKindLabel(item.tipo),
     item.descripcion,
     item.bodega,
     item.anada,

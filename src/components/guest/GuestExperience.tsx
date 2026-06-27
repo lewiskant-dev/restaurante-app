@@ -755,6 +755,39 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
             </button>
           </div>
 
+          <label className="mb-4 flex min-h-[58px] items-center gap-3 rounded-[24px] border border-black/8 bg-white/75 px-5 py-3 shadow-[0_12px_42px_rgba(36,27,18,0.06)] transition focus-within:border-[#151515]/30 focus-within:bg-white">
+            <svg
+              aria-hidden="true"
+              className="h-5 w-5 shrink-0 text-[#9a8060]"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <path
+                d="m20 20-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <input
+              type="search"
+              value={filters.query || ''}
+              onChange={(event) => updateFilter('query', event.target.value)}
+              placeholder="Buscar vino, bodega, D.O., uva o maridaje..."
+              className="min-w-0 flex-1 bg-transparent text-[16px] font-medium text-[#1a1714] outline-none placeholder:text-[#9b8f82]"
+            />
+            {filters.query ? (
+              <button
+                type="button"
+                onClick={() => updateFilter('query', '')}
+                className="rounded-full bg-[#f1eadf] px-3 py-1.5 text-[12px] font-semibold text-[#6f6256] transition hover:bg-[#e5dacb] hover:text-[#151515]"
+              >
+                Limpiar
+              </button>
+            ) : null}
+          </label>
+
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {filteredItems.map((item) => (
               <button
