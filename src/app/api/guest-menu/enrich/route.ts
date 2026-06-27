@@ -115,7 +115,30 @@ function capitalizeFirst(value: string) {
 }
 
 function normalizeTasteNotes(value: unknown) {
-  return normalizeStringList(value).map(capitalizeFirst)
+  const notes = new Map<string, string>()
+
+  normalizeStringList(value).forEach((item) => {
+    const note = capitalizeFirst(item)
+    const key = normalizePairingKey(note)
+    if (!key || notes.has(key)) return
+    notes.set(key, note)
+  })
+
+  return Array.from(notes.values()).slice(0, 6)
+}
+
+function isGenericTasteNoteSet(notes: string[]) {
+  const normalized = notes.map(normalizePairingKey)
+
+  if (normalized.length <= 3 && ['frutos rojos', 'vainilla', 'tabaco'].every((note) => normalized.includes(note))) {
+    return true
+  }
+
+  const genericHits = normalized.filter((note) =>
+    ['frutos rojos', 'fruta roja', 'vainilla', 'tabaco', 'especias', 'fruta negra'].includes(note)
+  ).length
+
+  return normalized.length > 0 && genericHits === normalized.length
 }
 
 function normalizeOptionalString(value: unknown) {
@@ -251,7 +274,8 @@ export async function POST(request: Request) {
 
     const prompt = `
 Actúa como sumiller profesional para una carta digital de restaurante.
-Busca información pública si hace falta y devuelve SOLO JSON válido, sin markdown.
+Debes buscar información pública real del vino si hay datos insuficientes o si hay dudas.
+Devuelve SOLO JSON válido, sin markdown.
 
 Vino:
 - Nombre: ${name}
@@ -283,18 +307,24 @@ Formato exacto:
     "acidez": { "value": 1, "label": "Baja" },
     "dulzor": { "value": 1, "label": "Seco" }
   },
-  "notas_cata": ["Frutos rojos", "Vainilla", "Tabaco"],
+  "notas_cata": ["nota aromática concreta 1", "nota aromática concreta 2", "nota aromática concreta 3"],
   "maridajes": ["Carnes a la brasa", "Quesos curados"],
   "temperatura": "14% vol."
 }
 
 Reglas:
+- Antes de responder, intenta identificar la ficha real del vino por nombre exacto, bodega, añada, D.O./origen y uvas. Busca especialmente fichas de bodega, distribuidor, tienda especializada o notas de cata públicas.
+- No devuelvas una ficha genérica por color del vino. Diferencia productor, añada, región y variedad.
 - Detecta "bodega", "anada", "origen" y "uva" cuando haya información pública razonable o cuando se pueda inferir claramente del nombre.
 - En "uva" usa nombres de variedades separados por coma: "Garnacha, Cariñena, Syrah".
 - En "origen" prioriza D.O. o región vitivinícola reconocible: "Priorat", "Ribera del Duero", "Catalunya", etc.
 - En "anada" devuelve solo el año si lo encuentras, por ejemplo "2024".
 - Cada value debe ser entero de 1 a 6.
-- Usa notas de cata concretas y entendibles por cliente: frutos rojos, ciruela, vainilla, cacao, tabaco, cítricos, flores blancas, mineral, hierbas, especias, etc.
+- En "notas_cata" devuelve entre 4 y 6 notas concretas, distintivas y útiles para cliente.
+- Evita notas comodín repetidas. No uses la combinación "Frutos rojos", "Vainilla", "Tabaco" salvo que una fuente real del vino lo respalde claramente.
+- Si no has encontrado ficha exacta, estima por uva, DO y elaboración, pero declara notas específicas probables: por ejemplo "Piel de limón", "Manzana verde", "Hinojo", "Salinidad", "Cassis", "Grafito", "Hierbas mediterráneas", "Cereza madura", "Pimienta blanca", "Flor de azahar". Evita quedarte en categorías vagas como "fruta", "especias" o "mineral" sin matiz.
+- Para blancos y espumosos prioriza notas como cítricos, fruta de hueso, manzana, pera, flores, hierbas, lías, salinidad o frutos secos si encaja. No uses frutos rojos/vainilla/tabaco por defecto.
+- Para tintos jóvenes prioriza fruta concreta, flor, hierbas, especias, balsámicos o mineralidad según región. Para crianzas/reservas usa madera, cacao, vainilla, tabaco o cuero solo si encaja por elaboración.
 - En "temperatura" devuelve el grado alcohólico aproximado o real si lo encuentras. Si no estás seguro, usa "".
 - No inventes una ficha exacta si no estás seguro: usa el estilo probable por bodega, DO, uva y tipo, pero evita afirmaciones demasiado específicas.
 - Si hay platos reales del restaurante disponibles, el array "maridajes" debe contener SOLO nombres exactos de esa lista. No propongas platos externos como sushi, carnes genéricas, quesos, arroces o pescados si no aparecen literalmente en la lista.
@@ -303,7 +333,7 @@ Reglas:
 - No uses un plato solo por variar: primero debe tener coherencia gastronómica con el vino.
 - Si la lista de platos reales está vacía, puedes devolver categorías gastronómicas generales.
 - Si ningún plato real encaja claramente, devuelve un array vacío en "maridajes".
-- Si hay duda, prioriza utilidad para cliente y coherencia gastronómica.
+- Si hay duda, prioriza utilidad para cliente, coherencia gastronómica y variedad real entre fichas de distintos vinos.
 - No incluyas texto fuera del JSON.
 `
 
@@ -327,7 +357,37 @@ Reglas:
     }
 
     const outputText = extractOutputText(raw)
-    const parsed = JSON.parse(extractJson(outputText)) as Record<string, unknown>
+    let parsed = JSON.parse(extractJson(outputText)) as Record<string, unknown>
+    let notasCata = normalizeTasteNotes(parsed.notas_cata)
+
+    if (isGenericTasteNoteSet(notasCata)) {
+      const retryPrompt = `${prompt}
+
+La respuesta anterior era demasiado genérica en "notas_cata". Rehaz SOLO el JSON.
+Obligatorio:
+- Consulta o razona con más detalle sobre el vino concreto.
+- No uses "Frutos rojos", "Vainilla" y "Tabaco" juntos.
+- Devuelve 4-6 notas más específicas y diferenciadas para este vino concreto.`
+
+      let retryResponse = await requestWineProfile({ apiKey, prompt: retryPrompt, toolType: 'web_search_preview' })
+      let retryRaw = await retryResponse.json()
+
+      if (!retryResponse.ok && /web_search_preview|tool/i.test(JSON.stringify(retryRaw))) {
+        retryResponse = await requestWineProfile({ apiKey, prompt: retryPrompt, toolType: 'web_search' })
+        retryRaw = await retryResponse.json()
+      }
+
+      if (retryResponse.ok) {
+        const retryOutputText = extractOutputText(retryRaw)
+        const retryParsed = JSON.parse(extractJson(retryOutputText)) as Record<string, unknown>
+        const retryNotes = normalizeTasteNotes(retryParsed.notas_cata)
+
+        if (!isGenericTasteNoteSet(retryNotes)) {
+          parsed = retryParsed
+          notasCata = retryNotes
+        }
+      }
+    }
 
     return NextResponse.json({
       bodega: normalizeOptionalString(parsed.bodega),
@@ -336,7 +396,7 @@ Reglas:
       uva: normalizeOptionalString(parsed.uva),
       descripcion: normalizeOptionalString(parsed.descripcion),
       perfil_vino: normalizeProfile(parsed.perfil_vino),
-      notas_cata: normalizeTasteNotes(parsed.notas_cata),
+      notas_cata: notasCata,
       maridajes: normalizePairingsFromAllowed(parsed.maridajes, platosCarta),
       temperatura: normalizeOptionalString(parsed.temperatura),
     })
