@@ -37,6 +37,7 @@ type SommelierPreferences = {
   cuerpo: SommelierScale
   madera: SommelierScale
   acidez: SommelierScale
+  fruta: SommelierScale
   dulzor: SommelierSweetness
   origen: string
   maxPrice: number | null
@@ -51,6 +52,7 @@ const initialSommelierPreferences: SommelierPreferences = {
   cuerpo: '',
   madera: '',
   acidez: '',
+  fruta: '',
   dulzor: '',
   origen: '',
   maxPrice: null,
@@ -124,17 +126,20 @@ function scoreProfileMetric(current: number | undefined, target: number | null) 
   return Math.max(0, 6 - Math.abs(normalizedCurrent - target))
 }
 
+function getPriceSliderBounds(service: SommelierService) {
+  if (service === 'copa') {
+    return { min: 3, max: 16, step: 1, label: 'Precio máximo por copa' }
+  }
+
+  return { min: 15, max: 120, step: 5, label: 'Precio máximo botella' }
+}
+
 function normalizeGuestText(value: string | null | undefined) {
   return (value || '')
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .trim()
-}
-
-function includesAnyGuestText(values: Array<string | null | undefined>, terms: string[]) {
-  const haystack = values.map((value) => normalizeGuestText(value)).join(' ')
-  return terms.some((term) => haystack.includes(normalizeGuestText(term)))
 }
 
 function getSurpriseScore(item: GuestMenuItem, wines: GuestMenuItem[]) {
@@ -220,18 +225,14 @@ function scoreSommelierItem(item: GuestMenuItem, preferences: SommelierPreferenc
       ? 12
       : -4
   } else if (preferences.comida) {
-    const termsByGroup: Record<Exclude<SommelierFoodGroup, ''>, string[]> = {
-      carne: ['carne', 'entrecot', 'pollo', 'entrana', 'brasa', 'ternera', 'cerdo'],
-      pescado: ['pescado', 'lubina', 'lenguado', 'marisco', 'bacalao', 'atun'],
-      verduras: ['verdura', 'verduras', 'ensalada', 'alcachofa', 'berenjena', 'tomate'],
-    }
-    if (includesAnyGuestText(item.maridajes, termsByGroup[preferences.comida])) score += 6
+    if (item.maridajes.some((pairing) => getPairingFoodGroup(pairing) === preferences.comida)) score += 6
   }
 
   score += scoreProfileMetric(item.perfil_vino?.intensidad?.value, getTargetScaleValue(preferences.intensidad))
   score += scoreProfileMetric(item.perfil_vino?.cuerpo?.value, getTargetScaleValue(preferences.cuerpo))
   score += scoreProfileMetric(item.perfil_vino?.madera?.value, getTargetScaleValue(preferences.madera))
   score += scoreProfileMetric(item.perfil_vino?.acidez?.value, getTargetScaleValue(preferences.acidez))
+  score += scoreProfileMetric(item.perfil_vino?.fruta?.value, getTargetScaleValue(preferences.fruta))
   score += scoreProfileMetric(item.perfil_vino?.dulzor?.value, getTargetSweetnessValue(preferences.dulzor))
 
   return score
@@ -321,15 +322,89 @@ function getSommelierRecommendations(items: GuestMenuItem[], preferences: Sommel
 
 function getPairingFoodGroup(value: string): SommelierFoodGroup {
   const normalized = normalizeGuestText(value)
-  if (['carne', 'entrecot', 'pollo', 'entrana', 'entraña', 'brasa', 'ternera', 'cerdo'].some((term) => normalized.includes(normalizeGuestText(term)))) {
-    return 'carne'
-  }
-  if (['pescado', 'lubina', 'lenguado', 'marisco', 'bacalao', 'atun', 'atún'].some((term) => normalized.includes(normalizeGuestText(term)))) {
+
+  const fishTerms = [
+    'pescado',
+    'lubina',
+    'lenguado',
+    'marisco',
+    'bacalao',
+    'atun',
+    'atún',
+    'salmon',
+    'salmón',
+    'merluza',
+    'rape',
+    'dorada',
+    'rodaballo',
+    'sardina',
+    'anchoa',
+    'boqueron',
+    'boquerón',
+    'gamba',
+    'langostino',
+    'calamar',
+    'sepia',
+    'pulpo',
+    'mejillon',
+    'mejillón',
+    'ostra',
+    'almeja',
+  ]
+  const meatTerms = [
+    'carne',
+    'entrecot',
+    'pollo',
+    'entrana',
+    'entraña',
+    'ternera',
+    'cerdo',
+    'cordero',
+    'butifarra',
+    'conejo',
+    'carrillera',
+    'chuleta',
+    'chuleton',
+    'chuletón',
+    'solomillo',
+    'secreto',
+    'presa',
+    'costilla',
+    'hamburguesa',
+    'pato',
+    'foie',
+  ]
+  const vegetableTerms = [
+    'verdura',
+    'verduras',
+    'ensalada',
+    'alcachofa',
+    'berenjena',
+    'tomate',
+    'setas',
+    'seta',
+    'esparrago',
+    'espárrago',
+    'calabacin',
+    'calabacín',
+    'pimiento',
+    'puerro',
+    'coliflor',
+    'zanahoria',
+  ]
+
+  if (fishTerms.some((term) => normalized.includes(normalizeGuestText(term)))) {
     return 'pescado'
   }
-  if (['verdura', 'verduras', 'ensalada', 'alcachofa', 'berenjena', 'tomate'].some((term) => normalized.includes(normalizeGuestText(term)))) {
+
+  if (meatTerms.some((term) => normalized.includes(normalizeGuestText(term)))) {
+    return 'carne'
+  }
+
+  if (vegetableTerms.some((term) => normalized.includes(normalizeGuestText(term)))) {
     return 'verduras'
   }
+
   return ''
 }
 
@@ -357,6 +432,7 @@ function hasSommelierPreferences(preferences: SommelierPreferences) {
       preferences.cuerpo ||
       preferences.madera ||
       preferences.acidez ||
+      preferences.fruta ||
       preferences.dulzor ||
       preferences.origen ||
       preferences.maxPrice !== null
@@ -527,21 +603,8 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
     ],
     [options.origenes]
   )
-  const priceOptions = useMemo(
-    () =>
-      sommelierPreferences.servicio === 'copa'
-        ? [
-            { value: '', label: 'Cualquier precio' },
-            { value: '5', label: 'Menos de 5 €' },
-            { value: '8', label: 'Menos de 8 €' },
-            { value: '12', label: 'Menos de 12 €' },
-          ]
-        : [
-            { value: '', label: 'Cualquier precio' },
-            { value: '25', label: 'Menos de 25 €' },
-            { value: '40', label: 'Menos de 40 €' },
-            { value: '70', label: 'Menos de 70 €' },
-          ],
+  const priceSliderBounds = useMemo(
+    () => getPriceSliderBounds(sommelierPreferences.servicio),
     [sommelierPreferences.servicio]
   )
   const featuredItem = useMemo(
@@ -585,7 +648,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
       ...current,
       [key]: value,
       ...(key === 'servicio' && value === 'copa'
-        ? { tipo: '', origen: '', madera: '', dulzor: '' }
+        ? { tipo: '', origen: '', madera: '', acidez: '' }
         : null),
       ...(key === 'servicio' && value === 'botella'
         ? { comida: '', plato: '' }
@@ -624,7 +687,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
   return (
     <main className="min-h-screen bg-[#f5f2eb] text-[#141414]">
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-5 py-6 sm:px-8 lg:px-10">
-        <header className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <header className="grid gap-5 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
           <div className="flex items-center gap-3">
             <NexoBrandMark className="h-8 w-auto text-[#141414]" />
             <div>
@@ -637,7 +700,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
             </div>
           </div>
 
-          <div className="flex w-full max-w-md rounded-full border border-[#d5c5ae] bg-white/56 p-1.5 shadow-[0_16px_38px_rgba(36,27,18,0.08)] lg:mx-auto">
+          <div className="flex w-full max-w-md rounded-full border border-[#d5c5ae] bg-white/56 p-1.5 shadow-[0_16px_38px_rgba(36,27,18,0.08)] lg:w-[480px]">
             {[
               { value: 'copa' as const, label: 'Copas' },
               { value: 'botella' as const, label: 'Botellas' },
@@ -677,6 +740,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
               </button>
             ))}
           </div>
+          <div className="hidden lg:block" aria-hidden="true" />
         </header>
 
         <section className="mt-10 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
@@ -693,7 +757,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                 <button
                   type="button"
                   onClick={surpriseSommelier}
-                  className="w-full rounded-[15px] border border-[#d8c3a5]/40 bg-[#f5efe5] px-3 py-2.5 text-left text-[12px] font-semibold text-[#151515] transition active:scale-[0.99] hover:bg-white"
+                  className="w-full rounded-[15px] border border-white/10 bg-white/8 px-3 py-2.5 text-left text-[12px] font-semibold text-white/72 transition active:scale-[0.99] hover:bg-white/14 hover:text-white"
                 >
                   Sorpréndeme
                 </button>
@@ -717,16 +781,28 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                   ) : null}
                   <div className="grid gap-3 sm:grid-cols-2">
                     <SommelierQuestion
-                      label="Frescura"
-                      value={sommelierPreferences.acidez}
-                      options={scaleOptions}
-                      onChange={(value) => updateSommelierPreference('acidez', value as SommelierScale)}
-                    />
-                    <SommelierQuestion
-                      label="Fruta"
+                      label="Intensidad"
                       value={sommelierPreferences.intensidad}
                       options={scaleOptions}
                       onChange={(value) => updateSommelierPreference('intensidad', value as SommelierScale)}
+                    />
+                    <SommelierQuestion
+                      label="Dulzor"
+                      value={sommelierPreferences.dulzor}
+                      options={sweetnessOptions}
+                      onChange={(value) => updateSommelierPreference('dulzor', value as SommelierSweetness)}
+                    />
+                    <SommelierQuestion
+                      label="Cuerpo"
+                      value={sommelierPreferences.cuerpo}
+                      options={scaleOptions}
+                      onChange={(value) => updateSommelierPreference('cuerpo', value as SommelierScale)}
+                    />
+                    <SommelierQuestion
+                      label="Fruta"
+                      value={sommelierPreferences.fruta}
+                      options={scaleOptions}
+                      onChange={(value) => updateSommelierPreference('fruta', value as SommelierScale)}
                     />
                   </div>
                 </>
@@ -799,13 +875,14 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
               )}
 
               <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                <SommelierDropdown
-                  label="Precio"
-                  value={sommelierPreferences.maxPrice === null ? '' : String(sommelierPreferences.maxPrice)}
-                  options={priceOptions}
-                  onChange={(value) =>
-                    updateSommelierPreference('maxPrice', value ? Number(value) : null)
-                  }
+                <SommelierPriceSlider
+                  label={priceSliderBounds.label}
+                  value={sommelierPreferences.maxPrice ?? priceSliderBounds.max}
+                  min={priceSliderBounds.min}
+                  max={priceSliderBounds.max}
+                  step={priceSliderBounds.step}
+                  isUnset={sommelierPreferences.maxPrice === null}
+                  onChange={(value) => updateSommelierPreference('maxPrice', value)}
                 />
 
                 <button
@@ -827,16 +904,6 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                   {featuredItem ? recommendationTitle : 'Sin resultados'}
                 </h2>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  resetSommelier()
-                  resetFilters()
-                }}
-                className="rounded-full border border-black/10 bg-white px-4 py-2 text-[12px] font-semibold text-[#5e5348] transition hover:bg-[#f7f1e8]"
-              >
-                Limpiar
-              </button>
             </div>
 
             {featuredItem ? (
@@ -1427,6 +1494,50 @@ function BottleImage({
         alt={alt}
         className={`h-full max-h-full w-full max-w-full object-contain object-center ${imageClassName}`}
       />
+    </div>
+  )
+}
+
+function SommelierPriceSlider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  isUnset,
+  onChange,
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  step: number
+  isUnset: boolean
+  onChange: (value: number) => void
+}) {
+  return (
+    <div className="rounded-[17px] border border-white/10 bg-white/8 px-3 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/42">
+          {label}
+        </div>
+        <div className="text-[12px] font-semibold text-white">
+          {isUnset ? 'Sin límite' : `Hasta ${formatPrice(value)}`}
+        </div>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onChange(Number(event.currentTarget.value))}
+        className="mt-3 h-2 w-full cursor-pointer accent-[#d8c3a5]"
+      />
+      <div className="mt-1.5 flex items-center justify-between text-[10px] font-semibold text-white/42">
+        <span>{formatPrice(min)}</span>
+        <span>{formatPrice(max)}</span>
+      </div>
     </div>
   )
 }
