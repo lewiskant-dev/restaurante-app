@@ -43,7 +43,7 @@ type SommelierPreferences = {
 }
 
 const initialSommelierPreferences: SommelierPreferences = {
-  servicio: '',
+  servicio: 'botella',
   tipo: '',
   comida: '',
   plato: '',
@@ -61,11 +61,6 @@ const wineTypeOptions: Array<{ value: SommelierWineType; label: string }> = [
   { value: 'vino_blanco', label: 'Blanco' },
   { value: 'vino_espumoso', label: 'Espumoso' },
   { value: 'vino_rosado', label: 'Rosado' },
-]
-
-const serviceOptions: Array<{ value: SommelierService; label: string }> = [
-  { value: 'botella', label: 'Una botella' },
-  { value: 'copa', label: 'Una copa' },
 ]
 
 const foodGroupOptions: Array<{ value: SommelierFoodGroup; label: string }> = [
@@ -100,7 +95,7 @@ function getGuestDisplayPrice(item: GuestMenuItem, service: SommelierService = '
 }
 
 function getGuestDisplayPriceLabel(item: GuestMenuItem, service: SommelierService = '') {
-  if (service === 'copa' && item.disponible_copa) return `${formatPrice(item.precio_copa)} copa`
+  if (service === 'copa' && item.disponible_copa) return formatPrice(item.precio_copa)
   return formatPrice(item.precio)
 }
 
@@ -355,8 +350,7 @@ function getPairingOptionsByFoodGroup(items: GuestMenuItem[], group: SommelierFo
 
 function hasSommelierPreferences(preferences: SommelierPreferences) {
   return Boolean(
-    preferences.servicio ||
-      preferences.tipo ||
+    preferences.tipo ||
       preferences.comida ||
       preferences.plato ||
       preferences.intensidad ||
@@ -498,19 +492,34 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
   const [selectedItem, setSelectedItem] = useState<GuestMenuItem | null>(null)
 
   const options = useMemo(() => getGuestMenuFilterOptions(items), [items])
-  const filteredItems = useMemo(() => filterGuestMenuItems(items, filters), [filters, items])
+  const serviceMode = sommelierPreferences.servicio === 'copa' ? 'copa' : 'botella'
+  const filteredItems = useMemo(() => {
+    const nextItems = filterGuestMenuItems(items, filters)
+    if (serviceMode === 'copa') {
+      return nextItems.filter((item) => isWineKind(item.tipo) && item.disponible_copa)
+    }
+
+    return nextItems
+  }, [filters, items, serviceMode])
   const sommelierDishOptions = useMemo(
     () => getPairingOptionsByFoodGroup(items, sommelierPreferences.comida),
     [items, sommelierPreferences.comida]
   )
+  const sommelierItems = useMemo(
+    () =>
+      serviceMode === 'copa'
+        ? items.filter((item) => isWineKind(item.tipo) && item.disponible_copa)
+        : items,
+    [items, serviceMode]
+  )
   const sommelierRecommendations = useMemo(() => {
-    if (sommelierMode === 'surprise') return getSurpriseRecommendations(items, recommendationSeed)
+    if (sommelierMode === 'surprise') return getSurpriseRecommendations(sommelierItems, recommendationSeed)
     if (sommelierMode === 'initial' && !hasSommelierPreferences(sommelierPreferences)) {
-      return getOpeningRecommendations(items, recommendationSeed)
+      return getOpeningRecommendations(sommelierItems, recommendationSeed)
     }
 
-    return getSommelierRecommendations(items, sommelierPreferences)
-  }, [items, recommendationSeed, sommelierMode, sommelierPreferences])
+    return getSommelierRecommendations(sommelierItems, sommelierPreferences)
+  }, [recommendationSeed, sommelierItems, sommelierMode, sommelierPreferences])
   const regionOptions = useMemo(
     () => [
       { value: '', label: 'Cualquier región / D.O.' },
@@ -585,22 +594,37 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
     }))
   }
 
+  function selectServiceMode(nextService: Exclude<SommelierService, ''>) {
+    setSommelierMode('initial')
+    setRecommendationSeed(getNextRecommendationSeed())
+    setSommelierPreferences({
+      ...initialSommelierPreferences,
+      servicio: nextService,
+    })
+  }
+
   function resetSommelier() {
     setSommelierMode('initial')
     setRecommendationSeed(getNextRecommendationSeed())
-    setSommelierPreferences(initialSommelierPreferences)
+    setSommelierPreferences({
+      ...initialSommelierPreferences,
+      servicio: serviceMode,
+    })
   }
 
   function surpriseSommelier() {
     setSommelierMode('surprise')
-    setSommelierPreferences(initialSommelierPreferences)
+    setSommelierPreferences({
+      ...initialSommelierPreferences,
+      servicio: serviceMode,
+    })
     setRecommendationSeed((current) => current + 1)
   }
 
   return (
     <main className="min-h-screen bg-[#f5f2eb] text-[#141414]">
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-5 py-6 sm:px-8 lg:px-10">
-        <header className="flex items-center justify-between gap-4">
+        <header className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <NexoBrandMark className="h-8 w-auto text-[#141414]" />
             <div>
@@ -611,6 +635,47 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                 {restaurantName}
               </h1>
             </div>
+          </div>
+
+          <div className="flex w-full max-w-md rounded-full border border-[#d5c5ae] bg-white/56 p-1.5 shadow-[0_16px_38px_rgba(36,27,18,0.08)] lg:mx-auto">
+            {[
+              { value: 'copa' as const, label: 'Copas' },
+              { value: 'botella' as const, label: 'Botellas' },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => selectServiceMode(option.value)}
+                className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-full px-5 text-[12px] font-bold uppercase tracking-[0.18em] transition ${
+                  serviceMode === option.value
+                    ? 'bg-[#151515] text-white shadow-[0_12px_28px_rgba(0,0,0,0.18)]'
+                    : 'text-[#9a8060] hover:bg-white/72 hover:text-[#151515]'
+                }`}
+              >
+                {option.value === 'copa' ? (
+                  <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M8 3h8l-1 8a3 3 0 0 1-6 0L8 3Zm4 11v5m-3 2h6"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M10 3h4v4l1.5 2.5V20a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1V9.5L10 7V3Zm-.5 9h5"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+                {option.label}
+              </button>
+            ))}
           </div>
         </header>
 
@@ -624,13 +689,6 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
             </h2>
 
             <div className="mt-7 space-y-3">
-              <SommelierQuestion
-                label="¿Qué te apetece beber?"
-                value={sommelierPreferences.servicio}
-                options={serviceOptions}
-                onChange={(value) => updateSommelierPreference('servicio', value as SommelierService)}
-              />
-
               <div>
                 <button
                   type="button"
@@ -807,8 +865,20 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                           {featuredItem.nombre}
                         </h3>
                       </div>
-                      <div className="rounded-full bg-white px-4 py-2 text-[15px] font-bold text-[#151515]">
-                        {getGuestDisplayPriceLabel(featuredItem, sommelierPreferences.servicio)}
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        {serviceMode === 'copa' && featuredItem.disponible_copa ? (
+                          <span className="rounded-full bg-[#b99c76] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white">
+                            Por copa
+                          </span>
+                        ) : null}
+                        <div className="rounded-full bg-white px-4 py-2 text-[15px] font-bold text-[#151515]">
+                          {getGuestDisplayPriceLabel(featuredItem, serviceMode)}
+                        </div>
+                        {serviceMode === 'botella' && featuredItem.disponible_copa && featuredItem.precio_copa !== null ? (
+                          <span className="text-[11px] font-semibold text-[#9a8060]">
+                            Copa {formatPrice(featuredItem.precio_copa)}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                     <p className="mt-4 text-[14px] leading-6 text-[#6a5e52]">
@@ -845,7 +915,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                             {item.nombre}
                           </span>
                           <span className="shrink-0 text-[12px] font-bold text-[#9a8060]">
-                            {getGuestDisplayPriceLabel(item, sommelierPreferences.servicio)}
+                            {getGuestDisplayPriceLabel(item, serviceMode)}
                           </span>
                         </button>
                       ))}
@@ -864,7 +934,12 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
         <section className="mt-6">
           <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <h2 className="text-[1.25rem] font-semibold tracking-tight">
-              {filteredItems.length} resultado{filteredItems.length === 1 ? '' : 's'}
+              {filteredItems.length}{' '}
+              {serviceMode === 'copa'
+                ? `vino${filteredItems.length === 1 ? '' : 's'} por copa disponible${
+                    filteredItems.length === 1 ? '' : 's'
+                  }`
+                : `resultado${filteredItems.length === 1 ? '' : 's'}`}
             </h2>
           </div>
 
