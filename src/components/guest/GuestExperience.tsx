@@ -24,10 +24,15 @@ type GuestExperienceProps = {
 type SommelierScale = '' | 'low' | 'medium' | 'high'
 type SommelierSweetness = '' | 'dry' | 'balanced' | 'sweet'
 type SommelierWineType = GuestMenuKind | ''
+type SommelierService = '' | 'botella' | 'copa'
+type SommelierFoodGroup = '' | 'carne' | 'pescado' | 'verduras'
 type SommelierMode = 'initial' | 'guided' | 'surprise'
 
 type SommelierPreferences = {
+  servicio: SommelierService
   tipo: SommelierWineType
+  comida: SommelierFoodGroup
+  plato: string
   intensidad: SommelierScale
   cuerpo: SommelierScale
   madera: SommelierScale
@@ -38,7 +43,10 @@ type SommelierPreferences = {
 }
 
 const initialSommelierPreferences: SommelierPreferences = {
+  servicio: '',
   tipo: '',
+  comida: '',
+  plato: '',
   intensidad: '',
   cuerpo: '',
   madera: '',
@@ -53,6 +61,17 @@ const wineTypeOptions: Array<{ value: SommelierWineType; label: string }> = [
   { value: 'vino_blanco', label: 'Blanco' },
   { value: 'vino_espumoso', label: 'Espumoso' },
   { value: 'vino_rosado', label: 'Rosado' },
+]
+
+const serviceOptions: Array<{ value: SommelierService; label: string }> = [
+  { value: 'botella', label: 'Una botella' },
+  { value: 'copa', label: 'Una copa' },
+]
+
+const foodGroupOptions: Array<{ value: SommelierFoodGroup; label: string }> = [
+  { value: 'carne', label: 'Carne' },
+  { value: 'pescado', label: 'Pescado' },
+  { value: 'verduras', label: 'Verduras' },
 ]
 
 const scaleOptions: Array<{ value: SommelierScale; label: string }> = [
@@ -73,6 +92,16 @@ function formatPrice(value: number | null) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })} €`
+}
+
+function getGuestDisplayPrice(item: GuestMenuItem, service: SommelierService = '') {
+  if (service === 'copa' && item.disponible_copa) return item.precio_copa
+  return item.precio
+}
+
+function getGuestDisplayPriceLabel(item: GuestMenuItem, service: SommelierService = '') {
+  if (service === 'copa' && item.disponible_copa) return `${formatPrice(item.precio_copa)} copa`
+  return formatPrice(item.precio)
 }
 
 function getKindLabel(value: GuestMenuKind) {
@@ -106,6 +135,11 @@ function normalizeGuestText(value: string | null | undefined) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .trim()
+}
+
+function includesAnyGuestText(values: Array<string | null | undefined>, terms: string[]) {
+  const haystack = values.map((value) => normalizeGuestText(value)).join(' ')
+  return terms.some((term) => haystack.includes(normalizeGuestText(term)))
 }
 
 function getSurpriseScore(item: GuestMenuItem, wines: GuestMenuItem[]) {
@@ -165,6 +199,11 @@ function scoreSommelierItem(item: GuestMenuItem, preferences: SommelierPreferenc
 
   let score = item.destacado ? 1 : 0
 
+  if (preferences.servicio === 'copa') {
+    if (!item.disponible_copa) return -100
+    score += 8
+  }
+
   if (preferences.tipo) {
     if (item.tipo === preferences.tipo) score += 10
     else if (item.tipo === 'vino') score += 4
@@ -172,12 +211,26 @@ function scoreSommelierItem(item: GuestMenuItem, preferences: SommelierPreferenc
   }
 
   if (preferences.maxPrice !== null) {
-    if (item.precio !== null && item.precio <= preferences.maxPrice) score += 5
-    if (item.precio !== null && item.precio > preferences.maxPrice) score -= 12
+    const displayPrice = getGuestDisplayPrice(item, preferences.servicio)
+    if (displayPrice !== null && displayPrice <= preferences.maxPrice) score += 5
+    if (displayPrice !== null && displayPrice > preferences.maxPrice) score -= 12
   }
 
   if (preferences.origen) {
     score += item.origen === preferences.origen ? 8 : -4
+  }
+
+  if (preferences.plato) {
+    score += item.maridajes.some((pairing) => normalizeGuestText(pairing) === normalizeGuestText(preferences.plato))
+      ? 12
+      : -4
+  } else if (preferences.comida) {
+    const termsByGroup: Record<Exclude<SommelierFoodGroup, ''>, string[]> = {
+      carne: ['carne', 'entrecot', 'pollo', 'entrana', 'brasa', 'ternera', 'cerdo'],
+      pescado: ['pescado', 'lubina', 'lenguado', 'marisco', 'bacalao', 'atun'],
+      verduras: ['verdura', 'verduras', 'ensalada', 'alcachofa', 'berenjena', 'tomate'],
+    }
+    if (includesAnyGuestText(item.maridajes, termsByGroup[preferences.comida])) score += 6
   }
 
   score += scoreProfileMetric(item.perfil_vino?.intensidad?.value, getTargetScaleValue(preferences.intensidad))
@@ -271,9 +324,41 @@ function getSommelierRecommendations(items: GuestMenuItem[], preferences: Sommel
   })
 }
 
+function getPairingFoodGroup(value: string): SommelierFoodGroup {
+  const normalized = normalizeGuestText(value)
+  if (['carne', 'entrecot', 'pollo', 'entrana', 'entraña', 'brasa', 'ternera', 'cerdo'].some((term) => normalized.includes(normalizeGuestText(term)))) {
+    return 'carne'
+  }
+  if (['pescado', 'lubina', 'lenguado', 'marisco', 'bacalao', 'atun', 'atún'].some((term) => normalized.includes(normalizeGuestText(term)))) {
+    return 'pescado'
+  }
+  if (['verdura', 'verduras', 'ensalada', 'alcachofa', 'berenjena', 'tomate'].some((term) => normalized.includes(normalizeGuestText(term)))) {
+    return 'verduras'
+  }
+  return ''
+}
+
+function getPairingOptionsByFoodGroup(items: GuestMenuItem[], group: SommelierFoodGroup) {
+  if (!group) return []
+
+  const pairings = new Map<string, string>()
+  items.forEach((item) => {
+    item.maridajes.forEach((pairing) => {
+      const trimmed = pairing.trim()
+      if (!trimmed || getPairingFoodGroup(trimmed) !== group) return
+      pairings.set(normalizeGuestText(trimmed), trimmed)
+    })
+  })
+
+  return Array.from(pairings.values()).sort((a, b) => a.localeCompare(b, 'es')).slice(0, 8)
+}
+
 function hasSommelierPreferences(preferences: SommelierPreferences) {
   return Boolean(
-    preferences.tipo ||
+    preferences.servicio ||
+      preferences.tipo ||
+      preferences.comida ||
+      preferences.plato ||
       preferences.intensidad ||
       preferences.cuerpo ||
       preferences.madera ||
@@ -399,6 +484,8 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
     maridaje: '',
     uva: '',
     origen: '',
+    denominacion: '',
+    region: '',
     bodega: '',
     categoria: '',
     tipoCarta: '',
@@ -412,6 +499,10 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
 
   const options = useMemo(() => getGuestMenuFilterOptions(items), [items])
   const filteredItems = useMemo(() => filterGuestMenuItems(items, filters), [filters, items])
+  const sommelierDishOptions = useMemo(
+    () => getPairingOptionsByFoodGroup(items, sommelierPreferences.comida),
+    [items, sommelierPreferences.comida]
+  )
   const sommelierRecommendations = useMemo(() => {
     if (sommelierMode === 'surprise') return getSurpriseRecommendations(items, recommendationSeed)
     if (sommelierMode === 'initial' && !hasSommelierPreferences(sommelierPreferences)) {
@@ -428,13 +519,21 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
     [options.origenes]
   )
   const priceOptions = useMemo(
-    () => [
-      { value: '', label: 'Cualquier precio' },
-      { value: '25', label: 'Menos de 25 €' },
-      { value: '40', label: 'Menos de 40 €' },
-      { value: '70', label: 'Menos de 70 €' },
-    ],
-    []
+    () =>
+      sommelierPreferences.servicio === 'copa'
+        ? [
+            { value: '', label: 'Cualquier precio' },
+            { value: '5', label: 'Menos de 5 €' },
+            { value: '8', label: 'Menos de 8 €' },
+            { value: '12', label: 'Menos de 12 €' },
+          ]
+        : [
+            { value: '', label: 'Cualquier precio' },
+            { value: '25', label: 'Menos de 25 €' },
+            { value: '40', label: 'Menos de 40 €' },
+            { value: '70', label: 'Menos de 70 €' },
+          ],
+    [sommelierPreferences.servicio]
   )
   const featuredItem = useMemo(
     () => sommelierRecommendations[0] ?? filteredItems[0],
@@ -460,6 +559,8 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
       maridaje: '',
       uva: '',
       origen: '',
+      denominacion: '',
+      region: '',
       bodega: '',
       categoria: '',
       tipoCarta: '',
@@ -471,7 +572,17 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
     value: SommelierPreferences[Key]
   ) {
     setSommelierMode('guided')
-    setSommelierPreferences((current) => ({ ...current, [key]: value }))
+    setSommelierPreferences((current) => ({
+      ...current,
+      [key]: value,
+      ...(key === 'servicio' && value === 'copa'
+        ? { tipo: '', origen: '', madera: '', dulzor: '' }
+        : null),
+      ...(key === 'servicio' && value === 'botella'
+        ? { comida: '', plato: '' }
+        : null),
+      ...(key === 'comida' ? { plato: '' } : null),
+    }))
   }
 
   function resetSommelier() {
@@ -513,76 +624,121 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
             </h2>
 
             <div className="mt-7 space-y-3">
+              <SommelierQuestion
+                label="¿Qué te apetece beber?"
+                value={sommelierPreferences.servicio}
+                options={serviceOptions}
+                onChange={(value) => updateSommelierPreference('servicio', value as SommelierService)}
+              />
+
               <div>
-                <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/42">
-                  ¿Qué tipo prefieres?
-                </div>
-                <div className="grid gap-1.5">
-                  <button
-                    type="button"
-                    onClick={surpriseSommelier}
-                    className="w-full rounded-[15px] border border-[#d8c3a5]/40 bg-[#f5efe5] px-3 py-2.5 text-left text-[12px] font-semibold text-[#151515] transition active:scale-[0.99] hover:bg-white"
-                  >
-                    Sorpréndeme
-                  </button>
-                  {wineTypeOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => updateSommelierPreference('tipo', option.value)}
-                      className={`rounded-[15px] px-3 py-2.5 text-left text-[12px] font-semibold transition ${
-                        sommelierPreferences.tipo === option.value
-                          ? 'bg-white text-[#151515]'
-                          : 'bg-white/8 text-white/68 hover:bg-white/14 hover:text-white'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  type="button"
+                  onClick={surpriseSommelier}
+                  className="w-full rounded-[15px] border border-[#d8c3a5]/40 bg-[#f5efe5] px-3 py-2.5 text-left text-[12px] font-semibold text-[#151515] transition active:scale-[0.99] hover:bg-white"
+                >
+                  Sorpréndeme
+                </button>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <SommelierQuestion
-                  label="Intensidad"
-                  value={sommelierPreferences.intensidad}
-                  options={scaleOptions}
-                  onChange={(value) => updateSommelierPreference('intensidad', value as SommelierScale)}
-                />
-                <SommelierQuestion
-                  label="Cuerpo"
-                  value={sommelierPreferences.cuerpo}
-                  options={scaleOptions}
-                  onChange={(value) => updateSommelierPreference('cuerpo', value as SommelierScale)}
-                />
-                <SommelierQuestion
-                  label="Madera"
-                  value={sommelierPreferences.madera}
-                  options={scaleOptions}
-                  onChange={(value) => updateSommelierPreference('madera', value as SommelierScale)}
-                />
-                <SommelierQuestion
-                  label="Acidez"
-                  value={sommelierPreferences.acidez}
-                  options={scaleOptions}
-                  onChange={(value) => updateSommelierPreference('acidez', value as SommelierScale)}
-                />
-              </div>
+              {sommelierPreferences.servicio === 'copa' ? (
+                <>
+                  <SommelierQuestion
+                    label="¿Qué estás comiendo?"
+                    value={sommelierPreferences.comida}
+                    options={foodGroupOptions}
+                    onChange={(value) => updateSommelierPreference('comida', value as SommelierFoodGroup)}
+                  />
+                  {sommelierDishOptions.length > 0 ? (
+                    <SommelierQuestion
+                      label="Elige plato"
+                      value={sommelierPreferences.plato}
+                      options={sommelierDishOptions.map((dish) => ({ value: dish, label: dish }))}
+                      onChange={(value) => updateSommelierPreference('plato', value)}
+                    />
+                  ) : null}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <SommelierQuestion
+                      label="Frescura"
+                      value={sommelierPreferences.acidez}
+                      options={scaleOptions}
+                      onChange={(value) => updateSommelierPreference('acidez', value as SommelierScale)}
+                    />
+                    <SommelierQuestion
+                      label="Fruta"
+                      value={sommelierPreferences.intensidad}
+                      options={scaleOptions}
+                      onChange={(value) => updateSommelierPreference('intensidad', value as SommelierScale)}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/42">
+                      ¿Qué tipo prefieres?
+                    </div>
+                    <div className="grid gap-1.5">
+                      {wineTypeOptions.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => updateSommelierPreference('tipo', option.value)}
+                          className={`rounded-[15px] px-3 py-2.5 text-left text-[12px] font-semibold transition ${
+                            sommelierPreferences.tipo === option.value
+                              ? 'bg-white text-[#151515]'
+                              : 'bg-white/8 text-white/68 hover:bg-white/14 hover:text-white'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              <div className="grid gap-2 sm:grid-cols-2">
-                <SommelierQuestion
-                  label="Dulzor"
-                  value={sommelierPreferences.dulzor}
-                  options={sweetnessOptions}
-                  onChange={(value) => updateSommelierPreference('dulzor', value as SommelierSweetness)}
-                />
-                <SommelierDropdown
-                  label="Región / D.O."
-                  value={sommelierPreferences.origen}
-                  options={regionOptions}
-                  onChange={(value) => updateSommelierPreference('origen', value)}
-                />
-              </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <SommelierQuestion
+                      label="Intensidad"
+                      value={sommelierPreferences.intensidad}
+                      options={scaleOptions}
+                      onChange={(value) => updateSommelierPreference('intensidad', value as SommelierScale)}
+                    />
+                    <SommelierQuestion
+                      label="Cuerpo"
+                      value={sommelierPreferences.cuerpo}
+                      options={scaleOptions}
+                      onChange={(value) => updateSommelierPreference('cuerpo', value as SommelierScale)}
+                    />
+                    <SommelierQuestion
+                      label="Madera"
+                      value={sommelierPreferences.madera}
+                      options={scaleOptions}
+                      onChange={(value) => updateSommelierPreference('madera', value as SommelierScale)}
+                    />
+                    <SommelierQuestion
+                      label="Acidez"
+                      value={sommelierPreferences.acidez}
+                      options={scaleOptions}
+                      onChange={(value) => updateSommelierPreference('acidez', value as SommelierScale)}
+                    />
+                  </div>
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <SommelierQuestion
+                      label="Dulzor"
+                      value={sommelierPreferences.dulzor}
+                      options={sweetnessOptions}
+                      onChange={(value) => updateSommelierPreference('dulzor', value as SommelierSweetness)}
+                    />
+                    <SommelierDropdown
+                      label="Región / D.O."
+                      value={sommelierPreferences.origen}
+                      options={regionOptions}
+                      onChange={(value) => updateSommelierPreference('origen', value)}
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
                 <SommelierDropdown
@@ -652,7 +808,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                         </h3>
                       </div>
                       <div className="rounded-full bg-white px-4 py-2 text-[15px] font-bold text-[#151515]">
-                        {formatPrice(featuredItem.precio)}
+                        {getGuestDisplayPriceLabel(featuredItem, sommelierPreferences.servicio)}
                       </div>
                     </div>
                     <p className="mt-4 text-[14px] leading-6 text-[#6a5e52]">
@@ -689,7 +845,7 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                             {item.nombre}
                           </span>
                           <span className="shrink-0 text-[12px] font-bold text-[#9a8060]">
-                            {formatPrice(item.precio)}
+                            {getGuestDisplayPriceLabel(item, sommelierPreferences.servicio)}
                           </span>
                         </button>
                       ))}
@@ -720,10 +876,16 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
               onChange={(value) => updateFilter('uva', value)}
             />
             <FilterSelect
-              label="Región / DO"
-              value={filters.origen || ''}
-              options={options.origenes}
-              onChange={(value) => updateFilter('origen', value)}
+              label="D.O."
+              value={filters.denominacion || ''}
+              options={options.denominaciones}
+              onChange={(value) => updateFilter('denominacion', value)}
+            />
+            <FilterSelect
+              label="Región"
+              value={filters.region || ''}
+              options={options.regiones}
+              onChange={(value) => updateFilter('region', value)}
             />
             <FilterSelect
               label="Bodega"
@@ -809,7 +971,14 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <h3 className="text-[15px] font-semibold leading-5">{item.nombre}</h3>
-                      <span className="shrink-0 text-[14px] font-bold">{formatPrice(item.precio)}</span>
+                      <span className="shrink-0 text-right text-[14px] font-bold">
+                        {formatPrice(item.precio)}
+                        {item.disponible_copa && item.precio_copa !== null ? (
+                          <span className="mt-0.5 block text-[11px] font-semibold text-[#9a8060]">
+                            Copa {formatPrice(item.precio_copa)}
+                          </span>
+                        ) : null}
+                      </span>
                     </div>
                     <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-[#756858]">
                       {item.descripcion || item.categoria}
@@ -903,7 +1072,12 @@ function GuestItemModal({ item, onClose }: { item: GuestMenuItem; onClose: () =>
           <div className="mt-4 text-[1.8rem] font-semibold tracking-tight text-[#171717]">
             {formatPrice(item.precio)}
           </div>
-          <div className="text-[12px] font-medium text-[#9a8060]">IVA incluido</div>
+          <div className="text-[12px] font-medium text-[#9a8060]">Botella · IVA incluido</div>
+          {item.disponible_copa && item.precio_copa !== null ? (
+            <div className="mt-2 rounded-[16px] bg-white/70 px-3 py-2 text-[13px] font-semibold text-[#4f463e]">
+              Copa · {formatPrice(item.precio_copa)}
+            </div>
+          ) : null}
 
           <div className="mt-4 space-y-2.5">
             {details.map(([label, value]) => (

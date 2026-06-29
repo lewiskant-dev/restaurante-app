@@ -15,6 +15,8 @@ type GuestMenuRow = {
   descripcion: string | null
   foto_url: string | null
   precio: number | null
+  disponible_copa: boolean | null
+  precio_copa: number | null
   bodega: string | null
   anada: string | null
   origen: string | null
@@ -40,7 +42,9 @@ function mapGuestMenuRow(row: GuestMenuRow): GuestMenuItem {
     tipo: row.tipo,
     descripcion: row.descripcion,
     foto_url: row.foto_url,
-    precio: row.precio,
+    precio: row.precio === null ? null : Number(row.precio),
+    disponible_copa: Boolean(row.disponible_copa),
+    precio_copa: row.precio_copa === null ? null : Number(row.precio_copa),
     bodega: row.bodega,
     anada: row.anada,
     origen: row.origen,
@@ -78,7 +82,7 @@ export default async function GuestRestaurantPage({
   const { data: rows, error: menuError } = await supabase
     .from('guest_menu_items')
     .select(
-      'id,restaurant_id,producto_id,nombre_publico,categoria_publica,tipo,descripcion,foto_url,precio,bodega,anada,origen,uva,cuerpo,tanino,temperatura,maridajes,etiquetas,perfil_vino,notas_cata,destacado,orden'
+      'id,restaurant_id,producto_id,nombre_publico,categoria_publica,tipo,descripcion,foto_url,precio,disponible_copa,precio_copa,bodega,anada,origen,uva,cuerpo,tanino,temperatura,maridajes,etiquetas,perfil_vino,notas_cata,destacado,orden'
     )
     .eq('restaurant_id', restaurant.id)
     .eq('publicado', true)

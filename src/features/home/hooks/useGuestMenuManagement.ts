@@ -42,6 +42,8 @@ export type GuestMenuForm = {
   descripcion: string
   foto_url: string
   precio: string
+  disponible_copa: boolean
+  precio_copa: string
   bodega: string
   anada: string
   origen: string
@@ -67,6 +69,8 @@ const initialGuestMenuForm: GuestMenuForm = {
   descripcion: '',
   foto_url: '',
   precio: '',
+  disponible_copa: false,
+  precio_copa: '',
   bodega: '',
   anada: '',
   origen: '',
@@ -177,6 +181,8 @@ export function useGuestMenuManagement({
         descripcion: item.descripcion,
         foto_url: item.foto_url,
         precio: item.precio === null ? null : Number(item.precio),
+        disponible_copa: Boolean(item.disponible_copa),
+        precio_copa: item.precio_copa === null || item.precio_copa === undefined ? null : Number(item.precio_copa),
         bodega: item.bodega,
         anada: item.anada,
         origen: item.origen,
@@ -247,6 +253,8 @@ export function useGuestMenuManagement({
       descripcion: item.descripcion || '',
       foto_url: item.foto_url || '',
       precio: item.precio === null ? '' : String(item.precio),
+      disponible_copa: item.disponible_copa,
+      precio_copa: item.precio_copa === null ? '' : String(item.precio_copa),
       bodega: item.bodega || '',
       anada: item.anada || '',
       origen: item.origen || '',
@@ -275,6 +283,21 @@ export function useGuestMenuManagement({
 
     if (!guestMenuForm.nombre_publico.trim()) {
       onError('Indica el nombre público de la ficha')
+      return
+    }
+
+    if (guestMenuForm.precio !== '' && Number(guestMenuForm.precio) < 0) {
+      onError('El precio de botella no puede ser negativo')
+      return
+    }
+
+    if (isWineKind(guestMenuForm.tipo) && guestMenuForm.disponible_copa && guestMenuForm.precio_copa === '') {
+      onError('Indica el precio de copa para este vino')
+      return
+    }
+
+    if (guestMenuForm.precio_copa !== '' && Number(guestMenuForm.precio_copa) < 0) {
+      onError('El precio de copa no puede ser negativo')
       return
     }
 
@@ -317,6 +340,11 @@ export function useGuestMenuManagement({
         descripcion: guestMenuForm.descripcion.trim() || null,
         foto_url: fotoUrl,
         precio: guestMenuForm.precio === '' ? null : Number(guestMenuForm.precio),
+        disponible_copa: isWineKind(guestMenuForm.tipo) && guestMenuForm.disponible_copa,
+        precio_copa:
+          isWineKind(guestMenuForm.tipo) && guestMenuForm.disponible_copa && guestMenuForm.precio_copa !== ''
+            ? Number(guestMenuForm.precio_copa)
+            : null,
         bodega: guestMenuForm.bodega.trim() || null,
         anada: guestMenuForm.anada.trim() || null,
         origen: guestMenuForm.origen.trim() || null,

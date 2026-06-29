@@ -459,15 +459,39 @@ export function CartaTab({
             placeholder="Categoría pública"
             className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
           />
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={guestMenuForm.precio}
-            onChange={(event) => onFormChange('precio', event.target.value)}
-            placeholder="Precio venta"
-            className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
-          />
+          <div className="space-y-2">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={guestMenuForm.precio}
+              onChange={(event) => onFormChange('precio', event.target.value)}
+              placeholder="Precio botella"
+              className={`w-full px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 ${fieldShell}`}
+            />
+            {isWineKind(guestMenuForm.tipo) ? (
+              <label className="flex items-center gap-2 rounded-[16px] bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={guestMenuForm.disponible_copa}
+                  onChange={(event) => onFormChange('disponible_copa', event.target.checked)}
+                />
+                Disponible por copa
+              </label>
+            ) : null}
+          </div>
+          {isWineKind(guestMenuForm.tipo) ? (
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={guestMenuForm.precio_copa}
+              onChange={(event) => onFormChange('precio_copa', event.target.value)}
+              placeholder="Precio copa"
+              disabled={!guestMenuForm.disponible_copa}
+              className={`px-4 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 disabled:opacity-45 ${fieldShell}`}
+            />
+          ) : null}
           <ReusableTextCombobox
             id="guest-menu-winery-options"
             value={guestMenuForm.bodega}
@@ -766,6 +790,11 @@ export function CartaTab({
                     {item.perfil_vino && Object.keys(item.perfil_vino).length > 0 ? (
                       <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-semibold text-blue-700">
                         Perfil IA
+                      </span>
+                    ) : null}
+                    {item.disponible_copa ? (
+                      <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-semibold text-rose-700">
+                        Copa {formatPrice(item.precio_copa)}
                       </span>
                     ) : null}
                   </div>

@@ -15,6 +15,8 @@ create table if not exists public.guest_menu_items (
   descripcion text,
   foto_url text,
   precio numeric(12,2),
+  disponible_copa boolean not null default false,
+  precio_copa numeric(12,2),
   bodega text,
   anada text,
   origen text,
@@ -43,7 +45,8 @@ create table if not exists public.guest_menu_items (
       'otro'
     )
   ),
-  constraint guest_menu_items_precio_check check (precio is null or precio >= 0)
+  constraint guest_menu_items_precio_check check (precio is null or precio >= 0),
+  constraint guest_menu_items_precio_copa_check check (precio_copa is null or precio_copa >= 0)
 );
 
 alter table public.guest_menu_items
@@ -51,6 +54,18 @@ add column if not exists perfil_vino jsonb not null default '{}'::jsonb;
 
 alter table public.guest_menu_items
 add column if not exists notas_cata text[] not null default array[]::text[];
+
+alter table public.guest_menu_items
+add column if not exists disponible_copa boolean not null default false;
+
+alter table public.guest_menu_items
+add column if not exists precio_copa numeric(12,2);
+
+alter table public.guest_menu_items
+drop constraint if exists guest_menu_items_precio_copa_check;
+
+alter table public.guest_menu_items
+add constraint guest_menu_items_precio_copa_check check (precio_copa is null or precio_copa >= 0);
 
 alter table public.guest_menu_items
 drop constraint if exists guest_menu_items_tipo_check;
@@ -75,6 +90,10 @@ create index if not exists guest_menu_items_restaurant_public_idx
 create index if not exists guest_menu_items_producto_idx
   on public.guest_menu_items(producto_id)
   where producto_id is not null;
+
+create index if not exists guest_menu_items_copa_idx
+  on public.guest_menu_items(restaurant_id, disponible_copa, precio_copa)
+  where publicado = true and disponible_copa = true;
 
 insert into storage.buckets (id, name, public)
 values ('guest-menu', 'guest-menu', true)

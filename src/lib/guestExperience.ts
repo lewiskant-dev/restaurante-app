@@ -27,6 +27,8 @@ export type GuestMenuItem = {
   descripcion: string | null
   foto_url: string | null
   precio: number | null
+  disponible_copa: boolean
+  precio_copa: number | null
   bodega: string | null
   anada: string | null
   origen: string | null
@@ -49,6 +51,8 @@ export type GuestMenuFilters = {
   maridaje?: string
   uva?: string
   origen?: string
+  denominacion?: string
+  region?: string
   bodega?: string
   categoria?: string
   tipoCarta?: GuestMenuKind | ''
@@ -255,12 +259,26 @@ export function splitGuestGrapes(value: string | null | undefined) {
     .filter(Boolean)
 }
 
+export function splitGuestOrigin(value: string | null | undefined) {
+  const parts = (value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+  return {
+    denominacion: parts[0] || '',
+    region: parts.slice(1).join(', '),
+  }
+}
+
 export function filterGuestMenuItems(items: GuestMenuItem[], filters: GuestMenuFilters) {
   const query = filters.query?.trim() || ''
   const tipo = filters.tipo || 'todos'
   const maridaje = normalizeGuestText(filters.maridaje)
   const uva = normalizeGuestText(filters.uva)
   const origen = normalizeGuestText(filters.origen)
+  const denominacion = normalizeGuestText(filters.denominacion)
+  const region = normalizeGuestText(filters.region)
   const bodega = normalizeGuestText(filters.bodega)
   const categoria = normalizeGuestText(filters.categoria)
   const tipoCarta = filters.tipoCarta || ''
@@ -278,6 +296,12 @@ export function filterGuestMenuItems(items: GuestMenuItem[], filters: GuestMenuF
         return false
       }
       if (origen && normalizeGuestText(item.origen) !== origen) return false
+      if (denominacion && normalizeGuestText(splitGuestOrigin(item.origen).denominacion) !== denominacion) {
+        return false
+      }
+      if (region && normalizeGuestText(splitGuestOrigin(item.origen).region) !== region) {
+        return false
+      }
       if (bodega && normalizeGuestText(item.bodega) !== bodega) return false
       if (categoria && normalizeGuestText(item.categoria) !== categoria) return false
       if (tipoCarta && item.tipo !== tipoCarta) return false
@@ -344,6 +368,8 @@ export function getGuestMenuFilterOptions(items: GuestMenuItem[]) {
   return {
     uvas: unique(items.flatMap((item) => splitGuestGrapes(item.uva))),
     origenes: unique(items.map((item) => item.origen || '')),
+    denominaciones: unique(items.map((item) => splitGuestOrigin(item.origen).denominacion)),
+    regiones: unique(items.map((item) => splitGuestOrigin(item.origen).region)),
     bodegas: unique(items.map((item) => item.bodega || '')),
     categorias: unique(items.map((item) => item.categoria || '')),
     tiposCarta: Array.from(new Set(items.map((item) => item.tipo))).sort((a, b) =>
