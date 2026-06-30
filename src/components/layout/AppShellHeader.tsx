@@ -65,29 +65,47 @@ function Icon({
   )
 }
 
-function getTabIcon(tab: TabKey, className = 'h-[18px] w-[18px]') {
+function getTabIcon(tab: TabKey, className = 'h-[20px] w-[20px]') {
   if (tab === 'stock') {
     return (
       <Icon
         path={
           <>
-            <path d="m12 3 7 4v10l-7 4-7-4V7z" />
-            <path d="m5 7 7 4 7-4" />
-            <path d="M12 11v10" />
+            <path d="m12 3.2 7.2 4.1v8.2l-7.2 4.1-7.2-4.1V7.3z" />
+            <path d="m4.8 7.3 7.2 4.1 7.2-4.1" />
+            <path d="M12 11.4v8.2" />
+            <path d="M16.8 13.2v3.2" stroke="#2563eb" strokeWidth="2.2" />
+            <path d="M15.2 14.8h3.2" stroke="#2563eb" strokeWidth="2.2" />
           </>
         }
         className={className}
       />
     )
   }
-  if (tab === 'albaran' || tab === 'albaranes') {
+  if (tab === 'albaran') {
     return (
       <Icon
         path={
           <>
-            <path d="M8 3h7l4 4v14H8z" />
-            <path d="M15 3v4h4" />
-            <path d="M11 13h5" />
+            <path d="M6.5 3.5h8.2l3.8 3.8v13.2h-12z" />
+            <path d="M14.5 3.8v3.9h3.8" />
+            <path d="M12.5 13.5h5.2" stroke="#2563eb" strokeWidth="2.3" />
+            <path d="M15.1 10.9v5.2" stroke="#2563eb" strokeWidth="2.3" />
+          </>
+        }
+        className={className}
+      />
+    )
+  }
+  if (tab === 'albaranes') {
+    return (
+      <Icon
+        path={
+          <>
+            <path d="M6.5 3.5h8.2l3.8 3.8v13.2h-12z" />
+            <path d="M14.5 3.8v3.9h3.8" />
+            <path d="M9.5 11h5.5" stroke="#2563eb" strokeWidth="2.1" />
+            <path d="M9.5 15h5.5" stroke="#2563eb" strokeWidth="2.1" />
           </>
         }
         className={className}
@@ -99,10 +117,11 @@ function getTabIcon(tab: TabKey, className = 'h-[18px] w-[18px]') {
       <Icon
         path={
           <>
-            <rect x="4" y="7" width="16" height="10" rx="2" />
-            <path d="M8 11h8" />
-            <path d="M7 17v2" />
-            <path d="M17 17v2" />
+            <rect x="4" y="5.5" width="16" height="11.5" rx="2" />
+            <path d="M8 10.5h8" stroke="#2563eb" strokeWidth="2.2" />
+            <path d="M9 17v2.5" />
+            <path d="M15 17v2.5" />
+            <path d="M7.5 19.5h9" />
           </>
         }
         className={className}
@@ -114,10 +133,11 @@ function getTabIcon(tab: TabKey, className = 'h-[18px] w-[18px]') {
       <Icon
         path={
           <>
-            <path d="M4 19h16" />
-            <path d="M6 19V8l6-4 6 4v11" />
-            <path d="M9 11h.01" />
-            <path d="M15 11h.01" />
+            <circle cx="8.5" cy="7.5" r="3" />
+            <path d="M3.8 20.5v-1.6a4.7 4.7 0 0 1 4.7-4.7" />
+            <path d="m16.2 11.2 4 2.2v4.8l-4 2.3-4-2.3v-4.8z" />
+            <path d="m12.2 13.4 4 2.3 4-2.3" />
+            <path d="M16.2 15.7v4.8" stroke="#2563eb" strokeWidth="2" />
           </>
         }
         className={className}
@@ -129,10 +149,10 @@ function getTabIcon(tab: TabKey, className = 'h-[18px] w-[18px]') {
       <Icon
         path={
           <>
-            <path d="M8 4h8" />
-            <path d="M8 8h8" />
-            <path d="M8 12h5" />
-            <path d="M6 4v16" />
+            <path d="M5.3 12.5h11.4v1.2a5.7 5.7 0 0 1-11.4 0z" />
+            <path d="M7 20h8" />
+            <path d="M16.8 12.6l3.2-3.8" stroke="#2563eb" strokeWidth="2.2" />
+            <path d="M11 4.2v6.2" />
           </>
         }
         className={className}
@@ -144,10 +164,10 @@ function getTabIcon(tab: TabKey, className = 'h-[18px] w-[18px]') {
       <Icon
         path={
           <>
-            <path d="M5 4h14v16H5z" />
-            <path d="M8 8h8" />
-            <path d="M8 12h5" />
-            <path d="M8 16h6" />
+            <rect x="5.5" y="4" width="13" height="16" rx="1.5" />
+            <path d="M8.8 8.5h6.4" stroke="#2563eb" strokeWidth="2.1" />
+            <path d="M8.8 12.2h6.4" />
+            <path d="M8.8 15.8h4.2" />
           </>
         }
         className={className}
@@ -159,8 +179,9 @@ function getTabIcon(tab: TabKey, className = 'h-[18px] w-[18px]') {
       <Icon
         path={
           <>
-            <path d="M12 8v4l3 2" />
-            <circle cx="12" cy="12" r="8" />
+            <circle cx="12" cy="12" r="8.2" />
+            <path d="M12 7.5v5.1l3 2.1" stroke="#2563eb" strokeWidth="2.2" />
+            <path d="M18.3 18.3l1.4 1.4" />
           </>
         }
         className={className}
@@ -172,8 +193,8 @@ function getTabIcon(tab: TabKey, className = 'h-[18px] w-[18px]') {
       <Icon
         path={
           <>
-            <path d="M12 22s8-4 8-10V6l-8-3-8 3v6c0 6 8 10 8 10Z" />
-            <path d="M9.5 12.5 11 14l3.5-4" />
+            <path d="M12 21s7.5-3.7 7.5-9.4V6.2L12 3.4 4.5 6.2v5.4C4.5 17.3 12 21 12 21Z" />
+            <path d="M8.9 12.2 11 14.2l4.2-4.7" stroke="#2563eb" strokeWidth="2.2" />
           </>
         }
         className={className}
@@ -185,10 +206,9 @@ function getTabIcon(tab: TabKey, className = 'h-[18px] w-[18px]') {
       <Icon
         path={
           <>
-            <path d="M4 19h16" />
-            <path d="M7 16V9" />
-            <path d="M12 16V5" />
-            <path d="M17 16v-7" />
+            <path d="M5 19V12h3.2v7z" />
+            <path d="M10.4 19V8.5h3.2V19z" />
+            <path d="M15.8 19V4.5H19V19z" stroke="#2563eb" strokeWidth="2" />
           </>
         }
         className={className}
@@ -200,10 +220,10 @@ function getTabIcon(tab: TabKey, className = 'h-[18px] w-[18px]') {
       <Icon
         path={
           <>
-            <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
-            <circle cx="9.5" cy="7" r="3" />
-            <path d="M17 11a3 3 0 1 0 0-6" />
-            <path d="M21 21v-2a4 4 0 0 0-3-3.87" />
+            <circle cx="9" cy="8" r="3.1" />
+            <path d="M3.8 20.5v-1.4A5.2 5.2 0 0 1 9 13.9" />
+            <path d="M14.8 6.2a2.6 2.6 0 1 1 0 5.2" />
+            <path d="M14.8 14.3a5 5 0 0 1 5.4 5v1.2" stroke="#2563eb" strokeWidth="2.1" />
           </>
         }
         className={className}
@@ -265,7 +285,13 @@ function NavGroup({
                   : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
-              <span className={active ? 'text-blue-600' : 'text-slate-400'}>{getTabIcon(item)}</span>
+              <span
+                className={`flex h-6 w-6 shrink-0 items-center justify-center ${
+                  active ? 'text-blue-600' : 'text-slate-700'
+                }`}
+              >
+                {getTabIcon(item)}
+              </span>
               <span>{getTabLabel(item)}</span>
             </button>
           )

@@ -213,8 +213,11 @@ export function useAlbaranManagement({
     return { productoId: '', estado: 'pendiente' as const }
   }
 
-  function findProductoIdFromOCR(nombreProducto: string) {
-    return getProductoMatchInfoFromOCR(nombreProducto).productoId
+  function getLastKnownUnitPrice(productoId: string) {
+    const producto = productos.find((prod) => prod.id === productoId)
+    const lastPrice = Number(producto?.ultimo_precio_compra ?? producto?.coste_unitario ?? 0)
+
+    return Number.isFinite(lastPrice) && lastPrice > 0 ? lastPrice : null
   }
 
   function getProductoNombre(productoId: string) {
@@ -350,18 +353,32 @@ export function useAlbaranManagement({
         const lineaNormalizada = normalizeOCRAlbaranLinea(linea, {
           proveedor: resultado.proveedor,
         })
+        const matchInfo = getProductoMatchInfoFromOCR(linea.nombre || '')
+        const precioDetectado = Number(lineaNormalizada.precio_unitario_normalizado || 0)
+        const precioFallback = getLastKnownUnitPrice(matchInfo.productoId)
+        const precioAplicado =
+          Number.isFinite(precioDetectado) && precioDetectado > 0
+            ? precioDetectado
+            : precioFallback
+        const avisoPrecioFallback =
+          (!Number.isFinite(precioDetectado) || precioDetectado <= 0) && precioFallback
+            ? `Precio no visible en el albarán. Se usa el último coste conocido: ${precioFallback.toLocaleString('es-ES', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 6,
+              })} €.`
+            : ''
+        const aviso = [lineaNormalizada.aviso, avisoPrecioFallback].filter(Boolean).join(' ')
 
         return {
-          producto_id: findProductoIdFromOCR(linea.nombre || ''),
+          producto_id: matchInfo.productoId,
           cantidad: String(lineaNormalizada.cantidad_normalizada || ''),
-          precio_unitario: String(
-            Number(lineaNormalizada.precio_unitario_normalizado || 0).toFixed(6)
-          ),
+          precio_unitario: precioAplicado ? String(Number(precioAplicado).toFixed(6)) : '',
           iva_porcentaje: lineaNormalizada.iva_porcentaje_normalizado
             ? String(lineaNormalizada.iva_porcentaje_normalizado)
             : '',
           nombre_detectado: linea.nombre || '',
-          ocr_aviso: lineaNormalizada.aviso,
+          ocr_aviso: aviso || undefined,
+          mapeo_estado: matchInfo.estado,
         }
       })
 
