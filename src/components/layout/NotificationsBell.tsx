@@ -141,11 +141,25 @@ export function NotificationsBell({
                 top: menuStyle.top,
                 left: menuStyle.left,
               }}
-              className="z-[140] w-[340px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_26px_60px_rgba(15,23,42,0.16)]"
+              className="z-[140] w-[360px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.18)]"
             >
-              <div className="border-b border-slate-100 px-4 py-3.5">
-                <div className="text-[14px] font-semibold text-slate-950">Notificaciones</div>
-                <div className="mt-0.5 text-[12px] text-slate-500">
+              <div className="border-b border-slate-100 bg-gradient-to-br from-white to-slate-50 px-5 py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[15px] font-semibold tracking-tight text-slate-950">
+                      Notificaciones
+                    </div>
+                    <div className="mt-0.5 text-[12px] text-slate-500">
+                      Alertas importantes del restaurante
+                    </div>
+                  </div>
+                  {hasAlerts ? (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-700">
+                      {alerts.length}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="mt-3 text-[12px] font-medium text-slate-600">
                   {hasAlerts
                     ? `${alerts.length} alerta${alerts.length === 1 ? '' : 's'} de stock`
                     : 'Sin alertas importantes ahora mismo'}
@@ -153,23 +167,23 @@ export function NotificationsBell({
               </div>
 
               {hasAlerts ? (
-                <div className="max-h-[420px] space-y-2 overflow-y-auto p-3">
+                <div className="max-h-[430px] space-y-2.5 overflow-y-auto bg-slate-50/70 p-3">
                   {alerts.map((alert) => (
                     <div
                       key={alert.id}
-                      className="rounded-[18px] border border-amber-100 bg-amber-50/70 p-3"
+                      className="rounded-[20px] border border-amber-100 bg-white p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.045)]"
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="truncate text-[13px] font-semibold text-slate-900">
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                        <div className="min-w-0 pr-1">
+                          <div className="truncate text-[13px] font-semibold leading-5 text-slate-950">
                             {alert.nombre}
                           </div>
-                          <div className="mt-1 text-[11px] text-slate-500">
+                          <div className="mt-1 text-[11px] font-medium text-slate-500">
                             Actual {alert.stock_actual} · Mínimo {alert.stock_minimo}
                           </div>
                         </div>
-                        <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                          Stock bajo
+                        <span className="whitespace-nowrap rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-amber-700 ring-1 ring-amber-100">
+                          Bajo
                         </span>
                       </div>
 
@@ -179,7 +193,7 @@ export function NotificationsBell({
                           setOpen(false)
                           onReviewAlert(alert.id)
                         }}
-                        className="mt-3 inline-flex rounded-[12px] bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-slate-800"
+                        className="mt-3 inline-flex items-center justify-center rounded-[13px] bg-slate-950 px-3.5 py-2 text-[11px] font-semibold text-white transition hover:bg-slate-800"
                       >
                         Revisar producto
                       </button>

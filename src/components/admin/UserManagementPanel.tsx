@@ -236,7 +236,7 @@ export function UserManagementPanel({
             </div>
           </div>
 
-          <div className="grid gap-3 xl:grid-cols-[1fr_0.8fr_auto]">
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(180px,260px)_auto]">
             <input
               type="text"
               value={newRestaurantName}
@@ -260,7 +260,7 @@ export function UserManagementPanel({
             </button>
           </div>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 space-y-2.5">
             {loadingManagedRestaurants ? (
               <div className="py-6 text-center text-sm text-slate-400">
                 Cargando restaurantes...
@@ -273,9 +273,9 @@ export function UserManagementPanel({
               managedRestaurants.map((restaurant) => (
                 <div
                   key={restaurant.id}
-                  className={`grid gap-3 p-3 xl:grid-cols-[1fr_0.8fr_auto] ${softPanel}`}
+                  className={`grid gap-3 p-3 xl:grid-cols-[minmax(0,1fr)_minmax(170px,260px)_auto] xl:items-center ${softPanel}`}
                 >
-                  <div className="space-y-2">
+                  <div className="min-w-0 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
                         {restaurant.usuarios_asignados ?? 0}{' '}
@@ -317,10 +317,10 @@ export function UserManagementPanel({
                     value={restaurantSlugDrafts[restaurant.id] ?? restaurant.slug}
                     onChange={(e) => onRestaurantSlugDraftChange(restaurant.id, e.target.value)}
                     disabled={restaurant.tiene_datos}
-                    className="rounded-[16px] border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 outline-none disabled:bg-slate-100 disabled:text-slate-400"
+                    className="h-11 w-full rounded-[16px] border border-slate-200 bg-white px-3 text-[13px] text-slate-900 outline-none disabled:bg-slate-100 disabled:text-slate-400"
                   />
                   {restaurant.tiene_datos ? (
-                    <div className="text-[11px] text-slate-500">
+                    <div className="text-[11px] text-slate-500 xl:col-start-2">
                       Este restaurante ya tiene datos operativos. Puedes cambiar el nombre visible,
                       pero no el slug.
                     </div>
@@ -328,7 +328,7 @@ export function UserManagementPanel({
                   <button
                     type="button"
                     onClick={() => onSaveRestaurant(restaurant.id)}
-                    className="rounded-[16px] bg-slate-900 px-4 py-2.5 text-[13px] font-semibold text-white"
+                    className="h-11 rounded-[16px] bg-slate-900 px-4 text-[13px] font-semibold text-white transition hover:bg-slate-800 xl:col-start-3 xl:row-start-1"
                   >
                     {savingManagedRestaurantId === restaurant.id ? 'Guardando...' : 'Guardar'}
                   </button>
@@ -660,7 +660,7 @@ export function UserManagementPanel({
                   key={managedUser.id}
                   className="rounded-[26px] border border-slate-200 bg-white/98 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.045)] sm:p-5"
                 >
-                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1.28fr)_minmax(300px,0.82fr)] xl:gap-5">
+                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.72fr)] xl:gap-6">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="truncate text-[17px] font-semibold text-slate-900 sm:text-[18px]">
@@ -687,7 +687,7 @@ export function UserManagementPanel({
                         {managedUser.email}
                       </div>
 
-                      <div className="mt-3 grid gap-2 sm:grid-cols-2 2xl:grid-cols-2">
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
                         <div className="rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-2.5">
                           <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
                             Alta
@@ -732,7 +732,7 @@ export function UserManagementPanel({
                         </div>
                       ) : null}
 
-                      <div className="mt-4 flex flex-col gap-3 rounded-[18px] border border-slate-200 bg-slate-50/80 p-3 sm:flex-row sm:flex-wrap sm:items-center">
+                      <div className="mt-4 flex flex-col gap-3 rounded-[20px] border border-slate-200 bg-slate-50/80 p-3 sm:flex-row sm:flex-wrap sm:items-center">
                         <div className="rounded-[14px] bg-white px-3.5 py-2 text-[13px] font-semibold text-slate-700 ring-1 ring-slate-200">
                           {getRoleLabel(managedUser.role)}
                         </div>
@@ -788,10 +788,10 @@ export function UserManagementPanel({
                     </div>
 
                     {canEditTarget ? (
-                      <div className="space-y-3 xl:border-l xl:border-slate-200 xl:pl-5">
+                      <div className="space-y-3 xl:border-l xl:border-slate-200 xl:pl-6">
                         {currentUserRole === 'master' && managedRestaurants.length > 0 ? (
-                          <div className="rounded-[18px] border border-slate-200 bg-slate-50/55 p-3.5">
-                            <div className="mb-3">
+                          <div className="rounded-[22px] border border-slate-200 bg-slate-50/70 p-4">
+                            <div className="mb-3.5">
                               <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
                                 Permisos
                               </div>
@@ -809,7 +809,7 @@ export function UserManagementPanel({
                                 return (
                                   <label
                                     key={restaurant.id}
-                                    className={`flex items-center gap-2 rounded-[14px] border px-3 py-2 text-[12px] leading-tight ${
+                                    className={`flex min-w-0 items-center gap-2 rounded-[14px] border px-3 py-2 text-[12px] leading-tight ${
                                       checked
                                         ? 'border-blue-200 bg-blue-50 text-blue-700'
                                         : 'border-slate-200 bg-white text-slate-600'
@@ -835,7 +835,7 @@ export function UserManagementPanel({
                               })}
                             </div>
 
-                            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <div className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
                               <IntegratedSelect
                                 value={selectedCurrentRestaurantId}
                                 onChange={(value) => onManagedCurrentRestaurantDraftChange(managedUser.id, value)}
@@ -854,7 +854,7 @@ export function UserManagementPanel({
                                         }))
                                 }
                                 className="min-w-0 flex-1"
-                                buttonClassName="rounded-[14px] px-3 py-2 text-[12px] disabled:opacity-60"
+                                buttonClassName="rounded-[14px] px-3 py-2.5 text-[12px] disabled:opacity-60"
                               />
 
                               <button
@@ -866,7 +866,7 @@ export function UserManagementPanel({
                                   )
                                 }
                                 disabled={savingManagedUserRestaurantId === managedUser.id}
-                                className="rounded-[14px] bg-indigo-50 px-4 py-2 text-[12px] font-semibold text-indigo-700 disabled:opacity-60 sm:self-auto"
+                                className="rounded-[14px] bg-indigo-50 px-4 py-2.5 text-[12px] font-semibold text-indigo-700 transition hover:bg-indigo-100 disabled:opacity-60"
                               >
                                 {savingManagedUserRestaurantId === managedUser.id
                                   ? 'Guardando alcance...'
@@ -876,8 +876,8 @@ export function UserManagementPanel({
                           </div>
                         ) : null}
 
-                        <div className="rounded-[18px] border border-slate-200 bg-slate-50/55 p-3.5">
-                          <div className="mb-3">
+                        <div className="rounded-[22px] border border-slate-200 bg-slate-50/70 p-4">
+                          <div className="mb-3.5">
                             <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
                               Seguridad
                             </div>
@@ -889,8 +889,8 @@ export function UserManagementPanel({
                             </div>
                           </div>
 
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-                            <div className="flex-1">
+                          <div className="grid gap-2">
+                            <div>
                               <input
                                 type="password"
                                 value={draftPassword}
@@ -898,7 +898,7 @@ export function UserManagementPanel({
                                   onManagedPasswordDraftChange(managedUser.id, e.target.value)
                                 }
                                 placeholder="Nueva contraseña"
-                                className={`w-full rounded-[14px] border bg-white px-4 py-2 text-[12px] text-slate-900 outline-none placeholder:text-slate-400 ${
+                                className={`h-11 w-full rounded-[14px] border bg-white px-4 text-[12px] text-slate-900 outline-none placeholder:text-slate-400 ${
                                   draftPassword && draftPasswordError
                                     ? 'border-red-200'
                                     : 'border-slate-200'
@@ -927,7 +927,7 @@ export function UserManagementPanel({
                               disabled={
                                 resettingManagedUserId === managedUser.id || !!draftPasswordError
                               }
-                              className="rounded-[14px] bg-amber-50 px-4 py-2 text-[12px] font-semibold text-amber-700 disabled:opacity-60 sm:self-auto"
+                              className="h-11 rounded-[14px] bg-amber-50 px-4 text-[12px] font-semibold text-amber-700 transition hover:bg-amber-100 disabled:opacity-60"
                             >
                               {resettingManagedUserId === managedUser.id
                                 ? 'Guardando...'
