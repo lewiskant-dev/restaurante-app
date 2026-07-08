@@ -28,6 +28,7 @@ type SommelierService = '' | 'botella' | 'copa'
 type SommelierFoodGroup = '' | 'carne' | 'pescado' | 'verduras'
 type SommelierMode = 'initial' | 'guided' | 'surprise'
 type MobileGuestView = 'home' | 'list' | 'sommelier' | 'favorites'
+type MobileSommelierStep = 'service' | 'questions'
 
 type SommelierPreferences = {
   servicio: SommelierService
@@ -511,37 +512,21 @@ function MobileGuestExperience({
       {view === 'home' ? (
         <section className="px-5 pb-6 pt-7">
           <MobileGuestHeader restaurantName={restaurantName} compact={false} />
-          <div className="mt-8">
-            <h1 className="text-[2.25rem] font-semibold leading-[1.05] tracking-[-0.04em] text-[#17120e]">
-              ¿Qué te apetece hoy?
-            </h1>
-            <label className="mt-5 flex h-12 items-center gap-3 rounded-full border border-[#eadfce] bg-white px-4 shadow-[0_10px_28px_rgba(44,32,20,0.06)]">
-              <input
-                type="search"
-                value={filters.query || ''}
-                onChange={(event) => {
-                  onFilterChange('query', event.target.value)
-                  onViewChange('list')
-                }}
-                placeholder="Buscar vino, bodega, D.O..."
-                className="min-w-0 flex-1 bg-transparent text-[14px] text-[#211b16] outline-none placeholder:text-[#9b9185]"
-              />
-              <MobileSearchIcon />
-            </label>
-            <button
-              type="button"
-              onClick={() => {
-                onSurprise()
+          <label className="mt-7 flex h-12 items-center gap-3 rounded-full border border-[#eadfce] bg-white px-4 shadow-[0_10px_28px_rgba(44,32,20,0.06)]">
+            <input
+              type="search"
+              value={filters.query || ''}
+              onChange={(event) => {
+                onFilterChange('query', event.target.value)
                 onViewChange('list')
               }}
-              className="mx-auto mt-5 flex h-11 items-center gap-2 rounded-full border border-[#eadfce] bg-white px-8 text-[13px] font-semibold text-[#8a6a42] shadow-[0_10px_24px_rgba(44,32,20,0.05)]"
-            >
-              <span>✦</span>
-              Sorpréndeme
-            </button>
-          </div>
+              placeholder="Buscar vino, bodega, D.O..."
+              className="min-w-0 flex-1 bg-transparent text-[14px] text-[#211b16] outline-none placeholder:text-[#9b9185]"
+            />
+            <MobileSearchIcon />
+          </label>
 
-          <div className="mt-9 flex items-center justify-between">
+          <div className="mt-7 flex items-center justify-between">
             <h2 className="text-[13px] font-bold text-[#17120e]">Explora por tipo</h2>
             <button
               type="button"
@@ -570,36 +555,13 @@ function MobileGuestExperience({
           {featuredItem ? (
             <section className="mt-8">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-[13px] font-bold text-[#17120e]">Recomendado para ti</h2>
+                <h2 className="text-[13px] font-bold text-[#17120e]">Recomendación del día</h2>
               </div>
-              <button
-                type="button"
+              <MobileFeaturedWineCard
+                item={featuredItem}
+                serviceMode={serviceMode}
                 onClick={() => onSelectItem(featuredItem)}
-                className="flex w-full items-center gap-4 rounded-[22px] border border-[#eadfce] bg-white p-4 text-left shadow-[0_14px_38px_rgba(44,32,20,0.08)]"
-              >
-                <div className="h-36 w-20 shrink-0 rounded-[18px] bg-[#f3eadc]">
-                  {featuredItem.foto_url ? (
-                    <BottleImage src={featuredItem.foto_url} alt={featuredItem.nombre} className="h-full w-full p-2" />
-                  ) : null}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-[17px] font-bold leading-tight text-[#17120e]">
-                    {featuredItem.nombre}
-                  </h3>
-                  <p className="mt-1 text-[12px] text-[#7a6d60]">
-                    {[getKindLabel(featuredItem.tipo), featuredItem.origen].filter(Boolean).join(' · ')}
-                  </p>
-                  <p className="mt-2 line-clamp-3 text-[12px] leading-5 text-[#6c6054]">
-                    {featuredItem.descripcion || 'Una recomendación seleccionada por el sommelier.'}
-                  </p>
-                  <div className="mt-3 flex items-center justify-between">
-                    <span className="text-[15px] font-bold text-[#17120e]">
-                      {getGuestDisplayPriceLabel(featuredItem, serviceMode)}
-                    </span>
-                    <span className="text-[12px] font-semibold text-[#a06d1f]">★ 4,6</span>
-                  </div>
-                </div>
-              </button>
+              />
             </section>
           ) : null}
 
@@ -1621,6 +1583,52 @@ function MobileWineListItem({
   )
 }
 
+function MobileFeaturedWineCard({
+  item,
+  serviceMode,
+  onClick,
+}: {
+  item: GuestMenuItem
+  serviceMode: SommelierService
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="grid w-full grid-cols-[6.5rem_1fr] gap-4 overflow-hidden rounded-[24px] border border-[#eadfce] bg-white p-4 text-left shadow-[0_14px_38px_rgba(44,32,20,0.08)]"
+    >
+      <div className="flex min-h-44 items-center justify-center rounded-[20px] bg-[#f3eadc]">
+        {item.foto_url ? (
+          <BottleImage src={item.foto_url} alt={item.nombre} className="h-44 w-full p-2" />
+        ) : (
+          <div className="text-[2rem] font-semibold text-[#9a8060]">{getKindLabel(item.tipo).slice(0, 1)}</div>
+        )}
+      </div>
+      <div className="min-w-0 self-center">
+        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#9a8060]">
+          {getKindLabel(item.tipo)}
+        </div>
+        <h3 className="mt-1 line-clamp-3 text-[18px] font-bold leading-tight text-[#17120e]">
+          {item.nombre}
+        </h3>
+        <p className="mt-1 text-[12px] text-[#7a6d60]">
+          {[item.bodega, item.origen].filter(Boolean).join(' · ')}
+        </p>
+        <p className="mt-3 line-clamp-3 text-[12px] leading-5 text-[#6c6054]">
+          {item.descripcion || 'Una recomendación seleccionada para acompañar la experiencia del restaurante.'}
+        </p>
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <span className="text-[16px] font-bold text-[#17120e]">
+            {getGuestDisplayPriceLabel(item, serviceMode)}
+          </span>
+          <span className="shrink-0 text-[12px] font-semibold text-[#a06d1f]">★ 4,6</span>
+        </div>
+      </div>
+    </button>
+  )
+}
+
 function MobileGuestBottomNav({
   active,
   serviceMode,
@@ -1873,6 +1881,13 @@ function MobileSommelierScreen({
   onSurprise: () => void
   onSelectItem: (item: GuestMenuItem) => void
 }) {
+  const [step, setStep] = useState<MobileSommelierStep>('service')
+
+  function chooseService(mode: 'botella' | 'copa') {
+    onChangePreference('servicio', mode)
+    setStep('questions')
+  }
+
   return (
     <section className="px-4 pb-6 pt-5">
       <div className="rounded-[30px] bg-[#151515] px-5 py-6 text-white shadow-[0_22px_60px_rgba(36,27,18,0.18)]">
@@ -1895,162 +1910,199 @@ function MobileSommelierScreen({
           ¿Qué te apetece hoy?
         </h1>
 
-        <div className="mt-7 space-y-3">
-          <button
-            type="button"
-            onClick={onSurprise}
-            className="w-full rounded-[17px] border border-white/10 bg-white/8 px-4 py-3 text-left text-[14px] font-semibold text-white/72 transition active:scale-[0.99]"
-          >
-            Sorpréndeme
-          </button>
+        {step === 'service' ? (
+          <div className="mt-7 grid gap-3">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/42">
+              Primero elige formato
+            </div>
+            <button
+              type="button"
+              onClick={() => chooseService('copa')}
+              className="flex min-h-[76px] items-center justify-between rounded-[22px] bg-white px-5 text-left text-[#151515]"
+            >
+              <span>
+                <span className="block text-[18px] font-semibold">Quiero una copa</span>
+                <span className="mt-1 block text-[12px] text-[#6d6258]">Recomendación rápida por momento y plato.</span>
+              </span>
+              <MobileNavIcon label="Copas" />
+            </button>
+            <button
+              type="button"
+              onClick={() => chooseService('botella')}
+              className="flex min-h-[76px] items-center justify-between rounded-[22px] bg-white/8 px-5 text-left text-white/76"
+            >
+              <span>
+                <span className="block text-[18px] font-semibold">Busco una botella</span>
+                <span className="mt-1 block text-[12px] text-white/48">Filtra por estilo, región y presupuesto.</span>
+              </span>
+              <MobileNavIcon label="Vinos" />
+            </button>
+          </div>
+        ) : (
+          <div className="mt-7 space-y-3">
+            <div className="grid grid-cols-2 gap-2 rounded-[20px] border border-white/10 bg-white/7 p-1.5">
+              {(['copa', 'botella'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => chooseService(mode)}
+                  className={`rounded-[16px] px-3 py-2.5 text-[13px] font-semibold transition ${
+                    serviceMode === mode ? 'bg-white text-[#151515]' : 'text-white/62'
+                  }`}
+                >
+                  {mode === 'copa' ? 'Copa' : 'Botella'}
+                </button>
+              ))}
+            </div>
 
-          {serviceMode === 'copa' ? (
-            <>
-              <SommelierQuestion
-                label="¿Qué estás comiendo?"
-                value={preferences.comida}
-                options={foodGroupOptions}
-                onChange={(value) => onChangePreference('comida', value as SommelierFoodGroup)}
-              />
-              {dishOptions.length > 0 ? (
+            <button
+              type="button"
+              onClick={onSurprise}
+              className="w-full rounded-[17px] border border-white/10 bg-white/8 px-4 py-3 text-left text-[14px] font-semibold text-white/72 transition active:scale-[0.99]"
+            >
+              Sorpréndeme
+            </button>
+
+            {serviceMode === 'copa' ? (
+              <>
                 <SommelierQuestion
-                  label="Elige plato"
-                  value={preferences.plato}
-                  options={dishOptions}
-                  onChange={(value) => onChangePreference('plato', value)}
+                  label="¿Qué estás comiendo?"
+                  value={preferences.comida}
+                  options={foodGroupOptions}
+                  onChange={(value) => onChangePreference('comida', value as SommelierFoodGroup)}
                 />
-              ) : null}
-              <div className="grid grid-cols-2 gap-3">
-                <SommelierQuestion
-                  label="Intensidad"
-                  value={preferences.intensidad}
-                  options={scaleOptions}
-                  onChange={(value) => onChangePreference('intensidad', value as SommelierScale)}
-                />
+                {dishOptions.length > 0 ? (
+                  <SommelierQuestion
+                    label="Elige plato"
+                    value={preferences.plato}
+                    options={dishOptions}
+                    onChange={(value) => onChangePreference('plato', value)}
+                  />
+                ) : null}
+                <div className="grid grid-cols-2 gap-3">
+                  <SommelierQuestion
+                    label="Intensidad"
+                    value={preferences.intensidad}
+                    options={scaleOptions}
+                    onChange={(value) => onChangePreference('intensidad', value as SommelierScale)}
+                  />
+                  <SommelierQuestion
+                    label="Dulzor"
+                    value={preferences.dulzor}
+                    options={sweetnessOptions}
+                    onChange={(value) => onChangePreference('dulzor', value as SommelierSweetness)}
+                  />
+                  <SommelierQuestion
+                    label="Cuerpo"
+                    value={preferences.cuerpo}
+                    options={scaleOptions}
+                    onChange={(value) => onChangePreference('cuerpo', value as SommelierScale)}
+                  />
+                  <SommelierQuestion
+                    label="Fruta"
+                    value={preferences.fruta}
+                    options={scaleOptions}
+                    onChange={(value) => onChangePreference('fruta', value as SommelierScale)}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/42">
+                    ¿Qué tipo prefieres?
+                  </div>
+                  <div className="grid gap-1.5">
+                    {wineTypeOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => onChangePreference('tipo', option.value)}
+                        className={`rounded-[15px] px-3 py-2.5 text-left text-[12px] font-semibold transition ${
+                          preferences.tipo === option.value
+                            ? 'bg-white text-[#151515]'
+                            : 'bg-white/8 text-white/68 hover:bg-white/14 hover:text-white'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <SommelierQuestion
+                    label="Intensidad"
+                    value={preferences.intensidad}
+                    options={scaleOptions}
+                    onChange={(value) => onChangePreference('intensidad', value as SommelierScale)}
+                  />
+                  <SommelierQuestion
+                    label="Cuerpo"
+                    value={preferences.cuerpo}
+                    options={scaleOptions}
+                    onChange={(value) => onChangePreference('cuerpo', value as SommelierScale)}
+                  />
+                  <SommelierQuestion
+                    label="Madera"
+                    value={preferences.madera}
+                    options={scaleOptions}
+                    onChange={(value) => onChangePreference('madera', value as SommelierScale)}
+                  />
+                  <SommelierQuestion
+                    label="Acidez"
+                    value={preferences.acidez}
+                    options={scaleOptions}
+                    onChange={(value) => onChangePreference('acidez', value as SommelierScale)}
+                  />
+                </div>
+
                 <SommelierQuestion
                   label="Dulzor"
                   value={preferences.dulzor}
                   options={sweetnessOptions}
                   onChange={(value) => onChangePreference('dulzor', value as SommelierSweetness)}
                 />
-                <SommelierQuestion
-                  label="Cuerpo"
-                  value={preferences.cuerpo}
-                  options={scaleOptions}
-                  onChange={(value) => onChangePreference('cuerpo', value as SommelierScale)}
+                <SommelierDropdown
+                  label="Región / D.O."
+                  value={preferences.origen}
+                  options={regionOptions}
+                  onChange={(value) => onChangePreference('origen', value)}
                 />
-                <SommelierQuestion
-                  label="Fruta"
-                  value={preferences.fruta}
-                  options={scaleOptions}
-                  onChange={(value) => onChangePreference('fruta', value as SommelierScale)}
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <div>
-                <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/42">
-                  ¿Qué tipo prefieres?
-                </div>
-                <div className="grid gap-1.5">
-                  {wineTypeOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => onChangePreference('tipo', option.value)}
-                      className={`rounded-[15px] px-3 py-2.5 text-left text-[12px] font-semibold transition ${
-                        preferences.tipo === option.value
-                          ? 'bg-white text-[#151515]'
-                          : 'bg-white/8 text-white/68 hover:bg-white/14 hover:text-white'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              </>
+            )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <SommelierQuestion
-                  label="Intensidad"
-                  value={preferences.intensidad}
-                  options={scaleOptions}
-                  onChange={(value) => onChangePreference('intensidad', value as SommelierScale)}
-                />
-                <SommelierQuestion
-                  label="Cuerpo"
-                  value={preferences.cuerpo}
-                  options={scaleOptions}
-                  onChange={(value) => onChangePreference('cuerpo', value as SommelierScale)}
-                />
-                <SommelierQuestion
-                  label="Madera"
-                  value={preferences.madera}
-                  options={scaleOptions}
-                  onChange={(value) => onChangePreference('madera', value as SommelierScale)}
-                />
-                <SommelierQuestion
-                  label="Acidez"
-                  value={preferences.acidez}
-                  options={scaleOptions}
-                  onChange={(value) => onChangePreference('acidez', value as SommelierScale)}
-                />
-              </div>
-
-              <SommelierQuestion
-                label="Dulzor"
-                value={preferences.dulzor}
-                options={sweetnessOptions}
-                onChange={(value) => onChangePreference('dulzor', value as SommelierSweetness)}
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <SommelierPriceSlider
+                label={priceSliderBounds.label}
+                value={preferences.maxPrice ?? priceSliderBounds.max}
+                min={priceSliderBounds.min}
+                max={priceSliderBounds.max}
+                step={priceSliderBounds.step}
+                isUnset={preferences.maxPrice === null}
+                onChange={(value) => onChangePreference('maxPrice', value)}
               />
-              <SommelierDropdown
-                label="Región / D.O."
-                value={preferences.origen}
-                options={regionOptions}
-                onChange={(value) => onChangePreference('origen', value)}
-              />
-            </>
-          )}
-
-          <div className="grid grid-cols-[1fr_auto] gap-2">
-            <SommelierPriceSlider
-              label={priceSliderBounds.label}
-              value={preferences.maxPrice ?? priceSliderBounds.max}
-              min={priceSliderBounds.min}
-              max={priceSliderBounds.max}
-              step={priceSliderBounds.step}
-              isUnset={preferences.maxPrice === null}
-              onChange={(value) => onChangePreference('maxPrice', value)}
-            />
-            <button
-              type="button"
-              onClick={onReset}
-              className="rounded-[18px] border border-white/12 bg-white/8 px-4 py-3 text-[13px] font-semibold text-white/76"
-            >
-              Reiniciar
-            </button>
+              <button
+                type="button"
+                onClick={onReset}
+                className="rounded-[18px] border border-white/12 bg-white/8 px-4 py-3 text-[13px] font-semibold text-white/76"
+              >
+                Reiniciar
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {featuredItem ? (
-        <button
-          type="button"
-          onClick={() => onSelectItem(featuredItem)}
-          className="mt-5 w-full rounded-[24px] border border-[#eadfce] bg-white p-4 text-left shadow-[0_14px_38px_rgba(44,32,20,0.08)]"
-        >
-          <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#9a8060]">
-            Recomendación actual
-          </div>
-          <div className="mt-2 text-[18px] font-bold text-[#17120e]">{featuredItem.nombre}</div>
-          <div className="mt-1 text-[13px] text-[#7a6d60]">
-            {[getKindLabel(featuredItem.tipo), featuredItem.origen].filter(Boolean).join(' · ')}
-          </div>
-          <div className="mt-3 text-[15px] font-bold text-[#17120e]">
-            {getGuestDisplayPriceLabel(featuredItem, serviceMode)}
-          </div>
-        </button>
+        <div className="mt-5">
+          <div className="mb-3 text-[13px] font-bold text-[#17120e]">Recomendación del sommelier</div>
+          <MobileFeaturedWineCard
+            item={featuredItem}
+            serviceMode={serviceMode}
+            onClick={() => onSelectItem(featuredItem)}
+          />
+        </div>
       ) : null}
       <div className="mt-8 text-center text-[12px] text-[#8d8174]">{restaurantName}</div>
     </section>
