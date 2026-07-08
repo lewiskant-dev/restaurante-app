@@ -16,13 +16,29 @@ export type DeploymentHealthCheck = {
   message?: string
 }
 
+export type DeploymentHealthStatus = 'ok' | 'warning' | 'degraded'
+
+export type DeploymentHealthScopeTotals = {
+  total: number
+  configured: number
+  failed: number
+}
+
+export type DeploymentHealthTotals = DeploymentHealthScopeTotals & {
+  required: number
+  optional: number
+  by_scope: Record<DeploymentHealthCheck['scope'], DeploymentHealthScopeTotals>
+}
+
 export type DeploymentHealthSummary = {
   ok: boolean
-  status: 'ok' | 'degraded'
+  status: DeploymentHealthStatus
   checked_at: string
+  duration_ms?: number
   checks: DeploymentHealthCheck[]
   missing: string[]
   warnings: string[]
+  totals: DeploymentHealthTotals
 }
 
 function hasValue(value: string | undefined) {
@@ -32,7 +48,8 @@ function hasValue(value: string | undefined) {
 export function buildDeploymentHealthSummary(
   env: EnvMap,
   checkedAt = new Date().toISOString(),
-  databaseChecks: DeploymentHealthCheck[] = []
+  databaseChecks: DeploymentHealthCheck[] = [],
+  durationMs?: number
 ): DeploymentHealthSummary {
   const checks = REQUIRED_ENV_KEYS.map((name) => ({
     name,
@@ -47,13 +64,53 @@ export function buildDeploymentHealthSummary(
   const warnings = allChecks
     .filter((check) => !check.required && !check.configured)
     .map((check) => check.name)
+  const totals = buildDeploymentHealthTotals(allChecks)
+  const status: DeploymentHealthStatus =
+    missing.length > 0 ? 'degraded' : warnings.length > 0 ? 'warning' : 'ok'
 
   return {
     ok: missing.length === 0,
-    status: missing.length === 0 ? 'ok' : 'degraded',
+    status,
     checked_at: checkedAt,
+    duration_ms: durationMs,
     checks: allChecks,
     missing,
     warnings,
+    totals,
+  }
+}
+
+function emptyScopeTotals(): DeploymentHealthScopeTotals {
+  return {
+    total: 0,
+    configured: 0,
+    failed: 0,
+  }
+}
+
+function buildDeploymentHealthTotals(checks: DeploymentHealthCheck[]): DeploymentHealthTotals {
+  const byScope: DeploymentHealthTotals['by_scope'] = {
+    env: emptyScopeTotals(),
+    database: emptyScopeTotals(),
+    storage: emptyScopeTotals(),
+  }
+
+  for (const check of checks) {
+    const scopeTotals = byScope[check.scope]
+    scopeTotals.total += 1
+    if (check.configured) {
+      scopeTotals.configured += 1
+    } else {
+      scopeTotals.failed += 1
+    }
+  }
+
+  return {
+    total: checks.length,
+    configured: checks.filter((check) => check.configured).length,
+    failed: checks.filter((check) => !check.configured).length,
+    required: checks.filter((check) => check.required).length,
+    optional: checks.filter((check) => !check.required).length,
+    by_scope: byScope,
   }
 }

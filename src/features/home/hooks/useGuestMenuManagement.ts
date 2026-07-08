@@ -410,9 +410,6 @@ export function useGuestMenuManagement({
       return
     }
 
-    const confirmed = window.confirm(`¿Eliminar la ficha "${item.nombre}" de la carta? Esta acción no se puede deshacer.`)
-    if (!confirmed) return
-
     const { error } = await supabase
       .from('guest_menu_items')
       .delete()

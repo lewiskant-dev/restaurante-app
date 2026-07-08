@@ -343,8 +343,14 @@ async function buildSupabaseChecks(): Promise<DeploymentHealthCheck[]> {
 }
 
 export async function GET() {
+  const startedAt = performance.now()
   const supabaseChecks = await buildSupabaseChecks()
-  const summary = buildDeploymentHealthSummary(process.env, new Date().toISOString(), supabaseChecks)
+  const summary = buildDeploymentHealthSummary(
+    process.env,
+    new Date().toISOString(),
+    supabaseChecks,
+    Math.round(performance.now() - startedAt)
+  )
 
   return NextResponse.json(summary, {
     status: summary.ok ? 200 : 503,

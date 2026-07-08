@@ -20,6 +20,10 @@ test('buildDeploymentHealthSummary marca ok si las variables criticas existen', 
   assert.deepEqual(summary.missing, [])
   assert.deepEqual(summary.warnings, [])
   assert.equal(summary.checked_at, '2026-05-15T10:00:00.000Z')
+  assert.equal(summary.totals.total, 5)
+  assert.equal(summary.totals.configured, 5)
+  assert.equal(summary.totals.failed, 0)
+  assert.equal(summary.totals.by_scope.env.total, 5)
   assert.equal(summary.checks.every((check) => check.scope === 'env'), true)
   assert.equal(summary.checks.every((check) => check.required), true)
 })
@@ -43,6 +47,7 @@ test('buildDeploymentHealthSummary no expone valores y lista variables ausentes'
     'SUPABASE_SERVICE_ROLE_KEY',
   ])
   assert.deepEqual(summary.warnings, [])
+  assert.equal(summary.totals.failed, 2)
   assert.equal(summary.checks.some((check) => 'value' in check), false)
 })
 
@@ -74,7 +79,29 @@ test('buildDeploymentHealthSummary diferencia checks requeridos y avisos', () =>
   )
 
   assert.equal(summary.ok, true)
-  assert.equal(summary.status, 'ok')
+  assert.equal(summary.status, 'warning')
   assert.deepEqual(summary.missing, [])
   assert.deepEqual(summary.warnings, ['bucket:albaranes'])
+  assert.equal(summary.totals.total, 7)
+  assert.equal(summary.totals.configured, 6)
+  assert.equal(summary.totals.failed, 1)
+  assert.equal(summary.totals.by_scope.database.total, 1)
+  assert.equal(summary.totals.by_scope.storage.failed, 1)
+})
+
+test('buildDeploymentHealthSummary conserva la duracion de ejecucion si se informa', () => {
+  const summary = buildDeploymentHealthSummary(
+    {
+      NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role',
+      MASTER_LOGIN: 'master',
+      MASTER_EMAIL: 'master@example.com',
+    },
+    '2026-05-15T10:00:00.000Z',
+    [],
+    148
+  )
+
+  assert.equal(summary.duration_ms, 148)
 })

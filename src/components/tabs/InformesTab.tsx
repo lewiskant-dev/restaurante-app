@@ -146,11 +146,27 @@ type DeploymentHealthCheck = {
 
 type DeploymentHealthSummary = {
   ok: boolean
-  status: 'ok' | 'degraded'
+  status: 'ok' | 'warning' | 'degraded'
   checked_at: string
+  duration_ms?: number
   checks: DeploymentHealthCheck[]
   missing: string[]
   warnings: string[]
+  totals?: {
+    total: number
+    configured: number
+    failed: number
+    required: number
+    optional: number
+    by_scope: Record<
+      DeploymentHealthCheck['scope'],
+      {
+        total: number
+        configured: number
+        failed: number
+      }
+    >
+  }
 }
 
 function formatHealthCheckName(value: string) {
@@ -254,6 +270,30 @@ export function InformesTab({
     .sort((a, b) => b.value - a.value)
     .slice(0, 5)
   const healthTone = getHealthToneClasses(healthSummary.tone)
+  const deploymentHealthLabel =
+    deploymentHealth?.status === 'ok'
+      ? 'Correcto'
+      : deploymentHealth?.status === 'warning'
+        ? 'Con avisos'
+        : deploymentHealth
+          ? 'Revisar'
+          : 'Pendiente'
+  const deploymentHealthBadgeClass =
+    deploymentHealth?.status === 'ok'
+      ? 'bg-emerald-50 text-emerald-700'
+      : deploymentHealth?.status === 'warning'
+        ? 'bg-amber-50 text-amber-700'
+        : deploymentHealth
+          ? 'bg-red-50 text-red-700'
+          : 'bg-slate-100 text-slate-500'
+  const deploymentHealthStateText =
+    deploymentHealth?.status === 'ok'
+      ? 'Operativo'
+      : deploymentHealth?.status === 'warning'
+        ? 'Con avisos'
+        : deploymentHealth
+          ? 'Degradado'
+          : 'Sin datos'
   const comparisonCards: ComparisonCard[] = [
     {
       key: 'ventas',
@@ -294,21 +334,9 @@ export function InformesTab({
                 Diagnóstico del despliegue
               </h3>
               <span
-                className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
-                  deploymentHealth?.ok
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : deploymentHealth
-                      ? 'bg-amber-50 text-amber-700'
-                      : 'bg-slate-100 text-slate-500'
-                }`}
+                className={`rounded-full px-3 py-1 text-[11px] font-semibold ${deploymentHealthBadgeClass}`}
               >
-                {deploymentHealthLoading
-                  ? 'Comprobando'
-                  : deploymentHealth?.ok
-                    ? 'Correcto'
-                    : deploymentHealth
-                      ? 'Revisar'
-                      : 'Pendiente'}
+                {deploymentHealthLoading ? 'Comprobando' : deploymentHealthLabel}
               </span>
             </div>
             <p className="mt-1 text-[12px] leading-5 text-slate-500 sm:text-[13px]">
@@ -336,19 +364,21 @@ export function InformesTab({
                 Estado
               </div>
               <div className="mt-2 text-[1.35rem] font-semibold text-slate-950">
-                {deploymentHealthLoading
-                  ? '...'
-                  : deploymentHealth?.ok
-                    ? 'Operativo'
-                    : deploymentHealth
-                      ? 'Degradado'
-                      : 'Sin datos'}
+                {deploymentHealthLoading ? '...' : deploymentHealthStateText}
               </div>
               <div className="mt-1 text-[11px] text-slate-500">
                 {deploymentHealth?.checked_at
                   ? `Última revisión: ${new Date(deploymentHealth.checked_at).toLocaleString('es-ES')}`
                   : 'Se cargará automáticamente al abrir informes.'}
               </div>
+              {deploymentHealth?.totals ? (
+                <div className="mt-2 text-[11px] font-medium text-slate-500">
+                  {deploymentHealth.totals.configured}/{deploymentHealth.totals.total} checks OK
+                  {typeof deploymentHealth.duration_ms === 'number'
+                    ? ` · ${deploymentHealth.duration_ms} ms`
+                    : ''}
+                </div>
+              ) : null}
             </div>
 
             <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3">

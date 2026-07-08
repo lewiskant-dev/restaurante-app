@@ -98,9 +98,8 @@ export default function HomePage() {
   const [loadingAccessibleRestaurants, setLoadingAccessibleRestaurants] = useState(false)
   const [switchingRestaurant, setSwitchingRestaurant] = useState(false)
   const [showRestaurantAccessLoader, setShowRestaurantAccessLoader] = useState(false)
-  const [restaurantsHydratedForUserId, setRestaurantsHydratedForUserId] = useState<string | null>(
-    null
-  )
+  const restaurantAccessKey = currentUserId ? `${currentUserId}:${activeRestaurantId ?? 'none'}` : null
+  const [restaurantsHydratedForKey, setRestaurantsHydratedForKey] = useState<string | null>(null)
 
   const [mapeosProductos, setMapeosProductos] = useState<MapeoProducto[]>([])
   const [auditoria, setAuditoria] = useState<Auditoria[]>([])
@@ -358,7 +357,7 @@ export default function HomePage() {
   const loadAccessibleRestaurantsEvent = useEffectEvent(async (silent = false) => {
     if (!session?.access_token) {
       setAccessibleRestaurants([])
-      setRestaurantsHydratedForUserId(null)
+      setRestaurantsHydratedForKey(null)
       return
     }
 
@@ -385,7 +384,7 @@ export default function HomePage() {
 
       const restaurants = payload.restaurants ?? []
       setAccessibleRestaurants(restaurants)
-      setRestaurantsHydratedForUserId(currentUser?.id ?? null)
+      setRestaurantsHydratedForKey(restaurantAccessKey)
 
       const activeRestaurants = restaurants.filter((restaurant) => restaurant.activo)
       const currentRestaurant = restaurants.find(
@@ -472,17 +471,22 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    if (!authReady || !currentUser) {
+    if (!authReady || !currentUserId) {
       setAccessibleRestaurants([])
-      setRestaurantsHydratedForUserId(null)
+      setRestaurantsHydratedForKey(null)
       return
     }
 
-    const shouldLoadSilently =
-      restaurantsHydratedForUserId === currentUserId && accessibleRestaurants.length > 0
+    if (restaurantsHydratedForKey === restaurantAccessKey && accessibleRestaurants.length > 0) return
 
-    void loadAccessibleRestaurantsEvent(shouldLoadSilently)
-  }, [authReady, currentUser, currentUserId, restaurantsHydratedForUserId, accessibleRestaurants.length])
+    void loadAccessibleRestaurantsEvent(accessibleRestaurants.length > 0)
+  }, [
+    authReady,
+    currentUserId,
+    restaurantAccessKey,
+    restaurantsHydratedForKey,
+    accessibleRestaurants.length,
+  ])
 
   const loadInitialDataEvent = useEffectEvent(async () => {
     const role = getUserRole(currentUser)
@@ -1215,7 +1219,7 @@ export default function HomePage() {
   const isCheckingRestaurantAccess =
     loadingAccessibleRestaurants &&
     accessibleRestaurants.length === 0 &&
-    restaurantsHydratedForUserId !== currentUserId
+    restaurantsHydratedForKey !== restaurantAccessKey
   const showRestaurantAccessFeedback =
     showRestaurantAccessLoader && (loadingAccessibleRestaurants || switchingRestaurant)
   const userInitials = getInitials(userDisplayName || 'Usuario')

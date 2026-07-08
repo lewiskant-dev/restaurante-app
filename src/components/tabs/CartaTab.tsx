@@ -30,7 +30,7 @@ type CartaTabProps = {
   onEnrichWithAI: () => void
   onCancel: () => void
   onTogglePublished: (item: GuestMenuAdminItem) => void
-  onDelete: (item: GuestMenuAdminItem) => void
+  onDelete: (item: GuestMenuAdminItem) => void | Promise<void>
   onFormChange: <Key extends keyof GuestMenuForm>(field: Key, value: GuestMenuForm[Key]) => void
   onImageFileChange: (file: File | null) => void
   onProductSelect: (productId: string) => void
@@ -169,8 +169,21 @@ export function CartaTab({
   const [productSearch, setProductSearch] = useState('')
   const [productDropdownOpen, setProductDropdownOpen] = useState(false)
   const [guestMenuSearch, setGuestMenuSearch] = useState('')
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null)
+  const [deletingGuestMenuId, setDeletingGuestMenuId] = useState<string | null>(null)
   const productListboxId = 'guest-menu-product-options'
   const publicUrl = restaurantSlug ? `/g/${restaurantSlug}` : ''
+  async function confirmDeleteGuestMenuItem(item: GuestMenuAdminItem) {
+    setDeletingGuestMenuId(item.id)
+
+    try {
+      await onDelete(item)
+      setDeleteCandidateId(null)
+    } finally {
+      setDeletingGuestMenuId(null)
+    }
+  }
+
   const productosActivos = useMemo(
     () => productos.filter((producto) => producto.activo !== false && !producto.archivado),
     [productos]
@@ -819,13 +832,34 @@ export function CartaTab({
                   >
                     Editar
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(item)}
-                    className="rounded-[16px] border border-red-100 bg-red-50 px-4 py-2 text-[12px] font-semibold text-red-600 shadow-[0_8px_18px_rgba(248,113,113,0.08)] transition hover:border-red-200 hover:bg-red-100"
-                  >
-                    Eliminar
-                  </button>
+                  {deleteCandidateId === item.id ? (
+                    <div className="flex flex-col gap-2 rounded-[18px] border border-red-100 bg-red-50 p-2 sm:flex-row">
+                      <button
+                        type="button"
+                        onClick={() => void confirmDeleteGuestMenuItem(item)}
+                        disabled={deletingGuestMenuId === item.id}
+                        className="rounded-[14px] bg-red-600 px-4 py-2 text-[12px] font-semibold text-white shadow-[0_8px_18px_rgba(220,38,38,0.14)] transition hover:bg-red-700 disabled:cursor-wait disabled:bg-red-300"
+                      >
+                        {deletingGuestMenuId === item.id ? 'Eliminando...' : 'Confirmar'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteCandidateId(null)}
+                        disabled={deletingGuestMenuId === item.id}
+                        className="rounded-[14px] bg-white px-4 py-2 text-[12px] font-semibold text-slate-600 shadow-sm transition hover:text-slate-950"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setDeleteCandidateId(item.id)}
+                      className="rounded-[16px] border border-red-100 bg-red-50 px-4 py-2 text-[12px] font-semibold text-red-600 shadow-[0_8px_18px_rgba(248,113,113,0.08)] transition hover:border-red-200 hover:bg-red-100"
+                    >
+                      Eliminar
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
