@@ -451,11 +451,17 @@ function MobileGuestExperience({
   filtersOpen,
   activeFiltersCount,
   serviceMode,
+  sommelierPreferences,
+  sommelierDishOptions,
+  regionOptions,
+  priceSliderBounds,
   onViewChange,
   onFilterChange,
   onResetFilters,
   onFiltersOpenChange,
   onServiceModeChange,
+  onSommelierPreferenceChange,
+  onResetSommelier,
   onSelectItem,
   onSurprise,
 }: {
@@ -469,31 +475,34 @@ function MobileGuestExperience({
   filtersOpen: boolean
   activeFiltersCount: number
   serviceMode: SommelierService
+  sommelierPreferences: SommelierPreferences
+  sommelierDishOptions: Array<{ value: string; label: string }>
+  regionOptions: Array<{ value: string; label: string }>
+  priceSliderBounds: ReturnType<typeof getPriceSliderBounds>
   onViewChange: (view: MobileGuestView) => void
   onFilterChange: <Key extends keyof GuestMenuFilters>(key: Key, value: GuestMenuFilters[Key]) => void
   onResetFilters: () => void
   onFiltersOpenChange: (open: boolean) => void
   onServiceModeChange: (mode: 'botella' | 'copa') => void
+  onSommelierPreferenceChange: <Key extends keyof SommelierPreferences>(
+    key: Key,
+    value: SommelierPreferences[Key]
+  ) => void
+  onResetSommelier: () => void
   onSelectItem: (item: GuestMenuItem) => void
   onSurprise: () => void
 }) {
   const wineTypeShortcuts = [
-    { value: 'vino_tinto', label: 'Tintos', icon: '🍷' },
-    { value: 'vino_blanco', label: 'Blancos', icon: '🥂' },
-    { value: 'vino_rosado', label: 'Rosados', icon: '🌹' },
-    { value: 'vino_espumoso', label: 'Espumosos', icon: '✨' },
-    { value: 'copa', label: 'Copas', icon: '🍸' },
+    { value: 'vino_tinto', label: 'Tintos' },
+    { value: 'vino_blanco', label: 'Blancos' },
+    { value: 'vino_rosado', label: 'Rosados' },
+    { value: 'vino_espumoso', label: 'Espumosos' },
   ] as const
   const listItems = view === 'favorites' ? favorites : filteredItems
 
   function openListWithType(value: (typeof wineTypeShortcuts)[number]['value']) {
-    if (value === 'copa') {
-      onFilterChange('tipoCarta', '')
-      onServiceModeChange('copa')
-    } else {
-      onFilterChange('tipoCarta', value)
-      onServiceModeChange('botella')
-    }
+    onFilterChange('tipoCarta', value)
+    onServiceModeChange('botella')
     onViewChange('list')
   }
 
@@ -503,7 +512,7 @@ function MobileGuestExperience({
         <section className="px-5 pb-6 pt-7">
           <MobileGuestHeader restaurantName={restaurantName} compact={false} />
           <div className="mt-8">
-            <h1 className="font-serif text-[2.25rem] leading-[1.05] tracking-[-0.04em] text-[#17120e]">
+            <h1 className="text-[2.25rem] font-semibold leading-[1.05] tracking-[-0.04em] text-[#17120e]">
               ¿Qué te apetece hoy?
             </h1>
             <label className="mt-5 flex h-12 items-center gap-3 rounded-full border border-[#eadfce] bg-white px-4 shadow-[0_10px_28px_rgba(44,32,20,0.06)]">
@@ -542,7 +551,7 @@ function MobileGuestExperience({
               Ver todos
             </button>
           </div>
-          <div className="mt-4 grid grid-cols-5 gap-2">
+          <div className="mt-4 grid grid-cols-4 gap-2">
             {wineTypeShortcuts.map((shortcut) => (
               <button
                 key={shortcut.value}
@@ -551,7 +560,7 @@ function MobileGuestExperience({
                 className="flex flex-col items-center gap-2 text-[11px] font-medium text-[#665a4e]"
               >
                 <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#eadfce] bg-white text-[18px] shadow-[0_8px_20px_rgba(44,32,20,0.05)]">
-                  {shortcut.icon}
+                  <MobileTypeIcon type={shortcut.value} />
                 </span>
                 {shortcut.label}
               </button>
@@ -630,7 +639,15 @@ function MobileGuestExperience({
         <MobileSommelierScreen
           restaurantName={restaurantName}
           featuredItem={featuredItem}
+          serviceMode={serviceMode}
+          preferences={sommelierPreferences}
+          dishOptions={sommelierDishOptions}
+          regionOptions={regionOptions}
+          priceSliderBounds={priceSliderBounds}
           onBack={() => onViewChange('home')}
+          onChangePreference={onSommelierPreferenceChange}
+          onReset={onResetSommelier}
+          onSurprise={onSurprise}
           onSelectItem={onSelectItem}
         />
       ) : (
@@ -964,11 +981,17 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
         filtersOpen={mobileFiltersOpen}
         activeFiltersCount={activeMobileFiltersCount}
         serviceMode={serviceMode}
+        sommelierPreferences={sommelierPreferences}
+        sommelierDishOptions={sommelierDishOptions.map((dish) => ({ value: dish, label: dish }))}
+        regionOptions={regionOptions}
+        priceSliderBounds={priceSliderBounds}
         onViewChange={setMobileView}
         onFilterChange={updateFilter}
         onResetFilters={resetFilters}
         onFiltersOpenChange={setMobileFiltersOpen}
         onServiceModeChange={(mode) => updateSommelierPreference('servicio', mode)}
+        onSommelierPreferenceChange={updateSommelierPreference}
+        onResetSommelier={resetSommelier}
         onSelectItem={setSelectedItem}
         onSurprise={surpriseSommelier}
       />
@@ -1442,30 +1465,54 @@ function MobileGuestHeader({ restaurantName, compact }: { restaurantName: string
   return (
     <header className="flex items-start justify-between gap-4">
       <div>
-        <div className="font-serif text-[1.35rem] font-bold leading-none text-[#17120e]">
+        <div className="text-[1.35rem] font-bold leading-none text-[#17120e]">
           {restaurantName}
         </div>
         <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.28em] text-[#9a6b25]">
           Sommelier
         </div>
       </div>
-      <button
-        type="button"
-        className={`flex items-center justify-center rounded-full border border-[#eadfce] bg-white text-[#5f554a] shadow-sm ${
-          compact ? 'h-9 w-9' : 'h-10 w-10'
-        }`}
-        aria-label="Perfil"
-      >
-        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path
-            d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 8a7 7 0 0 0-14 0"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-          />
-        </svg>
-      </button>
+      <NexoBrandMark className={compact ? 'h-7 w-7 text-[#17120e]' : 'h-8 w-8 text-[#17120e]'} />
     </header>
+  )
+}
+
+function MobileTypeIcon({ type }: { type: GuestMenuKind }) {
+  const common = 'currentColor'
+
+  if (type === 'vino_blanco') {
+    return (
+      <svg className="h-6 w-6 text-[#c8a64a]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M8 3h8l-1 7a4 4 0 0 1-6 0L8 3Z" stroke={common} strokeWidth="1.8" />
+        <path d="M12 13v6m-4 0h8" stroke={common} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  if (type === 'vino_rosado') {
+    return (
+      <svg className="h-6 w-6 text-[#c86b7a]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M8 3h8l-1 7a4 4 0 0 1-6 0L8 3Z" stroke={common} strokeWidth="1.8" />
+        <path d="M9 8h6M12 13v6m-4 0h8" stroke={common} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  if (type === 'vino_espumoso') {
+    return (
+      <svg className="h-6 w-6 text-[#b89454]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M10 3h4l-.5 7.5a1.5 1.5 0 0 1-3 0L10 3Z" stroke={common} strokeWidth="1.8" />
+        <path d="M12 13v6m-3 0h6M17 5l1-1m-1 5 1 1M7 5 6 4m1 5-1 1" stroke={common} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg className="h-6 w-6 text-[#8f1739]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M8 3h8l-1 7a4 4 0 0 1-6 0L8 3Z" stroke={common} strokeWidth="1.8" />
+      <path d="M12 13v6m-4 0h8" stroke={common} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M9 7h6" stroke={common} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
   )
 }
 
@@ -1588,13 +1635,12 @@ function MobileGuestBottomNav({
   const navItems: Array<{
     view: MobileGuestView
     label: string
-    icon: string
     serviceMode?: 'botella' | 'copa'
   }> = [
-    { view: 'list', label: 'Vinos', icon: '♙', serviceMode: 'botella' },
-    { view: 'list', label: 'Copas', icon: '♧', serviceMode: 'copa' },
-    { view: 'sommelier', label: 'Sommelier', icon: '♤' },
-    { view: 'favorites', label: 'Favoritos', icon: '♡' },
+    { view: 'home', label: 'Inicio' },
+    { view: 'list', label: 'Vinos', serviceMode: 'botella' },
+    { view: 'list', label: 'Copas', serviceMode: 'copa' },
+    { view: 'sommelier', label: 'Sommelier' },
   ]
 
   return (
@@ -1616,12 +1662,50 @@ function MobileGuestBottomNav({
                 : 'text-[#7f7368]'
             }`}
           >
-            <span className="text-[18px] leading-none">{item.icon}</span>
+            <MobileNavIcon label={item.label} />
             {item.label}
           </button>
         ))}
       </div>
     </nav>
+  )
+}
+
+function MobileNavIcon({ label }: { label: string }) {
+  const className = 'h-[18px] w-[18px]'
+
+  if (label === 'Inicio') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-8.5Z" stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+
+  if (label === 'Copas') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M8 3h8l-1 7a4 4 0 0 1-6 0L8 3Z" stroke="currentColor" strokeWidth="1.9" />
+        <path d="M12 13v6m-4 0h8" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  if (label === 'Sommelier') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 3l1.7 4.6L18 9.3l-4.3 1.7L12 16l-1.7-5L6 9.3l4.3-1.7L12 3Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+        <path d="M5 16l.8 2.2L8 19l-2.2.8L5 22l-.8-2.2L2 19l2.2-.8L5 16Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M7.5 3h9l-1.1 7.5a3.5 3.5 0 0 1-6.8 0L7.5 3Z" stroke="currentColor" strokeWidth="1.9" />
+      <path d="M12 13.5V20m-4 0h8" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+      <path d="M9 7h6" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+    </svg>
   )
 }
 
@@ -1653,7 +1737,7 @@ function MobileFiltersSheet({
       <div className="max-h-[82vh] w-full overflow-y-auto rounded-[30px] bg-[#fffaf2] px-5 pb-5 pt-3 shadow-[0_-18px_60px_rgba(0,0,0,0.28)]">
         <div className="mx-auto mb-5 h-1 w-14 rounded-full bg-[#d8cdbf]" />
         <div className="flex items-center justify-between">
-          <h2 className="font-serif text-[1.45rem] font-bold text-[#17120e]">Filtros</h2>
+          <h2 className="text-[1.45rem] font-bold text-[#17120e]">Filtros</h2>
           <button
             type="button"
             onClick={onReset}
@@ -1762,52 +1846,210 @@ function MobileSheetSelect({
 function MobileSommelierScreen({
   restaurantName,
   featuredItem,
+  serviceMode,
+  preferences,
+  dishOptions,
+  regionOptions,
+  priceSliderBounds,
   onBack,
+  onChangePreference,
+  onReset,
+  onSurprise,
   onSelectItem,
 }: {
   restaurantName: string
   featuredItem: GuestMenuItem | undefined
+  serviceMode: SommelierService
+  preferences: SommelierPreferences
+  dishOptions: Array<{ value: string; label: string }>
+  regionOptions: Array<{ value: string; label: string }>
+  priceSliderBounds: ReturnType<typeof getPriceSliderBounds>
   onBack: () => void
+  onChangePreference: <Key extends keyof SommelierPreferences>(
+    key: Key,
+    value: SommelierPreferences[Key]
+  ) => void
+  onReset: () => void
+  onSurprise: () => void
   onSelectItem: (item: GuestMenuItem) => void
 }) {
   return (
-    <section className="px-5 pb-6 pt-6">
-      <div className="flex items-center justify-between">
-        <button type="button" onClick={onBack} className="text-[24px] text-[#4d4338]" aria-label="Volver">
-          ‹
-        </button>
-        <div className="text-[14px] font-bold text-[#17120e]">Sommelier</div>
-        <div className="w-6" />
-      </div>
-      <div className="mt-8 text-center">
-        <h1 className="font-serif text-[2rem] font-bold text-[#17120e]">¿Qué te apetece hoy?</h1>
-        <p className="mx-auto mt-2 max-w-xs text-[13px] leading-6 text-[#7a6d60]">
-          Cuéntame el momento y te recomendaré el vino perfecto.
-        </p>
-      </div>
-      <div className="mt-8 space-y-3">
-        {['Quiero un vino para acompañar una comida', 'Busco un vino para una ocasión especial', 'Prefiero algo concreto', 'Sorpréndeme'].map((label) => (
+    <section className="px-4 pb-6 pt-5">
+      <div className="rounded-[30px] bg-[#151515] px-5 py-6 text-white shadow-[0_22px_60px_rgba(36,27,18,0.18)]">
+        <div className="flex items-center justify-between">
           <button
-            key={label}
             type="button"
-            className="flex min-h-[66px] w-full items-center gap-4 rounded-[20px] border border-[#eadfce] bg-white px-5 text-left text-[14px] font-semibold text-[#2b241e] shadow-[0_12px_28px_rgba(44,32,20,0.05)]"
+            onClick={onBack}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/8 text-[22px] text-white/72"
+            aria-label="Volver"
           >
-            <span className="text-[20px] text-[#9a6b25]">✦</span>
-            {label}
+            ‹
           </button>
-        ))}
+          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#d8c3a5]">
+            Sommelier Hernández
+          </div>
+          <div className="w-9" />
+        </div>
+
+        <h1 className="mt-5 text-[2.55rem] font-semibold leading-[0.95] tracking-tight">
+          ¿Qué te apetece hoy?
+        </h1>
+
+        <div className="mt-7 space-y-3">
+          <button
+            type="button"
+            onClick={onSurprise}
+            className="w-full rounded-[17px] border border-white/10 bg-white/8 px-4 py-3 text-left text-[14px] font-semibold text-white/72 transition active:scale-[0.99]"
+          >
+            Sorpréndeme
+          </button>
+
+          {serviceMode === 'copa' ? (
+            <>
+              <SommelierQuestion
+                label="¿Qué estás comiendo?"
+                value={preferences.comida}
+                options={foodGroupOptions}
+                onChange={(value) => onChangePreference('comida', value as SommelierFoodGroup)}
+              />
+              {dishOptions.length > 0 ? (
+                <SommelierQuestion
+                  label="Elige plato"
+                  value={preferences.plato}
+                  options={dishOptions}
+                  onChange={(value) => onChangePreference('plato', value)}
+                />
+              ) : null}
+              <div className="grid grid-cols-2 gap-3">
+                <SommelierQuestion
+                  label="Intensidad"
+                  value={preferences.intensidad}
+                  options={scaleOptions}
+                  onChange={(value) => onChangePreference('intensidad', value as SommelierScale)}
+                />
+                <SommelierQuestion
+                  label="Dulzor"
+                  value={preferences.dulzor}
+                  options={sweetnessOptions}
+                  onChange={(value) => onChangePreference('dulzor', value as SommelierSweetness)}
+                />
+                <SommelierQuestion
+                  label="Cuerpo"
+                  value={preferences.cuerpo}
+                  options={scaleOptions}
+                  onChange={(value) => onChangePreference('cuerpo', value as SommelierScale)}
+                />
+                <SommelierQuestion
+                  label="Fruta"
+                  value={preferences.fruta}
+                  options={scaleOptions}
+                  onChange={(value) => onChangePreference('fruta', value as SommelierScale)}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/42">
+                  ¿Qué tipo prefieres?
+                </div>
+                <div className="grid gap-1.5">
+                  {wineTypeOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => onChangePreference('tipo', option.value)}
+                      className={`rounded-[15px] px-3 py-2.5 text-left text-[12px] font-semibold transition ${
+                        preferences.tipo === option.value
+                          ? 'bg-white text-[#151515]'
+                          : 'bg-white/8 text-white/68 hover:bg-white/14 hover:text-white'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <SommelierQuestion
+                  label="Intensidad"
+                  value={preferences.intensidad}
+                  options={scaleOptions}
+                  onChange={(value) => onChangePreference('intensidad', value as SommelierScale)}
+                />
+                <SommelierQuestion
+                  label="Cuerpo"
+                  value={preferences.cuerpo}
+                  options={scaleOptions}
+                  onChange={(value) => onChangePreference('cuerpo', value as SommelierScale)}
+                />
+                <SommelierQuestion
+                  label="Madera"
+                  value={preferences.madera}
+                  options={scaleOptions}
+                  onChange={(value) => onChangePreference('madera', value as SommelierScale)}
+                />
+                <SommelierQuestion
+                  label="Acidez"
+                  value={preferences.acidez}
+                  options={scaleOptions}
+                  onChange={(value) => onChangePreference('acidez', value as SommelierScale)}
+                />
+              </div>
+
+              <SommelierQuestion
+                label="Dulzor"
+                value={preferences.dulzor}
+                options={sweetnessOptions}
+                onChange={(value) => onChangePreference('dulzor', value as SommelierSweetness)}
+              />
+              <SommelierDropdown
+                label="Región / D.O."
+                value={preferences.origen}
+                options={regionOptions}
+                onChange={(value) => onChangePreference('origen', value)}
+              />
+            </>
+          )}
+
+          <div className="grid grid-cols-[1fr_auto] gap-2">
+            <SommelierPriceSlider
+              label={priceSliderBounds.label}
+              value={preferences.maxPrice ?? priceSliderBounds.max}
+              min={priceSliderBounds.min}
+              max={priceSliderBounds.max}
+              step={priceSliderBounds.step}
+              isUnset={preferences.maxPrice === null}
+              onChange={(value) => onChangePreference('maxPrice', value)}
+            />
+            <button
+              type="button"
+              onClick={onReset}
+              className="rounded-[18px] border border-white/12 bg-white/8 px-4 py-3 text-[13px] font-semibold text-white/76"
+            >
+              Reiniciar
+            </button>
+          </div>
+        </div>
       </div>
+
       {featuredItem ? (
         <button
           type="button"
           onClick={() => onSelectItem(featuredItem)}
-          className="mt-8 w-full rounded-[22px] border border-[#eadfce] bg-white p-4 text-left shadow-[0_14px_38px_rgba(44,32,20,0.08)]"
+          className="mt-5 w-full rounded-[24px] border border-[#eadfce] bg-white p-4 text-left shadow-[0_14px_38px_rgba(44,32,20,0.08)]"
         >
-          <div className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#9a8060]">
-            Recomendación rápida
+          <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#9a8060]">
+            Recomendación actual
           </div>
-          <div className="mt-2 text-[17px] font-bold text-[#17120e]">{featuredItem.nombre}</div>
-          <div className="mt-1 text-[13px] text-[#7a6d60]">{formatPrice(featuredItem.precio)}</div>
+          <div className="mt-2 text-[18px] font-bold text-[#17120e]">{featuredItem.nombre}</div>
+          <div className="mt-1 text-[13px] text-[#7a6d60]">
+            {[getKindLabel(featuredItem.tipo), featuredItem.origen].filter(Boolean).join(' · ')}
+          </div>
+          <div className="mt-3 text-[15px] font-bold text-[#17120e]">
+            {getGuestDisplayPriceLabel(featuredItem, serviceMode)}
+          </div>
         </button>
       ) : null}
       <div className="mt-8 text-center text-[12px] text-[#8d8174]">{restaurantName}</div>
