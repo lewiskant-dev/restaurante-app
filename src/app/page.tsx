@@ -1053,6 +1053,11 @@ export default function HomePage() {
   }
 
   async function deshacerAccionAuditoria(item: Auditoria) {
+    if (!puedeDeshacerAuditoria(item)) {
+      setError('Esta acción no es reversible desde auditoría')
+      return
+    }
+
     if (!item.entidad_id) {
       setError('La acción no tiene entidad asociada')
       return
@@ -1147,8 +1152,6 @@ export default function HomePage() {
         await Promise.all([loadProveedores(), loadAuditoria()])
         return
       }
-
-      setError('Esta acción todavía no se puede deshacer')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo deshacer la acción')
     }

@@ -27,6 +27,7 @@ type SommelierWineType = GuestMenuKind | ''
 type SommelierService = '' | 'botella' | 'copa'
 type SommelierFoodGroup = '' | 'carne' | 'pescado' | 'verduras'
 type SommelierMode = 'initial' | 'guided' | 'surprise'
+type MobileGuestView = 'home' | 'list' | 'sommelier' | 'favorites'
 
 type SommelierPreferences = {
   servicio: SommelierService
@@ -439,6 +440,253 @@ function hasSommelierPreferences(preferences: SommelierPreferences) {
   )
 }
 
+function MobileGuestExperience({
+  restaurantName,
+  filteredItems,
+  featuredItem,
+  favorites,
+  filters,
+  options,
+  view,
+  filtersOpen,
+  activeFiltersCount,
+  serviceMode,
+  onViewChange,
+  onFilterChange,
+  onResetFilters,
+  onFiltersOpenChange,
+  onServiceModeChange,
+  onSelectItem,
+  onSurprise,
+}: {
+  restaurantName: string
+  filteredItems: GuestMenuItem[]
+  featuredItem: GuestMenuItem | undefined
+  favorites: GuestMenuItem[]
+  filters: GuestMenuFilters
+  options: ReturnType<typeof getGuestMenuFilterOptions>
+  view: MobileGuestView
+  filtersOpen: boolean
+  activeFiltersCount: number
+  serviceMode: SommelierService
+  onViewChange: (view: MobileGuestView) => void
+  onFilterChange: <Key extends keyof GuestMenuFilters>(key: Key, value: GuestMenuFilters[Key]) => void
+  onResetFilters: () => void
+  onFiltersOpenChange: (open: boolean) => void
+  onServiceModeChange: (mode: 'botella' | 'copa') => void
+  onSelectItem: (item: GuestMenuItem) => void
+  onSurprise: () => void
+}) {
+  const wineTypeShortcuts = [
+    { value: 'vino_tinto', label: 'Tintos', icon: '🍷' },
+    { value: 'vino_blanco', label: 'Blancos', icon: '🥂' },
+    { value: 'vino_rosado', label: 'Rosados', icon: '🌹' },
+    { value: 'vino_espumoso', label: 'Espumosos', icon: '✨' },
+    { value: 'copa', label: 'Copas', icon: '🍸' },
+  ] as const
+  const listItems = view === 'favorites' ? favorites : filteredItems
+
+  function openListWithType(value: (typeof wineTypeShortcuts)[number]['value']) {
+    if (value === 'copa') {
+      onFilterChange('tipoCarta', '')
+      onServiceModeChange('copa')
+    } else {
+      onFilterChange('tipoCarta', value)
+      onServiceModeChange('botella')
+    }
+    onViewChange('list')
+  }
+
+  return (
+    <div className="min-h-screen pb-24 lg:hidden">
+      {view === 'home' ? (
+        <section className="px-5 pb-6 pt-7">
+          <MobileGuestHeader restaurantName={restaurantName} compact={false} />
+          <div className="mt-8">
+            <h1 className="font-serif text-[2.25rem] leading-[1.05] tracking-[-0.04em] text-[#17120e]">
+              ¿Qué te apetece hoy?
+            </h1>
+            <label className="mt-5 flex h-12 items-center gap-3 rounded-full border border-[#eadfce] bg-white px-4 shadow-[0_10px_28px_rgba(44,32,20,0.06)]">
+              <input
+                type="search"
+                value={filters.query || ''}
+                onChange={(event) => {
+                  onFilterChange('query', event.target.value)
+                  onViewChange('list')
+                }}
+                placeholder="Buscar vino, bodega, D.O..."
+                className="min-w-0 flex-1 bg-transparent text-[14px] text-[#211b16] outline-none placeholder:text-[#9b9185]"
+              />
+              <MobileSearchIcon />
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                onSurprise()
+                onViewChange('list')
+              }}
+              className="mx-auto mt-5 flex h-11 items-center gap-2 rounded-full border border-[#eadfce] bg-white px-8 text-[13px] font-semibold text-[#8a6a42] shadow-[0_10px_24px_rgba(44,32,20,0.05)]"
+            >
+              <span>✦</span>
+              Sorpréndeme
+            </button>
+          </div>
+
+          <div className="mt-9 flex items-center justify-between">
+            <h2 className="text-[13px] font-bold text-[#17120e]">Explora por tipo</h2>
+            <button
+              type="button"
+              onClick={() => onViewChange('list')}
+              className="text-[12px] font-medium text-[#8d8174]"
+            >
+              Ver todos
+            </button>
+          </div>
+          <div className="mt-4 grid grid-cols-5 gap-2">
+            {wineTypeShortcuts.map((shortcut) => (
+              <button
+                key={shortcut.value}
+                type="button"
+                onClick={() => openListWithType(shortcut.value)}
+                className="flex flex-col items-center gap-2 text-[11px] font-medium text-[#665a4e]"
+              >
+                <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#eadfce] bg-white text-[18px] shadow-[0_8px_20px_rgba(44,32,20,0.05)]">
+                  {shortcut.icon}
+                </span>
+                {shortcut.label}
+              </button>
+            ))}
+          </div>
+
+          {featuredItem ? (
+            <section className="mt-8">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-[13px] font-bold text-[#17120e]">Recomendado para ti</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => onSelectItem(featuredItem)}
+                className="flex w-full items-center gap-4 rounded-[22px] border border-[#eadfce] bg-white p-4 text-left shadow-[0_14px_38px_rgba(44,32,20,0.08)]"
+              >
+                <div className="h-36 w-20 shrink-0 rounded-[18px] bg-[#f3eadc]">
+                  {featuredItem.foto_url ? (
+                    <BottleImage src={featuredItem.foto_url} alt={featuredItem.nombre} className="h-full w-full p-2" />
+                  ) : null}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-[17px] font-bold leading-tight text-[#17120e]">
+                    {featuredItem.nombre}
+                  </h3>
+                  <p className="mt-1 text-[12px] text-[#7a6d60]">
+                    {[getKindLabel(featuredItem.tipo), featuredItem.origen].filter(Boolean).join(' · ')}
+                  </p>
+                  <p className="mt-2 line-clamp-3 text-[12px] leading-5 text-[#6c6054]">
+                    {featuredItem.descripcion || 'Una recomendación seleccionada por el sommelier.'}
+                  </p>
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="text-[15px] font-bold text-[#17120e]">
+                      {getGuestDisplayPriceLabel(featuredItem, serviceMode)}
+                    </span>
+                    <span className="text-[12px] font-semibold text-[#a06d1f]">★ 4,6</span>
+                  </div>
+                </div>
+              </button>
+            </section>
+          ) : null}
+
+          {favorites.length > 0 ? (
+            <section className="mt-8">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-[13px] font-bold text-[#17120e]">Nuestros favoritos</h2>
+                <button
+                  type="button"
+                  onClick={() => onViewChange('favorites')}
+                  className="text-[12px] font-medium text-[#8d8174]"
+                >
+                  Ver todos
+                </button>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {favorites.slice(0, 5).map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => onSelectItem(item)}
+                    className="w-28 shrink-0 rounded-[18px] border border-[#eadfce] bg-white p-2 shadow-[0_10px_24px_rgba(44,32,20,0.05)]"
+                  >
+                    <div className="h-32 rounded-[14px] bg-[#f3eadc]">
+                      {item.foto_url ? <BottleImage src={item.foto_url} alt={item.nombre} className="h-full w-full p-2" /> : null}
+                    </div>
+                    <div className="mt-2 truncate text-left text-[11px] font-bold text-[#17120e]">
+                      {item.nombre}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : null}
+        </section>
+      ) : view === 'sommelier' ? (
+        <MobileSommelierScreen
+          restaurantName={restaurantName}
+          featuredItem={featuredItem}
+          onBack={() => onViewChange('home')}
+          onSelectItem={onSelectItem}
+        />
+      ) : (
+        <section className="px-4 pb-6 pt-6">
+          <MobileListHeader
+            count={listItems.length}
+            onBack={() => onViewChange('home')}
+            onFilters={() => onFiltersOpenChange(true)}
+            activeFiltersCount={activeFiltersCount}
+          />
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+            <MobileFilterChip label={`Filtros (${activeFiltersCount})`} active onClick={() => onFiltersOpenChange(true)} />
+            {filters.tipoCarta ? (
+              <MobileFilterChip
+                label={getGuestMenuKindLabel(filters.tipoCarta as GuestMenuKind)}
+                onClick={() => onFilterChange('tipoCarta', '')}
+              />
+            ) : null}
+            {typeof filters.maxPrice === 'number' ? (
+              <MobileFilterChip label={`Hasta ${formatPrice(filters.maxPrice)}`} onClick={() => onFilterChange('maxPrice', null)} />
+            ) : null}
+          </div>
+          <div className="mt-4 space-y-4">
+            {listItems.map((item) => (
+              <MobileWineListItem
+                key={item.id}
+                item={item}
+                serviceMode={serviceMode}
+                onClick={() => onSelectItem(item)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <MobileGuestBottomNav
+        active={view}
+        serviceMode={serviceMode}
+        onChange={onViewChange}
+        onServiceModeChange={onServiceModeChange}
+      />
+
+      {filtersOpen ? (
+        <MobileFiltersSheet
+          filters={filters}
+          options={options}
+          count={filteredItems.length}
+          onChange={onFilterChange}
+          onReset={onResetFilters}
+          onClose={() => onFiltersOpenChange(false)}
+        />
+      ) : null}
+    </div>
+  )
+}
+
 function getNextRecommendationSeed() {
   if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
     const values = new Uint32Array(1)
@@ -566,6 +814,8 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
   const [sommelierMode, setSommelierMode] = useState<SommelierMode>('initial')
   const [recommendationSeed, setRecommendationSeed] = useState(getNextRecommendationSeed)
   const [selectedItem, setSelectedItem] = useState<GuestMenuItem | null>(null)
+  const [mobileView, setMobileView] = useState<MobileGuestView>('home')
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
   const options = useMemo(() => getGuestMenuFilterOptions(items), [items])
   const serviceMode = sommelierPreferences.servicio === 'copa' ? 'copa' : 'botella'
@@ -618,6 +868,23 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
   const alternativeRecommendations = sommelierRecommendations
     .filter((item) => item.id !== featuredItem?.id)
     .slice(0, 2)
+  const favoriteMobileItems = useMemo(
+    () =>
+      [...items]
+        .filter((item) => isWineKind(item.tipo) && (item.destacado || isInitialGuestRecommendation(item)))
+        .sort((a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre, 'es'))
+        .slice(0, 8),
+    [items]
+  )
+  const activeMobileFiltersCount = [
+    filters.tipoCarta,
+    filters.uva,
+    filters.denominacion,
+    filters.region,
+    filters.bodega,
+    filters.maridaje,
+    filters.maxPrice !== null ? 'precio' : '',
+  ].filter(Boolean).length
 
   function updateFilter<Key extends keyof GuestMenuFilters>(key: Key, value: GuestMenuFilters[Key]) {
     setFilters((current) => ({ ...current, [key]: value }))
@@ -686,7 +953,27 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
 
   return (
     <main className="min-h-screen bg-[#f5f2eb] text-[#141414]">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-5 py-6 sm:px-8 lg:px-10">
+      <MobileGuestExperience
+        restaurantName={restaurantName}
+        filteredItems={filteredItems}
+        featuredItem={featuredItem}
+        favorites={favoriteMobileItems}
+        filters={filters}
+        options={options}
+        view={mobileView}
+        filtersOpen={mobileFiltersOpen}
+        activeFiltersCount={activeMobileFiltersCount}
+        serviceMode={serviceMode}
+        onViewChange={setMobileView}
+        onFilterChange={updateFilter}
+        onResetFilters={resetFilters}
+        onFiltersOpenChange={setMobileFiltersOpen}
+        onServiceModeChange={(mode) => updateSommelierPreference('servicio', mode)}
+        onSelectItem={setSelectedItem}
+        onSurprise={surpriseSommelier}
+      />
+
+      <div className="mx-auto hidden min-h-screen w-full max-w-6xl flex-col px-5 py-6 sm:px-8 lg:flex lg:px-10">
         <header className="grid gap-5 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
           <div className="flex items-center gap-3">
             <NexoBrandMark className="h-8 w-auto text-[#141414]" />
@@ -1148,6 +1435,383 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
 
       {selectedItem ? <GuestItemModal item={selectedItem} onClose={() => setSelectedItem(null)} /> : null}
     </main>
+  )
+}
+
+function MobileGuestHeader({ restaurantName, compact }: { restaurantName: string; compact: boolean }) {
+  return (
+    <header className="flex items-start justify-between gap-4">
+      <div>
+        <div className="font-serif text-[1.35rem] font-bold leading-none text-[#17120e]">
+          {restaurantName}
+        </div>
+        <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.28em] text-[#9a6b25]">
+          Sommelier
+        </div>
+      </div>
+      <button
+        type="button"
+        className={`flex items-center justify-center rounded-full border border-[#eadfce] bg-white text-[#5f554a] shadow-sm ${
+          compact ? 'h-9 w-9' : 'h-10 w-10'
+        }`}
+        aria-label="Perfil"
+      >
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 8a7 7 0 0 0-14 0"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+        </svg>
+      </button>
+    </header>
+  )
+}
+
+function MobileSearchIcon() {
+  return (
+    <svg className="h-4 w-4 text-[#8d8174]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="m20 20-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function MobileListHeader({
+  count,
+  activeFiltersCount,
+  onBack,
+  onFilters,
+}: {
+  count: number
+  activeFiltersCount: number
+  onBack: () => void
+  onFilters: () => void
+}) {
+  return (
+    <header className="flex h-12 items-center justify-between">
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex h-10 w-10 items-center justify-center rounded-full text-[#4d4338]"
+        aria-label="Volver"
+      >
+        <span className="text-xl">‹</span>
+      </button>
+      <div className="text-[13px] font-bold text-[#17120e]">{count} resultados</div>
+      <button
+        type="button"
+        onClick={onFilters}
+        className="rounded-full px-3 py-2 text-[12px] font-semibold text-[#4d4338]"
+      >
+        Ordenar
+        {activeFiltersCount ? <span className="ml-1 text-[#9b173d]">({activeFiltersCount})</span> : null}
+      </button>
+    </header>
+  )
+}
+
+function MobileFilterChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string
+  active?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`shrink-0 rounded-full border px-3 py-2 text-[12px] font-semibold ${
+        active
+          ? 'border-[#9b173d] bg-white text-[#9b173d]'
+          : 'border-[#eadfce] bg-white text-[#5f554a]'
+      }`}
+    >
+      {label}
+    </button>
+  )
+}
+
+function MobileWineListItem({
+  item,
+  serviceMode,
+  onClick,
+}: {
+  item: GuestMenuItem
+  serviceMode: SommelierService
+  onClick: () => void
+}) {
+  return (
+    <button type="button" onClick={onClick} className="flex w-full items-center gap-4 text-left">
+      <div className="h-28 w-16 shrink-0 rounded-[18px] bg-[#f3eadc]">
+        {item.foto_url ? <BottleImage src={item.foto_url} alt={item.nombre} className="h-full w-full p-1.5" /> : null}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="line-clamp-2 text-[15px] font-bold leading-tight text-[#17120e]">{item.nombre}</div>
+        <div className="mt-1 text-[12px] text-[#7a6d60]">
+          {[getKindLabel(item.tipo), item.origen].filter(Boolean).join(' · ')}
+        </div>
+        <div className="mt-2 text-[12px] font-semibold text-[#a06d1f]">★ 4,5</div>
+        {item.disponible_copa && item.precio_copa !== null ? (
+          <div className="mt-1 text-[11px] text-[#7a6d60]">Copa {formatPrice(item.precio_copa)}</div>
+        ) : null}
+      </div>
+      <div className="flex h-full min-h-24 shrink-0 flex-col items-end justify-between">
+        <span className="text-[20px] leading-none text-[#9c8f82]">♡</span>
+        <span className="text-[14px] font-bold text-[#17120e]">
+          {getGuestDisplayPriceLabel(item, serviceMode)}
+        </span>
+      </div>
+    </button>
+  )
+}
+
+function MobileGuestBottomNav({
+  active,
+  serviceMode,
+  onChange,
+  onServiceModeChange,
+}: {
+  active: MobileGuestView
+  serviceMode: SommelierService
+  onChange: (view: MobileGuestView) => void
+  onServiceModeChange: (mode: 'botella' | 'copa') => void
+}) {
+  const navItems: Array<{
+    view: MobileGuestView
+    label: string
+    icon: string
+    serviceMode?: 'botella' | 'copa'
+  }> = [
+    { view: 'list', label: 'Vinos', icon: '♙', serviceMode: 'botella' },
+    { view: 'list', label: 'Copas', icon: '♧', serviceMode: 'copa' },
+    { view: 'sommelier', label: 'Sommelier', icon: '♤' },
+    { view: 'favorites', label: 'Favoritos', icon: '♡' },
+  ]
+
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#eadfce] bg-white/96 px-4 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-2 shadow-[0_-12px_32px_rgba(44,32,20,0.08)] backdrop-blur">
+      <div className="grid grid-cols-4 gap-1">
+        {navItems.map((item) => (
+          <button
+            key={`${item.view}-${item.label}`}
+            type="button"
+            onClick={() => {
+              if (item.serviceMode) {
+                onServiceModeChange(item.serviceMode)
+              }
+              onChange(item.view)
+            }}
+            className={`flex flex-col items-center gap-1 rounded-[16px] px-2 py-1.5 text-[10px] font-semibold ${
+              active === item.view && (!item.serviceMode || serviceMode === item.serviceMode)
+                ? 'text-[#9b173d]'
+                : 'text-[#7f7368]'
+            }`}
+          >
+            <span className="text-[18px] leading-none">{item.icon}</span>
+            {item.label}
+          </button>
+        ))}
+      </div>
+    </nav>
+  )
+}
+
+function MobileFiltersSheet({
+  filters,
+  options,
+  count,
+  onChange,
+  onReset,
+  onClose,
+}: {
+  filters: GuestMenuFilters
+  options: ReturnType<typeof getGuestMenuFilterOptions>
+  count: number
+  onChange: <Key extends keyof GuestMenuFilters>(key: Key, value: GuestMenuFilters[Key]) => void
+  onReset: () => void
+  onClose: () => void
+}) {
+  const wineTypes = [
+    { value: 'vino_tinto', label: 'Tinto' },
+    { value: 'vino_blanco', label: 'Blanco' },
+    { value: 'vino_rosado', label: 'Rosado' },
+    { value: 'vino_espumoso', label: 'Espumoso' },
+  ] as const
+  const maxPrice = filters.maxPrice ?? 120
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end bg-black/58 px-3 pb-3 backdrop-blur-[2px]">
+      <div className="max-h-[82vh] w-full overflow-y-auto rounded-[30px] bg-[#fffaf2] px-5 pb-5 pt-3 shadow-[0_-18px_60px_rgba(0,0,0,0.28)]">
+        <div className="mx-auto mb-5 h-1 w-14 rounded-full bg-[#d8cdbf]" />
+        <div className="flex items-center justify-between">
+          <h2 className="font-serif text-[1.45rem] font-bold text-[#17120e]">Filtros</h2>
+          <button
+            type="button"
+            onClick={onReset}
+            className="text-[12px] font-semibold text-[#9b173d]"
+          >
+            Limpiar todo
+          </button>
+        </div>
+
+        <MobileFilterSection title="Tipo de vino">
+          <div className="grid grid-cols-4 gap-2">
+            {wineTypes.map((type) => (
+              <button
+                key={type.value}
+                type="button"
+                onClick={() => onChange('tipoCarta', filters.tipoCarta === type.value ? '' : type.value)}
+                className={`rounded-[14px] border px-2 py-3 text-[11px] font-semibold ${
+                  filters.tipoCarta === type.value
+                    ? 'border-[#9b173d] bg-[#9b173d] text-white'
+                    : 'border-[#eadfce] bg-white text-[#5f554a]'
+                }`}
+              >
+                {type.label}
+              </button>
+            ))}
+          </div>
+        </MobileFilterSection>
+
+        <MobileFilterSection title="Precio por botella">
+          <div className="flex items-center justify-between text-[11px] font-medium text-[#8d8174]">
+            <span>15 €</span>
+            <span>{filters.maxPrice === null ? 'Sin límite' : `Hasta ${formatPrice(maxPrice)}`}</span>
+          </div>
+          <input
+            type="range"
+            min={15}
+            max={120}
+            step={5}
+            value={maxPrice}
+            onChange={(event) => onChange('maxPrice', Number(event.currentTarget.value))}
+            className="mt-3 w-full accent-[#9b173d]"
+          />
+        </MobileFilterSection>
+
+        <div className="mt-5 grid gap-3">
+          <MobileSheetSelect label="Uva" value={filters.uva || ''} options={options.uvas} onChange={(value) => onChange('uva', value)} />
+          <MobileSheetSelect label="D.O." value={filters.denominacion || ''} options={options.denominaciones} onChange={(value) => onChange('denominacion', value)} />
+          <MobileSheetSelect label="Región" value={filters.region || ''} options={options.regiones} onChange={(value) => onChange('region', value)} />
+          <MobileSheetSelect label="Bodega" value={filters.bodega || ''} options={options.bodegas} onChange={(value) => onChange('bodega', value)} />
+          <MobileSheetSelect label="Maridaje" value={filters.maridaje || ''} options={options.maridajes} onChange={(value) => onChange('maridaje', value)} />
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-6 h-14 w-full rounded-[18px] bg-[#9b173d] text-[14px] font-bold text-white shadow-[0_14px_34px_rgba(155,23,61,0.22)]"
+        >
+          Ver {count} resultados
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function MobileFilterSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mt-5">
+      <h3 className="mb-3 text-[12px] font-bold text-[#17120e]">{title}</h3>
+      {children}
+    </section>
+  )
+}
+
+function MobileSheetSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: string
+  options: string[]
+  onChange: (value: string) => void
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[11px] font-bold uppercase tracking-[0.14em] text-[#9a8060]">
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value)}
+        className="h-12 w-full rounded-[16px] border border-[#eadfce] bg-white px-3 text-[13px] font-semibold text-[#211b16] outline-none"
+      >
+        <option value="">Todos</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+function MobileSommelierScreen({
+  restaurantName,
+  featuredItem,
+  onBack,
+  onSelectItem,
+}: {
+  restaurantName: string
+  featuredItem: GuestMenuItem | undefined
+  onBack: () => void
+  onSelectItem: (item: GuestMenuItem) => void
+}) {
+  return (
+    <section className="px-5 pb-6 pt-6">
+      <div className="flex items-center justify-between">
+        <button type="button" onClick={onBack} className="text-[24px] text-[#4d4338]" aria-label="Volver">
+          ‹
+        </button>
+        <div className="text-[14px] font-bold text-[#17120e]">Sommelier</div>
+        <div className="w-6" />
+      </div>
+      <div className="mt-8 text-center">
+        <h1 className="font-serif text-[2rem] font-bold text-[#17120e]">¿Qué te apetece hoy?</h1>
+        <p className="mx-auto mt-2 max-w-xs text-[13px] leading-6 text-[#7a6d60]">
+          Cuéntame el momento y te recomendaré el vino perfecto.
+        </p>
+      </div>
+      <div className="mt-8 space-y-3">
+        {['Quiero un vino para acompañar una comida', 'Busco un vino para una ocasión especial', 'Prefiero algo concreto', 'Sorpréndeme'].map((label) => (
+          <button
+            key={label}
+            type="button"
+            className="flex min-h-[66px] w-full items-center gap-4 rounded-[20px] border border-[#eadfce] bg-white px-5 text-left text-[14px] font-semibold text-[#2b241e] shadow-[0_12px_28px_rgba(44,32,20,0.05)]"
+          >
+            <span className="text-[20px] text-[#9a6b25]">✦</span>
+            {label}
+          </button>
+        ))}
+      </div>
+      {featuredItem ? (
+        <button
+          type="button"
+          onClick={() => onSelectItem(featuredItem)}
+          className="mt-8 w-full rounded-[22px] border border-[#eadfce] bg-white p-4 text-left shadow-[0_14px_38px_rgba(44,32,20,0.08)]"
+        >
+          <div className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#9a8060]">
+            Recomendación rápida
+          </div>
+          <div className="mt-2 text-[17px] font-bold text-[#17120e]">{featuredItem.nombre}</div>
+          <div className="mt-1 text-[13px] text-[#7a6d60]">{formatPrice(featuredItem.precio)}</div>
+        </button>
+      ) : null}
+      <div className="mt-8 text-center text-[12px] text-[#8d8174]">{restaurantName}</div>
+    </section>
   )
 }
 

@@ -361,7 +361,7 @@ export function AuditoriaTab({
                     onClick={() => onDeshacer(item)}
                     className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
                   >
-                    Deshacer
+                    Reactivar
                   </button>
                 </div>
               )}
