@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   filterGuestMenuItems,
   getGuestMenuKindLabel,
@@ -1882,10 +1882,25 @@ function MobileSommelierScreen({
   onSelectItem: (item: GuestMenuItem) => void
 }) {
   const [step, setStep] = useState<MobileSommelierStep>('service')
+  const [surpriseFeedbackVisible, setSurpriseFeedbackVisible] = useState(false)
+  const recommendationRef = useRef<HTMLDivElement | null>(null)
 
   function chooseService(mode: 'botella' | 'copa') {
     onChangePreference('servicio', mode)
     setStep('questions')
+  }
+
+  function handleSurprise() {
+    onSurprise()
+    setSurpriseFeedbackVisible(true)
+
+    window.setTimeout(() => {
+      recommendationRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
+
+    window.setTimeout(() => {
+      setSurpriseFeedbackVisible(false)
+    }, 2200)
   }
 
   return (
@@ -1957,10 +1972,15 @@ function MobileSommelierScreen({
 
             <button
               type="button"
-              onClick={onSurprise}
+              onClick={handleSurprise}
               className="w-full rounded-[17px] border border-white/10 bg-white/8 px-4 py-3 text-left text-[14px] font-semibold text-white/72 transition active:scale-[0.99]"
             >
-              Sorpréndeme
+              <span className="flex items-center justify-between gap-3">
+                <span>Sorpréndeme</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#d8c3a5]">
+                  Ver recomendación
+                </span>
+              </span>
             </button>
 
             {serviceMode === 'copa' ? (
@@ -2095,13 +2115,28 @@ function MobileSommelierScreen({
       </div>
 
       {featuredItem ? (
-        <div className="mt-5">
-          <div className="mb-3 text-[13px] font-bold text-[#17120e]">Recomendación del sommelier</div>
+        <div ref={recommendationRef} className="mt-5 scroll-mt-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="text-[13px] font-bold text-[#17120e]">Recomendación del sommelier</div>
+            {surpriseFeedbackVisible ? (
+              <div className="rounded-full bg-[#151515] px-3 py-1 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(21,21,21,0.18)]">
+                Nueva opción
+              </div>
+            ) : null}
+          </div>
+          <div
+            className={`rounded-[26px] transition ${
+              surpriseFeedbackVisible
+                ? 'ring-2 ring-[#9b173d]/45 ring-offset-4 ring-offset-[#f5f2eb]'
+                : ''
+            }`}
+          >
           <MobileFeaturedWineCard
             item={featuredItem}
             serviceMode={serviceMode}
             onClick={() => onSelectItem(featuredItem)}
           />
+          </div>
         </div>
       ) : null}
       <div className="mt-8 text-center text-[12px] text-[#8d8174]">{restaurantName}</div>
