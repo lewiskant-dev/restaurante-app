@@ -107,6 +107,15 @@ function getKindLabel(value: GuestMenuKind) {
   return getGuestMenuKindLabel(value)
 }
 
+function getMobileWineBadge(item: GuestMenuItem) {
+  if (item.tipo === 'vino_espumoso') return { label: 'Espumoso', className: 'bg-[#fde8ec] text-[#8f1739]' }
+  if (item.tipo === 'vino_blanco') return { label: 'Blanco', className: 'bg-[#eef4df] text-[#566830]' }
+  if (item.tipo === 'vino_rosado') return { label: 'Rosado', className: 'bg-[#fde6e9] text-[#9b4f62]' }
+  if (item.tipo === 'vino_tinto') return { label: 'Tinto', className: 'bg-[#f4e1e6] text-[#7d1834]' }
+  if (item.tipo === 'coctel') return { label: 'Cóctel', className: 'bg-[#efe8da] text-[#7d613e]' }
+  return { label: getKindLabel(item.tipo), className: 'bg-[#efe8da] text-[#7d613e]' }
+}
+
 function getTargetScaleValue(value: SommelierScale) {
   if (value === 'low') return 2
   if (value === 'medium') return 3.5
@@ -613,26 +622,54 @@ function MobileGuestExperience({
           onSelectItem={onSelectItem}
         />
       ) : (
-        <section className="px-4 pb-6 pt-6">
+        <section className="px-4 pb-6 pt-7">
           <MobileListHeader
             count={listItems.length}
+            title={serviceMode === 'copa' ? 'Copas' : view === 'favorites' ? 'Favoritos' : 'Vinos'}
             onBack={() => onViewChange('home')}
             onFilters={() => onFiltersOpenChange(true)}
-            activeFiltersCount={activeFiltersCount}
           />
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-            <MobileFilterChip label={`Filtros (${activeFiltersCount})`} active onClick={() => onFiltersOpenChange(true)} />
+          <div className="mt-7 grid grid-cols-[1fr_auto] gap-3">
+            <label className="flex h-12 items-center gap-3 rounded-[16px] border border-[#eadfce] bg-white px-4 shadow-[0_10px_28px_rgba(44,32,20,0.04)]">
+              <MobileSearchIcon />
+              <input
+                type="search"
+                value={filters.query || ''}
+                onChange={(event) => onFilterChange('query', event.target.value)}
+                placeholder="Buscar vino, bodega, uva, región..."
+                className="min-w-0 flex-1 bg-transparent text-[14px] text-[#211b16] outline-none placeholder:text-[#9b9185]"
+              />
+            </label>
+            <button
+              type="button"
+              className="flex h-12 w-12 items-center justify-center rounded-[16px] border border-[#eadfce] bg-white text-[#7f7368] shadow-[0_10px_28px_rgba(44,32,20,0.04)]"
+              aria-label="Guardar búsqueda"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M7 4h10a1 1 0 0 1 1 1v15l-6-3.5L6 20V5a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+          <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+            <MobileFilterChip label="Filtros" active badge={activeFiltersCount} onClick={() => onFiltersOpenChange(true)} icon />
             {filters.tipoCarta ? (
               <MobileFilterChip
                 label={getGuestMenuKindLabel(filters.tipoCarta as GuestMenuKind)}
                 onClick={() => onFilterChange('tipoCarta', '')}
               />
-            ) : null}
+            ) : (
+              <MobileFilterChip label="Tipo" onClick={() => onFiltersOpenChange(true)} />
+            )}
+            <MobileFilterChip label="País / Región" onClick={() => onFiltersOpenChange(true)} />
+            <MobileFilterChip label="Uva" onClick={() => onFiltersOpenChange(true)} />
             {typeof filters.maxPrice === 'number' ? (
               <MobileFilterChip label={`Hasta ${formatPrice(filters.maxPrice)}`} onClick={() => onFilterChange('maxPrice', null)} />
-            ) : null}
+            ) : (
+              <MobileFilterChip label="Precio" onClick={() => onFiltersOpenChange(true)} />
+            )}
+            <MobileFilterChip label="Más" onClick={() => onFiltersOpenChange(true)} chevron />
           </div>
-          <div className="mt-4 space-y-4">
+          <div className="mt-6 space-y-3.5">
             {listItems.map((item) => (
               <MobileWineListItem
                 key={item.id}
@@ -1492,34 +1529,40 @@ function MobileSearchIcon() {
 }
 
 function MobileListHeader({
+  title,
   count,
-  activeFiltersCount,
   onBack,
   onFilters,
 }: {
+  title: string
   count: number
-  activeFiltersCount: number
   onBack: () => void
   onFilters: () => void
 }) {
   return (
-    <header className="flex h-12 items-center justify-between">
+    <header className="flex items-start justify-between gap-4">
       <button
         type="button"
         onClick={onBack}
-        className="flex h-10 w-10 items-center justify-center rounded-full text-[#4d4338]"
+        className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-full text-[#4d4338]"
         aria-label="Volver"
       >
         <span className="text-xl">‹</span>
       </button>
-      <div className="text-[13px] font-bold text-[#17120e]">{count} resultados</div>
+      <div className="min-w-0 flex-1">
+        <h1 className="text-[2rem] font-bold leading-none tracking-[-0.04em] text-[#17120e]">{title}</h1>
+        <div className="mt-1 text-[16px] text-[#8b7e72]">{count} resultados</div>
+      </div>
       <button
         type="button"
         onClick={onFilters}
-        className="rounded-full px-3 py-2 text-[12px] font-semibold text-[#4d4338]"
+        className="flex h-12 items-center gap-2 rounded-[16px] border border-[#d9cbbb] bg-white px-4 text-[14px] font-semibold text-[#17120e] shadow-[0_8px_20px_rgba(44,32,20,0.04)]"
       >
         Ordenar
-        {activeFiltersCount ? <span className="ml-1 text-[#9b173d]">({activeFiltersCount})</span> : null}
+        <svg className="h-4 w-4 text-[#7f7368]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 7h10m-6 5h12M4 17h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M17 4v6m0 0 2-2m-2 2-2-2M12 14v6m0 0 2-2m-2 2-2-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </button>
     </header>
   )
@@ -1528,23 +1571,41 @@ function MobileListHeader({
 function MobileFilterChip({
   label,
   active,
+  icon,
+  chevron,
+  badge,
   onClick,
 }: {
   label: string
   active?: boolean
+  icon?: boolean
+  chevron?: boolean
+  badge?: number
   onClick: () => void
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 rounded-full border px-3 py-2 text-[12px] font-semibold ${
+      className={`flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-[13px] font-semibold ${
         active
-          ? 'border-[#9b173d] bg-white text-[#9b173d]'
+          ? 'border-[#9b173d] bg-[#9b173d] text-white shadow-[0_10px_22px_rgba(155,23,61,0.22)]'
           : 'border-[#eadfce] bg-white text-[#5f554a]'
       }`}
     >
+      {icon ? (
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 7h10m-6 5h12M4 17h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M17 4v6m0 0 2-2m-2 2-2-2M12 14v6m0 0 2-2m-2 2-2-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : null}
       {label}
+      {typeof badge === 'number' ? (
+        <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white px-1 text-[12px] font-bold text-[#9b173d]">
+          {badge}
+        </span>
+      ) : null}
+      {chevron ? <span className="text-[13px] text-current/70">⌄</span> : null}
     </button>
   )
 }
@@ -1558,26 +1619,60 @@ function MobileWineListItem({
   serviceMode: SommelierService
   onClick: () => void
 }) {
+  const badge = getMobileWineBadge(item)
+  const grapes = splitGuestGrapes(item.uva).slice(0, 3).join(', ')
+  const profileTags = [
+    getKindLabel(item.tipo).replace(/^Vino\s+/i, ''),
+    item.perfil_vino?.dulzor?.label,
+    item.perfil_vino?.madera?.label,
+  ].filter(Boolean)
+
   return (
-    <button type="button" onClick={onClick} className="flex w-full items-center gap-4 text-left">
-      <div className="h-28 w-16 shrink-0 rounded-[18px] bg-[#f3eadc]">
-        {item.foto_url ? <BottleImage src={item.foto_url} alt={item.nombre} className="h-full w-full p-1.5" /> : null}
+    <button
+      type="button"
+      onClick={onClick}
+      className="grid min-h-[164px] w-full grid-cols-[8.5rem_1fr] overflow-hidden rounded-[20px] border border-[#eadfce] bg-white text-left shadow-[0_12px_34px_rgba(44,32,20,0.07)]"
+    >
+      <div className="flex min-h-[164px] items-center justify-center bg-gradient-to-r from-[#fbf7ef] to-white px-3 py-4">
+        {item.foto_url ? (
+          <BottleImage src={item.foto_url} alt={item.nombre} className="h-[142px] w-full" />
+        ) : (
+          <div className="flex h-[120px] w-[76px] items-center justify-center rounded-[18px] bg-[#f3eadc] text-[2rem] font-semibold text-[#9a8060]">
+            {getKindLabel(item.tipo).slice(0, 1)}
+          </div>
+        )}
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="line-clamp-2 text-[15px] font-bold leading-tight text-[#17120e]">{item.nombre}</div>
-        <div className="mt-1 text-[12px] text-[#7a6d60]">
-          {[getKindLabel(item.tipo), item.origen].filter(Boolean).join(' · ')}
+      <div className="relative min-w-0 px-4 py-4 pb-16 pr-5">
+        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${badge.className}`}>
+          {badge.label}
+        </span>
+        <div className="mt-3 line-clamp-2 text-[18px] font-bold leading-tight text-[#17120e]">{item.nombre}</div>
+        <div className="mt-1 line-clamp-1 text-[13px] text-[#7a6d60]">{item.origen || item.categoria}</div>
+        <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-[#6f6256]">
+          <span className="font-semibold text-[#d28a00]">★ 4,5</span>
+          {grapes ? (
+            <>
+              <span className="text-[#c9bfb1]">·</span>
+              <span className="line-clamp-1">{grapes}</span>
+            </>
+          ) : null}
         </div>
-        <div className="mt-2 text-[12px] font-semibold text-[#a06d1f]">★ 4,5</div>
+        {profileTags.length > 0 ? (
+          <div className="mt-2 line-clamp-1 text-[12px] text-[#7a6d60]">
+            {profileTags.join(' · ')}
+          </div>
+        ) : null}
         {item.disponible_copa && item.precio_copa !== null ? (
           <div className="mt-1 text-[11px] text-[#7a6d60]">Copa {formatPrice(item.precio_copa)}</div>
         ) : null}
-      </div>
-      <div className="flex h-full min-h-24 shrink-0 flex-col items-end justify-between">
-        <span className="text-[20px] leading-none text-[#9c8f82]">♡</span>
-        <span className="text-[14px] font-bold text-[#17120e]">
+        <div className="absolute bottom-4 right-5 text-right">
+          <div className="text-[18px] font-bold text-[#17120e]">
           {getGuestDisplayPriceLabel(item, serviceMode)}
-        </span>
+          </div>
+          <div className="text-[11px] text-[#8b7e72]">
+            {serviceMode === 'copa' ? 'Copa' : 'Botella 75 cl'}
+          </div>
+        </div>
       </div>
     </button>
   )
