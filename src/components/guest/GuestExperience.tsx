@@ -459,7 +459,6 @@ function MobileGuestExperience({
   options,
   view,
   filtersOpen,
-  activeFiltersCount,
   serviceMode,
   sommelierPreferences,
   sommelierDishOptions,
@@ -483,7 +482,6 @@ function MobileGuestExperience({
   options: ReturnType<typeof getGuestMenuFilterOptions>
   view: MobileGuestView
   filtersOpen: boolean
-  activeFiltersCount: number
   serviceMode: SommelierService
   sommelierPreferences: SommelierPreferences
   sommelierDishOptions: Array<{ value: string; label: string }>
@@ -649,25 +647,6 @@ function MobileGuestExperience({
                 <path d="M7 4h10a1 1 0 0 1 1 1v15l-6-3.5L6 20V5a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
               </svg>
             </button>
-          </div>
-          <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
-            <MobileFilterChip label="Filtros" active badge={activeFiltersCount} onClick={() => onFiltersOpenChange(true)} icon />
-            {filters.tipoCarta ? (
-              <MobileFilterChip
-                label={getGuestMenuKindLabel(filters.tipoCarta as GuestMenuKind)}
-                onClick={() => onFilterChange('tipoCarta', '')}
-              />
-            ) : (
-              <MobileFilterChip label="Tipo" onClick={() => onFiltersOpenChange(true)} />
-            )}
-            <MobileFilterChip label="País / Región" onClick={() => onFiltersOpenChange(true)} />
-            <MobileFilterChip label="Uva" onClick={() => onFiltersOpenChange(true)} />
-            {typeof filters.maxPrice === 'number' ? (
-              <MobileFilterChip label={`Hasta ${formatPrice(filters.maxPrice)}`} onClick={() => onFilterChange('maxPrice', null)} />
-            ) : (
-              <MobileFilterChip label="Precio" onClick={() => onFiltersOpenChange(true)} />
-            )}
-            <MobileFilterChip label="Más" onClick={() => onFiltersOpenChange(true)} chevron />
           </div>
           <div className="mt-6 space-y-3.5">
             {listItems.map((item) => (
@@ -892,16 +871,6 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
         .slice(0, 8),
     [items]
   )
-  const activeMobileFiltersCount = [
-    filters.tipoCarta,
-    filters.uva,
-    filters.denominacion,
-    filters.region,
-    filters.bodega,
-    filters.maridaje,
-    filters.maxPrice !== null ? 'precio' : '',
-  ].filter(Boolean).length
-
   function updateFilter<Key extends keyof GuestMenuFilters>(key: Key, value: GuestMenuFilters[Key]) {
     setFilters((current) => ({ ...current, [key]: value }))
   }
@@ -978,7 +947,6 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
         options={options}
         view={mobileView}
         filtersOpen={mobileFiltersOpen}
-        activeFiltersCount={activeMobileFiltersCount}
         serviceMode={serviceMode}
         sommelierPreferences={sommelierPreferences}
         sommelierDishOptions={sommelierDishOptions.map((dish) => ({ value: dish, label: dish }))}
@@ -1558,55 +1526,20 @@ function MobileListHeader({
         onClick={onFilters}
         className="flex h-12 items-center gap-2 rounded-[16px] border border-[#d9cbbb] bg-white px-4 text-[14px] font-semibold text-[#17120e] shadow-[0_8px_20px_rgba(44,32,20,0.04)]"
       >
-        Ordenar
+        Filtros
         <svg className="h-4 w-4 text-[#7f7368]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M4 7h10m-6 5h12M4 17h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          <path d="M17 4v6m0 0 2-2m-2 2-2-2M12 14v6m0 0 2-2m-2 2-2-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M4 7h5m6 0h5M4 17h8m6 0h2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path
+            d="M12 4.8v4.4M15 14.8v4.4"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+          <circle cx="12" cy="7" r="2.15" stroke="currentColor" strokeWidth="1.8" />
+          <circle cx="15" cy="17" r="2.15" stroke="currentColor" strokeWidth="1.8" />
         </svg>
       </button>
     </header>
-  )
-}
-
-function MobileFilterChip({
-  label,
-  active,
-  icon,
-  chevron,
-  badge,
-  onClick,
-}: {
-  label: string
-  active?: boolean
-  icon?: boolean
-  chevron?: boolean
-  badge?: number
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-[13px] font-semibold ${
-        active
-          ? 'border-[#9b173d] bg-[#9b173d] text-white shadow-[0_10px_22px_rgba(155,23,61,0.22)]'
-          : 'border-[#eadfce] bg-white text-[#5f554a]'
-      }`}
-    >
-      {icon ? (
-        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M4 7h10m-6 5h12M4 17h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          <path d="M17 4v6m0 0 2-2m-2 2-2-2M12 14v6m0 0 2-2m-2 2-2-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ) : null}
-      {label}
-      {typeof badge === 'number' ? (
-        <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white px-1 text-[12px] font-bold text-[#9b173d]">
-          {badge}
-        </span>
-      ) : null}
-      {chevron ? <span className="text-[13px] text-current/70">⌄</span> : null}
-    </button>
   )
 }
 
@@ -1893,13 +1826,22 @@ function MobileFiltersSheet({
           <MobileSheetSelect label="Maridaje" value={filters.maridaje || ''} options={options.maridajes} onChange={(value) => onChange('maridaje', value)} />
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-6 h-14 w-full rounded-[18px] bg-[#9b173d] text-[14px] font-bold text-white shadow-[0_14px_34px_rgba(155,23,61,0.22)]"
-        >
-          Ver {count} resultados
-        </button>
+        <div className="mt-6 grid grid-cols-[0.9fr_1.35fr] gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-14 rounded-[18px] border border-[#d9cbbb] bg-white text-[14px] font-bold text-[#5f554a]"
+          >
+            Cerrar
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-14 rounded-[18px] bg-[#9b173d] text-[14px] font-bold text-white shadow-[0_14px_34px_rgba(155,23,61,0.22)]"
+          >
+            Aplicar filtros · {count}
+          </button>
+        </div>
       </div>
     </div>
   )
