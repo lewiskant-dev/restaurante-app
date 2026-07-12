@@ -1776,10 +1776,11 @@ function MobileFiltersSheet({
           <h2 className="text-[1.45rem] font-bold text-[#17120e]">Filtros</h2>
           <button
             type="button"
-            onClick={onReset}
-            className="text-[12px] font-semibold text-[#9b173d]"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-[#eadfce] bg-white text-[20px] leading-none text-[#5f554a] shadow-[0_8px_18px_rgba(44,32,20,0.05)]"
+            aria-label="Cerrar filtros"
           >
-            Limpiar todo
+            ×
           </button>
         </div>
 
@@ -1829,10 +1830,10 @@ function MobileFiltersSheet({
         <div className="mt-6 grid grid-cols-[0.9fr_1.35fr] gap-3">
           <button
             type="button"
-            onClick={onClose}
+            onClick={onReset}
             className="h-14 rounded-[18px] border border-[#d9cbbb] bg-white text-[14px] font-bold text-[#5f554a]"
           >
-            Cerrar
+            Limpiar todo
           </button>
           <button
             type="button"
