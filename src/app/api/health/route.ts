@@ -65,6 +65,11 @@ const STORAGE_BUCKET_CHECKS = [
     bucket: 'albaranes',
     required: false,
   },
+  {
+    name: 'bucket:guest-menu',
+    bucket: 'guest-menu',
+    required: false,
+  },
 ] as const
 
 const RPC_CHECKS = [
@@ -332,7 +337,7 @@ async function buildSupabaseChecks(): Promise<DeploymentHealthCheck[]> {
       return {
         name: check.name,
         configured: !missing,
-        scope: 'database' as const,
+        scope: 'rpc' as const,
         required: check.required,
         message: missing ? error?.message : undefined,
       }

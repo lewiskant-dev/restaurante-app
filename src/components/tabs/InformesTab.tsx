@@ -18,6 +18,7 @@ import {
 } from '@/lib/financialAnalytics'
 import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import { ghostButton, softPanel, surfaceCard } from '@/components/ui/primitives'
+import { getDeploymentHealthAction } from '@/lib/deploymentHealth'
 import type { Producto } from '@/types'
 
 function formatEuro(value: number) {
@@ -139,7 +140,7 @@ type ComparisonCard = {
 type DeploymentHealthCheck = {
   name: string
   configured: boolean
-  scope: 'env' | 'database' | 'storage'
+  scope: 'env' | 'database' | 'storage' | 'rpc'
   required: boolean
   message?: string
 }
@@ -176,6 +177,13 @@ function formatHealthCheckName(value: string) {
   if (value.startsWith('rpc:')) return value.replace('rpc:', 'Función ')
   if (value === 'supabase:admin-client') return 'Cliente admin de Supabase'
   return value
+}
+
+function formatHealthScope(value: DeploymentHealthCheck['scope']) {
+  if (value === 'env') return 'Variables'
+  if (value === 'database') return 'Base de datos'
+  if (value === 'storage') return 'Archivos'
+  return 'Funciones'
 }
 
 export function InformesTab({
@@ -294,6 +302,15 @@ export function InformesTab({
         : deploymentHealth
           ? 'Degradado'
           : 'Sin datos'
+  const deploymentHealthScopeRows = deploymentHealth?.totals
+    ? (['env', 'database', 'rpc', 'storage'] as DeploymentHealthCheck['scope'][]).map((scope) => ({
+        scope,
+        label: formatHealthScope(scope),
+        ...deploymentHealth.totals!.by_scope[scope],
+      }))
+    : []
+  const deploymentHealthFailures =
+    deploymentHealth?.checks.filter((check) => !check.configured) ?? []
   const comparisonCards: ComparisonCard[] = [
     {
       key: 'ventas',
@@ -358,73 +375,150 @@ export function InformesTab({
             {deploymentHealthError}
           </div>
         ) : (
-          <div className="mt-4 grid gap-3 lg:grid-cols-3">
-            <div className="rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                Estado
-              </div>
-              <div className="mt-2 text-[1.35rem] font-semibold text-slate-950">
-                {deploymentHealthLoading ? '...' : deploymentHealthStateText}
-              </div>
-              <div className="mt-1 text-[11px] text-slate-500">
-                {deploymentHealth?.checked_at
-                  ? `Última revisión: ${new Date(deploymentHealth.checked_at).toLocaleString('es-ES')}`
-                  : 'Se cargará automáticamente al abrir informes.'}
-              </div>
-              {deploymentHealth?.totals ? (
-                <div className="mt-2 text-[11px] font-medium text-slate-500">
-                  {deploymentHealth.totals.configured}/{deploymentHealth.totals.total} checks OK
-                  {typeof deploymentHealth.duration_ms === 'number'
-                    ? ` · ${deploymentHealth.duration_ms} ms`
-                    : ''}
+          <>
+            <div className="mt-4 grid gap-3 lg:grid-cols-3">
+              <div className="rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  Estado
                 </div>
-              ) : null}
+                <div className="mt-2 text-[1.35rem] font-semibold text-slate-950">
+                  {deploymentHealthLoading ? '...' : deploymentHealthStateText}
+                </div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  {deploymentHealth?.checked_at
+                    ? `Última revisión: ${new Date(deploymentHealth.checked_at).toLocaleString('es-ES')}`
+                    : 'Se cargará automáticamente al abrir informes.'}
+                </div>
+                {deploymentHealth?.totals ? (
+                  <div className="mt-2 text-[11px] font-medium text-slate-500">
+                    {deploymentHealth.totals.configured}/{deploymentHealth.totals.total} checks OK
+                    {typeof deploymentHealth.duration_ms === 'number'
+                      ? ` · ${deploymentHealth.duration_ms} ms`
+                      : ''}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Pendientes críticos
+                  </div>
+                  <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700">
+                    {deploymentHealth?.missing.length ?? 0}
+                  </span>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {deploymentHealth?.missing.length ? (
+                    deploymentHealth.missing.slice(0, 4).map((item) => (
+                      <div key={item} className="text-[12px] font-medium text-slate-700">
+                        {formatHealthCheckName(item)}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-[12px] text-slate-400">Sin bloqueos críticos.</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Avisos
+                  </div>
+                  <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+                    {deploymentHealth?.warnings.length ?? 0}
+                  </span>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {deploymentHealth?.warnings.length ? (
+                    deploymentHealth.warnings.slice(0, 4).map((item) => (
+                      <div key={item} className="text-[12px] font-medium text-slate-700">
+                        {formatHealthCheckName(item)}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-[12px] text-slate-400">Sin avisos pendientes.</div>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                  Pendientes críticos
-                </div>
-                <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700">
-                  {deploymentHealth?.missing.length ?? 0}
-                </span>
-              </div>
-              <div className="mt-3 space-y-2">
-                {deploymentHealth?.missing.length ? (
-                  deploymentHealth.missing.slice(0, 4).map((item) => (
-                    <div key={item} className="text-[12px] font-medium text-slate-700">
-                      {formatHealthCheckName(item)}
+            {deploymentHealthScopeRows.length > 0 ? (
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                {deploymentHealthScopeRows.map((row) => (
+                  <div
+                    key={row.scope}
+                    className="rounded-[16px] border border-slate-200 bg-white px-4 py-3"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                        {row.label}
+                      </div>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                          row.failed > 0
+                            ? 'bg-red-50 text-red-700'
+                            : 'bg-emerald-50 text-emerald-700'
+                        }`}
+                      >
+                        {row.configured}/{row.total || 0}
+                      </span>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-[12px] text-slate-400">Sin bloqueos críticos.</div>
-                )}
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className={`h-full rounded-full ${
+                          row.failed > 0 ? 'bg-red-400' : 'bg-emerald-500'
+                        }`}
+                        style={{
+                          width: `${row.total > 0 ? Math.round((row.configured / row.total) * 100) : 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
+            ) : null}
 
-            <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-3">
-              <div className="flex items-center justify-between gap-3">
+            {deploymentHealthFailures.length > 0 ? (
+              <div className="mt-3 rounded-[18px] border border-slate-200 bg-white px-4 py-3">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                  Avisos
+                  Plan de acción
                 </div>
-                <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
-                  {deploymentHealth?.warnings.length ?? 0}
-                </span>
-              </div>
-              <div className="mt-3 space-y-2">
-                {deploymentHealth?.warnings.length ? (
-                  deploymentHealth.warnings.slice(0, 4).map((item) => (
-                    <div key={item} className="text-[12px] font-medium text-slate-700">
-                      {formatHealthCheckName(item)}
+                <div className="mt-3 space-y-2">
+                  {deploymentHealthFailures.slice(0, 6).map((check) => (
+                    <div
+                      key={check.name}
+                      className="rounded-[14px] border border-slate-100 bg-slate-50 px-3 py-2.5"
+                    >
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-[12px] font-semibold text-slate-900">
+                          {formatHealthCheckName(check.name)}
+                        </div>
+                        <span
+                          className={`w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                            check.required
+                              ? 'bg-red-50 text-red-700'
+                              : 'bg-amber-50 text-amber-700'
+                          }`}
+                        >
+                          {check.required ? 'Crítico' : 'Aviso'}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] leading-4 text-slate-500">
+                        {getDeploymentHealthAction(check.name)}
+                      </p>
+                      {check.message ? (
+                        <p className="mt-1 line-clamp-2 text-[10px] text-slate-400">
+                          {check.message}
+                        </p>
+                      ) : null}
                     </div>
-                  ))
-                ) : (
-                  <div className="text-[12px] text-slate-400">Sin avisos pendientes.</div>
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
-          </div>
+            ) : null}
+          </>
         )}
       </div>
 

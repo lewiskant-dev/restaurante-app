@@ -33,12 +33,15 @@ La ruta devuelve:
 - `503` si faltan variables o tablas obligatorias
 - `missing` con lo que bloquea el despliegue
 - `warnings` con fases recomendadas pendientes, como tablas financieras
+- `totals.by_scope` separado por `env`, `database`, `rpc` y `storage`
+
+El mismo resultado se puede revisar desde `Informes > Diagnóstico del despliegue`. Si aparece algo roto, usa primero el bloque `Plan de acción`: resume si toca revisar Vercel, ejecutar un SQL concreto, crear un bucket o comprobar una firma RPC.
 
 Si `warnings` contiene `table:productos_precios_historial`, `table:inventario_cierres` o `table:inventario_cierre_lineas`, aplica [restaurant-finance-setup.sql](/Users/jorge/restaurante-app/supabase/restaurant-finance-setup.sql:1) antes de usar informes financieros avanzados.
 
 Si aparecen `column:productos.imagen_url`, `column:productos.icono` o `bucket:albaranes`, revisa [product-media-setup.sql](/Users/jorge/restaurante-app/supabase/product-media-setup.sql:1) y las policies de storage antes de usar imágenes o adjuntos.
 
-Si aparece o quieres activar `Nexo Guest Experience`, aplica [guest-experience-setup.sql](/Users/jorge/restaurante-app/supabase/guest-experience-setup.sql:1). Esa migración crea la tabla `guest_menu_items`, habilita lectura pública segura para QR y mantiene la edición privada limitada a `administrador` y `master`.
+Si aparece `bucket:guest-menu` o quieres activar `Nexo Guest Experience`, aplica [guest-experience-setup.sql](/Users/jorge/restaurante-app/supabase/guest-experience-setup.sql:1). Esa migración crea la tabla `guest_menu_items`, el bucket público de imágenes, habilita lectura pública segura para QR y mantiene la edición privada limitada a `administrador` y `master`.
 
 Si aparece `rpc:guardar_producto_atomico` o `rpc:cambiar_estado_producto_atomico`, aplica [product-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/product-reliability-setup.sql:1) antes de crear o editar productos reales.
 

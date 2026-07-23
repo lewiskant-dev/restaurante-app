@@ -1,7 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { buildDeploymentHealthSummary } from '../src/lib/deploymentHealth.ts'
+import {
+  buildDeploymentHealthSummary,
+  getDeploymentHealthAction,
+} from '../src/lib/deploymentHealth.ts'
 
 test('buildDeploymentHealthSummary marca ok si las variables criticas existen', () => {
   const summary = buildDeploymentHealthSummary(
@@ -24,6 +27,7 @@ test('buildDeploymentHealthSummary marca ok si las variables criticas existen', 
   assert.equal(summary.totals.configured, 5)
   assert.equal(summary.totals.failed, 0)
   assert.equal(summary.totals.by_scope.env.total, 5)
+  assert.equal(summary.totals.by_scope.rpc.total, 0)
   assert.equal(summary.checks.every((check) => check.scope === 'env'), true)
   assert.equal(summary.checks.every((check) => check.required), true)
 })
@@ -75,6 +79,12 @@ test('buildDeploymentHealthSummary diferencia checks requeridos y avisos', () =>
         required: false,
         message: 'bucket not found',
       },
+      {
+        name: 'rpc:guardar_producto_atomico',
+        configured: true,
+        scope: 'rpc',
+        required: true,
+      },
     ]
   )
 
@@ -82,10 +92,11 @@ test('buildDeploymentHealthSummary diferencia checks requeridos y avisos', () =>
   assert.equal(summary.status, 'warning')
   assert.deepEqual(summary.missing, [])
   assert.deepEqual(summary.warnings, ['bucket:albaranes'])
-  assert.equal(summary.totals.total, 7)
-  assert.equal(summary.totals.configured, 6)
+  assert.equal(summary.totals.total, 8)
+  assert.equal(summary.totals.configured, 7)
   assert.equal(summary.totals.failed, 1)
   assert.equal(summary.totals.by_scope.database.total, 1)
+  assert.equal(summary.totals.by_scope.rpc.total, 1)
   assert.equal(summary.totals.by_scope.storage.failed, 1)
 })
 
@@ -104,4 +115,12 @@ test('buildDeploymentHealthSummary conserva la duracion de ejecucion si se infor
   )
 
   assert.equal(summary.duration_ms, 148)
+})
+
+test('getDeploymentHealthAction devuelve acciones operativas por tipo de check', () => {
+  assert.match(getDeploymentHealthAction('SUPABASE_SERVICE_ROLE_KEY'), /service role/i)
+  assert.match(getDeploymentHealthAction('bucket:albaranes'), /albaranes/i)
+  assert.match(getDeploymentHealthAction('bucket:guest-menu'), /guest-experience/i)
+  assert.match(getDeploymentHealthAction('rpc:guardar_producto_atomico'), /productos/i)
+  assert.match(getDeploymentHealthAction('table:guest_menu_items'), /migracion/i)
 })

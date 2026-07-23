@@ -82,8 +82,14 @@ Interpretación:
 
 - `missing`: variables o tablas obligatorias que hay que corregir antes de operar.
 - `warnings`: piezas opcionales/recomendadas pendientes. La app puede funcionar, pero algunas fases pueden quedar limitadas.
+- `totals.by_scope.env`: estado de variables de entorno.
+- `totals.by_scope.database`: estado de tablas y columnas.
+- `totals.by_scope.rpc`: estado de funciones atomicas.
+- `totals.by_scope.storage`: estado de buckets y archivos.
 
 Si devuelve `503`, revisar `missing`. Si falta una variable, corregir el entorno del hosting. Si falta una tabla, aplicar el SQL correspondiente en Supabase antes de seguir.
+
+Desde `Informes > Diagnóstico del despliegue`, Nexo muestra el mismo chequeo en formato visual. Si hay fallos, el bloque `Plan de acción` indica la causa probable y el SQL, variable o bucket que conviene revisar primero.
 
 Tablas obligatorias esperadas:
 
@@ -129,6 +135,7 @@ Piezas recomendadas para adjuntos e imágenes:
 Piezas recomendadas para Nexo Guest Experience:
 
 - tabla `guest_menu_items`
+- bucket `guest-menu`
 - policies públicas de lectura para restaurantes activos y elementos publicados
 - ruta pública `/g/<slug-restaurante>` para QR sin login
 
