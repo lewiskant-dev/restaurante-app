@@ -936,6 +936,10 @@ export function GuestExperience({ restaurantName, items }: GuestExperienceProps)
     setRecommendationSeed((current) => current + 1)
   }
 
+  if (items.length === 0) {
+    return <GuestExperienceEmptyState restaurantName={restaurantName} />
+  }
+
   return (
     <main className="min-h-screen bg-[#f5f2eb] text-[#141414]">
       <MobileGuestExperience
@@ -1493,6 +1497,47 @@ function MobileSearchIcon() {
         strokeLinecap="round"
       />
     </svg>
+  )
+}
+
+function GuestExperienceEmptyState({ restaurantName }: { restaurantName: string }) {
+  return (
+    <main className="min-h-screen bg-[#f5f2eb] px-5 py-7 text-[#17120e]">
+      <div className="mx-auto flex min-h-[calc(100vh-3.5rem)] w-full max-w-4xl flex-col">
+        <header className="flex items-center gap-3">
+          <NexoBrandMark className="h-7 w-auto text-[#141414]" />
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#9a8060]">
+              Nexo Guest Experience
+            </div>
+            <h1 className="text-[1.5rem] font-semibold tracking-tight">{restaurantName}</h1>
+          </div>
+        </header>
+
+        <section className="flex flex-1 items-center justify-center py-12">
+          <div className="w-full max-w-xl rounded-[34px] border border-[#eadfce] bg-white/78 p-8 text-center shadow-[0_24px_70px_rgba(44,32,20,0.08)] backdrop-blur sm:p-10">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] bg-[#f3eadc] text-[#9a8060]">
+              <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M8 4h8a2 2 0 0 1 2 2v14l-6-3-6 3V6a2 2 0 0 1 2-2Z"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinejoin="round"
+                />
+                <path d="M9 8h6M9 11h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </div>
+            <h2 className="mt-6 text-[2rem] font-semibold leading-tight tracking-[-0.04em]">
+              Carta en preparación
+            </h2>
+            <p className="mx-auto mt-3 max-w-md text-[15px] leading-7 text-[#75695d]">
+              El restaurante todavía no tiene fichas publicadas. Cuando active sus vinos, copas o
+              recomendaciones, aparecerán aquí automáticamente.
+            </p>
+          </div>
+        </section>
+      </div>
+    </main>
   )
 }
 

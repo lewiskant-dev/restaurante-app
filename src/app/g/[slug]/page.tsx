@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { GuestExperience } from '@/components/guest/GuestExperience'
 import type { GuestMenuItem } from '@/lib/guestExperience'
 import { supabase } from '@/lib/supabase'
@@ -58,6 +59,41 @@ function mapGuestMenuRow(row: GuestMenuRow): GuestMenuItem {
     notas_cata: row.notas_cata ?? [],
     destacado: row.destacado,
     orden: row.orden,
+  }
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}): Promise<Metadata> {
+  const { slug } = await params
+  const { data: restaurant } = await supabase
+    .from('restaurantes')
+    .select('nombre,activo')
+    .eq('slug', slug)
+    .eq('activo', true)
+    .maybeSingle()
+
+  if (!restaurant) {
+    return {
+      title: 'Carta no disponible | Nexo',
+      robots: { index: false, follow: false },
+    }
+  }
+
+  const title = `${restaurant.nombre} | Nexo Guest Experience`
+  const description = `Carta interactiva de ${restaurant.nombre}: vinos, copas y recomendaciones del sommelier.`
+
+  return {
+    title,
+    description,
+    robots: { index: false, follow: false },
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+    },
   }
 }
 

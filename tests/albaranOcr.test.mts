@@ -6,6 +6,7 @@ import {
   detectUnitsPerPack,
   inferUnitsPerPack,
   normalizeOCRAlbaranLinea,
+  resolveOCRUnitPrice,
 } from '../src/lib/albaranOcr.ts'
 
 test('detectUnitsPerPack detecta unidades por caja al final del nombre', () => {
@@ -141,4 +142,37 @@ test('normalizeOCRAlbaranLinea separa coste sin IVA, IVA y coste con IVA', () =>
   assert.equal(Number(normalized.precio_unitario_normalizado.toFixed(2)), 0.67)
   assert.equal(Number(normalized.importe_iva_linea.toFixed(2)), 0.14)
   assert.equal(Number(normalized.precio_unitario_con_iva_normalizado.toFixed(2)), 0.82)
+})
+
+test('resolveOCRUnitPrice prioriza el precio detectado por OCR', () => {
+  const resolved = resolveOCRUnitPrice(4.25, {
+    ultimo_precio_compra: 3.5,
+    coste_unitario: 3,
+  })
+
+  assert.equal(resolved.precio_unitario, 4.25)
+  assert.equal(resolved.origen, 'ocr')
+  assert.equal(resolved.aviso, undefined)
+})
+
+test('resolveOCRUnitPrice usa el ultimo precio conocido si el albaran no muestra precio', () => {
+  const resolved = resolveOCRUnitPrice(0, {
+    ultimo_precio_compra: 12.345678,
+    coste_unitario: 10,
+  })
+
+  assert.equal(resolved.precio_unitario, 12.345678)
+  assert.equal(resolved.origen, 'ultimo_precio')
+  assert.match(resolved.aviso || '', /último coste conocido/)
+})
+
+test('resolveOCRUnitPrice pide revisar manualmente si no hay precio ni historico', () => {
+  const resolved = resolveOCRUnitPrice(0, {
+    ultimo_precio_compra: null,
+    coste_unitario: 0,
+  })
+
+  assert.equal(resolved.precio_unitario, null)
+  assert.equal(resolved.origen, 'sin_precio')
+  assert.match(resolved.aviso || '', /Indica el coste unitario/)
 })

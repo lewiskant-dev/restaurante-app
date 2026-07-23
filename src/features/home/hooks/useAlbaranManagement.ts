@@ -13,7 +13,7 @@ import {
   parseAtomicAlbaranResult,
   parseAtomicMapeoProductoResult,
 } from '@/lib/albaranTransaction'
-import { normalizeOCRAlbaranLinea } from '@/lib/albaranOcr'
+import { normalizeOCRAlbaranLinea, resolveOCRUnitPrice } from '@/lib/albaranOcr'
 import { supabase } from '@/lib/supabase'
 import type { Albaran, AlbaranLinea, Producto, Proveedor } from '@/types'
 import type { PromptActionRequest } from '@/components/ui/PromptActionDialog'
@@ -213,13 +213,6 @@ export function useAlbaranManagement({
     return { productoId: '', estado: 'pendiente' as const }
   }
 
-  function getLastKnownUnitPrice(productoId: string) {
-    const producto = productos.find((prod) => prod.id === productoId)
-    const lastPrice = Number(producto?.ultimo_precio_compra ?? producto?.coste_unitario ?? 0)
-
-    return Number.isFinite(lastPrice) && lastPrice > 0 ? lastPrice : null
-  }
-
   function getProductoNombre(productoId: string) {
     return productos.find((prod) => prod.id === productoId)?.nombre || ''
   }
@@ -354,25 +347,19 @@ export function useAlbaranManagement({
           proveedor: resultado.proveedor,
         })
         const matchInfo = getProductoMatchInfoFromOCR(linea.nombre || '')
-        const precioDetectado = Number(lineaNormalizada.precio_unitario_normalizado || 0)
-        const precioFallback = getLastKnownUnitPrice(matchInfo.productoId)
-        const precioAplicado =
-          Number.isFinite(precioDetectado) && precioDetectado > 0
-            ? precioDetectado
-            : precioFallback
-        const avisoPrecioFallback =
-          (!Number.isFinite(precioDetectado) || precioDetectado <= 0) && precioFallback
-            ? `Precio no visible en el albarán. Se usa el último coste conocido: ${precioFallback.toLocaleString('es-ES', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 6,
-              })} €.`
-            : ''
-        const aviso = [lineaNormalizada.aviso, avisoPrecioFallback].filter(Boolean).join(' ')
+        const producto = productos.find((prod) => prod.id === matchInfo.productoId)
+        const precioResuelto = resolveOCRUnitPrice(
+          lineaNormalizada.precio_unitario_normalizado,
+          producto
+        )
+        const aviso = [lineaNormalizada.aviso, precioResuelto.aviso].filter(Boolean).join(' ')
 
         return {
           producto_id: matchInfo.productoId,
           cantidad: String(lineaNormalizada.cantidad_normalizada || ''),
-          precio_unitario: precioAplicado ? String(Number(precioAplicado).toFixed(6)) : '',
+          precio_unitario: precioResuelto.precio_unitario
+            ? String(Number(precioResuelto.precio_unitario).toFixed(6))
+            : '',
           iva_porcentaje: lineaNormalizada.iva_porcentaje_normalizado
             ? String(lineaNormalizada.iva_porcentaje_normalizado)
             : '',

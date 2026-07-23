@@ -171,8 +171,32 @@ export function CartaTab({
   const [guestMenuSearch, setGuestMenuSearch] = useState('')
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null)
   const [deletingGuestMenuId, setDeletingGuestMenuId] = useState<string | null>(null)
+  const [publicUrlCopied, setPublicUrlCopied] = useState(false)
   const productListboxId = 'guest-menu-product-options'
   const publicUrl = restaurantSlug ? `/g/${restaurantSlug}` : ''
+
+  async function copyPublicGuestUrl() {
+    if (!publicUrl || typeof window === 'undefined') return
+
+    const absoluteUrl = new URL(publicUrl, window.location.origin).toString()
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(absoluteUrl)
+    } else {
+      const textarea = document.createElement('textarea')
+      textarea.value = absoluteUrl
+      textarea.setAttribute('readonly', 'true')
+      textarea.style.position = 'fixed'
+      textarea.style.left = '-9999px'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+    }
+
+    setPublicUrlCopied(true)
+    window.setTimeout(() => setPublicUrlCopied(false), 1800)
+  }
+
   async function confirmDeleteGuestMenuItem(item: GuestMenuAdminItem) {
     setDeletingGuestMenuId(item.id)
 
@@ -316,10 +340,21 @@ export function CartaTab({
             href={publicUrl || '#'}
             target="_blank"
             rel="noreferrer"
-            className={`px-4 py-2.5 text-center text-[12px] sm:text-[13px] ${ghostButton}`}
+            aria-disabled={!publicUrl}
+            className={`px-4 py-2.5 text-center text-[12px] sm:text-[13px] ${
+              publicUrl ? ghostButton : `${ghostButton} pointer-events-none opacity-50`
+            }`}
           >
             Ver carta pública
           </a>
+          <button
+            type="button"
+            onClick={() => void copyPublicGuestUrl()}
+            disabled={!publicUrl}
+            className={`px-4 py-2.5 text-[12px] disabled:cursor-not-allowed disabled:opacity-50 sm:text-[13px] ${ghostButton}`}
+          >
+            {publicUrlCopied ? 'Enlace copiado' : 'Copiar enlace QR'}
+          </button>
           <button
             type="button"
             onClick={onLoad}
@@ -330,6 +365,13 @@ export function CartaTab({
           </button>
         </div>
       </div>
+
+      {publicGuestMenuItems === 0 ? (
+        <div className="rounded-[24px] border border-amber-100 bg-amber-50/70 px-4 py-3 text-[13px] text-amber-800 shadow-[0_10px_24px_rgba(245,158,11,0.08)]">
+          La carta pública está preparada, pero todavía no hay fichas publicadas. Publica al menos una
+          ficha antes de imprimir o compartir el QR.
+        </div>
+      ) : null}
 
       <div className="grid gap-3 md:grid-cols-3">
         <div className={`p-4 ${softPanel}`}>

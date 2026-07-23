@@ -12,6 +12,17 @@ export type NormalizedOCRAlbaranLinea = OCRAlbaranLinea & {
   aviso?: string
 }
 
+export type OCRPriceFallbackProduct = {
+  ultimo_precio_compra?: number | null
+  coste_unitario?: number | null
+}
+
+export type OCRResolvedUnitPrice = {
+  precio_unitario: number | null
+  aviso?: string
+  origen: 'ocr' | 'ultimo_precio' | 'sin_precio'
+}
+
 type NormalizeOCRAlbaranOptions = {
   proveedor?: string | null
 }
@@ -182,5 +193,36 @@ export function normalizeOCRAlbaranLinea(
       unidadesPorPack > 1
         ? `OCR: ${cantidadPacks} caja(s)/pack(s) x ${unidadesPorPack} uds. Precio unitario calculado desde importe de línea.${ivaPorcentaje ? ` IVA ${ivaPorcentaje}%.` : ''}`
         : undefined,
+  }
+}
+
+export function resolveOCRUnitPrice(
+  precioDetectado: number | null | undefined,
+  producto?: OCRPriceFallbackProduct | null
+): OCRResolvedUnitPrice {
+  const detectedPrice = parsePositiveNumber(precioDetectado)
+  if (detectedPrice > 0) {
+    return {
+      precio_unitario: detectedPrice,
+      origen: 'ocr',
+    }
+  }
+
+  const fallbackPrice = parsePositiveNumber(producto?.ultimo_precio_compra ?? producto?.coste_unitario)
+  if (fallbackPrice > 0) {
+    return {
+      precio_unitario: fallbackPrice,
+      origen: 'ultimo_precio',
+      aviso: `Precio no visible en el albarán. Se usa el último coste conocido: ${fallbackPrice.toLocaleString('es-ES', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 6,
+      })} €.`,
+    }
+  }
+
+  return {
+    precio_unitario: null,
+    origen: 'sin_precio',
+    aviso: 'Precio no visible en el albarán. Indica el coste unitario antes de guardar.',
   }
 }
