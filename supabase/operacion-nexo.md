@@ -41,7 +41,9 @@ Si `warnings` contiene `table:productos_precios_historial`, `table:inventario_ci
 
 Si aparecen `column:productos.imagen_url`, `column:productos.icono` o `bucket:albaranes`, revisa [product-media-setup.sql](/Users/jorge/restaurante-app/supabase/product-media-setup.sql:1) y las policies de storage antes de usar imágenes o adjuntos.
 
-Si aparece `bucket:guest-menu` o quieres activar `Nexo Guest Experience`, aplica [guest-experience-setup.sql](/Users/jorge/restaurante-app/supabase/guest-experience-setup.sql:1). Esa migración crea la tabla `guest_menu_items`, el bucket público de imágenes, habilita lectura pública segura para QR y mantiene la edición privada limitada a `administrador` y `master`.
+Si aparece `bucket:guest-menu`, `table:guest_menu_items` o alguna columna `column:guest_menu_items.*`, aplica [guest-experience-setup.sql](/Users/jorge/restaurante-app/supabase/guest-experience-setup.sql:1). Esa migración crea la tabla `guest_menu_items`, las columnas de copas/perfil IA, el bucket público de imágenes, habilita lectura pública segura para QR y mantiene la edición privada limitada a `administrador` y `master`.
+
+Si aparece `OPENAI_API_KEY` en `warnings`, la app puede operar, pero no generará perfiles IA de vinos desde la carta. Añade esa variable en Vercel y redeploy. Para OCR de albaranes, la misma clave debe estar también como secret de la Edge Function `ocr-albaran` en Supabase.
 
 Si aparece `rpc:guardar_producto_atomico` o `rpc:cambiar_estado_producto_atomico`, aplica [product-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/product-reliability-setup.sql:1) antes de crear o editar productos reales.
 

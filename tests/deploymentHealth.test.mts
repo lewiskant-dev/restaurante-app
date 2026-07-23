@@ -14,6 +14,7 @@ test('buildDeploymentHealthSummary marca ok si las variables criticas existen', 
       SUPABASE_SERVICE_ROLE_KEY: 'service-role',
       MASTER_LOGIN: 'master',
       MASTER_EMAIL: 'master@example.com',
+      OPENAI_API_KEY: 'openai-key',
     },
     '2026-05-15T10:00:00.000Z'
   )
@@ -23,13 +24,13 @@ test('buildDeploymentHealthSummary marca ok si las variables criticas existen', 
   assert.deepEqual(summary.missing, [])
   assert.deepEqual(summary.warnings, [])
   assert.equal(summary.checked_at, '2026-05-15T10:00:00.000Z')
-  assert.equal(summary.totals.total, 5)
-  assert.equal(summary.totals.configured, 5)
+  assert.equal(summary.totals.total, 6)
+  assert.equal(summary.totals.configured, 6)
   assert.equal(summary.totals.failed, 0)
-  assert.equal(summary.totals.by_scope.env.total, 5)
+  assert.equal(summary.totals.by_scope.env.total, 6)
   assert.equal(summary.totals.by_scope.rpc.total, 0)
   assert.equal(summary.checks.every((check) => check.scope === 'env'), true)
-  assert.equal(summary.checks.every((check) => check.required), true)
+  assert.equal(summary.checks.filter((check) => check.required).length, 5)
 })
 
 test('buildDeploymentHealthSummary no expone valores y lista variables ausentes', () => {
@@ -40,6 +41,7 @@ test('buildDeploymentHealthSummary no expone valores y lista variables ausentes'
       SUPABASE_SERVICE_ROLE_KEY: undefined,
       MASTER_LOGIN: 'master',
       MASTER_EMAIL: 'master@example.com',
+      OPENAI_API_KEY: '',
     },
     '2026-05-15T10:00:00.000Z'
   )
@@ -50,8 +52,8 @@ test('buildDeploymentHealthSummary no expone valores y lista variables ausentes'
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
     'SUPABASE_SERVICE_ROLE_KEY',
   ])
-  assert.deepEqual(summary.warnings, [])
-  assert.equal(summary.totals.failed, 2)
+  assert.deepEqual(summary.warnings, ['OPENAI_API_KEY'])
+  assert.equal(summary.totals.failed, 3)
   assert.equal(summary.checks.some((check) => 'value' in check), false)
 })
 
@@ -63,6 +65,7 @@ test('buildDeploymentHealthSummary diferencia checks requeridos y avisos', () =>
       SUPABASE_SERVICE_ROLE_KEY: 'service-role',
       MASTER_LOGIN: 'master',
       MASTER_EMAIL: 'master@example.com',
+      OPENAI_API_KEY: 'openai-key',
     },
     '2026-05-15T10:00:00.000Z',
     [
@@ -92,8 +95,8 @@ test('buildDeploymentHealthSummary diferencia checks requeridos y avisos', () =>
   assert.equal(summary.status, 'warning')
   assert.deepEqual(summary.missing, [])
   assert.deepEqual(summary.warnings, ['bucket:albaranes'])
-  assert.equal(summary.totals.total, 8)
-  assert.equal(summary.totals.configured, 7)
+  assert.equal(summary.totals.total, 9)
+  assert.equal(summary.totals.configured, 8)
   assert.equal(summary.totals.failed, 1)
   assert.equal(summary.totals.by_scope.database.total, 1)
   assert.equal(summary.totals.by_scope.rpc.total, 1)
@@ -108,6 +111,7 @@ test('buildDeploymentHealthSummary conserva la duracion de ejecucion si se infor
       SUPABASE_SERVICE_ROLE_KEY: 'service-role',
       MASTER_LOGIN: 'master',
       MASTER_EMAIL: 'master@example.com',
+      OPENAI_API_KEY: 'openai-key',
     },
     '2026-05-15T10:00:00.000Z',
     [],
@@ -119,8 +123,10 @@ test('buildDeploymentHealthSummary conserva la duracion de ejecucion si se infor
 
 test('getDeploymentHealthAction devuelve acciones operativas por tipo de check', () => {
   assert.match(getDeploymentHealthAction('SUPABASE_SERVICE_ROLE_KEY'), /service role/i)
+  assert.match(getDeploymentHealthAction('OPENAI_API_KEY'), /perfiles IA/i)
   assert.match(getDeploymentHealthAction('bucket:albaranes'), /albaranes/i)
   assert.match(getDeploymentHealthAction('bucket:guest-menu'), /guest-experience/i)
+  assert.match(getDeploymentHealthAction('column:guest_menu_items.precio_copa'), /guest-experience/i)
   assert.match(getDeploymentHealthAction('rpc:guardar_producto_atomico'), /productos/i)
-  assert.match(getDeploymentHealthAction('table:guest_menu_items'), /migracion/i)
+  assert.match(getDeploymentHealthAction('table:guest_menu_items'), /guest-experience/i)
 })

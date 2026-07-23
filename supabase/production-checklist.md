@@ -19,6 +19,11 @@ npm run verify
   - `MASTER_LOGIN`
   - `NEXT_PUBLIC_ALLOW_SELF_REGISTER=false`
 
+Variables recomendadas si se usa IA:
+
+- `OPENAI_API_KEY` en Vercel para perfiles de vino y recomendaciones de carta.
+- `OPENAI_API_KEY` como secret de Supabase Edge Functions si se usa OCR de albaranes.
+
 ## 2. Orden de SQL en Supabase
 
 Ejecutar en `SQL Editor`, en este orden:
@@ -136,6 +141,7 @@ Piezas recomendadas para Nexo Guest Experience:
 
 - tabla `guest_menu_items`
 - bucket `guest-menu`
+- variable `OPENAI_API_KEY` en Vercel para generar perfiles IA de vino
 - policies públicas de lectura para restaurantes activos y elementos publicados
 - ruta pública `/g/<slug-restaurante>` para QR sin login
 

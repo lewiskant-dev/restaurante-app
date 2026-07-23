@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabaseAdmin'
 import type { GuestMenuKind, GuestWineProfile } from '@/lib/guestExperience'
+import { consumeRateLimit, getRateLimitKey } from '@/lib/rateLimit'
 
 type UserRole = 'empleado' | 'encargado' | 'administrador' | 'master'
 
@@ -21,6 +22,11 @@ type EnrichRequest = {
 }
 
 const profileKeys = ['intensidad', 'fruta', 'cuerpo', 'madera', 'acidez', 'dulzor'] as const
+const OPENAI_REQUEST_TIMEOUT_MS = 20000
+const AI_ENRICH_RATE_LIMIT = {
+  windowMs: 60 * 60 * 1000,
+  maxAttempts: 25,
+}
 
 type PairingDish = {
   nombre: string
@@ -46,6 +52,24 @@ function normalizeRole(value: unknown): UserRole {
 
 function canManageGuestMenu(role: UserRole) {
   return role === 'administrador' || role === 'master'
+}
+
+function enforceAiEnrichRateLimit(userId: string) {
+  const result = consumeRateLimit(getRateLimitKey(['guest-menu-ai-enrich', userId]), Date.now(), AI_ENRICH_RATE_LIMIT)
+
+  if (result.allowed) return null
+
+  return NextResponse.json(
+    {
+      error: 'Has generado muchos perfiles IA en poco tiempo. Espera unos minutos antes de volver a intentarlo.',
+    },
+    {
+      status: 429,
+      headers: {
+        'Retry-After': String(result.retryAfterSeconds),
+      },
+    }
+  )
 }
 
 function extractBearerToken(request: Request) {
@@ -220,23 +244,41 @@ function extractOutputText(raw: unknown) {
     .join('')
 }
 
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    })
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 async function requestWineProfile(params: {
   apiKey: string
   prompt: string
   toolType: 'web_search_preview' | 'web_search'
 }) {
-  return fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${params.apiKey}`,
+  return fetchWithTimeout(
+    'https://api.openai.com/v1/responses',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${params.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4.1-mini',
+        tools: [{ type: params.toolType }],
+        input: params.prompt,
+      }),
     },
-    body: JSON.stringify({
-      model: 'gpt-4.1-mini',
-      tools: [{ type: params.toolType }],
-      input: params.prompt,
-    }),
-  })
+    OPENAI_REQUEST_TIMEOUT_MS
+  )
 }
 
 export async function POST(request: Request) {
@@ -257,6 +299,9 @@ export async function POST(request: Request) {
     if (!canManageGuestMenu(role)) {
       return NextResponse.json({ error: 'No tienes permisos para enriquecer la carta' }, { status: 403 })
     }
+
+    const rateLimitResponse = enforceAiEnrichRateLimit(userData.user.id)
+    if (rateLimitResponse) return rateLimitResponse
 
     const body = (await request.json()) as EnrichRequest
     const wine = body.wine || {}
@@ -401,6 +446,13 @@ Obligatorio:
       temperatura: normalizeOptionalString(parsed.temperatura),
     })
   } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return NextResponse.json(
+        { error: 'La generación IA ha tardado demasiado. Inténtalo de nuevo en unos segundos.' },
+        { status: 504 }
+      )
+    }
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'No se pudo generar el perfil IA' },
       { status: 500 }

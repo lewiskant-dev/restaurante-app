@@ -6,6 +6,8 @@ const REQUIRED_ENV_KEYS = [
   'MASTER_EMAIL',
 ] as const
 
+const OPTIONAL_ENV_KEYS = ['OPENAI_API_KEY'] as const
+
 type EnvMap = Record<string, string | undefined>
 
 export type DeploymentHealthScope = 'env' | 'database' | 'storage' | 'rpc'
@@ -60,12 +62,20 @@ export function getDeploymentHealthAction(name: string) {
     return 'Configura las credenciales internas de Master en variables de entorno.'
   }
 
+  if (name === 'OPENAI_API_KEY') {
+    return 'Anade OPENAI_API_KEY en Vercel para activar perfiles IA de vinos y recomendaciones.'
+  }
+
   if (name === 'supabase:admin-client') {
     return 'Comprueba NEXT_PUBLIC_SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY.'
   }
 
   if (name === 'bucket:guest-menu') {
     return 'Ejecuta guest-experience-setup.sql para crear el bucket publico de imagenes de carta.'
+  }
+
+  if (name === 'table:guest_menu_items' || name.startsWith('column:guest_menu_items.')) {
+    return 'Ejecuta guest-experience-setup.sql para activar carta publica, copas y perfiles IA.'
   }
 
   if (name === 'bucket:albaranes') {
@@ -125,12 +135,20 @@ export function buildDeploymentHealthSummary(
   databaseChecks: DeploymentHealthCheck[] = [],
   durationMs?: number
 ): DeploymentHealthSummary {
-  const checks = REQUIRED_ENV_KEYS.map((name) => ({
-    name,
-    configured: hasValue(env[name]),
-    scope: 'env' as const,
-    required: true,
-  }))
+  const checks = [
+    ...REQUIRED_ENV_KEYS.map((name) => ({
+      name,
+      configured: hasValue(env[name]),
+      scope: 'env' as const,
+      required: true,
+    })),
+    ...OPTIONAL_ENV_KEYS.map((name) => ({
+      name,
+      configured: hasValue(env[name]),
+      scope: 'env' as const,
+      required: false,
+    })),
+  ]
   const allChecks = [...checks, ...databaseChecks]
   const missing = allChecks
     .filter((check) => check.required && !check.configured)

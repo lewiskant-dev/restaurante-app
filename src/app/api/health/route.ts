@@ -31,6 +31,12 @@ const DATABASE_CHECKS = [
     column: 'id',
     required: false,
   },
+  {
+    name: 'table:guest_menu_items',
+    table: 'guest_menu_items',
+    column: 'id',
+    required: false,
+  },
   { name: 'column:productos.imagen_url', table: 'productos', column: 'imagen_url', required: false },
   { name: 'column:productos.icono', table: 'productos', column: 'icono', required: false },
   {
@@ -55,6 +61,42 @@ const DATABASE_CHECKS = [
     name: 'column:movimientos_stock.anulado',
     table: 'movimientos_stock',
     column: 'anulado',
+    required: false,
+  },
+  {
+    name: 'column:guest_menu_items.disponible_copa',
+    table: 'guest_menu_items',
+    column: 'disponible_copa',
+    required: false,
+  },
+  {
+    name: 'column:guest_menu_items.precio_copa',
+    table: 'guest_menu_items',
+    column: 'precio_copa',
+    required: false,
+  },
+  {
+    name: 'column:guest_menu_items.perfil_vino',
+    table: 'guest_menu_items',
+    column: 'perfil_vino',
+    required: false,
+  },
+  {
+    name: 'column:guest_menu_items.notas_cata',
+    table: 'guest_menu_items',
+    column: 'notas_cata',
+    required: false,
+  },
+  {
+    name: 'column:guest_menu_items.destacado',
+    table: 'guest_menu_items',
+    column: 'destacado',
+    required: false,
+  },
+  {
+    name: 'column:guest_menu_items.publicado',
+    table: 'guest_menu_items',
+    column: 'publicado',
     required: false,
   },
 ] as const
