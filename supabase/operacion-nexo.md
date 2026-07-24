@@ -21,8 +21,13 @@ Este comando ejecuta:
 
 ## Verificación del despliegue
 
-Después de desplegar, entra como `administrador` o `master` y abre `Informes > Diagnóstico del despliegue`.
-La ruta interna autenticada es:
+Después de desplegar, comprueba que la app responde sin credenciales:
+
+```text
+https://tu-dominio.com/api/ping
+```
+
+Para revisar configuración, Supabase, buckets y funciones, entra como `administrador` o `master` y abre `Informes > Diagnóstico del despliegue`. La ruta interna autenticada es:
 
 ```text
 https://tu-dominio.com/api/health

@@ -68,13 +68,21 @@ La validación debe dejar claro:
 
 ## 4. Validación del despliegue web
 
-Abrir:
+Comprobar primero que la app responde desde un monitor externo sin credenciales:
+
+```text
+https://tu-dominio.com/api/ping
+```
+
+Debe devolver `200`; esta ruta no consulta Supabase ni expone configuración interna.
+
+Después, entrar como `administrador` o `master` y abrir `Informes > Diagnóstico del despliegue`. La ruta interna autenticada es:
 
 ```text
 https://tu-dominio.com/api/health
 ```
 
-Debe devolver `200` y:
+Debe devolver `200` para usuarios autorizados y:
 
 ```json
 {
@@ -92,7 +100,7 @@ Interpretación:
 - `totals.by_scope.rpc`: estado de funciones atomicas.
 - `totals.by_scope.storage`: estado de buckets y archivos.
 
-Si devuelve `503`, revisar `missing`. Si falta una variable, corregir el entorno del hosting. Si falta una tabla, aplicar el SQL correspondiente en Supabase antes de seguir.
+Si `/api/health` devuelve `401`, iniciar sesión de nuevo. Si devuelve `403`, usar una cuenta con rol `administrador` o `master`. Si devuelve `503`, revisar `missing`. Si falta una variable, corregir el entorno del hosting. Si falta una tabla, aplicar el SQL correspondiente en Supabase antes de seguir.
 
 Desde `Informes > Diagnóstico del despliegue`, Nexo muestra el mismo chequeo en formato visual. Si hay fallos, el bloque `Plan de acción` indica la causa probable y el SQL, variable o bucket que conviene revisar primero.
 
@@ -199,7 +207,8 @@ select public.crear_cierre_inventario(current_date, 'Prueba de cierre', '<restau
 
 ## 6. Criterios para darlo por listo
 
-- `/api/health` devuelve `200`.
+- `/api/ping` devuelve `200` sin autenticación.
+- `Informes > Diagnóstico del despliegue` devuelve estado `ok` para `administrador` o `master`.
 - `npm run verify` pasa en local antes del deploy.
 - Las validaciones SQL no muestran problemas críticos.
 - Un administrador solo ve datos de su restaurante.
@@ -224,5 +233,6 @@ Cada vez que añadas una fase sensible:
 2. ejecutar validaciones
 3. probar flujo mínimo
 4. desplegar
-5. comprobar `/api/health`
-6. revisar logs del hosting
+5. comprobar `/api/ping`
+6. comprobar `Informes > Diagnóstico del despliegue`
+7. revisar logs del hosting

@@ -61,8 +61,9 @@ Orden recomendado:
 8. Ejecutar [supabase/product-media-setup.sql](supabase/product-media-setup.sql)
 9. Ejecutar [supabase/product-reliability-setup.sql](supabase/product-reliability-setup.sql)
 10. Ejecutar [supabase/proveedor-reliability-setup.sql](supabase/proveedor-reliability-setup.sql)
-11. Aplicar índices de rendimiento con [supabase/performance-indexes.sql](supabase/performance-indexes.sql)
-12. Validar funciones críticas con [supabase/supabase-healthcheck.sql](supabase/supabase-healthcheck.sql)
+11. Ejecutar [supabase/guest-experience-setup.sql](supabase/guest-experience-setup.sql)
+12. Aplicar índices de rendimiento con [supabase/performance-indexes.sql](supabase/performance-indexes.sql)
+13. Validar funciones críticas con [supabase/supabase-healthcheck.sql](supabase/supabase-healthcheck.sql)
 
 Si quieres empezar de cero sin tocar funcionalidades, ejecutar después [supabase/reset-operational-data.sql](supabase/reset-operational-data.sql).
 
@@ -90,13 +91,21 @@ El modelo es multi-tenant:
 
 ## Comprobaciones utiles
 
-Para comprobar que el despliegue tiene la configuración crítica cargada:
+Para comprobar que el despliegue responde desde un monitor externo sin credenciales:
 
 ```bash
-curl https://tu-dominio.com/api/health
+curl https://tu-dominio.com/api/ping
 ```
 
-La respuesta no expone secretos. Devuelve:
+La respuesta publica no consulta Supabase ni expone secretos. Devuelve:
+
+- `ok`: `true` cuando la app responde.
+- `status`: `ok`.
+- `service`: `nexo`.
+
+Para comprobar configuración crítica, tablas, columnas, buckets y RPCs, entra como `administrador` o `master` y abre `Informes > Diagnóstico del despliegue`. La ruta interna es `/api/health`, requiere token de sesión y no debe usarse como monitor público.
+
+El diagnóstico autenticado devuelve:
 
 - `ok`: `true` cuando no falta nada obligatorio.
 - `missing`: variables o tablas obligatorias pendientes.
