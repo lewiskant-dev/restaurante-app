@@ -16,6 +16,7 @@ export type AuditAction =
   | 'consumo'
   | 'ajuste_stock'
   | 'anular'
+  | 'anular_movimiento'
   | 'deshacer_archivar'
   | 'importar_csv'
   | 'login'
@@ -41,6 +42,14 @@ export type AuditPayloadValidation =
       status: 400
       error: string
     }
+
+const SENSITIVE_KEY_PATTERN =
+  /password|contraseña|contrasena|token|secret|service[_-]?role|api[_-]?key|authorization|cookie|session/i
+const MAX_AUDIT_PAYLOAD_DEPTH = 4
+const MAX_AUDIT_ARRAY_ITEMS = 20
+const MAX_AUDIT_STRING_LENGTH = 500
+const MAX_AUDIT_OBJECT_KEYS = 40
+const REDACTED_VALUE = '[redactado]'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -100,6 +109,35 @@ function isAllowedAction(entity: AuditEntity, action: unknown): action is AuditA
   return false
 }
 
+function sanitizeAuditValue(value: unknown, depth = 0): unknown {
+  if (value === null || value === undefined) return null
+
+  if (typeof value === 'string') {
+    return value.length > MAX_AUDIT_STRING_LENGTH
+      ? `${value.slice(0, MAX_AUDIT_STRING_LENGTH)}...`
+      : value
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') return value
+
+  if (depth >= MAX_AUDIT_PAYLOAD_DEPTH) return '[truncado]'
+
+  if (Array.isArray(value)) {
+    return value.slice(0, MAX_AUDIT_ARRAY_ITEMS).map((item) => sanitizeAuditValue(item, depth + 1))
+  }
+
+  if (!isRecord(value)) return String(value)
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .slice(0, MAX_AUDIT_OBJECT_KEYS)
+      .map(([key, nestedValue]) => [
+        key,
+        SENSITIVE_KEY_PATTERN.test(key) ? REDACTED_VALUE : sanitizeAuditValue(nestedValue, depth + 1),
+      ])
+  )
+}
+
 export function validateAuditPayload(value: unknown): AuditPayloadValidation {
   if (!isRecord(value) || !isAllowedEntity(value.entidad)) {
     return {
@@ -130,8 +168,8 @@ export function validateAuditPayload(value: unknown): AuditPayloadValidation {
           : null,
     accion: value.accion,
     detalle,
-    payloadAntes: value.payloadAntes ?? null,
-    payloadDespues: value.payloadDespues ?? null,
+    payloadAntes: sanitizeAuditValue(value.payloadAntes),
+    payloadDespues: sanitizeAuditValue(value.payloadDespues),
   }
 }
 

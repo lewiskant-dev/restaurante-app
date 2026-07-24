@@ -3,6 +3,8 @@ import type { DeploymentHealthCheck } from '@/lib/deploymentHealth'
 import { buildDeploymentHealthSummary } from '@/lib/deploymentHealth'
 import { createSupabaseAdminClient } from '@/lib/supabaseAdmin'
 
+type HealthRole = 'empleado' | 'encargado' | 'administrador' | 'master'
+
 const DATABASE_CHECKS = [
   { name: 'table:restaurantes', table: 'restaurantes', column: 'id', required: true },
   {
@@ -316,6 +318,24 @@ const RPC_CHECKS = [
   },
 ] as const
 
+function normalizeRole(value: unknown): HealthRole {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  if (normalized === 'master') return 'master'
+  if (normalized === 'administrador' || normalized === 'admin') return 'administrador'
+  if (normalized === 'encargado') return 'encargado'
+  return 'empleado'
+}
+
+function canViewDeploymentHealth(role: HealthRole) {
+  return role === 'administrador' || role === 'master'
+}
+
+function extractBearerToken(request: Request) {
+  const header = request.headers.get('authorization') || ''
+  const [kind, token] = header.split(' ')
+  return kind?.toLowerCase() === 'bearer' ? token?.trim() : ''
+}
+
 function shouldSkipDatabaseChecks() {
   return (
     !process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
@@ -389,8 +409,37 @@ async function buildSupabaseChecks(): Promise<DeploymentHealthCheck[]> {
   return [...databaseChecks, ...storageChecks, ...rpcChecks]
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const token = extractBearerToken(request)
+
+  if (!token) {
+    return NextResponse.json({ error: 'Sesión no válida' }, { status: 401 })
+  }
+
   const startedAt = performance.now()
+  let supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>
+
+  try {
+    supabaseAdmin = createSupabaseAdminClient()
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'No se pudo crear el cliente admin' },
+      { status: 500 }
+    )
+  }
+
+  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token)
+
+  if (userError || !userData.user) {
+    return NextResponse.json({ error: 'Sesión no válida' }, { status: 401 })
+  }
+
+  const role = normalizeRole(userData.user.app_metadata?.role ?? userData.user.user_metadata?.role)
+
+  if (!canViewDeploymentHealth(role)) {
+    return NextResponse.json({ error: 'No tienes permisos para ver el diagnóstico' }, { status: 403 })
+  }
+
   const supabaseChecks = await buildSupabaseChecks()
   const summary = buildDeploymentHealthSummary(
     process.env,

@@ -2343,6 +2343,7 @@ export default function HomePage() {
 
         {tab === 'informes' && (
           <InformesTab
+            accessToken={session?.access_token}
             tpvAnaliticaRange={tpvAnaliticaRange}
             tpvAnalitica={tpvAnalitica}
             productos={productos}

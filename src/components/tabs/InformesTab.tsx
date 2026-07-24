@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type {
   InventarioCierre,
   MovimientoConProducto,
@@ -108,6 +108,7 @@ function getMarginRiskClasses(marginRatio: number | null) {
 }
 
 type InformesTabProps = {
+  accessToken?: string
   tpvAnaliticaRange: '7d' | '30d' | '90d'
   tpvAnalitica: TpvAnaliticaResumen
   productos: Producto[]
@@ -187,6 +188,7 @@ function formatHealthScope(value: DeploymentHealthCheck['scope']) {
 }
 
 export function InformesTab({
+  accessToken,
   tpvAnaliticaRange,
   tpvAnalitica,
   productos,
@@ -211,13 +213,22 @@ export function InformesTab({
   const [deploymentHealthLoading, setDeploymentHealthLoading] = useState(false)
   const [deploymentHealthError, setDeploymentHealthError] = useState('')
 
-  async function loadDeploymentHealth() {
+  const loadDeploymentHealth = useCallback(async () => {
+    if (!accessToken) {
+      setDeploymentHealth(null)
+      setDeploymentHealthError('Inicia sesión para cargar el diagnóstico')
+      return
+    }
+
     setDeploymentHealthLoading(true)
     setDeploymentHealthError('')
 
     try {
       const response = await fetch('/api/health', {
         cache: 'no-store',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       })
       const payload = (await response.json()) as DeploymentHealthSummary | { error?: string }
 
@@ -233,11 +244,11 @@ export function InformesTab({
     } finally {
       setDeploymentHealthLoading(false)
     }
-  }
+  }, [accessToken])
 
   useEffect(() => {
     void loadDeploymentHealth()
-  }, [])
+  }, [loadDeploymentHealth])
 
   const healthSummary = buildFinancialHealthSummary({
     ventasEstimadas: tpvAnalitica.ventas_estimadas_total,

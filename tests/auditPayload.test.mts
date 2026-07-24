@@ -70,6 +70,60 @@ test('validateAuditPayload acepta auditoría operativa con entidad asociada', ()
   )
 })
 
+test('validateAuditPayload redacta claves sensibles en payloads', () => {
+  const result = validateAuditPayload({
+    entidad: 'usuario',
+    accion: 'crear',
+    payloadDespues: {
+      email: 'persona@example.com',
+      password: 'NoDebeGuardarse123',
+      profile: {
+        accessToken: 'token-secreto',
+        nombre: 'Persona',
+      },
+    },
+  })
+
+  assert.equal(result.ok, true)
+  assert.deepEqual(result.ok ? result.payloadDespues : null, {
+    email: 'persona@example.com',
+    password: '[redactado]',
+    profile: {
+      accessToken: '[redactado]',
+      nombre: 'Persona',
+    },
+  })
+})
+
+test('validateAuditPayload limita payloads grandes', () => {
+  const result = validateAuditPayload({
+    entidad: 'producto',
+    accion: 'editar',
+    payloadAntes: {
+      descripcion: 'x'.repeat(700),
+      items: Array.from({ length: 30 }, (_, index) => ({ index })),
+      nested: { a: { b: { c: { d: { e: 'muy profundo' } } } } },
+    },
+  })
+
+  assert.equal(result.ok, true)
+
+  if (!result.ok || !result.payloadAntes || typeof result.payloadAntes !== 'object') {
+    assert.fail('Payload sanitizado inesperado')
+  }
+
+  const payloadAntes = result.payloadAntes as {
+    descripcion: string
+    items: unknown[]
+    nested: { a: { b: { c: string } } }
+  }
+
+  assert.equal(payloadAntes.descripcion.length, 503)
+  assert.equal(payloadAntes.descripcion.endsWith('...'), true)
+  assert.equal(payloadAntes.items.length, 20)
+  assert.equal(payloadAntes.nested.a.b.c, '[truncado]')
+})
+
 test('getAuditDisplayName prioriza nombre completo y cae a email', () => {
   assert.equal(
     getAuditDisplayName({

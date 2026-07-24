@@ -21,7 +21,8 @@ Este comando ejecuta:
 
 ## Verificación del despliegue
 
-Después de desplegar, abre:
+Después de desplegar, entra como `administrador` o `master` y abre `Informes > Diagnóstico del despliegue`.
+La ruta interna autenticada es:
 
 ```text
 https://tu-dominio.com/api/health
@@ -35,7 +36,7 @@ La ruta devuelve:
 - `warnings` con fases recomendadas pendientes, como tablas financieras
 - `totals.by_scope` separado por `env`, `database`, `rpc` y `storage`
 
-El mismo resultado se puede revisar desde `Informes > Diagnóstico del despliegue`. Si aparece algo roto, usa primero el bloque `Plan de acción`: resume si toca revisar Vercel, ejecutar un SQL concreto, crear un bucket o comprobar una firma RPC.
+Si aparece algo roto, usa primero el bloque `Plan de acción`: resume si toca revisar Vercel, ejecutar un SQL concreto, crear un bucket o comprobar una firma RPC.
 
 Si `warnings` contiene `table:productos_precios_historial`, `table:inventario_cierres` o `table:inventario_cierre_lineas`, aplica [restaurant-finance-setup.sql](/Users/jorge/restaurante-app/supabase/restaurant-finance-setup.sql:1) antes de usar informes financieros avanzados.
 
@@ -66,6 +67,10 @@ Aplica [receta-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/rece
 Aplica [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1) antes de aplicar importaciones TPV reales. La función incluida descuenta stock, crea movimientos y marca la importación como procesada dentro de una única transacción.
 
 Después de aplicar SQL críticos, ejecuta [supabase-healthcheck.sql](/Users/jorge/restaurante-app/supabase/supabase-healthcheck.sql:1). Todas las filas deberían salir `OK`.
+
+## Auditoría segura
+
+La auditoría guarda eventos operativos con restaurante activo, actor y detalle del cambio. Los payloads de auditoría se sanean en la API: claves sensibles como contraseñas, tokens, cookies o API keys se redaccionan y los objetos grandes se recortan para mantener el histórico útil, ligero y seguro.
 
 ## Alta de un restaurante nuevo
 
