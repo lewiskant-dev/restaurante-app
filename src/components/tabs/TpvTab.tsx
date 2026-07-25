@@ -9,6 +9,7 @@ import type {
   VentaTPVCruda,
 } from '@/features/home/types'
 import { formatCantidad, formatFechaHora, normalizeText } from '@/features/home/utils'
+import { getTpvImportReadiness } from '@/lib/tpvImportReadiness'
 import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import { fieldShell, ghostButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 
@@ -123,6 +124,19 @@ export function TpvTab({
   )
   const articulosMapeados = ventasResumen.filter((item) => item.mapeado).length
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const importReadiness = getTpvImportReadiness({
+    importing: tpvImportando,
+    applying: tpvAplicando,
+    salesCount: tpvVentasCrudas.length,
+    pendingMappingsCount: tpvPendientesMapeo.length,
+    importApplied: Boolean(tpvImportacionId),
+  })
+  const importReadinessClass =
+    importReadiness.tone === 'emerald'
+      ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
+      : importReadiness.tone === 'amber'
+        ? 'border-amber-100 bg-amber-50 text-amber-800'
+        : 'border-slate-200 bg-slate-50 text-slate-600'
 
   function handleResetImport() {
     if (!tpvImportDraftActive) return
@@ -506,7 +520,8 @@ export function TpvTab({
 
           <button
             onClick={onAplicarImportacion}
-            disabled={tpvAplicando || tpvVentasCrudas.length === 0 || Boolean(tpvImportacionId)}
+            disabled={!importReadiness.canApply}
+            title={importReadiness.detail}
             className="w-full rounded-[16px] bg-emerald-600 px-4 py-2.5 text-[12px] font-semibold text-white shadow-[0_10px_20px_rgba(5,150,105,0.2)] transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 sm:py-2.5 sm:text-[13px]"
           >
             {tpvAplicando
@@ -524,6 +539,11 @@ export function TpvTab({
           >
             Descartar
           </button>
+        </div>
+
+        <div className={`mt-3 rounded-[16px] border px-4 py-3 text-[12px] sm:text-[13px] ${importReadinessClass}`}>
+          <div className="font-semibold">{importReadiness.label}</div>
+          <div className="mt-1 leading-5">{importReadiness.detail}</div>
         </div>
 
         <div className={`mt-4 p-3 text-[12px] text-slate-600 sm:p-3 sm:text-[13px] ${softPanel}`}>

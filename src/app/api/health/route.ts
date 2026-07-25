@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server'
+import {
+  canViewDeploymentHealth,
+  extractBearerTokenFromHeader,
+  normalizeDeploymentHealthRole,
+} from '@/lib/deploymentHealthAccess'
 import type { DeploymentHealthCheck } from '@/lib/deploymentHealth'
 import { buildDeploymentHealthSummary } from '@/lib/deploymentHealth'
-import { createSupabaseAdminClient } from '@/lib/supabaseAdmin'
-
-type HealthRole = 'empleado' | 'encargado' | 'administrador' | 'master'
+import { createSupabaseAdminClient, createSupabaseServerAuthClient } from '@/lib/supabaseAdmin'
 
 const DATABASE_CHECKS = [
   { name: 'table:restaurantes', table: 'restaurantes', column: 'id', required: true },
@@ -318,22 +321,8 @@ const RPC_CHECKS = [
   },
 ] as const
 
-function normalizeRole(value: unknown): HealthRole {
-  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : ''
-  if (normalized === 'master') return 'master'
-  if (normalized === 'administrador' || normalized === 'admin') return 'administrador'
-  if (normalized === 'encargado') return 'encargado'
-  return 'empleado'
-}
-
-function canViewDeploymentHealth(role: HealthRole) {
-  return role === 'administrador' || role === 'master'
-}
-
 function extractBearerToken(request: Request) {
-  const header = request.headers.get('authorization') || ''
-  const [kind, token] = header.split(' ')
-  return kind?.toLowerCase() === 'bearer' ? token?.trim() : ''
+  return extractBearerTokenFromHeader(request.headers.get('authorization'))
 }
 
 function shouldSkipDatabaseChecks() {
@@ -417,24 +406,26 @@ export async function GET(request: Request) {
   }
 
   const startedAt = performance.now()
-  let supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>
+  let supabaseAuth: ReturnType<typeof createSupabaseServerAuthClient>
 
   try {
-    supabaseAdmin = createSupabaseAdminClient()
+    supabaseAuth = createSupabaseServerAuthClient()
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'No se pudo crear el cliente admin' },
+      { error: error instanceof Error ? error.message : 'No se pudo crear el cliente de autenticación' },
       { status: 500 }
     )
   }
 
-  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token)
+  const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token)
 
   if (userError || !userData.user) {
     return NextResponse.json({ error: 'Sesión no válida' }, { status: 401 })
   }
 
-  const role = normalizeRole(userData.user.app_metadata?.role ?? userData.user.user_metadata?.role)
+  const role = normalizeDeploymentHealthRole(
+    userData.user.app_metadata?.role ?? userData.user.user_metadata?.role
+  )
 
   if (!canViewDeploymentHealth(role)) {
     return NextResponse.json({ error: 'No tienes permisos para ver el diagnóstico' }, { status: 403 })

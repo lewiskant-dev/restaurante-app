@@ -259,6 +259,18 @@ export default function StockTab({
     { value: 'archivados', label: 'Archivados' },
     { value: 'todos', label: 'Todos' },
   ]
+  const canUseStockActions = canManageStock || canAdjustStock || canConsumeStock
+  const filtersActive = Boolean(busqueda.trim()) || categoriaFiltro !== 'todas' || unidadFiltro !== 'todas' || productoEstado !== 'activos'
+  const emptyStateTitle = filtersActive
+    ? 'No hay productos con estos filtros'
+    : canManageStock
+      ? 'Aún no hay productos en stock'
+      : 'No hay productos disponibles'
+  const emptyStateDescription = filtersActive
+    ? 'Ajusta búsqueda, categoría, estado o unidad para ampliar resultados.'
+    : canManageStock
+      ? 'Crea el primer producto para empezar a controlar inventario, mínimos y consumos.'
+      : 'Cuando un administrador cargue productos, aparecerán aquí para consulta operativa.'
 
   return (
     <>
@@ -292,6 +304,16 @@ export default function StockTab({
           </div>
         ) : null}
       </div>
+
+      {!canUseStockActions ? (
+        <div className="mb-4 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-[12px] leading-5 text-slate-600 sm:text-[13px]">
+          <span className="font-semibold text-slate-800">Modo consulta.</span> Tu rol puede revisar el inventario, pero no crear productos, ajustar stock ni registrar consumos.
+        </div>
+      ) : !canManageStock ? (
+        <div className="mb-4 rounded-[18px] border border-amber-100 bg-amber-50 px-4 py-3 text-[12px] leading-5 text-amber-800 sm:text-[13px]">
+          <span className="font-semibold">Permisos limitados.</span> Puedes operar stock según tu rol, pero la creación y edición de productos queda reservada a administración.
+        </div>
+      ) : null}
 
       <div className={`overflow-visible ${softPanel}`}>
         <div className="border-b border-slate-100 px-3 py-3 sm:px-5 lg:px-4 lg:py-2.5">
@@ -351,7 +373,13 @@ export default function StockTab({
             <button
               type="button"
               onClick={onExportar}
-              className={`px-3 py-2 text-[12.5px] ${ghostButton}`}
+              disabled={loadingProductos || productosFiltrados.length === 0}
+              title={
+                productosFiltrados.length === 0
+                  ? 'No hay productos para exportar'
+                  : 'Exportar productos filtrados'
+              }
+              className={`px-3 py-2 text-[12.5px] disabled:cursor-not-allowed disabled:opacity-50 ${ghostButton}`}
             >
               Exportar
             </button>
@@ -468,12 +496,12 @@ export default function StockTab({
               />
             </div>
             <div className="mt-4 text-sm font-semibold text-slate-800">
-              No hay productos para mostrar
+              {emptyStateTitle}
             </div>
             <div className="mx-auto mt-1 max-w-sm text-[12px] leading-5 text-slate-500">
-              Añade tu primer producto o ajusta búsqueda, categoría, estado y unidad para ampliar resultados.
+              {emptyStateDescription}
             </div>
-            {canManageStock ? (
+            {canManageStock && !filtersActive ? (
               <button
                 type="button"
                 onClick={onNuevoProducto}
