@@ -13,6 +13,10 @@ import {
   validatePasswordStrength,
 } from '@/features/home/utils'
 import {
+  getManagedUserCreateReadiness,
+  getManagedUserRestaurantScopeReadiness,
+} from '@/lib/managedUserReadiness'
+import {
   fieldShell,
   ghostButton,
   primaryGradientButton,
@@ -184,6 +188,20 @@ export function UserManagementPanel({
     { value: 'acceso_reciente', label: 'Acceso reciente' },
     { value: 'requiere_revision', label: 'Requieren revisión' },
   ]
+  const createReadiness = getManagedUserCreateReadiness({
+    creating: creatingManagedUser,
+    nameError: newManagedUserNameError,
+    emailError: newManagedUserEmailError,
+    passwordError: newManagedUserPasswordError,
+    restaurantsError: newManagedUserRestaurantsError,
+    role: newManagedUserRole,
+  })
+  const createReadinessClass =
+    createReadiness.tone === 'emerald'
+      ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
+      : createReadiness.tone === 'amber'
+        ? 'border-amber-100 bg-amber-50 text-amber-800'
+        : 'border-slate-200 bg-slate-50 text-slate-600'
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -494,7 +512,8 @@ export function UserManagementPanel({
           <button
             type="button"
             onClick={onCreate}
-            disabled={!canSubmitManagedUser}
+            disabled={!canSubmitManagedUser || !createReadiness.canProceed}
+            title={createReadiness.detail}
             className={`rounded-[16px] px-5 py-3 text-[15px] disabled:cursor-not-allowed disabled:opacity-60 sm:py-2.5 sm:text-[13px] ${primaryGradientButton}`}
           >
             {creatingManagedUser ? 'Creando...' : 'Crear usuario'}
@@ -513,6 +532,11 @@ export function UserManagementPanel({
           </div>
           <div className="text-slate-500">El rol podras cambiarlo despues.</div>
           <div />
+        </div>
+
+        <div className={`mt-3 rounded-[16px] border px-4 py-3 text-[12px] sm:text-[13px] ${createReadinessClass}`}>
+          <div className="font-semibold">{createReadiness.label}</div>
+          <div className="mt-1 leading-5">{createReadiness.detail}</div>
         </div>
 
         {currentUserRole === 'master' ? (
@@ -654,6 +678,21 @@ export function UserManagementPanel({
               const selectedRestaurantIds = managedUserRestaurantDrafts[managedUser.id] ?? []
               const selectedCurrentRestaurantId =
                 managedUserCurrentRestaurantDrafts[managedUser.id] ?? ''
+              const inactiveRestaurantIds = managedRestaurants
+                .filter((restaurant) => !restaurant.activo)
+                .map((restaurant) => restaurant.id)
+              const restaurantScopeReadiness = getManagedUserRestaurantScopeReadiness({
+                saving: savingManagedUserRestaurantId === managedUser.id,
+                selectedRestaurantIds,
+                currentRestaurantId: selectedCurrentRestaurantId,
+                inactiveRestaurantIds,
+              })
+              const restaurantScopeReadinessClass =
+                restaurantScopeReadiness.tone === 'emerald'
+                  ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
+                  : restaurantScopeReadiness.tone === 'amber'
+                    ? 'border-amber-100 bg-amber-50 text-amber-800'
+                    : 'border-slate-200 bg-slate-50 text-slate-600'
 
               return (
                 <div
@@ -865,13 +904,19 @@ export function UserManagementPanel({
                                     managedUser.full_name || managedUser.email
                                   )
                                 }
-                                disabled={savingManagedUserRestaurantId === managedUser.id}
+                                disabled={!restaurantScopeReadiness.canProceed}
+                                title={restaurantScopeReadiness.detail}
                                 className="rounded-[14px] bg-indigo-50 px-4 py-2.5 text-[12px] font-semibold text-indigo-700 transition hover:bg-indigo-100 disabled:opacity-60"
                               >
                                 {savingManagedUserRestaurantId === managedUser.id
                                   ? 'Guardando alcance...'
                                   : 'Guardar cambios'}
                               </button>
+                            </div>
+
+                            <div className={`mt-3 rounded-[14px] border px-3 py-2 text-[12px] ${restaurantScopeReadinessClass}`}>
+                              <div className="font-semibold">{restaurantScopeReadiness.label}</div>
+                              <div className="mt-1 leading-5">{restaurantScopeReadiness.detail}</div>
                             </div>
                           </div>
                         ) : null}

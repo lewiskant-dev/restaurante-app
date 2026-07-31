@@ -3,6 +3,10 @@
 import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import type { AlbaranLineaForm } from '@/features/home/types'
 import {
+  getAlbaranOcrReadiness,
+  getAlbaranSaveReadiness,
+} from '@/lib/albaranFormReadiness'
+import {
   fieldShell,
   ghostButton,
   primaryGradientButton,
@@ -100,6 +104,24 @@ export function AlbaranFormTab({
       .filter((prod) => prod.activo !== false && !prod.archivado)
       .map((prod) => ({ value: prod.id, label: prod.nombre })),
   ]
+  const ocrReadiness = getAlbaranOcrReadiness({
+    loading: albaranOCRLoading,
+    hasFile: Boolean(albaranFoto),
+  })
+  const saveReadiness = getAlbaranSaveReadiness({
+    saving: albaranSaving,
+    numero: albaranNumero,
+    proveedorId: albaranProveedorId,
+    fecha: albaranFecha,
+    lineas: albaranLineas,
+    pendingOcrLines: lineasOCRPendientes,
+  })
+  const readinessClass =
+    saveReadiness.tone === 'emerald'
+      ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
+      : saveReadiness.tone === 'amber'
+        ? 'border-amber-100 bg-amber-50 text-amber-800'
+        : 'border-slate-200 bg-slate-50 text-slate-600'
 
   return (
     <div className="space-y-5">
@@ -184,11 +206,17 @@ export function AlbaranFormTab({
             <button
               type="button"
               onClick={onAnalizarOCR}
-              disabled={albaranOCRLoading || !albaranFoto}
+              disabled={!ocrReadiness.canProceed}
+              title={ocrReadiness.detail}
               className="mt-3 w-full rounded-[16px] bg-amber-500 px-4 py-2.5 text-[13px] font-semibold text-white shadow-[0_10px_20px_rgba(245,158,11,0.18)] transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {albaranOCRLoading ? 'Analizando albarán...' : 'Analizar albarán'}
             </button>
+
+            <div className="mt-2 rounded-[14px] border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] leading-5 text-slate-600">
+              <span className="font-semibold text-slate-800">{ocrReadiness.label}.</span>{' '}
+              {ocrReadiness.detail}
+            </div>
           </div>
 
           {albaranOCRResumen ? (
@@ -393,9 +421,15 @@ export function AlbaranFormTab({
           </div>
         ) : null}
 
+        <div className={`mt-4 rounded-[16px] border px-4 py-3 text-[13px] ${readinessClass}`}>
+          <div className="font-semibold">{saveReadiness.label}</div>
+          <div className="mt-1 leading-5">{saveReadiness.detail}</div>
+        </div>
+
         <button
           onClick={onGuardar}
-          disabled={albaranSaving || lineasOCRPendientes > 0}
+          disabled={!saveReadiness.canProceed}
+          title={saveReadiness.detail}
           className={`mt-4 w-full rounded-[16px] px-4 py-2.5 text-[13px] disabled:cursor-not-allowed disabled:opacity-60 ${primaryGradientButton}`}
         >
           {albaranSaving
