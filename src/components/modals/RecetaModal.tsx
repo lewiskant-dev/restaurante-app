@@ -10,6 +10,7 @@ import {
   getCurrentCostPct,
   suggestRecipeTargetCostPct,
 } from '@/lib/recipePricing'
+import { getRecipeFormReadiness } from '@/lib/recipeFormReadiness'
 import type { Producto } from '@/types'
 
 type RecetaModalProps = {
@@ -111,6 +112,31 @@ export function RecetaModal({
   const suggestedPvp = calculateSuggestedPvp(costePorRacion, targetCostPct)
   const currentCostPct = getCurrentCostPct(costePorRacion, precioVenta)
   const suggestedMargin = suggestedPvp - costePorRacion
+  const activeProductIds = useMemo(
+    () =>
+      productos
+        .filter((producto) => producto.activo !== false && !producto.archivado)
+        .map((producto) => producto.id),
+    [productos]
+  )
+  const formReadiness = getRecipeFormReadiness({
+    saving: recetaSaving,
+    nombre: recetaNombre,
+    lineas: recetaLineas.map((linea) => ({
+      producto_id: linea.producto_id,
+      cantidad: linea.cantidad,
+    })),
+    activeProductIds,
+    raciones: recetaRaciones,
+    precioVenta: recetaPrecioVenta,
+    editing: Boolean(recetaEditId),
+  })
+  const formReadinessClass =
+    formReadiness.tone === 'emerald'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+      : formReadiness.tone === 'amber'
+      ? 'border-amber-200 bg-amber-50 text-amber-900'
+      : 'border-slate-200 bg-slate-50 text-slate-700'
 
   if (!open) return null
 
@@ -396,6 +422,10 @@ export function RecetaModal({
         </div>
 
         <div className="border-t border-slate-100 bg-white px-4 py-3 lg:px-5">
+          <div className={`mb-3 rounded-[16px] border px-4 py-3 ${formReadinessClass}`}>
+            <div className="text-sm font-semibold">{formReadiness.label}</div>
+            <div className="mt-1 text-xs opacity-80">{formReadiness.detail}</div>
+          </div>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
@@ -407,8 +437,9 @@ export function RecetaModal({
             <button
               type="button"
               onClick={onGuardar}
-              disabled={recetaSaving}
-              className={`rounded-[16px] px-5 py-3 text-sm disabled:cursor-wait disabled:opacity-60 ${primaryGradientButton}`}
+              disabled={!formReadiness.canSave}
+              title={formReadiness.canSave ? undefined : formReadiness.detail}
+              className={`rounded-[16px] px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60 ${primaryGradientButton}`}
             >
               {recetaSaving
                 ? recetaEditId

@@ -7,6 +7,7 @@ import { PRODUCT_CATEGORY_OPTIONS } from '@/features/home/constants'
 import { ProductCategoryBadge } from '@/components/ui/ProductCategoryVisual'
 import { fieldShell, ghostButton, primaryGradientButton, softPanel } from '@/components/ui/primitives'
 import { formatEuro } from '@/features/home/utils'
+import { getProductFormReadiness } from '@/lib/productFormReadiness'
 import type { Producto } from '@/types'
 
 type ProductModalProps = {
@@ -51,6 +52,22 @@ export function ProductModal({
     { value: 'ml', label: 'ml' },
     { value: 'cajas', label: 'cajas' },
   ]
+  const formReadiness = getProductFormReadiness({
+    saving: productoSaving,
+    nombre: productoForm.nombre,
+    categoria: productoForm.categoria,
+    unidad: productoForm.unidad,
+    stockActual: productoForm.stock_actual,
+    stockMinimo: productoForm.stock_minimo,
+    costeUnitario: productoForm.coste_unitario,
+    editing: Boolean(productoEditId),
+  })
+  const formReadinessClass =
+    formReadiness.tone === 'emerald'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+      : formReadiness.tone === 'amber'
+      ? 'border-amber-200 bg-amber-50 text-amber-900'
+      : 'border-slate-200 bg-slate-50 text-slate-700'
 
   async function handleImageFile(file: File | null) {
     if (!file) return
@@ -323,6 +340,10 @@ export function ProductModal({
         </div>
 
         <div className="border-t border-slate-100 bg-white px-4 py-3 lg:px-5">
+          <div className={`mb-3 rounded-[16px] border px-4 py-3 ${formReadinessClass}`}>
+            <div className="text-sm font-semibold">{formReadiness.label}</div>
+            <div className="mt-1 text-xs opacity-80">{formReadiness.detail}</div>
+          </div>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
@@ -334,8 +355,9 @@ export function ProductModal({
             <button
               type="button"
               onClick={onGuardar}
-              disabled={productoSaving}
-              className={`rounded-[16px] px-5 py-3 text-sm disabled:cursor-wait disabled:opacity-60 ${primaryGradientButton}`}
+              disabled={!formReadiness.canSave}
+              title={formReadiness.canSave ? undefined : formReadiness.detail}
+              className={`rounded-[16px] px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60 ${primaryGradientButton}`}
             >
               {productoSaving
                 ? productoEditId

@@ -2,6 +2,7 @@
 
 import type { ProveedorForm } from '@/features/home/types'
 import { fieldShell, ghostButton, primaryGradientButton } from '@/components/ui/primitives'
+import { getProviderFormReadiness } from '@/lib/providerFormReadiness'
 
 type ProveedorModalProps = {
   open: boolean
@@ -23,6 +24,19 @@ export function ProveedorModal({
   onGuardar,
 }: ProveedorModalProps) {
   if (!open) return null
+
+  const formReadiness = getProviderFormReadiness({
+    saving: proveedorSaving,
+    nombre: proveedorForm.nombre,
+    email: proveedorForm.email,
+    editing: Boolean(proveedorEditId),
+  })
+  const formReadinessClass =
+    formReadiness.tone === 'emerald'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+      : formReadiness.tone === 'amber'
+      ? 'border-amber-200 bg-amber-50 text-amber-900'
+      : 'border-slate-200 bg-slate-50 text-slate-700'
 
   return (
     <div
@@ -86,13 +100,18 @@ export function ProveedorModal({
         </div>
         </div>
         <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-4 py-3 sm:flex-row sm:justify-end lg:px-5">
+          <div className={`w-full rounded-[16px] border px-4 py-3 sm:mr-auto sm:max-w-[320px] ${formReadinessClass}`}>
+            <div className="text-sm font-semibold">{formReadiness.label}</div>
+            <div className="mt-1 text-xs opacity-80">{formReadiness.detail}</div>
+          </div>
           <button type="button" onClick={onClose} className={`px-4 py-3 text-sm ${ghostButton}`}>
             Cancelar
           </button>
           <button
             onClick={onGuardar}
-            disabled={proveedorSaving}
-            className={`rounded-[16px] px-5 py-3 text-sm disabled:cursor-wait disabled:opacity-60 ${primaryGradientButton}`}
+            disabled={!formReadiness.canSave}
+            title={formReadiness.canSave ? undefined : formReadiness.detail}
+            className={`rounded-[16px] px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60 ${primaryGradientButton}`}
           >
             {proveedorSaving ? 'Guardando...' : 'Guardar proveedor'}
           </button>

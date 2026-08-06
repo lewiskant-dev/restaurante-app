@@ -8,6 +8,7 @@ import type {
 import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import type { Receta } from '@/features/home/types'
 import { isInitialGuestRecommendation, isWineKind, splitGuestGrapes } from '@/lib/guestExperience'
+import { getGuestMenuFormReadiness } from '@/lib/guestMenuFormReadiness'
 import { fieldShell, ghostButton, primaryGradientButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 import type { Producto } from '@/types'
 
@@ -278,6 +279,21 @@ export function CartaTab({
     [guestMenuForm.maridajes]
   )
   const canEnrichWithAI = isWineKind(guestMenuForm.tipo) && Boolean(guestMenuForm.nombre_publico.trim())
+  const formReadiness = getGuestMenuFormReadiness({
+    saving: guestMenuSaving,
+    nombrePublico: guestMenuForm.nombre_publico,
+    tipo: guestMenuForm.tipo,
+    precio: guestMenuForm.precio,
+    disponibleCopa: guestMenuForm.disponible_copa,
+    precioCopa: guestMenuForm.precio_copa,
+    publicado: guestMenuForm.publicado,
+  })
+  const formReadinessClass =
+    formReadiness.tone === 'emerald'
+      ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
+      : formReadiness.tone === 'amber'
+        ? 'border-amber-100 bg-amber-50 text-amber-800'
+        : 'border-slate-200 bg-slate-50 text-slate-600'
   const grapeSuggestions = grapeOptions
     .filter(
       (grape) =>
@@ -761,12 +777,18 @@ export function CartaTab({
             <button
               type="button"
               onClick={onSave}
-              disabled={guestMenuSaving}
+              disabled={!formReadiness.canSave}
+              title={formReadiness.detail}
               className={`rounded-[16px] px-5 py-2.5 text-[12px] disabled:cursor-not-allowed disabled:opacity-60 ${primaryGradientButton}`}
             >
               {guestMenuSaving ? 'Guardando...' : guestMenuEditId ? 'Guardar cambios' : 'Crear ficha'}
             </button>
           </div>
+        </div>
+
+        <div className={`mt-3 rounded-[16px] border px-4 py-3 text-[12px] sm:text-[13px] ${formReadinessClass}`}>
+          <div className="font-semibold">{formReadiness.label}</div>
+          <div className="mt-1 leading-5">{formReadiness.detail}</div>
         </div>
       </div>
 
