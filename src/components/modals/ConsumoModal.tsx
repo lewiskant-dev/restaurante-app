@@ -3,6 +3,7 @@
 import type { Producto } from '@/types'
 import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import { fieldShell, ghostButton } from '@/components/ui/primitives'
+import { getStockConsumptionReadiness } from '@/lib/stockMovementReadiness'
 
 const consumoMotivoOptions = [
   { value: 'Uso en cocina', label: 'Uso en cocina' },
@@ -39,6 +40,20 @@ export function ConsumoModal({
   onGuardar,
 }: ConsumoModalProps) {
   if (!open || !producto) return null
+
+  const formReadiness = getStockConsumptionReadiness({
+    saving: consumoSaving,
+    productName: producto.nombre,
+    stockActual: Number(producto.stock_actual || 0),
+    cantidad: consumoCantidad,
+    motivo: consumoMotivo,
+  })
+  const formReadinessClass =
+    formReadiness.tone === 'emerald'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+      : formReadiness.tone === 'amber'
+        ? 'border-amber-200 bg-amber-50 text-amber-900'
+        : 'border-slate-200 bg-slate-50 text-slate-700'
 
   return (
     <div
@@ -85,13 +100,18 @@ export function ConsumoModal({
           ) : null}
         </div>
         <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-4 py-3 sm:flex-row sm:justify-end lg:px-5">
+          <div className={`w-full rounded-[16px] border px-4 py-3 sm:mr-auto sm:max-w-[320px] ${formReadinessClass}`}>
+            <div className="text-sm font-semibold">{formReadiness.label}</div>
+            <div className="mt-1 text-xs opacity-80">{formReadiness.detail}</div>
+          </div>
           <button type="button" onClick={onClose} className={`px-4 py-3 text-sm ${ghostButton}`}>
             Cancelar
           </button>
           <button
             onClick={onGuardar}
-            disabled={consumoSaving}
-            className="rounded-[16px] bg-amber-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(245,158,11,0.18)] transition hover:bg-amber-600 disabled:cursor-wait disabled:opacity-60"
+            disabled={!formReadiness.canSave}
+            title={formReadiness.canSave ? undefined : formReadiness.detail}
+            className="rounded-[16px] bg-amber-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(245,158,11,0.18)] transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {consumoSaving ? 'Registrando...' : 'Registrar consumo'}
           </button>
