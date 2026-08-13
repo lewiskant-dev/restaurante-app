@@ -13,6 +13,7 @@ import {
   tableCell,
   tableHeaderCell,
 } from '@/components/ui/primitives'
+import { buildProductHealthSummary } from '@/lib/operationalHealth'
 import type { Producto } from '@/types'
 import { formatCantidad, getNivel } from '@/features/home/utils'
 import type { ProductoEstadoFiltro } from '@/features/home/hooks/useStockManagement'
@@ -261,6 +262,7 @@ export default function StockTab({
   ]
   const canUseStockActions = canManageStock || canAdjustStock || canConsumeStock
   const filtersActive = Boolean(busqueda.trim()) || categoriaFiltro !== 'todas' || unidadFiltro !== 'todas' || productoEstado !== 'activos'
+  const productHealth = useMemo(() => buildProductHealthSummary(productosFiltrados), [productosFiltrados])
   const emptyStateTitle = filtersActive
     ? 'No hay productos con estos filtros'
     : canManageStock
@@ -312,6 +314,40 @@ export default function StockTab({
       ) : !canManageStock ? (
         <div className="mb-4 rounded-[18px] border border-amber-100 bg-amber-50 px-4 py-3 text-[12px] leading-5 text-amber-800 sm:text-[13px]">
           <span className="font-semibold">Permisos limitados.</span> Puedes operar stock según tu rol, pero la creación y edición de productos queda reservada a administración.
+        </div>
+      ) : null}
+
+      {productHealth.totalIssues > 0 ? (
+        <div className={`mb-4 p-4 ${softPanel}`}>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h3 className="text-[14px] font-semibold text-slate-900">Salud operativa del stock</h3>
+              <p className="mt-1 text-[12px] text-slate-500">
+                Alertas de inventario y calidad de datos sobre los productos visibles.
+              </p>
+            </div>
+            <div className="text-[12px] text-slate-500">
+              {productHealth.highSeverity} alta · {productHealth.mediumSeverity} media
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
+            <div className={`p-3 ${softPanel}`}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Stock negativo</div>
+              <div className="mt-1 text-[1.45rem] font-semibold text-red-600">{productHealth.negativeStock}</div>
+            </div>
+            <div className={`p-3 ${softPanel}`}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin unidad</div>
+              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{productHealth.missingUnit}</div>
+            </div>
+            <div className={`p-3 ${softPanel}`}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin coste útil</div>
+              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{productHealth.missingCost}</div>
+            </div>
+            <div className={`p-3 ${softPanel}`}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Bajo mínimo</div>
+              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{productHealth.underMinimum}</div>
+            </div>
+          </div>
         </div>
       ) : null}
 

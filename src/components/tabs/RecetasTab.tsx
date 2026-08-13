@@ -5,6 +5,7 @@ import { ActionMenu } from '@/components/ui/ActionMenu'
 import { fieldShell, primaryGradientButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 import type { Receta } from '@/features/home/types'
 import { formatEuro } from '@/features/home/utils'
+import { buildRecipeHealthSummary, getRecipeOperationalIssues } from '@/lib/operationalHealth'
 import { normalizeSearchText } from '@/lib/userInputPolicy'
 
 type RecetasTabProps = {
@@ -48,6 +49,7 @@ export function RecetasTab({
     recetas.length === 0
       ? 0
       : recetas.reduce((acc, receta) => acc + Number(receta.margen_estimado || 0), 0) / recetas.length
+  const recipeHealth = useMemo(() => buildRecipeHealthSummary(recetas), [recetas])
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -127,6 +129,46 @@ export function RecetasTab({
         </div>
       </div>
 
+      {recipeHealth.totalIssues > 0 ? (
+        <div className={`p-4 ${surfaceCard}`}>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
+                Salud operativa de recetas
+              </h3>
+              <p className="mt-1 text-[12px] text-slate-500">
+                Señales que pueden romper TPV, margen o consumo teórico.
+              </p>
+            </div>
+            <div className="text-[12px] text-slate-500">
+              {recipeHealth.highSeverity} alta · {recipeHealth.mediumSeverity} media
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-5">
+            <div className={`p-3 ${softPanel}`}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin TPV</div>
+              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{recipeHealth.recipesWithoutTpvName}</div>
+            </div>
+            <div className={`p-3 ${softPanel}`}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin ingredientes</div>
+              <div className="mt-1 text-[1.45rem] font-semibold text-red-600">{recipeHealth.recipesWithoutIngredients}</div>
+            </div>
+            <div className={`p-3 ${softPanel}`}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin coste útil</div>
+              <div className="mt-1 text-[1.45rem] font-semibold text-red-600">{recipeHealth.recipesWithoutCost}</div>
+            </div>
+            <div className={`p-3 ${softPanel}`}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin precio</div>
+              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{recipeHealth.recipesWithoutPrice}</div>
+            </div>
+            <div className={`p-3 ${softPanel}`}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Margen negativo</div>
+              <div className="mt-1 text-[1.45rem] font-semibold text-red-600">{recipeHealth.recipesNegativeMargin}</div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className={`p-3 sm:p-5 ${surfaceCard}`}>
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <label className={`flex min-h-[46px] items-center gap-3 px-4 py-2.5 lg:max-w-md lg:flex-1 ${fieldShell}`}>
@@ -195,12 +237,13 @@ export function RecetasTab({
 
         {!loadingRecetas &&
           recetasFiltradas.map((receta) => (
-            <div
-              key={receta.id}
-              className={`mb-2.5 p-3 last:mb-0 sm:mb-3 sm:p-4 ${softPanel}`}
-            >
+            <div key={receta.id} className={`mb-2.5 p-3 last:mb-0 sm:mb-3 sm:p-4 ${softPanel}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
+                  {(() => {
+                    const issues = getRecipeOperationalIssues(receta)
+                    return (
+                      <>
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="truncate text-[13px] font-semibold text-slate-900 sm:text-[15px]">
                       {receta.nombre}
@@ -252,6 +295,26 @@ export function RecetasTab({
                       caja/lote o si la cantidad de ingrediente es demasiado alta.
                     </div>
                   ) : null}
+                        {issues.length > 0 ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {issues.map((issue) => (
+                              <span
+                                key={issue.id}
+                                className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                                  issue.severity === 'alta'
+                                    ? 'bg-red-50 text-red-700'
+                                    : 'bg-amber-50 text-amber-700'
+                                }`}
+                                title={issue.detail}
+                              >
+                                {issue.label}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </>
+                    )
+                  })()}
                 </div>
 
                 <ActionMenu>

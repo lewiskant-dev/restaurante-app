@@ -559,6 +559,25 @@ export function TpvTab({
           <div className="mt-1 leading-5">{importReadiness.detail}</div>
         </div>
 
+        <div className="mt-3 grid gap-3 md:grid-cols-4">
+          <div className={`p-3 ${softPanel}`}>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Líneas CSV</div>
+            <div className="mt-1 text-[1.35rem] font-semibold text-slate-900">{tpvVentasCrudas.length}</div>
+          </div>
+          <div className={`p-3 ${softPanel}`}>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Unidades</div>
+            <div className="mt-1 text-[1.35rem] font-semibold text-slate-900">{formatCantidad(totalUnidadesCsv)}</div>
+          </div>
+          <div className={`p-3 ${softPanel}`}>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Pendientes</div>
+            <div className="mt-1 text-[1.35rem] font-semibold text-amber-600">{tpvPendientesMapeo.length}</div>
+          </div>
+          <div className={`p-3 ${softPanel}`}>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Ignorados</div>
+            <div className="mt-1 text-[1.35rem] font-semibold text-slate-900">{tpvIgnoredSummary.articulos.length}</div>
+          </div>
+        </div>
+
         <div className={`mt-4 p-3 text-[12px] text-slate-600 sm:p-3 sm:text-[13px] ${softPanel}`}>
           <div className="font-semibold text-slate-900">Formato esperado</div>
           <div className="mt-1">

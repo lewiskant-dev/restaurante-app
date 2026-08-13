@@ -9,6 +9,7 @@ import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import type { Receta } from '@/features/home/types'
 import { isInitialGuestRecommendation, isWineKind, splitGuestGrapes } from '@/lib/guestExperience'
 import { getGuestMenuFormReadiness } from '@/lib/guestMenuFormReadiness'
+import { buildGuestMenuHealthSummary, getGuestMenuOperationalIssues } from '@/lib/operationalHealth'
 import { fieldShell, ghostButton, primaryGradientButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 import type { Producto } from '@/types'
 
@@ -217,6 +218,7 @@ export function CartaTab({
     () => productosActivos.find((producto) => producto.id === guestMenuForm.producto_id),
     [guestMenuForm.producto_id, productosActivos]
   )
+  const productsById = useMemo(() => new Map(productos.map((producto) => [producto.id, producto])), [productos])
   const productosFiltrados = useMemo(() => {
     const query = normalizeProductSearch(productSearch)
 
@@ -302,6 +304,10 @@ export function CartaTab({
         )
     )
     .slice(0, 10)
+  const guestMenuHealth = useMemo(
+    () => buildGuestMenuHealthSummary(guestMenuItems, productsById),
+    [guestMenuItems, productsById]
+  )
 
   const productInputValue =
     productDropdownOpen || !selectedProduct ? productSearch : selectedProduct.nombre
@@ -411,6 +417,42 @@ export function CartaTab({
           </div>
         </div>
       </div>
+
+      {guestMenuHealth.totalIssues > 0 ? (
+        <div className={`p-4 ${surfaceCard}`}>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
+                Coherencia carta-operativa
+              </h3>
+              <p className="mt-1 text-[12px] text-slate-500">
+                Señales de fichas publicadas que no cruzan bien con stock o precios internos.
+              </p>
+            </div>
+            <div className="text-[12px] text-slate-500">
+              {guestMenuHealth.highSeverity} alta · {guestMenuHealth.mediumSeverity} media
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
+            <div className={`p-3 ${softPanel}`}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin producto</div>
+              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{guestMenuHealth.publishedWithoutProduct}</div>
+            </div>
+            <div className={`p-3 ${softPanel}`}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Producto inactivo</div>
+              <div className="mt-1 text-[1.45rem] font-semibold text-red-600">{guestMenuHealth.publishedWithInactiveProduct}</div>
+            </div>
+            <div className={`p-3 ${softPanel}`}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin precio</div>
+              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{guestMenuHealth.publishedWithoutPrice}</div>
+            </div>
+            <div className={`p-3 ${softPanel}`}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Copa sin precio</div>
+              <div className="mt-1 text-[1.45rem] font-semibold text-red-600">{guestMenuHealth.winesByGlassWithoutCupPrice}</div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className={`p-4 sm:p-5 ${surfaceCard}`}>
         <div className="mb-4 flex items-center justify-between gap-3">
@@ -845,6 +887,10 @@ export function CartaTab({
             {filteredGuestMenuItems.map((item) => (
               <div key={item.id} className={`grid gap-3 p-3 lg:grid-cols-[1fr_auto] ${softPanel}`}>
                 <div className="min-w-0">
+                  {(() => {
+                    const issues = getGuestMenuOperationalIssues(item, productsById)
+                    return (
+                      <>
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="text-[14px] font-semibold text-slate-900">{item.nombre}</div>
                     <span
@@ -880,6 +926,26 @@ export function CartaTab({
                     {item.bodega ? ` · ${item.bodega}` : ''}
                     {item.anada ? ` · ${item.anada}` : ''}
                   </div>
+                        {issues.length > 0 ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {issues.map((issue) => (
+                              <span
+                                key={issue.id}
+                                className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                                  issue.severity === 'alta'
+                                    ? 'bg-red-50 text-red-700'
+                                    : 'bg-amber-50 text-amber-700'
+                                }`}
+                                title={issue.detail}
+                              >
+                                {issue.label}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </>
+                    )
+                  })()}
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
                   <button
