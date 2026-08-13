@@ -10,6 +10,7 @@ import type {
 } from '@/features/home/types'
 import { formatCantidad, formatFechaHora, normalizeText } from '@/features/home/utils'
 import { getTpvImportReadiness } from '@/lib/tpvImportReadiness'
+import { getTpvCoverageSummary, getTpvPendingMappingReadiness } from '@/lib/tpvMappingReadiness'
 import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import { fieldShell, ghostButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 
@@ -123,6 +124,12 @@ export function TpvTab({
     0
   )
   const articulosMapeados = ventasResumen.filter((item) => item.mapeado).length
+  const coverageSummary = getTpvCoverageSummary({
+    totalArticles: ventasResumen.length,
+    mappedArticles: articulosMapeados,
+    pendingArticles: tpvPendientesMapeo.length,
+    ignoredArticles: tpvIgnoredSummary.articulos.length,
+  })
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const importReadiness = getTpvImportReadiness({
     importing: tpvImportando,
@@ -135,6 +142,12 @@ export function TpvTab({
     importReadiness.tone === 'emerald'
       ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
       : importReadiness.tone === 'amber'
+        ? 'border-amber-100 bg-amber-50 text-amber-800'
+        : 'border-slate-200 bg-slate-50 text-slate-600'
+  const coverageSummaryClass =
+    coverageSummary.tone === 'emerald'
+      ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
+      : coverageSummary.tone === 'amber'
         ? 'border-amber-100 bg-amber-50 text-amber-800'
         : 'border-slate-200 bg-slate-50 text-slate-600'
 
@@ -829,6 +842,45 @@ export function TpvTab({
           </div>
         </div>
 
+        <div className="mb-4 grid gap-3 md:grid-cols-4">
+          <div className={`p-3 ${softPanel}`}>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Cobertura TPV
+            </div>
+            <div className="mt-1 text-[1.5rem] font-semibold text-slate-900">
+              {coverageSummary.coveragePct}%
+            </div>
+            <div className="mt-1 text-[11px] leading-4 text-slate-400">
+              Artículos con receta o excluidos de la importación.
+            </div>
+          </div>
+          <div className={`p-3 ${softPanel}`}>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Ya cubiertos
+            </div>
+            <div className="mt-1 text-[1.5rem] font-semibold text-emerald-600">{articulosMapeados}</div>
+          </div>
+          <div className={`p-3 ${softPanel}`}>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Pendientes
+            </div>
+            <div className="mt-1 text-[1.5rem] font-semibold text-amber-600">{tpvPendientesMapeo.length}</div>
+          </div>
+          <div className={`p-3 ${softPanel}`}>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Ignorados
+            </div>
+            <div className="mt-1 text-[1.5rem] font-semibold text-slate-900">
+              {tpvIgnoredSummary.articulos.length}
+            </div>
+          </div>
+        </div>
+
+        <div className={`mb-4 rounded-[16px] border px-4 py-3 text-[12px] sm:text-[13px] ${coverageSummaryClass}`}>
+          <div className="font-semibold">{coverageSummary.label}</div>
+          <div className="mt-1 leading-5">{coverageSummary.detail}</div>
+        </div>
+
         {tpvVentasCrudas.length === 0 ? (
           <div className="py-8 text-center text-sm text-slate-400">
             Carga primero un CSV para ver sugerencias de mapeo.
@@ -841,74 +893,90 @@ export function TpvTab({
           </div>
         ) : (
           <div className="space-y-3">
-            {tpvPendientesMapeo.map((item) => (
-              <div
-                key={item.producto_externo}
-                className={`p-3 sm:p-3 ${softPanel}`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate text-[13px] font-semibold text-slate-900 sm:text-[14px]">
-                      {item.producto_externo}
-                    </div>
-                    <div className="mt-1 text-[11px] text-slate-500 sm:text-[12px]">
-                      Total en CSV: {item.total}
+            {tpvPendientesMapeo.map((item) => {
+              const selectedRecipeId =
+                tpvMapeosSeleccionados[item.producto_externo] || item.sugerencias[0]?.id || ''
+              const mappingReadiness = getTpvPendingMappingReadiness({
+                saving: tpvGuardandoMapeo === item.producto_externo,
+                productoExterno: item.producto_externo,
+                recetaId: selectedRecipeId,
+                suggestionsCount: item.sugerencias.length,
+              })
+              const mappingReadinessClass =
+                mappingReadiness.tone === 'emerald'
+                  ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
+                  : mappingReadiness.tone === 'amber'
+                    ? 'border-amber-100 bg-amber-50 text-amber-800'
+                    : 'border-slate-200 bg-slate-50 text-slate-600'
+
+              return (
+                <div
+                  key={item.producto_externo}
+                  className={`p-3 sm:p-3 ${softPanel}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-[13px] font-semibold text-slate-900 sm:text-[14px]">
+                        {item.producto_externo}
+                      </div>
+                      <div className="mt-1 text-[11px] text-slate-500 sm:text-[12px]">
+                        Total en CSV: {item.total} · {item.sugerencias.length > 0 ? `${item.sugerencias.length} sugerencia(s)` : 'Sin sugerencias'}
+                      </div>
                     </div>
                   </div>
+
+                  <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto_auto]">
+                    <IntegratedSelect
+                      value={selectedRecipeId}
+                      options={[
+                        { value: '', label: 'Selecciona receta sugerida' },
+                        ...(item.sugerencias.length > 0
+                          ? item.sugerencias.map((receta) => ({
+                              value: receta.id,
+                              label: `${receta.nombre}${receta.nombre_tpv ? ` · TPV actual: ${receta.nombre_tpv}` : ''}`,
+                            }))
+                          : recetas
+                              .filter((receta) => receta.activo !== false)
+                              .map((receta) => ({ value: receta.id, label: receta.nombre }))),
+                      ]}
+                      onChange={(value) => onMapeoSeleccionadoChange(item.producto_externo, value)}
+                      searchable
+                      buttonClassName="px-3.5 py-2.5 text-[12px] sm:py-2.5 sm:text-[13px]"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => onCrearRecetaDesdeTpv(item.producto_externo)}
+                      className={`px-4 py-2.5 text-[12px] sm:py-2.5 sm:text-[13px] ${ghostButton}`}
+                    >
+                      Crear receta
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onIgnorarArticulo(item.producto_externo)}
+                      className="rounded-[16px] bg-amber-50 px-4 py-2.5 text-[12px] font-semibold text-amber-700 transition hover:bg-amber-100 sm:py-2.5 sm:text-[13px]"
+                    >
+                      Ignorar
+                    </button>
+
+                    <button
+                      onClick={() => onGuardarMapeo(item.producto_externo, selectedRecipeId)}
+                      disabled={!mappingReadiness.canSave}
+                      title={mappingReadiness.canSave ? undefined : mappingReadiness.detail}
+                      className="rounded-[16px] bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
+                    >
+                      {tpvGuardandoMapeo === item.producto_externo ? 'Guardando...' : 'Guardar mapeo'}
+                    </button>
+                  </div>
+
+                  <div className={`mt-3 rounded-[16px] border px-4 py-3 text-[12px] sm:text-[13px] ${mappingReadinessClass}`}>
+                    <div className="font-semibold">{mappingReadiness.label}</div>
+                    <div className="mt-1 leading-5">{mappingReadiness.detail}</div>
+                  </div>
                 </div>
-
-                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto_auto]">
-                  <IntegratedSelect
-                    value={
-                      tpvMapeosSeleccionados[item.producto_externo] || item.sugerencias[0]?.id || ''
-                    }
-                    options={[
-                      { value: '', label: 'Selecciona receta sugerida' },
-                      ...(item.sugerencias.length > 0
-                        ? item.sugerencias.map((receta) => ({
-                            value: receta.id,
-                            label: `${receta.nombre}${receta.nombre_tpv ? ` · TPV actual: ${receta.nombre_tpv}` : ''}`,
-                          }))
-                        : recetas
-                            .filter((receta) => receta.activo !== false)
-                            .map((receta) => ({ value: receta.id, label: receta.nombre }))),
-                    ]}
-                    onChange={(value) => onMapeoSeleccionadoChange(item.producto_externo, value)}
-                    searchable
-                    buttonClassName="px-3.5 py-2.5 text-[12px] sm:py-2.5 sm:text-[13px]"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => onCrearRecetaDesdeTpv(item.producto_externo)}
-                    className={`px-4 py-2.5 text-[12px] sm:py-2.5 sm:text-[13px] ${ghostButton}`}
-                  >
-                    Crear receta
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => onIgnorarArticulo(item.producto_externo)}
-                    className="rounded-[16px] bg-amber-50 px-4 py-2.5 text-[12px] font-semibold text-amber-700 transition hover:bg-amber-100 sm:py-2.5 sm:text-[13px]"
-                  >
-                    Ignorar
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      onGuardarMapeo(
-                        item.producto_externo,
-                        tpvMapeosSeleccionados[item.producto_externo] || item.sugerencias[0]?.id || ''
-                      )
-                    }
-                    disabled={tpvGuardandoMapeo === item.producto_externo}
-                    className="rounded-[16px] bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white disabled:opacity-60 sm:rounded-[16px] sm:py-2.5 sm:text-[13px]"
-                  >
-                    {tpvGuardandoMapeo === item.producto_externo ? 'Guardando...' : 'Guardar mapeo'}
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
