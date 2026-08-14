@@ -16,6 +16,7 @@ import {
   PromptActionDialog,
   type PromptActionRequest,
 } from '@/components/ui/PromptActionDialog'
+import { softPanel, surfaceCard } from '@/components/ui/primitives'
 import { AjusteStockModal } from '@/components/modals/AjusteStockModal'
 import { ConsumoModal } from '@/components/modals/ConsumoModal'
 import { DetalleAlbaranModal } from '@/components/modals/DetalleAlbaranModal'
@@ -74,6 +75,13 @@ import {
   buildReorderSupplierSummary,
   buildWasteFinancialSummary,
 } from '@/lib/financialAnalytics'
+import {
+  buildAlbaranHealthSummary,
+  buildGuestMenuHealthSummary,
+  buildProductHealthSummary,
+  buildProviderHealthSummary,
+  buildRecipeHealthSummary,
+} from '@/lib/operationalHealth'
 import {
   getRestaurantScopeDetail,
   getRestaurantScopeFromAppMetadata,
@@ -1257,6 +1265,87 @@ export default function HomePage() {
               : tab === 'usuarios'
                 ? busquedaUsuarios
                 : ''
+  const productsById = useMemo(
+    () => new Map(productos.map((producto) => [producto.id, producto])),
+    [productos]
+  )
+  const recipeHealthSummary = useMemo(() => buildRecipeHealthSummary(recetas), [recetas])
+  const productHealthSummary = useMemo(() => buildProductHealthSummary(productos), [productos])
+  const guestMenuHealthSummary = useMemo(
+    () => buildGuestMenuHealthSummary(guestMenuItems, productsById),
+    [guestMenuItems, productsById]
+  )
+  const providerHealthSummary = useMemo(() => buildProviderHealthSummary(proveedores), [proveedores])
+  const albaranHealthSummary = useMemo(() => buildAlbaranHealthSummary(albaranesFiltrados), [albaranesFiltrados])
+  const operationalPriorities = useMemo(() => {
+    const items = [
+      {
+        id: 'recipes',
+        title: 'Recetas débiles',
+        detail: `${recipeHealthSummary.totalIssues} señal(es) que afectan TPV, margen o consumo teórico.`,
+        count: recipeHealthSummary.totalIssues,
+        highSeverity: recipeHealthSummary.highSeverity,
+        tab: 'recetas' as TabKey,
+      },
+      {
+        id: 'stock',
+        title: 'Datos de stock a revisar',
+        detail: `${productHealthSummary.totalIssues} señal(es) sobre costes, unidades o niveles de inventario.`,
+        count: productHealthSummary.totalIssues,
+        highSeverity: productHealthSummary.highSeverity,
+        tab: 'stock' as TabKey,
+      },
+      {
+        id: 'guest-menu',
+        title: 'Carta desconectada de operativa',
+        detail: `${guestMenuHealthSummary.totalIssues} ficha(s) publicadas con incoherencias de producto o precio.`,
+        count: guestMenuHealthSummary.totalIssues,
+        highSeverity: guestMenuHealthSummary.highSeverity,
+        tab: 'carta' as TabKey,
+      },
+      {
+        id: 'tpv',
+        title: 'Cobertura TPV pendiente',
+        detail: `${tpvPendientesMapeo.length} artículo(s) siguen sin receta útil para descontar stock.`,
+        count: tpvPendientesMapeo.length,
+        highSeverity: tpvPendientesMapeo.length > 0 ? 1 : 0,
+        tab: 'tpv' as TabKey,
+      },
+      {
+        id: 'providers',
+        title: 'Proveedores incompletos',
+        detail: `${providerHealthSummary.totalIssues} hueco(s) de contacto o fiscalidad en compras.`,
+        count: providerHealthSummary.totalIssues,
+        highSeverity: providerHealthSummary.highSeverity,
+        tab: 'proveedores' as TabKey,
+      },
+      {
+        id: 'albaranes',
+        title: 'Compras por revisar',
+        detail: `${albaranHealthSummary.totalIssues} documento(s) con proveedor o total no fiable.`,
+        count: albaranHealthSummary.totalIssues,
+        highSeverity: albaranHealthSummary.highSeverity,
+        tab: 'albaranes' as TabKey,
+      },
+    ]
+
+    return items
+      .filter((item) => item.count > 0 && canAccessTab(currentUserRole, item.tab))
+      .sort((a, b) => {
+        if (b.highSeverity !== a.highSeverity) return b.highSeverity - a.highSeverity
+        return b.count - a.count
+      })
+  }, [
+    recipeHealthSummary,
+    productHealthSummary,
+    guestMenuHealthSummary,
+    tpvPendientesMapeo.length,
+    providerHealthSummary,
+    albaranHealthSummary,
+    currentUserRole,
+  ])
+  const totalOperationalIssues = operationalPriorities.reduce((total, item) => total + item.count, 0)
+  const totalHighSeverityIssues = operationalPriorities.reduce((total, item) => total + item.highSeverity, 0)
 
   function reviewStockAlert(productId: string) {
     const producto = productos.find((item) => item.id === productId)
@@ -1292,6 +1381,11 @@ export default function HomePage() {
     if (tab === 'usuarios') {
       setBusquedaUsuarios(value)
     }
+  }
+
+  function openPriorityTab(nextTab: TabKey) {
+    changeMainTab(getMainTabForTab(nextTab))
+    changeTab(nextTab)
   }
 
   function descargarCSV(nombreArchivo: string, filas: Record<string, unknown>[]) {
@@ -2004,6 +2098,67 @@ export default function HomePage() {
         </div>
 
         <section className="space-y-6 pt-5 lg:pt-0">
+          {operationalPriorities.length > 0 ? (
+            <div className={`p-4 sm:p-5 ${surfaceCard}`}>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <h2 className="text-[1.25rem] font-semibold tracking-tight text-slate-950 sm:text-[1.5rem]">
+                    Bandeja de prioridades
+                  </h2>
+                  <p className="mt-1 text-[12px] text-slate-500 sm:text-[13px]">
+                    Lo más importante para estabilizar operación, compras, stock y TPV sin ir pestaña por pestaña.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <div className={`min-w-[110px] p-3 ${softPanel}`}>
+                    <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Señales</div>
+                    <div className="mt-1 text-[1.45rem] font-semibold text-slate-900">{totalOperationalIssues}</div>
+                  </div>
+                  <div className={`min-w-[110px] p-3 ${softPanel}`}>
+                    <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Alta prioridad</div>
+                    <div className="mt-1 text-[1.45rem] font-semibold text-red-600">{totalHighSeverityIssues}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3 xl:grid-cols-2">
+                {operationalPriorities.slice(0, 6).map((item) => (
+                  <div
+                    key={item.id}
+                    className={`flex flex-col gap-3 rounded-[18px] border px-4 py-4 ${
+                      item.highSeverity > 0
+                        ? 'border-red-200 bg-red-50/70'
+                        : 'border-amber-200 bg-amber-50/70'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-[14px] font-semibold text-slate-900">{item.title}</div>
+                        <div className="mt-1 text-[12px] leading-5 text-slate-600">{item.detail}</div>
+                      </div>
+                      <div
+                        className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
+                          item.highSeverity > 0 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                        }`}
+                      >
+                        {item.count}
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => openPriorityTab(item.tab)}
+                        className="rounded-[14px] bg-slate-900 px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-slate-800"
+                      >
+                        Revisar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           {tab === 'stock' && (
             <StockTab
               canManageStock={canManageStock}

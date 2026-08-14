@@ -2,8 +2,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  buildAlbaranHealthSummary,
   buildGuestMenuHealthSummary,
   buildProductHealthSummary,
+  buildProviderHealthSummary,
   buildRecipeHealthSummary,
   getRecipeOperationalIssues,
 } from '../src/lib/operationalHealth.ts'
@@ -165,4 +167,72 @@ test('buildGuestMenuHealthSummary detecta incoherencias publicadas', () => {
   assert.equal(summary.publishedWithInactiveProduct, 1)
   assert.equal(summary.publishedWithoutPrice, 1)
   assert.equal(summary.winesByGlassWithoutCupPrice, 1)
+})
+
+test('buildProviderHealthSummary detecta huecos de contacto y fiscalidad', () => {
+  const summary = buildProviderHealthSummary([
+    {
+      id: 'prov-1',
+      nombre: 'Distribuciones Norte',
+      cif: '',
+      telefono: '',
+      email: '',
+      notas: '',
+      activo: true,
+      archivado: false,
+      created_at: '',
+    },
+    {
+      id: 'prov-2',
+      nombre: 'Bodega Sur',
+      cif: 'A123',
+      telefono: '123',
+      email: '',
+      notas: '',
+      activo: true,
+      archivado: false,
+      created_at: '',
+    },
+  ] as never[])
+
+  assert.equal(summary.missingCif, 1)
+  assert.equal(summary.missingPhoneAndEmail, 1)
+  assert.equal(summary.missingEmail, 1)
+})
+
+test('buildAlbaranHealthSummary detecta documentos sin proveedor o total valido', () => {
+  const summary = buildAlbaranHealthSummary([
+    {
+      id: 'alb-1',
+      numero: 'A-1',
+      proveedor_id: null,
+      proveedor_nombre: '',
+      fecha: '2026-08-13',
+      notas: '',
+      total: 0,
+      foto_url: '',
+      ocr_texto: '',
+      anulado: false,
+      anulado_motivo: '',
+      created_at: '',
+    },
+    {
+      id: 'alb-2',
+      numero: 'A-2',
+      proveedor_id: 'prov-1',
+      proveedor_nombre: 'Proveedor',
+      fecha: '2026-08-13',
+      notas: '',
+      total: 10,
+      foto_url: '',
+      ocr_texto: '',
+      anulado: true,
+      anulado_motivo: '',
+      created_at: '',
+    },
+  ] as never[])
+
+  assert.equal(summary.missingSupplier, 1)
+  assert.equal(summary.zeroTotal, 1)
+  assert.equal(summary.cancelled, 1)
 })

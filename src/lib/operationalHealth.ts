@@ -1,7 +1,7 @@
 import type { GuestMenuAdminItem } from '@/features/home/hooks/useGuestMenuManagement'
 import type { Receta } from '@/features/home/types'
 import { isWineKind } from './guestExperience.ts'
-import type { Producto } from '@/types'
+import type { Albaran, Producto, Proveedor } from '@/types'
 
 export type OperationalIssueSeverity = 'alta' | 'media'
 
@@ -41,6 +41,24 @@ export type GuestMenuHealthSummary = {
   publishedWithInactiveProduct: number
   publishedWithoutPrice: number
   winesByGlassWithoutCupPrice: number
+}
+
+export type ProviderHealthSummary = {
+  totalIssues: number
+  highSeverity: number
+  mediumSeverity: number
+  missingCif: number
+  missingPhoneAndEmail: number
+  missingEmail: number
+}
+
+export type AlbaranHealthSummary = {
+  totalIssues: number
+  highSeverity: number
+  mediumSeverity: number
+  missingSupplier: number
+  zeroTotal: number
+  cancelled: number
 }
 
 export function getRecipeOperationalIssues(receta: Receta): OperationalIssue[] {
@@ -312,5 +330,129 @@ export function buildGuestMenuHealthSummary(
     publishedWithInactiveProduct,
     publishedWithoutPrice,
     winesByGlassWithoutCupPrice,
+  }
+}
+
+export function getProviderOperationalIssues(proveedor: Proveedor): OperationalIssue[] {
+  if (proveedor.activo === false || proveedor.archivado) return []
+
+  const issues: OperationalIssue[] = []
+
+  if (!String(proveedor.cif || '').trim()) {
+    issues.push({
+      id: `${proveedor.id}:missing-cif`,
+      severity: 'media',
+      label: 'Sin CIF',
+      detail: 'Falta el identificador fiscal para compras y trazabilidad administrativa.',
+    })
+  }
+
+  if (!String(proveedor.email || '').trim() && !String(proveedor.telefono || '').trim()) {
+    issues.push({
+      id: `${proveedor.id}:missing-contact`,
+      severity: 'alta',
+      label: 'Sin contacto',
+      detail: 'No hay teléfono ni email para resolver incidencias o repetir pedidos.',
+    })
+  } else if (!String(proveedor.email || '').trim()) {
+    issues.push({
+      id: `${proveedor.id}:missing-email`,
+      severity: 'media',
+      label: 'Sin email',
+      detail: 'Conviene tener un correo para pedidos, facturas y seguimiento.',
+    })
+  }
+
+  return issues
+}
+
+export function buildProviderHealthSummary(proveedores: Proveedor[]): ProviderHealthSummary {
+  let highSeverity = 0
+  let mediumSeverity = 0
+  let missingCif = 0
+  let missingPhoneAndEmail = 0
+  let missingEmail = 0
+
+  proveedores.forEach((proveedor) => {
+    if (proveedor.activo === false || proveedor.archivado) return
+
+    if (!String(proveedor.cif || '').trim()) missingCif += 1
+    if (!String(proveedor.email || '').trim() && !String(proveedor.telefono || '').trim()) {
+      missingPhoneAndEmail += 1
+    } else if (!String(proveedor.email || '').trim()) {
+      missingEmail += 1
+    }
+
+    getProviderOperationalIssues(proveedor).forEach((issue) => {
+      if (issue.severity === 'alta') highSeverity += 1
+      else mediumSeverity += 1
+    })
+  })
+
+  return {
+    totalIssues: highSeverity + mediumSeverity,
+    highSeverity,
+    mediumSeverity,
+    missingCif,
+    missingPhoneAndEmail,
+    missingEmail,
+  }
+}
+
+export function getAlbaranOperationalIssues(albaran: Albaran): OperationalIssue[] {
+  if (albaran.anulado) return []
+
+  const issues: OperationalIssue[] = []
+
+  if (!albaran.proveedor_id || !String(albaran.proveedor_nombre || '').trim()) {
+    issues.push({
+      id: `${albaran.id}:missing-supplier`,
+      severity: 'alta',
+      label: 'Sin proveedor',
+      detail: 'El documento no está ligado a un proveedor válido.',
+    })
+  }
+
+  if (Number(albaran.total || 0) <= 0) {
+    issues.push({
+      id: `${albaran.id}:zero-total`,
+      severity: 'media',
+      label: 'Total no válido',
+      detail: 'El total del albarán está vacío o es igual a cero.',
+    })
+  }
+
+  return issues
+}
+
+export function buildAlbaranHealthSummary(albaranes: Albaran[]): AlbaranHealthSummary {
+  let highSeverity = 0
+  let mediumSeverity = 0
+  let missingSupplier = 0
+  let zeroTotal = 0
+  let cancelled = 0
+
+  albaranes.forEach((albaran) => {
+    if (albaran.anulado) {
+      cancelled += 1
+      return
+    }
+
+    if (!albaran.proveedor_id || !String(albaran.proveedor_nombre || '').trim()) missingSupplier += 1
+    if (Number(albaran.total || 0) <= 0) zeroTotal += 1
+
+    getAlbaranOperationalIssues(albaran).forEach((issue) => {
+      if (issue.severity === 'alta') highSeverity += 1
+      else mediumSeverity += 1
+    })
+  })
+
+  return {
+    totalIssues: highSeverity + mediumSeverity,
+    highSeverity,
+    mediumSeverity,
+    missingSupplier,
+    zeroTotal,
+    cancelled,
   }
 }

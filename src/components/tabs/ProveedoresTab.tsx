@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { ActionMenu } from '@/components/ui/ActionMenu'
 import {
   fieldShell,
@@ -7,6 +8,7 @@ import {
   softPanel,
   surfaceCard,
 } from '@/components/ui/primitives'
+import { buildProviderHealthSummary, getProviderOperationalIssues } from '@/lib/operationalHealth'
 import type { Proveedor } from '@/types'
 
 type ProveedoresTabProps = {
@@ -34,6 +36,11 @@ export function ProveedoresTab({
   onArchiveProveedor,
   onReactivarProveedor,
 }: ProveedoresTabProps) {
+  const providerHealth = useMemo(
+    () => buildProviderHealthSummary(proveedoresFiltrados),
+    [proveedoresFiltrados]
+  )
+
   return (
     <div className="space-y-4 sm:space-y-5">
       <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -87,6 +94,38 @@ export function ProveedoresTab({
         </div>
       </div>
 
+      {providerHealth.totalIssues > 0 ? (
+        <div className={`p-4 ${surfaceCard}`}>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
+                Salud operativa de proveedores
+              </h3>
+              <p className="mt-1 text-[12px] text-slate-500">
+                Contacto y datos mínimos que conviene tener bien cerrados para compras.
+              </p>
+            </div>
+            <div className="text-[12px] text-slate-500">
+              {providerHealth.highSeverity} alta · {providerHealth.mediumSeverity} media
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <div className={`p-3 ${softPanel}`}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin CIF</div>
+              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{providerHealth.missingCif}</div>
+            </div>
+            <div className={`p-3 ${softPanel}`}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin contacto</div>
+              <div className="mt-1 text-[1.45rem] font-semibold text-red-600">{providerHealth.missingPhoneAndEmail}</div>
+            </div>
+            <div className={`p-3 ${softPanel}`}>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin email</div>
+              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{providerHealth.missingEmail}</div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className={`p-3 sm:p-5 ${surfaceCard}`}>
         {loadingProveedores && (
           <div className="grid gap-2.5">
@@ -128,12 +167,13 @@ export function ProveedoresTab({
 
         {!loadingProveedores &&
           proveedoresFiltrados.map((prov) => (
-            <div
-              key={prov.id}
-              className={`mb-2 px-3 py-3 last:mb-0 sm:px-4 sm:py-3.5 ${softPanel}`}
-            >
+            <div key={prov.id} className={`mb-2 px-3 py-3 last:mb-0 sm:px-4 sm:py-3.5 ${softPanel}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
+                  {(() => {
+                    const issues = getProviderOperationalIssues(prov)
+                    return (
+                      <>
                   <div className="truncate text-[13px] font-semibold text-slate-900 sm:text-[15px]">
                     {prov.nombre}
                   </div>
@@ -146,6 +186,26 @@ export function ProveedoresTab({
                   {prov.archivado ? (
                     <div className="mt-1 text-[11px] font-medium text-red-500 sm:text-[12px]">Archivado</div>
                   ) : null}
+                        {issues.length > 0 ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {issues.map((issue) => (
+                              <span
+                                key={issue.id}
+                                className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                                  issue.severity === 'alta'
+                                    ? 'bg-red-50 text-red-700'
+                                    : 'bg-amber-50 text-amber-700'
+                                }`}
+                                title={issue.detail}
+                              >
+                                {issue.label}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </>
+                    )
+                  })()}
                 </div>
 
                 <ActionMenu>
