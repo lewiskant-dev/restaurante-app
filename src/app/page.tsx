@@ -1383,7 +1383,26 @@ export default function HomePage() {
     }
   }
 
-  function openPriorityTab(nextTab: TabKey) {
+  function openPriorityTab(priorityId: string, nextTab: TabKey) {
+    if (priorityId === 'stock') {
+      setBusqueda('')
+      setCategoriaFiltro('todas')
+      setUnidadFiltro('todas')
+      setProductoEstado('stock_bajo')
+    }
+
+    if (priorityId === 'providers') {
+      setBusquedaProveedor('')
+      setProveedorEstado('activos')
+    }
+
+    if (priorityId === 'albaranes') {
+      setBusquedaAlbaran('')
+      setAlbaranEstado('activos')
+      setAlbaranDesde('')
+      setAlbaranHasta('')
+    }
+
     changeMainTab(getMainTabForTab(nextTab))
     changeTab(nextTab)
   }
@@ -2147,7 +2166,7 @@ export default function HomePage() {
                     <div className="flex justify-end">
                       <button
                         type="button"
-                        onClick={() => openPriorityTab(item.tab)}
+                        onClick={() => openPriorityTab(item.id, item.tab)}
                         className="rounded-[14px] bg-slate-900 px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-slate-800"
                       >
                         Revisar
