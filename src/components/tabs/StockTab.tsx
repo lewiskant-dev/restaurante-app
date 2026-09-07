@@ -321,35 +321,24 @@ export default function StockTab({
       ) : null}
 
       {productHealth.totalIssues > 0 ? (
-        <div className={`mb-4 p-4 ${softPanel}`}>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <h3 className="text-[14px] font-semibold text-slate-900">Salud operativa del stock</h3>
-              <p className="mt-1 text-[12px] text-slate-500">
-                Alertas de inventario y calidad de datos sobre los productos visibles.
-              </p>
-            </div>
-            <div className="text-[12px] text-slate-500">
-              {productHealth.highSeverity} alta · {productHealth.mediumSeverity} media
-            </div>
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-4">
-            <div className={`p-3 ${softPanel}`}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Stock negativo</div>
-              <div className="mt-1 text-[1.45rem] font-semibold text-red-600">{productHealth.negativeStock}</div>
-            </div>
-            <div className={`p-3 ${softPanel}`}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin unidad</div>
-              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{productHealth.missingUnit}</div>
-            </div>
-            <div className={`p-3 ${softPanel}`}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin coste útil</div>
-              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{productHealth.missingCost}</div>
-            </div>
-            <div className={`p-3 ${softPanel}`}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Bajo mínimo</div>
-              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{productHealth.underMinimum}</div>
-            </div>
+        <div className="mb-4 rounded-[16px] border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 text-[12px]">
+            <span className="font-semibold text-slate-900">Salud stock</span>
+            <span className="text-slate-400">·</span>
+            <span className="font-semibold text-red-600">{productHealth.highSeverity} alta</span>
+            <span className="font-semibold text-amber-600">{productHealth.mediumSeverity} media</span>
+            <span className="rounded-full bg-red-50 px-2 py-1 font-semibold text-red-700">
+              Stock negativo {productHealth.negativeStock}
+            </span>
+            <span className="rounded-full bg-amber-50 px-2 py-1 font-semibold text-amber-700">
+              Sin unidad {productHealth.missingUnit}
+            </span>
+            <span className="rounded-full bg-amber-50 px-2 py-1 font-semibold text-amber-700">
+              Sin coste {productHealth.missingCost}
+            </span>
+            <span className="rounded-full bg-amber-50 px-2 py-1 font-semibold text-amber-700">
+              Bajo mínimo {productHealth.underMinimum}
+            </span>
           </div>
         </div>
       ) : null}

@@ -126,6 +126,7 @@ export default function HomePage() {
   const [guestMenuHealthFilter, setGuestMenuHealthFilter] = useState<GuestMenuHealthFilter>('todas')
   const [providerHealthFilter, setProviderHealthFilter] = useState<ProviderHealthFilter>('todos')
   const [albaranHealthFilter, setAlbaranHealthFilter] = useState<AlbaranHealthFilter>('todos')
+  const [priorityNavigationKey, setPriorityNavigationKey] = useState(0)
   const [proveedorRecienCreadoId, setProveedorRecienCreadoId] = useState('')
   const [confirmActionRequest, setConfirmActionRequest] =
     useState<ConfirmActionRequest | null>(null)
@@ -1466,6 +1467,7 @@ export default function HomePage() {
 
     changeMainTab(getMainTabForTab(nextTab))
     changeTab(nextTab)
+    setPriorityNavigationKey((current) => current + 1)
 
     if (scrollTargetId) {
       window.setTimeout(() => {
@@ -2356,6 +2358,7 @@ export default function HomePage() {
 
         {tab === 'carta' && (
           <CartaTab
+            key={`carta-${priorityNavigationKey}`}
             restaurantSlug={activeRestaurantSlug}
             productos={productos}
             recetas={recetas}
@@ -2551,6 +2554,7 @@ export default function HomePage() {
 
         {tab === 'recetas' && (
           <RecetasTab
+            key={`recetas-${priorityNavigationKey}`}
             loadingRecetas={loadingRecetas}
             recetas={recetas}
             healthFilter={recipeHealthFilter}

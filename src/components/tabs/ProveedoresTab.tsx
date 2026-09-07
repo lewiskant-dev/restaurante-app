@@ -145,33 +145,21 @@ export function ProveedoresTab({
       </div>
 
       {providerHealth.totalIssues > 0 ? (
-        <div className={`p-4 ${surfaceCard}`}>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
-                Salud operativa de proveedores
-              </h3>
-              <p className="mt-1 text-[12px] text-slate-500">
-                Contacto y datos mínimos que conviene tener bien cerrados para compras.
-              </p>
-            </div>
-            <div className="text-[12px] text-slate-500">
-              {providerHealth.highSeverity} alta · {providerHealth.mediumSeverity} media
-            </div>
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <div className={`p-3 ${softPanel}`}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin CIF</div>
-              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{providerHealth.missingCif}</div>
-            </div>
-            <div className={`p-3 ${softPanel}`}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin contacto</div>
-              <div className="mt-1 text-[1.45rem] font-semibold text-red-600">{providerHealth.missingPhoneAndEmail}</div>
-            </div>
-            <div className={`p-3 ${softPanel}`}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin email</div>
-              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{providerHealth.missingEmail}</div>
-            </div>
+        <div className="rounded-[16px] border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 text-[12px]">
+            <span className="font-semibold text-slate-900">Salud proveedores</span>
+            <span className="text-slate-400">·</span>
+            <span className="font-semibold text-red-600">{providerHealth.highSeverity} alta</span>
+            <span className="font-semibold text-amber-600">{providerHealth.mediumSeverity} media</span>
+            <span className="rounded-full bg-red-50 px-2 py-1 font-semibold text-red-700">
+              Sin contacto {providerHealth.missingPhoneAndEmail}
+            </span>
+            <span className="rounded-full bg-amber-50 px-2 py-1 font-semibold text-amber-700">
+              Sin CIF {providerHealth.missingCif}
+            </span>
+            <span className="rounded-full bg-amber-50 px-2 py-1 font-semibold text-amber-700">
+              Sin email {providerHealth.missingEmail}
+            </span>
           </div>
         </div>
       ) : null}

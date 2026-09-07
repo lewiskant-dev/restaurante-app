@@ -144,33 +144,21 @@ export function AlbaranesTab({
       </div>
 
       {albaranHealth.totalIssues > 0 || albaranHealth.cancelled > 0 ? (
-        <div className={`p-4 ${surfaceCard}`}>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
-                Salud operativa de compras
-              </h3>
-              <p className="mt-1 text-[12px] text-slate-500">
-                Señales de documentos que conviene revisar por proveedor, total o estado.
-              </p>
-            </div>
-            <div className="text-[12px] text-slate-500">
-              {albaranHealth.highSeverity} alta · {albaranHealth.mediumSeverity} media
-            </div>
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <div className={`p-3 ${surfaceCard}`}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin proveedor</div>
-              <div className="mt-1 text-[1.45rem] font-semibold text-red-600">{albaranHealth.missingSupplier}</div>
-            </div>
-            <div className={`p-3 ${surfaceCard}`}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Total no válido</div>
-              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{albaranHealth.zeroTotal}</div>
-            </div>
-            <div className={`p-3 ${surfaceCard}`}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Anulados</div>
-              <div className="mt-1 text-[1.45rem] font-semibold text-slate-900">{albaranHealth.cancelled}</div>
-            </div>
+        <div className="rounded-[16px] border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 text-[12px]">
+            <span className="font-semibold text-slate-900">Salud compras</span>
+            <span className="text-slate-400">·</span>
+            <span className="font-semibold text-red-600">{albaranHealth.highSeverity} alta</span>
+            <span className="font-semibold text-amber-600">{albaranHealth.mediumSeverity} media</span>
+            <span className="rounded-full bg-red-50 px-2 py-1 font-semibold text-red-700">
+              Sin proveedor {albaranHealth.missingSupplier}
+            </span>
+            <span className="rounded-full bg-amber-50 px-2 py-1 font-semibold text-amber-700">
+              Total no válido {albaranHealth.zeroTotal}
+            </span>
+            <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700">
+              Anulados {albaranHealth.cancelled}
+            </span>
           </div>
         </div>
       ) : null}

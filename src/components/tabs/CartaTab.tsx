@@ -455,42 +455,29 @@ export function CartaTab({
       </div>
 
       {guestMenuHealth.totalIssues > 0 ? (
-        <div className={`p-4 ${surfaceCard}`}>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
-                Coherencia carta-operativa
-              </h3>
-              <p className="mt-1 text-[12px] text-slate-500">
-                Señales de fichas publicadas que no cruzan bien con stock o precios internos.
-              </p>
-            </div>
-            <div className="text-[12px] text-slate-500">
-              {guestMenuHealth.highSeverity} alta · {guestMenuHealth.mediumSeverity} media
-            </div>
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-4">
-            <div className={`p-3 ${softPanel}`}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin producto</div>
-              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{guestMenuHealth.publishedWithoutProduct}</div>
-            </div>
-            <div className={`p-3 ${softPanel}`}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Producto inactivo</div>
-              <div className="mt-1 text-[1.45rem] font-semibold text-red-600">{guestMenuHealth.publishedWithInactiveProduct}</div>
-            </div>
-            <div className={`p-3 ${softPanel}`}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Sin precio</div>
-              <div className="mt-1 text-[1.45rem] font-semibold text-amber-600">{guestMenuHealth.publishedWithoutPrice}</div>
-            </div>
-            <div className={`p-3 ${softPanel}`}>
-              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Copa sin precio</div>
-              <div className="mt-1 text-[1.45rem] font-semibold text-red-600">{guestMenuHealth.winesByGlassWithoutCupPrice}</div>
-            </div>
+        <div className="rounded-[16px] border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 text-[12px]">
+            <span className="font-semibold text-slate-900">Coherencia carta</span>
+            <span className="text-slate-400">·</span>
+            <span className="font-semibold text-red-600">{guestMenuHealth.highSeverity} alta</span>
+            <span className="font-semibold text-amber-600">{guestMenuHealth.mediumSeverity} media</span>
+            <span className="rounded-full bg-amber-50 px-2 py-1 font-semibold text-amber-700">
+              Sin producto {guestMenuHealth.publishedWithoutProduct}
+            </span>
+            <span className="rounded-full bg-red-50 px-2 py-1 font-semibold text-red-700">
+              Producto inactivo {guestMenuHealth.publishedWithInactiveProduct}
+            </span>
+            <span className="rounded-full bg-amber-50 px-2 py-1 font-semibold text-amber-700">
+              Sin precio {guestMenuHealth.publishedWithoutPrice}
+            </span>
+            <span className="rounded-full bg-red-50 px-2 py-1 font-semibold text-red-700">
+              Copa sin precio {guestMenuHealth.winesByGlassWithoutCupPrice}
+            </span>
           </div>
         </div>
       ) : null}
 
-      <div id="priority-target-carta" className={`scroll-mt-28 p-4 sm:p-5 ${surfaceCard}`}>
+      <div className={`p-4 sm:p-5 ${surfaceCard}`}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
@@ -870,7 +857,7 @@ export function CartaTab({
         </div>
       </div>
 
-      <div className={`p-4 sm:p-5 ${surfaceCard}`}>
+      <div id="priority-target-carta" className={`scroll-mt-28 p-4 sm:p-5 ${surfaceCard}`}>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
             Fichas de carta
