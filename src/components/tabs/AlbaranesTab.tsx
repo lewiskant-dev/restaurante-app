@@ -4,19 +4,26 @@ import { useMemo } from 'react'
 import type { Albaran } from '@/types'
 import { formatEuro, formatFecha } from '@/features/home/utils'
 import { fieldShell, ghostButton, surfaceCard } from '@/components/ui/primitives'
-import { buildAlbaranHealthSummary, getAlbaranOperationalIssues } from '@/lib/operationalHealth'
+import {
+  albaranMatchesHealthFilter,
+  buildAlbaranHealthSummary,
+  getAlbaranOperationalIssues,
+  type AlbaranHealthFilter,
+} from '@/lib/operationalHealth'
 
 type AlbaranesTabProps = {
   busquedaAlbaran: string
   albaranDesde: string
   albaranHasta: string
   albaranEstado: 'activos' | 'anulados' | 'todos'
+  albaranHealthFilter: AlbaranHealthFilter
   loadingAlbaranes: boolean
   albaranesFiltrados: Albaran[]
   onBusquedaChange: (value: string) => void
   onDesdeChange: (value: string) => void
   onHastaChange: (value: string) => void
   onEstadoChange: (value: 'activos' | 'anulados' | 'todos') => void
+  onAlbaranHealthFilterChange: (value: AlbaranHealthFilter) => void
   onExportar: () => void
   onOpenDetalle: (albaran: Albaran) => void
 }
@@ -26,16 +33,37 @@ export function AlbaranesTab({
   albaranDesde,
   albaranHasta,
   albaranEstado,
+  albaranHealthFilter,
   loadingAlbaranes,
   albaranesFiltrados,
   onBusquedaChange,
   onDesdeChange,
   onHastaChange,
   onEstadoChange,
+  onAlbaranHealthFilterChange,
   onExportar,
   onOpenDetalle,
 }: AlbaranesTabProps) {
   const albaranHealth = useMemo(() => buildAlbaranHealthSummary(albaranesFiltrados), [albaranesFiltrados])
+  const albaranesOperativosFiltrados = useMemo(
+    () =>
+      albaranesFiltrados.filter((albaran) =>
+        albaranMatchesHealthFilter(albaran, albaranHealthFilter)
+      ),
+    [albaranHealthFilter, albaranesFiltrados]
+  )
+  const albaranHealthFilterOptions: Array<{ value: AlbaranHealthFilter; label: string; count: number }> = [
+    { value: 'todos', label: 'Todos', count: albaranesFiltrados.length },
+    {
+      value: 'con_alertas',
+      label: 'Con alertas',
+      count: albaranesFiltrados.filter((albaran) =>
+        albaranMatchesHealthFilter(albaran, 'con_alertas')
+      ).length,
+    },
+    { value: 'sin_proveedor', label: 'Sin proveedor', count: albaranHealth.missingSupplier },
+    { value: 'total_no_valido', label: 'Total no válido', count: albaranHealth.zeroTotal },
+  ]
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -48,7 +76,7 @@ export function AlbaranesTab({
         </p>
       </div>
 
-      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
+      <div id="priority-target-albaranes" className={`scroll-mt-28 p-3 sm:p-5 ${surfaceCard}`}>
         <div className="grid gap-3 xl:grid-cols-[1.2fr_0.72fr_0.72fr_auto_auto]">
           <input
             type="search"
@@ -93,6 +121,25 @@ export function AlbaranesTab({
           >
             Exportar CSV
           </button>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {albaranHealthFilterOptions.map((option) => {
+            const selected = albaranHealthFilter === option.value
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onAlbaranHealthFilterChange(option.value)}
+                className={`rounded-[14px] border px-3 py-2 text-[11px] font-semibold transition sm:text-[12px] ${
+                  selected
+                    ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-700'
+                }`}
+              >
+                {option.label} · {option.count}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -147,7 +194,7 @@ export function AlbaranesTab({
           </div>
         )}
 
-        {!loadingAlbaranes && albaranesFiltrados.length === 0 && (
+        {!loadingAlbaranes && albaranesOperativosFiltrados.length === 0 && (
           <div className="py-12 text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[20px] bg-slate-50 text-xl text-slate-400">
               🧾
@@ -156,13 +203,13 @@ export function AlbaranesTab({
               No hay albaranes para este filtro
             </div>
             <p className="mx-auto mt-1 max-w-sm text-[12px] leading-5 text-slate-500">
-              Ajusta búsqueda, fechas o estado para revisar otros documentos.
+              Ajusta búsqueda, fechas, estado o filtro operativo para revisar otros documentos.
             </p>
           </div>
         )}
 
         {!loadingAlbaranes &&
-          albaranesFiltrados.map((alb) => (
+          albaranesOperativosFiltrados.map((alb) => (
             <div key={alb.id} className="mb-2 last:mb-0">
               <button
                 type="button"

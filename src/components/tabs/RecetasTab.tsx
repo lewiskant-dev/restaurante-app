@@ -5,30 +5,41 @@ import { ActionMenu } from '@/components/ui/ActionMenu'
 import { fieldShell, primaryGradientButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 import type { Receta } from '@/features/home/types'
 import { formatEuro } from '@/features/home/utils'
-import { buildRecipeHealthSummary, getRecipeOperationalIssues } from '@/lib/operationalHealth'
+import {
+  buildRecipeHealthSummary,
+  getRecipeOperationalIssues,
+  recipeMatchesHealthFilter,
+  type RecipeHealthFilter,
+} from '@/lib/operationalHealth'
 import { normalizeSearchText } from '@/lib/userInputPolicy'
 
 type RecetasTabProps = {
   loadingRecetas: boolean
   recetas: Receta[]
+  healthFilter: RecipeHealthFilter
   onOpenCrearReceta: () => void
   onOpenEditarReceta: (receta: Receta) => void
   onToggleActivaReceta: (receta: Receta) => void
+  onHealthFilterChange: (value: RecipeHealthFilter) => void
 }
 
 export function RecetasTab({
   loadingRecetas,
   recetas,
+  healthFilter,
   onOpenCrearReceta,
   onOpenEditarReceta,
   onToggleActivaReceta,
+  onHealthFilterChange,
 }: RecetasTabProps) {
   const [busquedaReceta, setBusquedaReceta] = useState('')
   const recetasFiltradas = useMemo(() => {
     const query = normalizeSearchText(busquedaReceta)
-    if (!query) return recetas
 
     return recetas.filter((receta) => {
+      if (!recipeMatchesHealthFilter(receta, healthFilter)) return false
+      if (!query) return true
+
       const estado = receta.activo === false ? 'inactiva' : 'activa'
       return [
         receta.nombre,
@@ -37,7 +48,7 @@ export function RecetasTab({
         estado,
       ].some((value) => normalizeSearchText(value).includes(query))
     })
-  }, [busquedaReceta, recetas])
+  }, [busquedaReceta, healthFilter, recetas])
 
   const activas = recetas.filter((item) => item.activo !== false).length
   const costeTeoricoTotal = recetas.reduce((acc, receta) => acc + Number(receta.coste_teorico || 0), 0)
@@ -50,6 +61,19 @@ export function RecetasTab({
       ? 0
       : recetas.reduce((acc, receta) => acc + Number(receta.margen_estimado || 0), 0) / recetas.length
   const recipeHealth = useMemo(() => buildRecipeHealthSummary(recetas), [recetas])
+  const recipeHealthFilterOptions: Array<{ value: RecipeHealthFilter; label: string; count: number }> = [
+    { value: 'todas', label: 'Todas', count: recetas.length },
+    {
+      value: 'con_alertas',
+      label: 'Con alertas',
+      count: recetas.filter((receta) => recipeMatchesHealthFilter(receta, 'con_alertas')).length,
+    },
+    { value: 'sin_tpv', label: 'Sin TPV', count: recipeHealth.recipesWithoutTpvName },
+    { value: 'sin_ingredientes', label: 'Sin ingredientes', count: recipeHealth.recipesWithoutIngredients },
+    { value: 'sin_coste', label: 'Sin coste', count: recipeHealth.recipesWithoutCost },
+    { value: 'sin_precio', label: 'Sin precio', count: recipeHealth.recipesWithoutPrice },
+    { value: 'margen_negativo', label: 'Margen negativo', count: recipeHealth.recipesNegativeMargin },
+  ]
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -169,7 +193,7 @@ export function RecetasTab({
         </div>
       ) : null}
 
-      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
+      <div id="priority-target-recetas" className={`scroll-mt-28 p-3 sm:p-5 ${surfaceCard}`}>
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <label className={`flex min-h-[46px] items-center gap-3 px-4 py-2.5 lg:max-w-md lg:flex-1 ${fieldShell}`}>
             <span className="text-slate-400">⌕</span>
@@ -184,6 +208,25 @@ export function RecetasTab({
           <div className="text-[12px] text-slate-500">
             {recetasFiltradas.length} de {recetas.length} recetas
           </div>
+        </div>
+        <div className="mb-4 flex flex-wrap gap-2">
+          {recipeHealthFilterOptions.map((option) => {
+            const selected = healthFilter === option.value
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onHealthFilterChange(option.value)}
+                className={`rounded-[14px] border px-3 py-2 text-[12px] font-semibold transition ${
+                  selected
+                    ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-700'
+                }`}
+              >
+                {option.label} · {option.count}
+              </button>
+            )
+          })}
         </div>
 
         {loadingRecetas && (
@@ -228,9 +271,9 @@ export function RecetasTab({
 
         {!loadingRecetas && recetas.length > 0 && recetasFiltradas.length === 0 && (
           <div className="py-10 text-center">
-            <div className="text-sm font-semibold text-slate-700">No hay recetas con esa búsqueda</div>
+            <div className="text-sm font-semibold text-slate-700">No hay recetas con esos filtros</div>
             <p className="mt-1 text-[12px] text-slate-500">
-              Prueba por nombre de receta, nombre TPV, activa o inactiva.
+              Ajusta la búsqueda o cambia el filtro de salud operativa.
             </p>
           </div>
         )}

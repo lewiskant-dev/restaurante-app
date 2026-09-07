@@ -9,7 +9,12 @@ import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import type { Receta } from '@/features/home/types'
 import { isInitialGuestRecommendation, isWineKind, splitGuestGrapes } from '@/lib/guestExperience'
 import { getGuestMenuFormReadiness } from '@/lib/guestMenuFormReadiness'
-import { buildGuestMenuHealthSummary, getGuestMenuOperationalIssues } from '@/lib/operationalHealth'
+import {
+  buildGuestMenuHealthSummary,
+  getGuestMenuOperationalIssues,
+  guestMenuMatchesHealthFilter,
+  type GuestMenuHealthFilter,
+} from '@/lib/operationalHealth'
 import { fieldShell, ghostButton, primaryGradientButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 import type { Producto } from '@/types'
 
@@ -25,6 +30,7 @@ type CartaTabProps = {
   guestMenuForm: GuestMenuForm
   guestMenuImageFile: File | null
   publicGuestMenuItems: number
+  guestMenuHealthFilter: GuestMenuHealthFilter
   onLoad: () => void
   onNew: () => void
   onEdit: (item: GuestMenuAdminItem) => void
@@ -36,6 +42,7 @@ type CartaTabProps = {
   onFormChange: <Key extends keyof GuestMenuForm>(field: Key, value: GuestMenuForm[Key]) => void
   onImageFileChange: (file: File | null) => void
   onProductSelect: (productId: string) => void
+  onGuestMenuHealthFilterChange: (value: GuestMenuHealthFilter) => void
 }
 
 const typeOptions = [
@@ -156,6 +163,7 @@ export function CartaTab({
   guestMenuForm,
   guestMenuImageFile,
   publicGuestMenuItems,
+  guestMenuHealthFilter,
   onLoad,
   onNew,
   onEdit,
@@ -167,6 +175,7 @@ export function CartaTab({
   onFormChange,
   onImageFileChange,
   onProductSelect,
+  onGuestMenuHealthFilterChange,
 }: CartaTabProps) {
   const [productSearch, setProductSearch] = useState('')
   const [productDropdownOpen, setProductDropdownOpen] = useState(false)
@@ -233,20 +242,20 @@ export function CartaTab({
   const filteredGuestMenuItems = useMemo(() => {
     const query = normalizeProductSearch(guestMenuSearch)
 
-    if (!query) return guestMenuItems
-
     return guestMenuItems.filter((item) =>
-      [
-        item.nombre,
-        item.categoria,
-        item.tipo,
-        item.bodega,
-        item.anada,
-        item.origen,
-        item.uva,
-      ].some((value) => normalizeProductSearch(value).includes(query))
+      guestMenuMatchesHealthFilter(item, productsById, guestMenuHealthFilter) &&
+      (!query ||
+        [
+          item.nombre,
+          item.categoria,
+          item.tipo,
+          item.bodega,
+          item.anada,
+          item.origen,
+          item.uva,
+        ].some((value) => normalizeProductSearch(value).includes(query)))
     )
-  }, [guestMenuItems, guestMenuSearch])
+  }, [guestMenuHealthFilter, guestMenuItems, guestMenuSearch, productsById])
   const grapeOptions = useMemo(
     () =>
       Array.from(new Set(guestMenuItems.flatMap((item) => splitGuestGrapes(item.uva)))).sort((a, b) =>
@@ -308,6 +317,33 @@ export function CartaTab({
     () => buildGuestMenuHealthSummary(guestMenuItems, productsById),
     [guestMenuItems, productsById]
   )
+  const guestMenuHealthFilterOptions: Array<{
+    value: GuestMenuHealthFilter
+    label: string
+    count: number
+  }> = [
+    { value: 'todas', label: 'Todas', count: guestMenuItems.length },
+    { value: 'publicadas', label: 'Publicadas', count: publicGuestMenuItems },
+    {
+      value: 'con_alertas',
+      label: 'Con alertas',
+      count: guestMenuItems.filter((item) =>
+        guestMenuMatchesHealthFilter(item, productsById, 'con_alertas')
+      ).length,
+    },
+    { value: 'sin_producto', label: 'Sin producto', count: guestMenuHealth.publishedWithoutProduct },
+    {
+      value: 'producto_inactivo',
+      label: 'Producto inactivo',
+      count: guestMenuHealth.publishedWithInactiveProduct,
+    },
+    { value: 'sin_precio', label: 'Sin precio', count: guestMenuHealth.publishedWithoutPrice },
+    {
+      value: 'copa_sin_precio',
+      label: 'Copa sin precio',
+      count: guestMenuHealth.winesByGlassWithoutCupPrice,
+    },
+  ]
 
   const productInputValue =
     productDropdownOpen || !selectedProduct ? productSearch : selectedProduct.nombre
@@ -454,7 +490,7 @@ export function CartaTab({
         </div>
       ) : null}
 
-      <div className={`p-4 sm:p-5 ${surfaceCard}`}>
+      <div id="priority-target-carta" className={`scroll-mt-28 p-4 sm:p-5 ${surfaceCard}`}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
@@ -863,6 +899,25 @@ export function CartaTab({
             className="w-full bg-transparent text-[13px] text-slate-900 outline-none placeholder:text-slate-400"
           />
         </label>
+        <div className="mb-4 flex flex-wrap gap-2">
+          {guestMenuHealthFilterOptions.map((option) => {
+            const selected = guestMenuHealthFilter === option.value
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onGuestMenuHealthFilterChange(option.value)}
+                className={`rounded-[14px] border px-3 py-2 text-[12px] font-semibold transition ${
+                  selected
+                    ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-700'
+                }`}
+              >
+                {option.label} · {option.count}
+              </button>
+            )
+          })}
+        </div>
 
         {loadingGuestMenu ? (
           <div className="rounded-[18px] border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">
@@ -879,7 +934,7 @@ export function CartaTab({
           <div className="rounded-[18px] border border-dashed border-slate-200 px-4 py-8 text-center">
             <div className="text-sm font-semibold text-slate-700">No hay fichas que coincidan</div>
             <p className="mt-1 text-[12px] text-slate-500">
-              Prueba con otro nombre, bodega, D.O. o variedad.
+              Ajusta la búsqueda o cambia el filtro operativo.
             </p>
           </div>
         ) : (

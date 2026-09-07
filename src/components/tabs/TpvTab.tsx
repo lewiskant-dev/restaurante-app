@@ -850,7 +850,7 @@ export function TpvTab({
         )}
       </div>
 
-      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
+      <div id="priority-target-tpv" className={`scroll-mt-28 p-3 sm:p-5 ${surfaceCard}`}>
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-[14px] font-semibold text-slate-900 sm:text-[15px]">
             Pendientes de mapear

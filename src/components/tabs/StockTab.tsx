@@ -256,6 +256,9 @@ export default function StockTab({
   )
   const statusOptions = [
     { value: 'activos', label: 'Activos' },
+    { value: 'stock_negativo', label: 'Stock negativo' },
+    { value: 'sin_coste', label: 'Sin coste' },
+    { value: 'sin_unidad', label: 'Sin unidad' },
     { value: 'stock_bajo', label: 'Stock bajo' },
     { value: 'archivados', label: 'Archivados' },
     { value: 'todos', label: 'Todos' },
@@ -351,7 +354,7 @@ export default function StockTab({
         </div>
       ) : null}
 
-      <div className={`overflow-visible ${softPanel}`}>
+      <div id="priority-target-stock" className={`scroll-mt-28 overflow-visible ${softPanel}`}>
         <div className="border-b border-slate-100 px-3 py-3 sm:px-5 lg:px-4 lg:py-2.5">
           <div className="hidden gap-2 xl:grid xl:grid-cols-[1.2fr_0.74fr_0.74fr_0.66fr_auto]">
             <label className={`flex items-center gap-3 px-3.5 py-2 ${fieldShell}`}>
@@ -474,6 +477,9 @@ export default function StockTab({
                 options={[
                   { value: 'todos', label: 'Estado' },
                   { value: 'activos', label: 'Activos' },
+                  { value: 'stock_negativo', label: 'Stock negativo' },
+                  { value: 'sin_coste', label: 'Sin coste' },
+                  { value: 'sin_unidad', label: 'Sin unidad' },
                   { value: 'stock_bajo', label: 'Stock bajo' },
                   { value: 'archivados', label: 'Archivados' },
                 ]}

@@ -7,7 +7,11 @@ import {
   buildProductHealthSummary,
   buildProviderHealthSummary,
   buildRecipeHealthSummary,
+  albaranMatchesHealthFilter,
   getRecipeOperationalIssues,
+  guestMenuMatchesHealthFilter,
+  providerMatchesHealthFilter,
+  recipeMatchesHealthFilter,
 } from '../src/lib/operationalHealth.ts'
 
 test('buildRecipeHealthSummary detecta recetas operativamente debiles', () => {
@@ -58,6 +62,43 @@ test('buildRecipeHealthSummary detecta recetas operativamente debiles', () => {
     precio_venta: 8,
     margen_estimado: -4,
   } as never).some((issue) => issue.label === 'Margen negativo'), true)
+})
+
+test('recipeMatchesHealthFilter aisla recetas por incidencia operativa', () => {
+  const inactiveRecipe = {
+    id: 'r0',
+    nombre: 'Archivada',
+    nombre_tpv: '',
+    tipo_carta: 'comida',
+    activo: false,
+    ingredientes_count: 0,
+    coste_teorico: 0,
+    coste_por_racion: 0,
+    raciones: 1,
+    precio_venta: 0,
+    margen_estimado: 0,
+  } as never
+  const weakRecipe = {
+    id: 'r1',
+    nombre: 'Croqueta',
+    nombre_tpv: '',
+    tipo_carta: 'comida',
+    activo: true,
+    ingredientes_count: 1,
+    coste_teorico: 0,
+    coste_por_racion: 0,
+    raciones: 1,
+    precio_venta: 8,
+    margen_estimado: -2,
+  } as never
+
+  assert.equal(recipeMatchesHealthFilter(inactiveRecipe, 'todas'), true)
+  assert.equal(recipeMatchesHealthFilter(inactiveRecipe, 'con_alertas'), false)
+  assert.equal(recipeMatchesHealthFilter(weakRecipe, 'con_alertas'), true)
+  assert.equal(recipeMatchesHealthFilter(weakRecipe, 'sin_tpv'), true)
+  assert.equal(recipeMatchesHealthFilter(weakRecipe, 'sin_coste'), true)
+  assert.equal(recipeMatchesHealthFilter(weakRecipe, 'margen_negativo'), true)
+  assert.equal(recipeMatchesHealthFilter(weakRecipe, 'sin_ingredientes'), false)
 })
 
 test('buildProductHealthSummary detecta costes, stock y unidades problematicas', () => {
@@ -169,6 +210,58 @@ test('buildGuestMenuHealthSummary detecta incoherencias publicadas', () => {
   assert.equal(summary.winesByGlassWithoutCupPrice, 1)
 })
 
+test('guestMenuMatchesHealthFilter filtra solo incidencias publicadas', () => {
+  const productsById = new Map([
+    [
+      'inactive-product',
+      {
+        id: 'inactive-product',
+        nombre: 'Vino viejo',
+        categoria: 'Vinos',
+        unidad: 'botella',
+        stock_actual: 0,
+        stock_minimo: 0,
+        coste_unitario: 4,
+        referencia: '',
+        activo: false,
+        archivado: true,
+        created_at: '',
+      },
+    ],
+  ])
+  const draftItem = {
+    id: 'g0',
+    producto_id: null,
+    nombre: 'Borrador',
+    categoria: 'Vinos',
+    tipo: 'vino',
+    precio: null,
+    disponible_copa: true,
+    precio_copa: null,
+    publicado: false,
+  } as never
+  const publishedItem = {
+    id: 'g1',
+    producto_id: 'inactive-product',
+    nombre: 'Copa rota',
+    categoria: 'Vinos',
+    tipo: 'vino',
+    precio: -1,
+    disponible_copa: true,
+    precio_copa: null,
+    publicado: true,
+  } as never
+
+  assert.equal(guestMenuMatchesHealthFilter(draftItem, productsById as never, 'todas'), true)
+  assert.equal(guestMenuMatchesHealthFilter(draftItem, productsById as never, 'con_alertas'), false)
+  assert.equal(guestMenuMatchesHealthFilter(publishedItem, productsById as never, 'publicadas'), true)
+  assert.equal(guestMenuMatchesHealthFilter(publishedItem, productsById as never, 'con_alertas'), true)
+  assert.equal(guestMenuMatchesHealthFilter(publishedItem, productsById as never, 'producto_inactivo'), true)
+  assert.equal(guestMenuMatchesHealthFilter(publishedItem, productsById as never, 'sin_precio'), true)
+  assert.equal(guestMenuMatchesHealthFilter(publishedItem, productsById as never, 'copa_sin_precio'), true)
+  assert.equal(guestMenuMatchesHealthFilter(publishedItem, productsById as never, 'sin_producto'), false)
+})
+
 test('buildProviderHealthSummary detecta huecos de contacto y fiscalidad', () => {
   const summary = buildProviderHealthSummary([
     {
@@ -198,6 +291,25 @@ test('buildProviderHealthSummary detecta huecos de contacto y fiscalidad', () =>
   assert.equal(summary.missingCif, 1)
   assert.equal(summary.missingPhoneAndEmail, 1)
   assert.equal(summary.missingEmail, 1)
+})
+
+test('providerMatchesHealthFilter aisla proveedores por hueco operativo', () => {
+  const provider = {
+    id: 'prov-1',
+    nombre: 'Distribuciones Norte',
+    cif: '',
+    telefono: '',
+    email: '',
+    notas: '',
+    activo: true,
+    archivado: false,
+    created_at: '',
+  } as never
+
+  assert.equal(providerMatchesHealthFilter(provider, 'con_alertas'), true)
+  assert.equal(providerMatchesHealthFilter(provider, 'sin_contacto'), true)
+  assert.equal(providerMatchesHealthFilter(provider, 'sin_cif'), true)
+  assert.equal(providerMatchesHealthFilter(provider, 'sin_email'), false)
 })
 
 test('buildAlbaranHealthSummary detecta documentos sin proveedor o total valido', () => {
@@ -235,4 +347,25 @@ test('buildAlbaranHealthSummary detecta documentos sin proveedor o total valido'
   assert.equal(summary.missingSupplier, 1)
   assert.equal(summary.zeroTotal, 1)
   assert.equal(summary.cancelled, 1)
+})
+
+test('albaranMatchesHealthFilter aisla compras por incidencia operativa', () => {
+  const albaran = {
+    id: 'alb-1',
+    numero: 'A-1',
+    proveedor_id: null,
+    proveedor_nombre: '',
+    fecha: '2026-08-13',
+    notas: '',
+    total: 0,
+    foto_url: '',
+    ocr_texto: '',
+    anulado: false,
+    anulado_motivo: '',
+    created_at: '',
+  } as never
+
+  assert.equal(albaranMatchesHealthFilter(albaran, 'con_alertas'), true)
+  assert.equal(albaranMatchesHealthFilter(albaran, 'sin_proveedor'), true)
+  assert.equal(albaranMatchesHealthFilter(albaran, 'total_no_valido'), true)
 })

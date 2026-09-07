@@ -41,7 +41,14 @@ type UseStockManagementOptions = {
   confirmAction?: (request: ConfirmActionRequest) => Promise<boolean>
 }
 
-export type ProductoEstadoFiltro = 'activos' | 'archivados' | 'todos' | 'stock_bajo'
+export type ProductoEstadoFiltro =
+  | 'activos'
+  | 'archivados'
+  | 'todos'
+  | 'stock_bajo'
+  | 'stock_negativo'
+  | 'sin_unidad'
+  | 'sin_coste'
 
 export function useStockManagement({
   currentRestaurantId,
@@ -98,6 +105,18 @@ export function useStockManagement({
         if (
           productoEstado === 'stock_bajo' &&
           (!productoActivo || p.stock_minimo <= 0 || p.stock_actual > p.stock_minimo)
+        ) {
+          return false
+        }
+        if (productoEstado === 'stock_negativo' && (!productoActivo || Number(p.stock_actual || 0) >= 0)) {
+          return false
+        }
+        if (productoEstado === 'sin_unidad' && (!productoActivo || String(p.unidad || '').trim())) {
+          return false
+        }
+        if (
+          productoEstado === 'sin_coste' &&
+          (!productoActivo || Number(p.ultimo_precio_compra ?? p.coste_unitario ?? 0) > 0)
         ) {
           return false
         }

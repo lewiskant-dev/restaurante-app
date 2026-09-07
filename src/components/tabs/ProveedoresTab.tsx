@@ -8,16 +8,25 @@ import {
   softPanel,
   surfaceCard,
 } from '@/components/ui/primitives'
-import { buildProviderHealthSummary, getProviderOperationalIssues } from '@/lib/operationalHealth'
+import {
+  buildProviderHealthSummary,
+  getProviderOperationalIssues,
+  providerMatchesHealthFilter,
+  type ProviderHealthFilter,
+} from '@/lib/operationalHealth'
 import type { Proveedor } from '@/types'
+
+type ProveedorEstadoFilter = 'activos' | 'archivados' | 'todos'
 
 type ProveedoresTabProps = {
   busquedaProveedor: string
-  proveedorEstado: 'activos' | 'archivados' | 'todos'
+  proveedorEstado: ProveedorEstadoFilter
+  providerHealthFilter: ProviderHealthFilter
   loadingProveedores: boolean
   proveedoresFiltrados: Proveedor[]
   onBusquedaChange: (value: string) => void
-  onEstadoChange: (value: 'activos' | 'archivados' | 'todos') => void
+  onEstadoChange: (value: ProveedorEstadoFilter) => void
+  onProviderHealthFilterChange: (value: ProviderHealthFilter) => void
   onOpenCrearProveedor: () => void
   onOpenEditarProveedor: (proveedor: Proveedor) => void
   onArchiveProveedor: (proveedor: Proveedor) => void
@@ -27,19 +36,41 @@ type ProveedoresTabProps = {
 export function ProveedoresTab({
   busquedaProveedor,
   proveedorEstado,
+  providerHealthFilter,
   loadingProveedores,
   proveedoresFiltrados,
   onBusquedaChange,
   onEstadoChange,
+  onProviderHealthFilterChange,
   onOpenCrearProveedor,
   onOpenEditarProveedor,
   onArchiveProveedor,
   onReactivarProveedor,
 }: ProveedoresTabProps) {
+  const proveedoresOperativosFiltrados = useMemo(
+    () =>
+      proveedoresFiltrados.filter((proveedor) =>
+        providerMatchesHealthFilter(proveedor, providerHealthFilter)
+      ),
+    [providerHealthFilter, proveedoresFiltrados]
+  )
   const providerHealth = useMemo(
     () => buildProviderHealthSummary(proveedoresFiltrados),
     [proveedoresFiltrados]
   )
+  const providerHealthFilterOptions: Array<{ value: ProviderHealthFilter; label: string; count: number }> = [
+    { value: 'todos', label: 'Todos', count: proveedoresFiltrados.length },
+    {
+      value: 'con_alertas',
+      label: 'Con alertas',
+      count: proveedoresFiltrados.filter((proveedor) =>
+        providerMatchesHealthFilter(proveedor, 'con_alertas')
+      ).length,
+    },
+    { value: 'sin_contacto', label: 'Sin contacto', count: providerHealth.missingPhoneAndEmail },
+    { value: 'sin_cif', label: 'Sin CIF', count: providerHealth.missingCif },
+    { value: 'sin_email', label: 'Sin email', count: providerHealth.missingEmail },
+  ]
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -62,7 +93,7 @@ export function ProveedoresTab({
         </button>
       </div>
 
-      <div className={`p-3 sm:p-5 ${surfaceCard}`}>
+      <div id="priority-target-proveedores" className={`scroll-mt-28 p-3 sm:p-5 ${surfaceCard}`}>
         <div className="grid gap-3 xl:grid-cols-[1.3fr_0.8fr_auto]">
           <input
             type="search"
@@ -89,8 +120,27 @@ export function ProveedoresTab({
           </div>
 
           <div className="rounded-[16px] border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[12px] font-semibold text-slate-600 sm:px-4 sm:text-[13px]">
-            Visibles: {proveedoresFiltrados.length}
+            Visibles: {proveedoresOperativosFiltrados.length}
           </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {providerHealthFilterOptions.map((option) => {
+            const selected = providerHealthFilter === option.value
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onProviderHealthFilterChange(option.value)}
+                className={`rounded-[14px] border px-3 py-2 text-[11px] font-semibold transition sm:text-[12px] ${
+                  selected
+                    ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-700'
+                }`}
+              >
+                {option.label} · {option.count}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -144,7 +194,7 @@ export function ProveedoresTab({
           </div>
         )}
 
-        {!loadingProveedores && proveedoresFiltrados.length === 0 && (
+        {!loadingProveedores && proveedoresOperativosFiltrados.length === 0 && (
           <div className="py-12 text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[20px] bg-slate-50 text-slate-400">
               <span className="text-2xl leading-none">＋</span>
@@ -153,7 +203,7 @@ export function ProveedoresTab({
               No hay proveedores para este filtro
             </div>
             <p className="mx-auto mt-1 max-w-sm text-[12px] leading-5 text-slate-500">
-              Crea un proveedor o ajusta búsqueda y estado para ampliar resultados.
+              Crea un proveedor o ajusta búsqueda, estado y filtro operativo para ampliar resultados.
             </p>
             <button
               type="button"
@@ -166,7 +216,7 @@ export function ProveedoresTab({
         )}
 
         {!loadingProveedores &&
-          proveedoresFiltrados.map((prov) => (
+          proveedoresOperativosFiltrados.map((prov) => (
             <div key={prov.id} className={`mb-2 px-3 py-3 last:mb-0 sm:px-4 sm:py-3.5 ${softPanel}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">

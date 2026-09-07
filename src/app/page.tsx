@@ -16,7 +16,7 @@ import {
   PromptActionDialog,
   type PromptActionRequest,
 } from '@/components/ui/PromptActionDialog'
-import { softPanel, surfaceCard } from '@/components/ui/primitives'
+import { surfaceCard } from '@/components/ui/primitives'
 import { AjusteStockModal } from '@/components/modals/AjusteStockModal'
 import { ConsumoModal } from '@/components/modals/ConsumoModal'
 import { DetalleAlbaranModal } from '@/components/modals/DetalleAlbaranModal'
@@ -81,6 +81,10 @@ import {
   buildProductHealthSummary,
   buildProviderHealthSummary,
   buildRecipeHealthSummary,
+  type AlbaranHealthFilter,
+  type GuestMenuHealthFilter,
+  type ProviderHealthFilter,
+  type RecipeHealthFilter,
 } from '@/lib/operationalHealth'
 import {
   getRestaurantScopeDetail,
@@ -118,6 +122,10 @@ export default function HomePage() {
   const [operarioActual, setOperarioActual] = useState('')
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
+  const [recipeHealthFilter, setRecipeHealthFilter] = useState<RecipeHealthFilter>('todas')
+  const [guestMenuHealthFilter, setGuestMenuHealthFilter] = useState<GuestMenuHealthFilter>('todas')
+  const [providerHealthFilter, setProviderHealthFilter] = useState<ProviderHealthFilter>('todos')
+  const [albaranHealthFilter, setAlbaranHealthFilter] = useState<AlbaranHealthFilter>('todos')
   const [proveedorRecienCreadoId, setProveedorRecienCreadoId] = useState('')
   const [confirmActionRequest, setConfirmActionRequest] =
     useState<ConfirmActionRequest | null>(null)
@@ -1384,16 +1392,63 @@ export default function HomePage() {
   }
 
   function openPriorityTab(priorityId: string, nextTab: TabKey) {
+    let scrollTargetId = ''
+
+    if (priorityId === 'recipes') {
+      setRecipeHealthFilter(
+        recipeHealthSummary.recipesWithoutIngredients > 0
+          ? 'sin_ingredientes'
+          : recipeHealthSummary.recipesWithoutCost > 0
+            ? 'sin_coste'
+            : recipeHealthSummary.recipesNegativeMargin > 0
+              ? 'margen_negativo'
+              : recipeHealthSummary.recipesWithoutTpvName > 0
+                ? 'sin_tpv'
+                : 'sin_precio'
+      )
+      scrollTargetId = 'priority-target-recetas'
+    }
+
     if (priorityId === 'stock') {
       setBusqueda('')
       setCategoriaFiltro('todas')
       setUnidadFiltro('todas')
-      setProductoEstado('stock_bajo')
+      setProductoEstado(
+        productHealthSummary.negativeStock > 0
+          ? 'stock_negativo'
+          : productHealthSummary.missingCost > 0
+            ? 'sin_coste'
+            : productHealthSummary.missingUnit > 0
+              ? 'sin_unidad'
+              : 'stock_bajo'
+      )
+      scrollTargetId = 'priority-target-stock'
+    }
+
+    if (priorityId === 'guest-menu') {
+      setGuestMenuHealthFilter(
+        guestMenuHealthSummary.publishedWithInactiveProduct > 0
+          ? 'producto_inactivo'
+          : guestMenuHealthSummary.winesByGlassWithoutCupPrice > 0
+            ? 'copa_sin_precio'
+            : guestMenuHealthSummary.publishedWithoutProduct > 0
+              ? 'sin_producto'
+              : 'sin_precio'
+      )
+      scrollTargetId = 'priority-target-carta'
     }
 
     if (priorityId === 'providers') {
       setBusquedaProveedor('')
       setProveedorEstado('activos')
+      setProviderHealthFilter(
+        providerHealthSummary.missingPhoneAndEmail > 0
+          ? 'sin_contacto'
+          : providerHealthSummary.missingCif > 0
+            ? 'sin_cif'
+            : 'sin_email'
+      )
+      scrollTargetId = 'priority-target-proveedores'
     }
 
     if (priorityId === 'albaranes') {
@@ -1401,10 +1456,25 @@ export default function HomePage() {
       setAlbaranEstado('activos')
       setAlbaranDesde('')
       setAlbaranHasta('')
+      setAlbaranHealthFilter(albaranHealthSummary.missingSupplier > 0 ? 'sin_proveedor' : 'total_no_valido')
+      scrollTargetId = 'priority-target-albaranes'
+    }
+
+    if (priorityId === 'tpv') {
+      scrollTargetId = 'priority-target-tpv'
     }
 
     changeMainTab(getMainTabForTab(nextTab))
     changeTab(nextTab)
+
+    if (scrollTargetId) {
+      window.setTimeout(() => {
+        document.getElementById(scrollTargetId)?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+      }, 120)
+    }
   }
 
   function descargarCSV(nombreArchivo: string, filas: Record<string, unknown>[]) {
@@ -2118,56 +2188,59 @@ export default function HomePage() {
 
         <section className="space-y-6 pt-5 lg:pt-0">
           {operationalPriorities.length > 0 ? (
-            <div className={`p-4 sm:p-5 ${surfaceCard}`}>
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <h2 className="text-[1.25rem] font-semibold tracking-tight text-slate-950 sm:text-[1.5rem]">
-                    Bandeja de prioridades
+            <div className={`p-3 sm:p-4 ${surfaceCard}`}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <h2 className="text-[15px] font-semibold text-slate-950 sm:text-[16px]">
+                    Prioridades operativas
                   </h2>
-                  <p className="mt-1 text-[12px] text-slate-500 sm:text-[13px]">
-                    Lo más importante para estabilizar operación, compras, stock y TPV sin ir pestaña por pestaña.
-                  </p>
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                    {totalOperationalIssues} señales
+                  </span>
+                  {totalHighSeverityIssues > 0 ? (
+                    <span className="rounded-full border border-red-100 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700">
+                      {totalHighSeverityIssues} alta prioridad
+                    </span>
+                  ) : null}
                 </div>
-                <div className="flex gap-3">
-                  <div className={`min-w-[110px] p-3 ${softPanel}`}>
-                    <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Señales</div>
-                    <div className="mt-1 text-[1.45rem] font-semibold text-slate-900">{totalOperationalIssues}</div>
-                  </div>
-                  <div className={`min-w-[110px] p-3 ${softPanel}`}>
-                    <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Alta prioridad</div>
-                    <div className="mt-1 text-[1.45rem] font-semibold text-red-600">{totalHighSeverityIssues}</div>
-                  </div>
+                <div className="text-[12px] text-slate-500">
+                  {operationalPriorities.length} área(s) a revisar
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-3 xl:grid-cols-2">
+              <div className="mt-3 divide-y divide-slate-100">
                 {operationalPriorities.slice(0, 6).map((item) => (
                   <div
                     key={item.id}
-                    className={`flex flex-col gap-3 rounded-[18px] border px-4 py-4 ${
-                      item.highSeverity > 0
-                        ? 'border-red-200 bg-red-50/70'
-                        : 'border-amber-200 bg-amber-50/70'
-                    }`}
+                    className="grid gap-2 py-2.5 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-3"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-[14px] font-semibold text-slate-900">{item.title}</div>
-                        <div className="mt-1 text-[12px] leading-5 text-slate-600">{item.detail}</div>
-                      </div>
+                    <div className="flex min-w-0 items-start gap-3">
                       <div
-                        className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
-                          item.highSeverity > 0 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                        className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
+                          item.highSeverity > 0 ? 'bg-red-500' : 'bg-amber-400'
                         }`}
-                      >
-                        {item.count}
+                      />
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="text-[13px] font-semibold text-slate-900">{item.title}</div>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              item.highSeverity > 0
+                                ? 'bg-red-50 text-red-700'
+                                : 'bg-amber-50 text-amber-700'
+                            }`}
+                          >
+                            {item.count}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 truncate text-[12px] text-slate-500">{item.detail}</div>
                       </div>
                     </div>
-                    <div className="flex justify-end">
+                    <div className="flex justify-start sm:justify-end">
                       <button
                         type="button"
                         onClick={() => openPriorityTab(item.id, item.tab)}
-                        className="rounded-[14px] bg-slate-900 px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-slate-800"
+                        className="rounded-[12px] border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
                       >
                         Revisar
                       </button>
@@ -2268,12 +2341,14 @@ export default function HomePage() {
             albaranDesde={albaranDesde}
             albaranHasta={albaranHasta}
             albaranEstado={albaranEstado}
+            albaranHealthFilter={albaranHealthFilter}
             loadingAlbaranes={loadingAlbaranes}
             albaranesFiltrados={albaranesFiltrados}
             onBusquedaChange={setBusquedaAlbaran}
             onDesdeChange={setAlbaranDesde}
             onHastaChange={setAlbaranHasta}
             onEstadoChange={setAlbaranEstado}
+            onAlbaranHealthFilterChange={setAlbaranHealthFilter}
             onExportar={exportarAlbaranesCSV}
             onOpenDetalle={(albaran) => void openDetalleAlbaran(albaran)}
           />
@@ -2292,6 +2367,7 @@ export default function HomePage() {
             guestMenuForm={guestMenuForm}
             guestMenuImageFile={guestMenuImageFile}
             publicGuestMenuItems={publicGuestMenuItems}
+            guestMenuHealthFilter={guestMenuHealthFilter}
             onLoad={() => void loadGuestMenuItems()}
             onNew={() => openNewGuestMenuItem()}
             onEdit={openEditGuestMenuItem}
@@ -2303,6 +2379,7 @@ export default function HomePage() {
             onFormChange={setGuestMenuFormField}
             onImageFileChange={setGuestMenuImageFile}
             onProductSelect={selectGuestMenuProduct}
+            onGuestMenuHealthFilterChange={setGuestMenuHealthFilter}
           />
         )}
 
@@ -2332,10 +2409,12 @@ export default function HomePage() {
           <ProveedoresTab
             busquedaProveedor={busquedaProveedor}
             proveedorEstado={proveedorEstado}
+            providerHealthFilter={providerHealthFilter}
             loadingProveedores={loadingProveedores}
             proveedoresFiltrados={proveedoresFiltrados}
             onBusquedaChange={setBusquedaProveedor}
             onEstadoChange={setProveedorEstado}
+            onProviderHealthFilterChange={setProviderHealthFilter}
             onOpenCrearProveedor={openCrearProveedor}
             onOpenEditarProveedor={openEditarProveedor}
             onArchiveProveedor={(proveedor) => void archiveProveedor(proveedor)}
@@ -2474,9 +2553,11 @@ export default function HomePage() {
           <RecetasTab
             loadingRecetas={loadingRecetas}
             recetas={recetas}
+            healthFilter={recipeHealthFilter}
             onOpenCrearReceta={openCrearReceta}
             onOpenEditarReceta={openEditarReceta}
             onToggleActivaReceta={(receta) => void toggleActivaReceta(receta)}
+            onHealthFilterChange={setRecipeHealthFilter}
           />
         )}
 

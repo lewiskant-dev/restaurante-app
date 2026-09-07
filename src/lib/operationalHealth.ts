@@ -12,6 +12,28 @@ export type OperationalIssue = {
   detail: string
 }
 
+export type RecipeHealthFilter =
+  | 'todas'
+  | 'con_alertas'
+  | 'sin_tpv'
+  | 'sin_ingredientes'
+  | 'sin_coste'
+  | 'sin_precio'
+  | 'margen_negativo'
+
+export type GuestMenuHealthFilter =
+  | 'todas'
+  | 'publicadas'
+  | 'con_alertas'
+  | 'sin_producto'
+  | 'producto_inactivo'
+  | 'sin_precio'
+  | 'copa_sin_precio'
+
+export type ProviderHealthFilter = 'todos' | 'con_alertas' | 'sin_contacto' | 'sin_cif' | 'sin_email'
+
+export type AlbaranHealthFilter = 'todos' | 'con_alertas' | 'sin_proveedor' | 'total_no_valido'
+
 export type RecipeHealthSummary = {
   totalIssues: number
   highSeverity: number
@@ -116,6 +138,25 @@ export function getRecipeOperationalIssues(receta: Receta): OperationalIssue[] {
   }
 
   return issues
+}
+
+export function recipeMatchesHealthFilter(receta: Receta, filter: RecipeHealthFilter) {
+  if (filter === 'todas') return true
+  if (receta.activo === false) return false
+
+  const ingredientes = Number(receta.ingredientes_count || 0)
+  const costeTeorico = Number(receta.coste_teorico || 0)
+  const precioVenta = Number(receta.precio_venta || 0)
+  const margen = Number(receta.margen_estimado || 0)
+
+  if (filter === 'con_alertas') return getRecipeOperationalIssues(receta).length > 0
+  if (filter === 'sin_tpv') return !String(receta.nombre_tpv || '').trim()
+  if (filter === 'sin_ingredientes') return ingredientes <= 0
+  if (filter === 'sin_coste') return ingredientes > 0 && costeTeorico <= 0
+  if (filter === 'sin_precio') return precioVenta <= 0
+  if (filter === 'margen_negativo') return precioVenta > 0 && margen < 0
+
+  return true
 }
 
 export function buildRecipeHealthSummary(recetas: Receta[]): RecipeHealthSummary {
@@ -291,6 +332,28 @@ export function getGuestMenuOperationalIssues(
   return issues
 }
 
+export function guestMenuMatchesHealthFilter(
+  item: GuestMenuAdminItem,
+  productsById: Map<string, Producto>,
+  filter: GuestMenuHealthFilter
+) {
+  if (filter === 'todas') return true
+  if (filter === 'publicadas') return item.publicado
+  if (!item.publicado) return false
+
+  const linkedProduct = item.producto_id ? productsById.get(item.producto_id) : undefined
+
+  if (filter === 'con_alertas') return getGuestMenuOperationalIssues(item, productsById).length > 0
+  if (filter === 'sin_producto') return !item.producto_id
+  if (filter === 'producto_inactivo') {
+    return Boolean(item.producto_id && (!linkedProduct || linkedProduct.activo === false || linkedProduct.archivado))
+  }
+  if (filter === 'sin_precio') return item.precio === null || Number(item.precio) < 0
+  if (filter === 'copa_sin_precio') return isWineKind(item.tipo) && item.disponible_copa && item.precio_copa === null
+
+  return true
+}
+
 export function buildGuestMenuHealthSummary(
   items: GuestMenuAdminItem[],
   productsById: Map<string, Producto>
@@ -366,6 +429,21 @@ export function getProviderOperationalIssues(proveedor: Proveedor): OperationalI
   return issues
 }
 
+export function providerMatchesHealthFilter(proveedor: Proveedor, filter: ProviderHealthFilter) {
+  if (filter === 'todos') return true
+  if (proveedor.activo === false || proveedor.archivado) return false
+
+  const missingEmail = !String(proveedor.email || '').trim()
+  const missingPhone = !String(proveedor.telefono || '').trim()
+
+  if (filter === 'con_alertas') return getProviderOperationalIssues(proveedor).length > 0
+  if (filter === 'sin_contacto') return missingEmail && missingPhone
+  if (filter === 'sin_cif') return !String(proveedor.cif || '').trim()
+  if (filter === 'sin_email') return missingEmail && !missingPhone
+
+  return true
+}
+
 export function buildProviderHealthSummary(proveedores: Proveedor[]): ProviderHealthSummary {
   let highSeverity = 0
   let mediumSeverity = 0
@@ -423,6 +501,19 @@ export function getAlbaranOperationalIssues(albaran: Albaran): OperationalIssue[
   }
 
   return issues
+}
+
+export function albaranMatchesHealthFilter(albaran: Albaran, filter: AlbaranHealthFilter) {
+  if (filter === 'todos') return true
+  if (albaran.anulado) return false
+
+  if (filter === 'con_alertas') return getAlbaranOperationalIssues(albaran).length > 0
+  if (filter === 'sin_proveedor') {
+    return !albaran.proveedor_id || !String(albaran.proveedor_nombre || '').trim()
+  }
+  if (filter === 'total_no_valido') return Number(albaran.total || 0) <= 0
+
+  return true
 }
 
 export function buildAlbaranHealthSummary(albaranes: Albaran[]): AlbaranHealthSummary {
