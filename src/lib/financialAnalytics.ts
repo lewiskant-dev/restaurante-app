@@ -70,6 +70,18 @@ export type InventoryFinancialSummary = {
   valueAboveMinimum: number
 }
 
+export type InventoryClosingReadiness = {
+  canCreate: boolean
+  needsConfirmation: boolean
+  label: string
+  detail: string
+  tone: 'slate' | 'amber' | 'emerald'
+  activeProducts: number
+  productsMissingCost: number
+  productsWithNegativeStock: number
+  hasClosingToday: boolean
+}
+
 export function buildInventoryFinancialSummary(
   products: InventoryValueCandidate[]
 ): InventoryFinancialSummary {
@@ -103,6 +115,83 @@ export function buildInventoryFinancialSummary(
       valueAboveMinimum: 0,
     }
   )
+}
+
+export function buildInventoryClosingReadiness(
+  products: InventoryValueCandidate[],
+  closings: InventarioCierre[],
+  today: string
+): InventoryClosingReadiness {
+  const activeProducts = products.filter((product) => product.activo !== false && !product.archivado)
+  const productsMissingCost = activeProducts.filter((product) => {
+    const unitCost = Number(product.ultimo_precio_compra ?? product.coste_unitario ?? 0)
+    return unitCost <= 0
+  }).length
+  const productsWithNegativeStock = activeProducts.filter(
+    (product) => Number(product.stock_actual || 0) < 0
+  ).length
+  const hasClosingToday = closings.some((closing) => closing.fecha === today)
+
+  if (activeProducts.length === 0) {
+    return {
+      canCreate: false,
+      needsConfirmation: false,
+      label: 'Sin inventario activo',
+      detail: 'Crea productos activos antes de generar un cierre de inventario.',
+      tone: 'slate',
+      activeProducts: 0,
+      productsMissingCost,
+      productsWithNegativeStock,
+      hasClosingToday,
+    }
+  }
+
+  if (hasClosingToday) {
+    return {
+      canCreate: true,
+      needsConfirmation: true,
+      label: 'Ya existe cierre hoy',
+      detail: 'Puedes crear otro cierre, pero quedará como una nueva foto del mismo día.',
+      tone: 'amber',
+      activeProducts: activeProducts.length,
+      productsMissingCost,
+      productsWithNegativeStock,
+      hasClosingToday,
+    }
+  }
+
+  if (productsWithNegativeStock > 0 || productsMissingCost > 0) {
+    const reasons = [
+      productsWithNegativeStock
+        ? `${productsWithNegativeStock} producto(s) con stock negativo`
+        : '',
+      productsMissingCost ? `${productsMissingCost} producto(s) sin coste` : '',
+    ].filter(Boolean)
+
+    return {
+      canCreate: true,
+      needsConfirmation: true,
+      label: 'Cierre con avisos',
+      detail: `Revisa ${reasons.join(' y ')} antes de usar este cierre como foto contable.`,
+      tone: 'amber',
+      activeProducts: activeProducts.length,
+      productsMissingCost,
+      productsWithNegativeStock,
+      hasClosingToday,
+    }
+  }
+
+  return {
+    canCreate: true,
+    needsConfirmation: false,
+    label: 'Listo para cerrar',
+    detail: 'El inventario activo tiene coste y stock coherente para congelar el valor actual.',
+    tone: 'emerald',
+    activeProducts: activeProducts.length,
+    productsMissingCost,
+    productsWithNegativeStock,
+    hasClosingToday,
+  }
 }
 
 export type ReorderRecommendation = {

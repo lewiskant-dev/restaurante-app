@@ -1,13 +1,18 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { getGuestMenuFormReadiness } from '../src/lib/guestMenuFormReadiness.ts'
+import {
+  getGuestMenuFormReadiness,
+  getGuestMenuPublicationReadiness,
+} from '../src/lib/guestMenuFormReadiness.ts'
 
 test('getGuestMenuFormReadiness exige nombre público', () => {
   assert.equal(
     getGuestMenuFormReadiness({
       saving: false,
       nombrePublico: '',
+      productoId: null,
+      productAvailable: false,
       tipo: 'vino',
       precio: '',
       disponibleCopa: false,
@@ -23,6 +28,8 @@ test('getGuestMenuFormReadiness valida precios negativos o no numéricos', () =>
     getGuestMenuFormReadiness({
       saving: false,
       nombrePublico: 'Vino de casa',
+      productoId: 'producto-1',
+      productAvailable: true,
       tipo: 'vino',
       precio: '-1',
       disponibleCopa: false,
@@ -36,6 +43,8 @@ test('getGuestMenuFormReadiness valida precios negativos o no numéricos', () =>
     getGuestMenuFormReadiness({
       saving: false,
       nombrePublico: 'Vino de casa',
+      productoId: 'producto-1',
+      productAvailable: true,
       tipo: 'vino',
       precio: '',
       disponibleCopa: true,
@@ -51,6 +60,8 @@ test('getGuestMenuFormReadiness exige precio de copa si un vino está disponible
     getGuestMenuFormReadiness({
       saving: false,
       nombrePublico: 'Vino de casa',
+      productoId: 'producto-1',
+      productAvailable: true,
       tipo: 'vino_tinto',
       precio: '18',
       disponibleCopa: true,
@@ -66,6 +77,8 @@ test('getGuestMenuFormReadiness permite guardar borrador o publicar fichas compl
     getGuestMenuFormReadiness({
       saving: false,
       nombrePublico: 'Vino de casa',
+      productoId: 'producto-1',
+      productAvailable: true,
       tipo: 'vino_tinto',
       precio: '18',
       disponibleCopa: true,
@@ -75,7 +88,7 @@ test('getGuestMenuFormReadiness permite guardar borrador o publicar fichas compl
     {
       canSave: true,
       label: 'Lista para publicar',
-      detail: 'La ficha tiene los datos mínimos para aparecer en la carta pública.',
+      detail: 'La ficha tiene producto, precio y datos mínimos para aparecer en la carta pública.',
       tone: 'emerald',
     }
   )
@@ -84,6 +97,8 @@ test('getGuestMenuFormReadiness permite guardar borrador o publicar fichas compl
     getGuestMenuFormReadiness({
       saving: false,
       nombrePublico: 'Agua',
+      productoId: null,
+      productAvailable: false,
       tipo: 'bebida',
       precio: '',
       disponibleCopa: false,
@@ -91,5 +106,53 @@ test('getGuestMenuFormReadiness permite guardar borrador o publicar fichas compl
       publicado: false,
     }).canSave,
     true
+  )
+})
+
+test('getGuestMenuPublicationReadiness exige producto activo y precio al publicar', () => {
+  assert.equal(
+    getGuestMenuPublicationReadiness({
+      nombrePublico: 'Agua',
+      productoId: null,
+      productAvailable: false,
+      tipo: 'bebida',
+      precio: 2.5,
+      disponibleCopa: false,
+      precioCopa: null,
+    }).label,
+    'Producto pendiente'
+  )
+
+  assert.equal(
+    getGuestMenuPublicationReadiness({
+      nombrePublico: 'Agua',
+      productoId: 'producto-1',
+      productAvailable: true,
+      tipo: 'bebida',
+      precio: null,
+      disponibleCopa: false,
+      precioCopa: null,
+    }).label,
+    'Precio pendiente'
+  )
+})
+
+test('getGuestMenuPublicationReadiness permite publicar fichas completas', () => {
+  assert.deepEqual(
+    getGuestMenuPublicationReadiness({
+      nombrePublico: 'Agua',
+      productoId: 'producto-1',
+      productAvailable: true,
+      tipo: 'bebida',
+      precio: 2.5,
+      disponibleCopa: false,
+      precioCopa: null,
+    }),
+    {
+      canPublish: true,
+      label: 'Lista para publicar',
+      detail: 'La ficha tiene producto, precio y datos mínimos para aparecer en la carta pública.',
+      tone: 'emerald',
+    }
   )
 })

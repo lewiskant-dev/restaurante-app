@@ -69,6 +69,7 @@ import {
 } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
 import {
+  buildInventoryClosingReadiness,
   buildInventoryClosingComparison,
   buildInventoryFinancialSummary,
   buildReorderRecommendations,
@@ -1005,11 +1006,30 @@ export default function HomePage() {
       return
     }
 
+    const today = todayLocalInputDate()
+    const closingReadiness = buildInventoryClosingReadiness(productos, inventarioCierres, today)
+
+    if (!closingReadiness.canCreate) {
+      setError(closingReadiness.detail)
+      return
+    }
+
+    if (closingReadiness.needsConfirmation) {
+      const confirmed = await requestConfirmAction({
+        title: closingReadiness.label,
+        description: closingReadiness.detail,
+        confirmLabel: 'Crear cierre',
+        tone: 'primary',
+      })
+
+      if (!confirmed) return
+    }
+
     setCreatingInventarioCierre(true)
     setError('')
 
     const { error } = await supabase.rpc('crear_cierre_inventario', {
-      target_fecha: todayLocalInputDate(),
+      target_fecha: today,
       target_notas: 'Cierre generado desde Informes',
       p_restaurant_id: activeRestaurantId,
     })

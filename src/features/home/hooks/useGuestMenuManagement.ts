@@ -5,6 +5,7 @@ import {
   isInitialGuestRecommendation,
   isWineKind,
 } from '@/lib/guestExperience'
+import { getGuestMenuPublicationReadiness } from '@/lib/guestMenuFormReadiness'
 import type { GuestMenuItem, GuestMenuKind, GuestWineProfile } from '@/lib/guestExperience'
 import { supabase } from '@/lib/supabase'
 import type { Producto } from '@/types'
@@ -296,12 +297,34 @@ export function useGuestMenuManagement({
       return
     }
 
-    if (guestMenuForm.precio_copa !== '' && Number(guestMenuForm.precio_copa) < 0) {
-      onError('El precio de copa no puede ser negativo')
-      return
-    }
+      if (guestMenuForm.precio_copa !== '' && Number(guestMenuForm.precio_copa) < 0) {
+        onError('El precio de copa no puede ser negativo')
+        return
+      }
 
-    setGuestMenuSaving(true)
+      if (guestMenuForm.publicado) {
+        const linkedProduct = guestMenuForm.producto_id
+          ? productos.find((producto) => producto.id === guestMenuForm.producto_id)
+          : null
+        const publicationReadiness = getGuestMenuPublicationReadiness({
+          nombrePublico: guestMenuForm.nombre_publico,
+          productoId: guestMenuForm.producto_id,
+          productAvailable: Boolean(
+            linkedProduct && linkedProduct.activo !== false && !linkedProduct.archivado
+          ),
+          tipo: guestMenuForm.tipo,
+          precio: guestMenuForm.precio,
+          disponibleCopa: guestMenuForm.disponible_copa,
+          precioCopa: guestMenuForm.precio_copa,
+        })
+
+        if (!publicationReadiness.canPublish) {
+          onError(publicationReadiness.detail)
+          return
+        }
+      }
+
+      setGuestMenuSaving(true)
     onError('')
 
     try {
@@ -391,6 +414,28 @@ export function useGuestMenuManagement({
       return
     }
 
+    if (!item.publicado) {
+      const linkedProduct = item.producto_id
+        ? productos.find((producto) => producto.id === item.producto_id)
+        : null
+      const publicationReadiness = getGuestMenuPublicationReadiness({
+        nombrePublico: item.nombre,
+        productoId: item.producto_id,
+        productAvailable: Boolean(
+          linkedProduct && linkedProduct.activo !== false && !linkedProduct.archivado
+        ),
+        tipo: item.tipo,
+        precio: item.precio,
+        disponibleCopa: item.disponible_copa,
+        precioCopa: item.precio_copa,
+      })
+
+      if (!publicationReadiness.canPublish) {
+        onError(publicationReadiness.detail)
+        return
+      }
+    }
+
     const { error } = await supabase
       .from('guest_menu_items')
       .update({ publicado: !item.publicado })
@@ -400,6 +445,17 @@ export function useGuestMenuManagement({
       onError(error.message)
       return
     }
+
+    await registrarAuditoria({
+      entidad: 'producto',
+      entidad_id: item.id,
+      accion: 'editar',
+      detalle: !item.publicado
+        ? `Ficha de carta publicada: ${item.nombre}`
+        : `Ficha de carta retirada de carta publica: ${item.nombre}`,
+      payload_antes: { publicado: item.publicado },
+      payload_despues: { publicado: !item.publicado },
+    })
 
     onToast(!item.publicado ? 'Ficha publicada' : 'Ficha retirada de la carta pública')
     await loadGuestMenuItems()

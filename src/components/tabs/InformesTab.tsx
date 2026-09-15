@@ -9,6 +9,7 @@ import type {
 import {
   buildBreakEvenSummary,
   buildFinancialHealthSummary,
+  buildInventoryClosingReadiness,
   buildInventoryClosingComparison,
   buildInventoryFinancialSummary,
   buildReorderRecommendations,
@@ -18,6 +19,7 @@ import {
 } from '@/lib/financialAnalytics'
 import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import { ghostButton, softPanel, surfaceCard } from '@/components/ui/primitives'
+import { todayLocalInputDate } from '@/features/home/utils'
 import { getDeploymentHealthAction } from '@/lib/deploymentHealth'
 import type { Producto } from '@/types'
 
@@ -263,10 +265,21 @@ export function InformesTab({
     tpvAnalitica.compras_periodo.total_coste
   )
   const inventorySummary = buildInventoryFinancialSummary(productos)
+  const inventoryClosingReadiness = buildInventoryClosingReadiness(
+    productos,
+    inventarioCierres,
+    todayLocalInputDate()
+  )
   const reorderRecommendations = buildReorderRecommendations(productos)
   const topReorderRecommendations = reorderRecommendations.slice(0, 6)
   const reorderSupplierSummary = buildReorderSupplierSummary(reorderRecommendations).slice(0, 4)
   const inventoryClosingComparison = buildInventoryClosingComparison(inventarioCierres)
+  const inventoryClosingReadinessClass =
+    inventoryClosingReadiness.tone === 'emerald'
+      ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
+      : inventoryClosingReadiness.tone === 'amber'
+        ? 'border-amber-100 bg-amber-50 text-amber-800'
+        : 'border-slate-200 bg-slate-50 text-slate-600'
   const wasteCutoff = new Date()
   wasteCutoff.setDate(
     wasteCutoff.getDate() - (tpvAnaliticaRange === '7d' ? 7 : tpvAnaliticaRange === '90d' ? 90 : 30)
@@ -706,7 +719,8 @@ export function InformesTab({
             <button
               type="button"
               onClick={onCrearCierreInventario}
-              disabled={creatingInventarioCierre}
+              disabled={creatingInventarioCierre || !inventoryClosingReadiness.canCreate}
+              title={inventoryClosingReadiness.detail}
               className="rounded-[16px] bg-slate-950 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-wait disabled:bg-slate-400"
             >
               {creatingInventarioCierre ? 'Creando cierre...' : 'Crear cierre de hoy'}
@@ -747,6 +761,37 @@ export function InformesTab({
               </div>
               <div className="mt-1 text-[11px] text-slate-500">
                 de {inventorySummary.activeProducts} productos activos
+              </div>
+            </div>
+          </div>
+
+          <div
+            className={`mt-3 rounded-[16px] border px-4 py-3 text-[12px] sm:text-[13px] ${inventoryClosingReadinessClass}`}
+          >
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="font-semibold">{inventoryClosingReadiness.label}</div>
+                <div className="mt-1 leading-5">{inventoryClosingReadiness.detail}</div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center lg:min-w-[360px]">
+                <div className="rounded-[14px] bg-white/70 px-3 py-2">
+                  <div className="text-[11px] opacity-65">Sin coste</div>
+                  <div className="mt-0.5 font-semibold">
+                    {inventoryClosingReadiness.productsMissingCost}
+                  </div>
+                </div>
+                <div className="rounded-[14px] bg-white/70 px-3 py-2">
+                  <div className="text-[11px] opacity-65">Stock negativo</div>
+                  <div className="mt-0.5 font-semibold">
+                    {inventoryClosingReadiness.productsWithNegativeStock}
+                  </div>
+                </div>
+                <div className="rounded-[14px] bg-white/70 px-3 py-2">
+                  <div className="text-[11px] opacity-65">Cierre hoy</div>
+                  <div className="mt-0.5 font-semibold">
+                    {inventoryClosingReadiness.hasClosingToday ? 'Sí' : 'No'}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

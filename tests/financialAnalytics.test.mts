@@ -5,6 +5,7 @@ import {
   buildComparativaMetrica,
   buildBreakEvenSummary,
   buildFinancialHealthSummary,
+  buildInventoryClosingReadiness,
   buildInventoryClosingComparison,
   buildInventoryFinancialSummary,
   buildReorderRecommendations,
@@ -75,6 +76,87 @@ test('buildInventoryFinancialSummary calcula valor de stock y reposicion', () =>
       valueAboveMinimum: 12,
     }
   )
+})
+
+test('buildInventoryClosingReadiness bloquea cierres sin inventario activo', () => {
+  assert.deepEqual(buildInventoryClosingReadiness([], [], '2026-09-15'), {
+    canCreate: false,
+    needsConfirmation: false,
+    label: 'Sin inventario activo',
+    detail: 'Crea productos activos antes de generar un cierre de inventario.',
+    tone: 'slate',
+    activeProducts: 0,
+    productsMissingCost: 0,
+    productsWithNegativeStock: 0,
+    hasClosingToday: false,
+  })
+})
+
+test('buildInventoryClosingReadiness marca listo un inventario completo', () => {
+  assert.deepEqual(
+    buildInventoryClosingReadiness(
+      [
+        { stock_actual: 10, stock_minimo: 4, coste_unitario: 2 },
+        { stock_actual: 1, stock_minimo: 5, ultimo_precio_compra: 3 },
+      ],
+      [],
+      '2026-09-15'
+    ),
+    {
+      canCreate: true,
+      needsConfirmation: false,
+      label: 'Listo para cerrar',
+      detail: 'El inventario activo tiene coste y stock coherente para congelar el valor actual.',
+      tone: 'emerald',
+      activeProducts: 2,
+      productsMissingCost: 0,
+      productsWithNegativeStock: 0,
+      hasClosingToday: false,
+    }
+  )
+})
+
+test('buildInventoryClosingReadiness avisa con costes pendientes o stock negativo', () => {
+  const readiness = buildInventoryClosingReadiness(
+    [
+      { stock_actual: -2, stock_minimo: 4, coste_unitario: 2 },
+      { stock_actual: 1, stock_minimo: 5, coste_unitario: 0 },
+      { stock_actual: 100, stock_minimo: 10, coste_unitario: 1, archivado: true },
+    ],
+    [],
+    '2026-09-15'
+  )
+
+  assert.equal(readiness.label, 'Cierre con avisos')
+  assert.equal(readiness.canCreate, true)
+  assert.equal(readiness.needsConfirmation, true)
+  assert.equal(readiness.productsMissingCost, 1)
+  assert.equal(readiness.productsWithNegativeStock, 1)
+})
+
+test('buildInventoryClosingReadiness avisa si ya hay cierre del mismo dia', () => {
+  const readiness = buildInventoryClosingReadiness(
+    [{ stock_actual: 10, stock_minimo: 4, coste_unitario: 2 }],
+    [
+      {
+        id: 'actual',
+        fecha: '2026-09-15',
+        valor_total: 100,
+        coste_reposicion_minima: 10,
+        valor_sobre_minimo: 50,
+        productos_activos: 1,
+        productos_con_coste: 1,
+        productos_sin_coste: 0,
+        notas: '',
+        created_at: '2026-09-15T10:00:00Z',
+      },
+    ],
+    '2026-09-15'
+  )
+
+  assert.equal(readiness.label, 'Ya existe cierre hoy')
+  assert.equal(readiness.hasClosingToday, true)
+  assert.equal(readiness.needsConfirmation, true)
 })
 
 test('buildReorderRecommendations prioriza productos bajo minimo con coste estimado', () => {

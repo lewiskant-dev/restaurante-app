@@ -9,6 +9,7 @@ import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import type { Receta } from '@/features/home/types'
 import { isInitialGuestRecommendation, isWineKind, splitGuestGrapes } from '@/lib/guestExperience'
 import { getGuestMenuFormReadiness } from '@/lib/guestMenuFormReadiness'
+import { getGuestMenuPublicationReadiness } from '@/lib/guestMenuFormReadiness'
 import {
   buildGuestMenuHealthSummary,
   getGuestMenuOperationalIssues,
@@ -293,6 +294,8 @@ export function CartaTab({
   const formReadiness = getGuestMenuFormReadiness({
     saving: guestMenuSaving,
     nombrePublico: guestMenuForm.nombre_publico,
+    productoId: guestMenuForm.producto_id,
+    productAvailable: Boolean(selectedProduct),
     tipo: guestMenuForm.tipo,
     precio: guestMenuForm.precio,
     disponibleCopa: guestMenuForm.disponible_copa,
@@ -926,13 +929,24 @@ export function CartaTab({
           </div>
         ) : (
           <div className="space-y-2">
-            {filteredGuestMenuItems.map((item) => (
+            {filteredGuestMenuItems.map((item) => {
+              const issues = getGuestMenuOperationalIssues(item, productsById)
+              const linkedProduct = item.producto_id ? productsById.get(item.producto_id) : null
+              const publicationReadiness = getGuestMenuPublicationReadiness({
+                nombrePublico: item.nombre,
+                productoId: item.producto_id,
+                productAvailable: Boolean(
+                  linkedProduct && linkedProduct.activo !== false && !linkedProduct.archivado
+                ),
+                tipo: item.tipo,
+                precio: item.precio,
+                disponibleCopa: item.disponible_copa,
+                precioCopa: item.precio_copa,
+              })
+
+              return (
               <div key={item.id} className={`grid gap-3 p-3 lg:grid-cols-[1fr_auto] ${softPanel}`}>
                 <div className="min-w-0">
-                  {(() => {
-                    const issues = getGuestMenuOperationalIssues(item, productsById)
-                    return (
-                      <>
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="text-[14px] font-semibold text-slate-900">{item.nombre}</div>
                     <span
@@ -985,14 +999,13 @@ export function CartaTab({
                             ))}
                           </div>
                         ) : null}
-                      </>
-                    )
-                  })()}
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
                   <button
                     type="button"
                     onClick={() => onTogglePublished(item)}
+                    disabled={!item.publicado && !publicationReadiness.canPublish}
+                    title={!item.publicado ? publicationReadiness.detail : undefined}
                     className={`px-4 py-2 text-[12px] ${ghostButton}`}
                   >
                     {item.publicado ? 'Despublicar' : 'Publicar'}
@@ -1034,7 +1047,8 @@ export function CartaTab({
                   )}
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
