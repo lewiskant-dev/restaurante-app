@@ -51,7 +51,7 @@ type TpvTabProps = {
   onMapeoSeleccionadoChange: (productoExterno: string, recetaId: string) => void
   onGuardarMapeo: (productoExterno: string, recetaId: string) => void
   onCrearRecetaDesdeTpv: (productoExterno: string) => void
-  onIgnorarArticulo: (productoExterno: string) => void
+  onIgnorarArticulo: (productoExterno: string) => void | Promise<void>
   onRestaurarArticulo: (productoExterno: string) => void
 }
 
@@ -974,10 +974,10 @@ export function TpvTab({
 
                     <button
                       type="button"
-                      onClick={() => onIgnorarArticulo(item.producto_externo)}
-                      className="rounded-[16px] bg-amber-50 px-4 py-2.5 text-[12px] font-semibold text-amber-700 transition hover:bg-amber-100 sm:py-2.5 sm:text-[13px]"
+                      onClick={() => void onIgnorarArticulo(item.producto_externo)}
+                      className="rounded-[16px] bg-slate-100 px-4 py-2.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-200 sm:py-2.5 sm:text-[13px]"
                     >
-                      Ignorar
+                      Omitir del stock
                     </button>
 
                     <button
@@ -1005,7 +1005,7 @@ export function TpvTab({
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="text-[13px] font-semibold text-amber-900">
-                  Artículos ignorados en esta importación
+                  Artículos omitidos del stock
                 </div>
                 <div className="mt-1 text-[12px] text-amber-800">
                   {tpvIgnoredSummary.lineas} línea(s) · {formatCantidad(tpvIgnoredSummary.unidades)} unidades no se aplicarán al stock.

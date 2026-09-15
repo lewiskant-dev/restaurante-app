@@ -37,7 +37,6 @@ type StockTabProps = {
   onUnidadFiltroChange: (value: string) => void
   onProductoEstadoChange: (value: ProductoEstadoFiltro) => void
   onNuevoProducto: () => void
-  onOpenCategorias: () => void
   onExportar: () => void
   onOpenConsumo: (producto: Producto) => void
   onOpenEditarProducto: (producto: Producto) => void
@@ -199,7 +198,6 @@ export default function StockTab({
   onUnidadFiltroChange,
   onProductoEstadoChange,
   onNuevoProducto,
-  onOpenCategorias,
   onExportar,
   onOpenConsumo,
   onOpenEditarProducto,
@@ -291,13 +289,6 @@ export default function StockTab({
 
         {canManageStock ? (
           <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={onOpenCategorias}
-              className={`hidden items-center justify-center px-4 py-2.5 text-sm lg:inline-flex ${ghostButton}`}
-            >
-              Categorías
-            </button>
             <button
               type="button"
               onClick={onNuevoProducto}

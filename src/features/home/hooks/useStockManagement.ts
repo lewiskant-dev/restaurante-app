@@ -68,7 +68,6 @@ export function useStockManagement({
   const [busquedaMov, setBusquedaMov] = useState('')
   const [productoEstado, setProductoEstado] = useState<ProductoEstadoFiltro>('activos')
   const [productoModalOpen, setProductoModalOpen] = useState(false)
-  const [categoriasModalOpen, setCategoriasModalOpen] = useState(false)
   const [productoSaving, setProductoSaving] = useState(false)
   const [productoEditId, setProductoEditId] = useState<string | null>(null)
   const [productoForm, setProductoForm] = useState<NuevoProductoForm>(initialProductoForm)
@@ -271,14 +270,6 @@ export function useStockManagement({
     setProductoHistorialPrecios([])
     setProductoHistorialLoading(false)
     onError('')
-  }
-
-  function openCategoriasModal() {
-    setCategoriasModalOpen(true)
-  }
-
-  function closeCategoriasModal() {
-    setCategoriasModalOpen(false)
   }
 
   async function loadProductoHistorial(productoId: string) {
@@ -831,7 +822,6 @@ export function useStockManagement({
     setUnidadFiltro('todas')
     setBusquedaMov('')
     setProductoEstado('activos')
-    closeCategoriasModal()
     closeProductoModal()
     closeConsumoModal()
     closeAjusteModal()
@@ -848,7 +838,6 @@ export function useStockManagement({
     busquedaMov,
     productoEstado,
     productoModalOpen,
-    categoriasModalOpen,
     productoSaving,
     productoEditId,
     productoForm,
@@ -885,8 +874,6 @@ export function useStockManagement({
     loadProductos,
     loadMovimientos,
     openNuevoProducto,
-    openCategoriasModal,
-    closeCategoriasModal,
     closeProductoModal,
     openEditarProducto,
     guardarProducto,

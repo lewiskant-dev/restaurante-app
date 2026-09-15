@@ -11,6 +11,7 @@ import type {
   ProductoPrecioHistorial,
 } from '@/features/home/types'
 import {
+  formatCantidad,
   formatOCRDateToInput,
   normalizeText,
   scoreRecipeMatch,
@@ -37,6 +38,7 @@ import {
 } from '@/lib/recetaTransaction'
 import { supabase } from '@/lib/supabase'
 import type { Producto } from '@/types'
+import type { ConfirmActionRequest } from '@/components/ui/ConfirmActionDialog'
 
 type AuditoriaParams = {
   entidad: string
@@ -54,6 +56,7 @@ type UseRecetaTpvManagementOptions = {
   onToast: (message: string) => void
   requirePermission: (permission: PermissionKey, message: string) => boolean
   registrarAuditoria: (params: AuditoriaParams) => Promise<void>
+  confirmAction?: (request: ConfirmActionRequest) => Promise<boolean>
   loadProductos: () => Promise<void>
   loadMovimientos: () => Promise<void>
   loadAuditoria: () => Promise<void>
@@ -111,6 +114,7 @@ export function useRecetaTpvManagement({
   onToast,
   requirePermission,
   registrarAuditoria,
+  confirmAction,
   loadProductos,
   loadMovimientos,
   loadAuditoria,
@@ -1256,9 +1260,30 @@ export function useRecetaTpvManagement({
     }
   }
 
-  function ignorarArticuloTPV(productoExterno: string) {
+  async function ignorarArticuloTPV(productoExterno: string) {
     const key = normalizeText(productoExterno)
     if (!key) return
+
+    const resumen = tpvVentasCrudas.reduce(
+      (acc, venta) => {
+        if (normalizeText(venta.producto_externo) !== key) return acc
+        acc.lineas += 1
+        acc.unidades += Number(venta.cantidad || 0)
+        return acc
+      },
+      { lineas: 0, unidades: 0 }
+    )
+    const confirmed = confirmAction
+      ? await confirmAction({
+          title: 'Omitir artículo del stock',
+          description: `"${productoExterno}" no descontará stock al aplicar esta importación TPV. Afecta a ${resumen.lineas} línea(s) y ${formatCantidad(resumen.unidades)} unidad(es).`,
+          confirmLabel: 'Omitir del stock',
+          cancelLabel: 'Cancelar',
+          tone: 'primary',
+        })
+      : true
+
+    if (!confirmed) return
 
     setTpvArticulosIgnorados((prev) => (prev.includes(key) ? prev : [...prev, key]))
     setTpvMapeosSeleccionados((prev) => {
@@ -1266,7 +1291,7 @@ export function useRecetaTpvManagement({
       delete next[productoExterno]
       return next
     })
-    onToast(`Artículo ignorado: ${productoExterno}`)
+    onToast(`Artículo omitido del stock: ${productoExterno}`)
   }
 
   function restaurarArticuloTPV(productoExterno: string) {
@@ -1274,7 +1299,7 @@ export function useRecetaTpvManagement({
     if (!key) return
 
     setTpvArticulosIgnorados((prev) => prev.filter((item) => item !== key))
-    onToast(`Artículo recuperado: ${productoExterno}`)
+    onToast(`Artículo recuperado para stock: ${productoExterno}`)
   }
 
   function selectTpvFile(file: File | null) {
