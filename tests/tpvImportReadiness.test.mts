@@ -76,3 +76,22 @@ test('getTpvImportReadiness permite aplicar solo un borrador completo no aplicad
     false
   )
 })
+
+test('getTpvImportReadiness avisa cuando hay articulos ignorados', () => {
+  assert.deepEqual(
+    getTpvImportReadiness({
+      importing: false,
+      applying: false,
+      salesCount: 8,
+      pendingMappingsCount: 0,
+      ignoredArticlesCount: 2,
+      importApplied: false,
+    }),
+    {
+      canApply: true,
+      label: 'Lista con ignorados',
+      detail: '2 artículo(s) se omitirán y no descontarán stock al aplicar.',
+      tone: 'amber',
+    }
+  )
+})

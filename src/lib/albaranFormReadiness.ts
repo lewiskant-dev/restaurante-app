@@ -19,11 +19,27 @@ export type AlbaranOcrReadinessInput = {
   hasFile: boolean
 }
 
+export type AlbaranClosingReadinessInput = {
+  totalDocumento: number
+  totalDetectado: number | null
+  pendingOcrLines: number
+  tolerance?: number
+}
+
 export type AlbaranReadiness = {
   canProceed: boolean
   label: string
   detail: string
   tone: 'slate' | 'amber' | 'emerald'
+}
+
+export type AlbaranClosingReadiness = {
+  label: string
+  detail: string
+  tone: 'slate' | 'amber' | 'emerald'
+  totalDelta: number | null
+  hasTotalMismatch: boolean
+  hasPendingOcr: boolean
 }
 
 function toFiniteNumber(value: string | number | undefined) {
@@ -55,6 +71,64 @@ export function getAlbaranOcrReadiness(input: AlbaranOcrReadinessInput): Albaran
     label: 'OCR listo',
     detail: 'Puedes analizar el documento y revisar los productos detectados antes de guardar.',
     tone: 'emerald',
+  }
+}
+
+export function getAlbaranClosingReadiness(
+  input: AlbaranClosingReadinessInput
+): AlbaranClosingReadiness {
+  const totalDocumento = Number.isFinite(input.totalDocumento) ? input.totalDocumento : 0
+  const tolerance = input.tolerance ?? 0.05
+  const totalDelta =
+    input.totalDetectado === null || !Number.isFinite(input.totalDetectado)
+      ? null
+      : totalDocumento - input.totalDetectado
+  const hasTotalMismatch = totalDelta !== null && Math.abs(totalDelta) > tolerance
+  const hasPendingOcr = input.pendingOcrLines > 0
+
+  if (hasPendingOcr) {
+    return {
+      label: 'OCR pendiente',
+      detail: `Asigna ${input.pendingOcrLines} línea(s) detectadas antes de aplicar el albarán.`,
+      tone: 'amber',
+      totalDelta,
+      hasTotalMismatch,
+      hasPendingOcr,
+    }
+  }
+
+  if (hasTotalMismatch) {
+    return {
+      label: 'Total por revisar',
+      detail: 'El total de líneas no coincide con el total detectado en el documento.',
+      tone: 'amber',
+      totalDelta,
+      hasTotalMismatch,
+      hasPendingOcr,
+    }
+  }
+
+  if (totalDelta === null) {
+    return {
+      label: totalDocumento > 0 ? 'Cierre manual' : 'Sin total',
+      detail:
+        totalDocumento > 0
+          ? 'El albarán se cerrará con el total calculado desde sus líneas.'
+          : 'Añade líneas para calcular el total del albarán.',
+      tone: totalDocumento > 0 ? 'slate' : 'amber',
+      totalDelta,
+      hasTotalMismatch,
+      hasPendingOcr,
+    }
+  }
+
+  return {
+    label: 'Cierre cuadrado',
+    detail: 'El total de líneas coincide con el total detectado en el documento.',
+    tone: 'emerald',
+    totalDelta,
+    hasTotalMismatch,
+    hasPendingOcr,
   }
 }
 

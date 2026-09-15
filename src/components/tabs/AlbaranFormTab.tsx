@@ -1,8 +1,10 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import type { AlbaranLineaForm } from '@/features/home/types'
 import {
+  getAlbaranClosingReadiness,
   getAlbaranOcrReadiness,
   getAlbaranSaveReadiness,
 } from '@/lib/albaranFormReadiness'
@@ -54,6 +56,43 @@ type AlbaranFormTabProps = {
   getOCRStatusClasses: (estado?: AlbaranLineaForm['mapeo_estado']) => string
   getOCRStatusLabel: (estado?: AlbaranLineaForm['mapeo_estado']) => string
   getProductoNombre: (productoId: string) => string
+}
+
+function Icon({
+  path,
+  className = 'h-4 w-4',
+}: {
+  path: ReactNode
+  className?: string
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {path}
+    </svg>
+  )
+}
+
+function PlusIcon({ className }: { className?: string }) {
+  return (
+    <Icon
+      className={className}
+      path={
+        <>
+          <path d="M12 5v14" />
+          <path d="M5 12h14" />
+        </>
+      }
+    />
+  )
 }
 
 export function AlbaranFormTab({
@@ -116,12 +155,39 @@ export function AlbaranFormTab({
     lineas: albaranLineas,
     pendingOcrLines: lineasOCRPendientes,
   })
+  const closingReadiness = getAlbaranClosingReadiness({
+    totalDocumento: totalAlbaran,
+    totalDetectado: albaranOCRTotalDetectado,
+    pendingOcrLines: lineasOCRPendientes,
+  })
   const readinessClass =
     saveReadiness.tone === 'emerald'
       ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
       : saveReadiness.tone === 'amber'
         ? 'border-amber-100 bg-amber-50 text-amber-800'
         : 'border-slate-200 bg-slate-50 text-slate-600'
+  const closingReadinessClass =
+    closingReadiness.tone === 'emerald'
+      ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
+      : closingReadiness.tone === 'amber'
+        ? 'border-amber-100 bg-amber-50 text-amber-800'
+        : 'border-slate-200 bg-slate-50 text-slate-700'
+  const closingMetrics = [
+    { label: 'Líneas', value: String(albaranLineas.length) },
+    { label: 'Total líneas', value: `${totalAlbaran.toFixed(2)} €` },
+    {
+      label: 'Total OCR',
+      value:
+        albaranOCRTotalDetectado !== null ? `${albaranOCRTotalDetectado.toFixed(2)} €` : 'Sin OCR',
+    },
+    {
+      label: 'Diferencia',
+      value:
+        closingReadiness.totalDelta !== null
+          ? `${closingReadiness.totalDelta.toFixed(2)} €`
+          : 'No aplica',
+    },
+  ]
 
   return (
     <div className="space-y-5">
@@ -160,9 +226,10 @@ export function AlbaranFormTab({
                 <button
                   type="button"
                   onClick={onOpenCrearProveedor}
-                  className="rounded-[14px] bg-slate-900 px-3 py-2 text-[12px] font-semibold text-white transition hover:bg-slate-800"
+                  className="inline-flex items-center gap-2 rounded-[14px] bg-slate-900 px-3 py-2 text-[12px] font-semibold text-white transition hover:bg-slate-800"
                 >
-                  + Proveedor
+                  <PlusIcon />
+                  <span>Proveedor</span>
                 </button>
               ) : null}
             </div>
@@ -232,9 +299,10 @@ export function AlbaranFormTab({
           <h3 className="text-[15px] font-semibold text-slate-900">Líneas</h3>
           <button
             onClick={onAddLinea}
-            className="rounded-[14px] bg-slate-900 px-3 py-2 text-[12px] font-semibold text-white transition hover:bg-slate-800"
+            className="inline-flex items-center gap-2 rounded-[14px] bg-slate-900 px-3 py-2 text-[12px] font-semibold text-white transition hover:bg-slate-800"
           >
-            + Línea
+            <PlusIcon />
+            <span>Línea</span>
           </button>
         </div>
 
@@ -401,25 +469,30 @@ export function AlbaranFormTab({
           </div>
         </div>
 
-        {albaranOCRTotalDetectado ? (
-          <div
-            className={`mt-4 rounded-[16px] px-4 py-3 text-[13px] ${
-              Math.abs(totalAlbaran - albaranOCRTotalDetectado) > 0.05
-                ? 'bg-red-50 text-red-700'
-                : 'bg-emerald-50 text-emerald-700'
-            }`}
-          >
-            Total detectado en documento: {albaranOCRTotalDetectado.toFixed(2)} €. Diferencia:{' '}
-            {(totalAlbaran - albaranOCRTotalDetectado).toFixed(2)} €.
+        <div className={`mt-4 rounded-[16px] border px-4 py-3 ${closingReadinessClass}`}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="text-[12px] font-semibold uppercase tracking-[0.16em] opacity-70">
+                Control de cierre
+              </div>
+              <div className="mt-1 text-[14px] font-semibold">{closingReadiness.label}</div>
+              <div className="mt-1 text-[12px] leading-5 opacity-85">{closingReadiness.detail}</div>
+            </div>
+            {lineasOCRPendientes > 0 ? (
+              <div className="shrink-0 rounded-full bg-white/70 px-3 py-1 text-[12px] font-semibold">
+                {lineasOCRPendientes} OCR pendiente(s)
+              </div>
+            ) : null}
           </div>
-        ) : null}
-
-        {lineasOCRPendientes > 0 ? (
-          <div className="mt-4 rounded-[16px] bg-amber-50 px-4 py-3 text-[13px] text-amber-800">
-            Hay {lineasOCRPendientes} línea(s) pendientes de asignar. Revísalas antes de aplicar el
-            albarán.
+          <div className="mt-3 grid gap-2 sm:grid-cols-4">
+            {closingMetrics.map((metric) => (
+              <div key={metric.label} className="rounded-[14px] bg-white/70 px-3 py-2">
+                <div className="text-[11px] font-medium opacity-65">{metric.label}</div>
+                <div className="mt-0.5 text-[13px] font-semibold">{metric.value}</div>
+              </div>
+            ))}
           </div>
-        ) : null}
+        </div>
 
         <div className={`mt-4 rounded-[16px] border px-4 py-3 text-[13px] ${readinessClass}`}>
           <div className="font-semibold">{saveReadiness.label}</div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import type { Albaran } from '@/types'
 import { formatEuro, formatFecha } from '@/features/home/utils'
 import { fieldShell, ghostButton, surfaceCard } from '@/components/ui/primitives'
@@ -26,6 +26,60 @@ type AlbaranesTabProps = {
   onAlbaranHealthFilterChange: (value: AlbaranHealthFilter) => void
   onExportar: () => void
   onOpenDetalle: (albaran: Albaran) => void
+}
+
+function Icon({
+  path,
+  className = 'h-5 w-5',
+}: {
+  path: ReactNode
+  className?: string
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {path}
+    </svg>
+  )
+}
+
+function ReceiptIcon({ className }: { className?: string }) {
+  return (
+    <Icon
+      className={className}
+      path={
+        <>
+          <path d="M7 3h10a2 2 0 0 1 2 2v16l-3-2-2 2-2-2-2 2-2-2-3 2V5a2 2 0 0 1 2-2Z" />
+          <path d="M9 8h6" />
+          <path d="M9 12h6" />
+          <path d="M9 16h3" />
+        </>
+      }
+    />
+  )
+}
+
+function ImageIcon({ className }: { className?: string }) {
+  return (
+    <Icon
+      className={className}
+      path={
+        <>
+          <rect x="4" y="5" width="16" height="14" rx="2" />
+          <circle cx="9" cy="10" r="1.5" />
+          <path d="m20 15-3.5-3.5a2 2 0 0 0-2.8 0L7 18" />
+        </>
+      }
+    />
+  )
 }
 
 export function AlbaranesTab({
@@ -184,8 +238,8 @@ export function AlbaranesTab({
 
         {!loadingAlbaranes && albaranesOperativosFiltrados.length === 0 && (
           <div className="py-12 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[20px] bg-slate-50 text-xl text-slate-400">
-              🧾
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[20px] bg-slate-50 text-slate-400">
+              <ReceiptIcon className="h-6 w-6" />
             </div>
             <div className="mt-4 text-sm font-semibold text-slate-800">
               No hay albaranes para este filtro
@@ -204,8 +258,8 @@ export function AlbaranesTab({
                 onClick={() => onOpenDetalle(alb)}
                 className="flex w-full items-center gap-3 rounded-[18px] border border-slate-200 bg-white px-3 py-3 text-left shadow-[0_6px_14px_rgba(15,23,42,0.035)] last:border-b-slate-200 sm:rounded-none sm:border-0 sm:border-b sm:bg-transparent sm:px-0 sm:py-3.5 sm:shadow-none sm:last:border-b-0"
               >
-                <div className="flex h-11 w-11 items-center justify-center rounded-[14px] border border-blue-200 bg-blue-50 text-base sm:h-10 sm:w-10 sm:rounded-[16px] sm:text-base">
-                  {alb.foto_url ? '📷' : '🧾'}
+                <div className="flex h-11 w-11 items-center justify-center rounded-[14px] border border-blue-200 bg-blue-50 text-blue-600 sm:h-10 sm:w-10 sm:rounded-[16px]">
+                  {alb.foto_url ? <ImageIcon className="h-5 w-5" /> : <ReceiptIcon className="h-5 w-5" />}
                 </div>
 
                 <div className="min-w-0 flex-1">

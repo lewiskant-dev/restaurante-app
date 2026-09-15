@@ -3,6 +3,7 @@ export type TpvImportReadinessInput = {
   applying: boolean
   salesCount: number
   pendingMappingsCount: number
+  ignoredArticlesCount?: number
   importApplied: boolean
 }
 
@@ -55,6 +56,15 @@ export function getTpvImportReadiness(input: TpvImportReadinessInput): TpvImport
       canApply: false,
       label: 'Mapeos pendientes',
       detail: `Resuelve ${input.pendingMappingsCount} artículo(s) antes de descontar stock.`,
+      tone: 'amber',
+    }
+  }
+
+  if ((input.ignoredArticlesCount ?? 0) > 0) {
+    return {
+      canApply: true,
+      label: 'Lista con ignorados',
+      detail: `${input.ignoredArticlesCount} artículo(s) se omitirán y no descontarán stock al aplicar.`,
       tone: 'amber',
     }
   }

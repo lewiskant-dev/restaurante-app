@@ -136,6 +136,7 @@ export function TpvTab({
     applying: tpvAplicando,
     salesCount: tpvVentasCrudas.length,
     pendingMappingsCount: tpvPendientesMapeo.length,
+    ignoredArticlesCount: tpvIgnoredSummary.articulos.length,
     importApplied: Boolean(tpvImportacionId),
   })
   const importReadinessClass =

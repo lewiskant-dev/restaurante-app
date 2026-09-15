@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  getAlbaranClosingReadiness,
   getAlbaranOcrReadiness,
   getAlbaranSaveReadiness,
 } from '../src/lib/albaranFormReadiness.ts'
@@ -83,6 +84,67 @@ test('getAlbaranSaveReadiness permite guardar albaranes completos', () => {
       label: 'Listo para guardar',
       detail: 'El albarán tiene proveedor, fecha y líneas completas para actualizar stock y costes.',
       tone: 'emerald',
+    }
+  )
+})
+
+test('getAlbaranClosingReadiness resume cierre manual u OCR cuadrado', () => {
+  assert.deepEqual(
+    getAlbaranClosingReadiness({
+      totalDocumento: 24.2,
+      totalDetectado: null,
+      pendingOcrLines: 0,
+    }),
+    {
+      label: 'Cierre manual',
+      detail: 'El albarán se cerrará con el total calculado desde sus líneas.',
+      tone: 'slate',
+      totalDelta: null,
+      hasTotalMismatch: false,
+      hasPendingOcr: false,
+    }
+  )
+
+  assert.deepEqual(
+    getAlbaranClosingReadiness({
+      totalDocumento: 24.2,
+      totalDetectado: 24.2,
+      pendingOcrLines: 0,
+    }),
+    {
+      label: 'Cierre cuadrado',
+      detail: 'El total de líneas coincide con el total detectado en el documento.',
+      tone: 'emerald',
+      totalDelta: 0,
+      hasTotalMismatch: false,
+      hasPendingOcr: false,
+    }
+  )
+})
+
+test('getAlbaranClosingReadiness prioriza OCR pendiente y detecta descuadres', () => {
+  assert.equal(
+    getAlbaranClosingReadiness({
+      totalDocumento: 20,
+      totalDetectado: 25,
+      pendingOcrLines: 2,
+    }).label,
+    'OCR pendiente'
+  )
+
+  assert.deepEqual(
+    getAlbaranClosingReadiness({
+      totalDocumento: 20,
+      totalDetectado: 25,
+      pendingOcrLines: 0,
+    }),
+    {
+      label: 'Total por revisar',
+      detail: 'El total de líneas no coincide con el total detectado en el documento.',
+      tone: 'amber',
+      totalDelta: -5,
+      hasTotalMismatch: true,
+      hasPendingOcr: false,
     }
   )
 })
