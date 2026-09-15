@@ -325,20 +325,36 @@ export default function StockTab({
           <div className="flex flex-wrap items-center gap-2 text-[12px]">
             <span className="font-semibold text-slate-900">Salud stock</span>
             <span className="text-slate-400">·</span>
-            <span className="font-semibold text-red-600">{productHealth.highSeverity} alta</span>
-            <span className="font-semibold text-amber-600">{productHealth.mediumSeverity} media</span>
-            <span className="rounded-full bg-red-50 px-2 py-1 font-semibold text-red-700">
-              Stock negativo {productHealth.negativeStock}
-            </span>
-            <span className="rounded-full bg-amber-50 px-2 py-1 font-semibold text-amber-700">
-              Sin unidad {productHealth.missingUnit}
-            </span>
-            <span className="rounded-full bg-amber-50 px-2 py-1 font-semibold text-amber-700">
-              Sin coste {productHealth.missingCost}
-            </span>
-            <span className="rounded-full bg-amber-50 px-2 py-1 font-semibold text-amber-700">
-              Bajo mínimo {productHealth.underMinimum}
-            </span>
+            {productHealth.highSeverity > 0 ? (
+              <span className="font-semibold text-red-600">
+                {productHealth.highSeverity} alta
+              </span>
+            ) : null}
+            {productHealth.mediumSeverity > 0 ? (
+              <span className="font-semibold text-slate-600">
+                {productHealth.mediumSeverity} aviso(s)
+              </span>
+            ) : null}
+            {productHealth.negativeStock > 0 ? (
+              <span className="rounded-full bg-red-50 px-2 py-1 font-semibold text-red-700">
+                Stock negativo {productHealth.negativeStock}
+              </span>
+            ) : null}
+            {productHealth.missingUnit > 0 ? (
+              <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700">
+                Sin unidad {productHealth.missingUnit}
+              </span>
+            ) : null}
+            {productHealth.missingCost > 0 ? (
+              <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700">
+                Sin coste {productHealth.missingCost}
+              </span>
+            ) : null}
+            {productHealth.underMinimum > 0 ? (
+              <span className="rounded-full bg-amber-50 px-2 py-1 font-semibold text-amber-700">
+                Bajo mínimo {productHealth.underMinimum}
+              </span>
+            ) : null}
           </div>
         </div>
       ) : null}

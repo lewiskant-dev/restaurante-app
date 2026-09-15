@@ -2231,44 +2231,49 @@ export default function HomePage() {
               </div>
 
               <div className="mt-3 divide-y divide-slate-100">
-                {operationalPriorities.slice(0, 6).map((item) => (
-                  <div
-                    key={item.id}
-                    className="grid gap-2 py-2.5 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-3"
-                  >
-                    <div className="flex min-w-0 items-start gap-3">
-                      <div
-                        className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
-                          item.highSeverity > 0 ? 'bg-red-500' : 'bg-amber-400'
-                        }`}
-                      />
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <div className="text-[13px] font-semibold text-slate-900">{item.title}</div>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                              item.highSeverity > 0
-                                ? 'bg-red-50 text-red-700'
-                                : 'bg-amber-50 text-amber-700'
-                            }`}
-                          >
-                            {item.count}
-                          </span>
+                {operationalPriorities.slice(0, 6).map((item) => {
+                  const hasHighSeverity = item.highSeverity > 0
+                  const priorityTone = hasHighSeverity
+                    ? 'bg-red-500'
+                    : 'bg-slate-300'
+                  const countTone = hasHighSeverity
+                    ? 'border-red-100 bg-red-50 text-red-700'
+                    : 'border-slate-200 bg-slate-50 text-slate-600'
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="grid gap-2 py-2.5 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-3"
+                    >
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${priorityTone}`} />
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div className="text-[13px] font-semibold text-slate-900">{item.title}</div>
+                            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${countTone}`}>
+                              {item.count}
+                            </span>
+                            {hasHighSeverity ? (
+                              <span className="text-[11px] font-semibold text-red-600">
+                                {item.highSeverity} alta prioridad
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="mt-0.5 truncate text-[12px] text-slate-500">{item.detail}</div>
                         </div>
-                        <div className="mt-0.5 truncate text-[12px] text-slate-500">{item.detail}</div>
+                      </div>
+                      <div className="flex justify-start sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={() => openPriorityTab(item.id, item.tab)}
+                          className="rounded-[12px] border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
+                        >
+                          Revisar
+                        </button>
                       </div>
                     </div>
-                    <div className="flex justify-start sm:justify-end">
-                      <button
-                        type="button"
-                        onClick={() => openPriorityTab(item.id, item.tab)}
-                        className="rounded-[12px] border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
-                      >
-                        Revisar
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           ) : null}
