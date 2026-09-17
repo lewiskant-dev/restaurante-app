@@ -7,6 +7,7 @@ import {
 } from '@/lib/guestExperience'
 import { getGuestMenuPublicationReadiness } from '@/lib/guestMenuFormReadiness'
 import type { GuestMenuItem, GuestMenuKind, GuestWineProfile } from '@/lib/guestExperience'
+import type { ConfirmActionRequest } from '@/components/ui/ConfirmActionDialog'
 import { supabase } from '@/lib/supabase'
 import type { Producto } from '@/types'
 import type { PermissionKey, Receta } from '@/features/home/types'
@@ -27,6 +28,7 @@ type UseGuestMenuManagementOptions = {
   onToast: (message: string) => void
   requirePermission: (permission: PermissionKey, message: string) => boolean
   registrarAuditoria: (params: AuditoriaParams) => Promise<void>
+  confirmAction?: (request: ConfirmActionRequest) => Promise<boolean>
 }
 
 export type GuestMenuAdminItem = GuestMenuItem & {
@@ -128,6 +130,7 @@ export function useGuestMenuManagement({
   onToast,
   requirePermission,
   registrarAuditoria,
+  confirmAction,
 }: UseGuestMenuManagementOptions) {
   const [guestMenuItems, setGuestMenuItems] = useState<GuestMenuAdminItem[]>([])
   const [loadingGuestMenu, setLoadingGuestMenu] = useState(false)
@@ -465,6 +468,22 @@ export function useGuestMenuManagement({
     if (!requirePermission('guest_menu_manage', 'No tienes permisos para gestionar la carta')) {
       return
     }
+
+    if (item.publicado) {
+      onError('Retira primero la ficha de la carta publica antes de eliminarla')
+      return
+    }
+
+    const confirmed = confirmAction
+      ? await confirmAction({
+          title: 'Eliminar ficha de carta',
+          description: `Se eliminara definitivamente "${item.nombre}". Esta accion no se puede deshacer.`,
+          confirmLabel: 'Eliminar ficha',
+          tone: 'danger',
+        })
+      : false
+
+    if (!confirmed) return
 
     const { error } = await supabase
       .from('guest_menu_items')

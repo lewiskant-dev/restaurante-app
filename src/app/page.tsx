@@ -739,6 +739,7 @@ export default function HomePage() {
     onToast: setToast,
     requirePermission,
     registrarAuditoria,
+    confirmAction: requestConfirmAction,
   })
 
   const {
