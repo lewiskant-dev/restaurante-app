@@ -1309,12 +1309,30 @@ export function useRecetaTpvManagement({
     setTpvImportacionId(null)
     setTpvMapeosSeleccionados({})
     setTpvArticulosIgnorados([])
-    setTpvImportDateState(todayLocalInputDate())
+    if (!file) setTpvImportDateState(todayLocalInputDate())
   }
 
-  function resetTpvImportDraft() {
+  async function resetTpvImportDraft() {
+    const hasDraft = Boolean(tpvFile) || tpvVentasCrudas.length > 0 || Boolean(tpvImportacionId)
+    if (!hasDraft) return false
+
+    const importApplied = Boolean(tpvImportacionId)
+    const confirmed = confirmAction
+      ? await confirmAction({
+          title: importApplied ? 'Limpiar importacion TPV' : 'Descartar borrador TPV',
+          description: importApplied
+            ? 'La importacion ya aplicada seguira en el historico. Solo se limpiara el area de trabajo para cargar otro CSV.'
+            : `Se perderan el CSV cargado, ${tpvVentasCrudas.length} linea(s) revisada(s), los mapeos temporales y las omisiones de este borrador.`,
+          confirmLabel: importApplied ? 'Limpiar area' : 'Descartar borrador',
+          tone: importApplied ? 'primary' : 'danger',
+        })
+      : false
+
+    if (!confirmed) return false
+
     selectTpvFile(null)
-    onToast('Importación TPV descartada')
+    onToast(importApplied ? 'Area de importacion preparada' : 'Borrador TPV descartado')
+    return true
   }
 
   function setTpvImportDate(value: string) {

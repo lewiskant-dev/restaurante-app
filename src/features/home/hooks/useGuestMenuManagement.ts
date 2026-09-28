@@ -8,6 +8,7 @@ import {
 import { getGuestMenuPublicationReadiness } from '@/lib/guestMenuFormReadiness'
 import type { GuestMenuItem, GuestMenuKind, GuestWineProfile } from '@/lib/guestExperience'
 import type { ConfirmActionRequest } from '@/components/ui/ConfirmActionDialog'
+import { getOwnedPublicStoragePath } from '@/lib/storageObject'
 import { supabase } from '@/lib/supabase'
 import type { Producto } from '@/types'
 import type { PermissionKey, Receta } from '@/features/home/types'
@@ -330,6 +331,8 @@ export function useGuestMenuManagement({
       setGuestMenuSaving(true)
     onError('')
 
+    let uploadedImagePath: string | null = null
+
     try {
       let fotoUrl = guestMenuForm.foto_url.trim() || null
 
@@ -348,6 +351,7 @@ export function useGuestMenuManagement({
           throw new Error(`No se pudo subir la foto de carta: ${uploadError.message}`)
         }
 
+        uploadedImagePath = fileName
         const { data: publicUrlData } = supabase.storage.from('guest-menu').getPublicUrl(fileName)
         fotoUrl = publicUrlData.publicUrl
       }
@@ -394,6 +398,18 @@ export function useGuestMenuManagement({
       const { data, error } = await query.select('id').single()
       if (error) throw error
 
+      if (uploadedImagePath && guestMenuEditId) {
+        const previousItem = guestMenuItems.find((item) => item.id === guestMenuEditId)
+        const previousImagePath = getOwnedPublicStoragePath(
+          previousItem?.foto_url,
+          'guest-menu',
+          restaurantId
+        )
+        if (previousImagePath && previousImagePath !== uploadedImagePath) {
+          await supabase.storage.from('guest-menu').remove([previousImagePath])
+        }
+      }
+
       await registrarAuditoria({
         entidad: 'producto',
         entidad_id: data.id,
@@ -406,6 +422,9 @@ export function useGuestMenuManagement({
       resetGuestMenuForm()
       await loadGuestMenuItems()
     } catch (error) {
+      if (uploadedImagePath) {
+        await supabase.storage.from('guest-menu').remove([uploadedImagePath])
+      }
       onError(error instanceof Error ? error.message : 'No se pudo guardar la ficha de carta')
     } finally {
       setGuestMenuSaving(false)
@@ -447,6 +466,11 @@ export function useGuestMenuManagement({
     if (error) {
       onError(error.message)
       return
+    }
+
+    const imagePath = getOwnedPublicStoragePath(item.foto_url, 'guest-menu', item.restaurant_id)
+    if (imagePath) {
+      await supabase.storage.from('guest-menu').remove([imagePath])
     }
 
     await registrarAuditoria({

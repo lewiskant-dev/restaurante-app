@@ -40,7 +40,7 @@ type TpvTabProps = {
   tpvAnalitica: TpvAnaliticaResumen
   recetas: Receta[]
   onFileChange: (file: File | null) => void
-  onResetImport: () => void
+  onResetImport: () => boolean | Promise<boolean>
   onImportDateChange: (value: string) => void
   onVentaCrudaChange: (index: number, patch: Partial<VentaTPVCruda>) => void
   onVentaCrudaRemove: (index: number) => void
@@ -152,10 +152,10 @@ export function TpvTab({
         ? 'border-amber-100 bg-amber-50 text-amber-800'
         : 'border-slate-200 bg-slate-50 text-slate-600'
 
-  function handleResetImport() {
+  async function handleResetImport() {
     if (!tpvImportDraftActive) return
-    if (fileInputRef.current) fileInputRef.current.value = ''
-    onResetImport()
+    const discarded = await onResetImport()
+    if (discarded && fileInputRef.current) fileInputRef.current.value = ''
   }
 
   return (
@@ -496,8 +496,10 @@ export function TpvTab({
               ref={fileInputRef}
               type="file"
               accept=".csv,text/csv"
+              disabled={tpvImportDraftActive}
+              title={tpvImportDraftActive ? 'Descarta el borrador actual antes de cargar otro CSV' : undefined}
               onChange={(e) => onFileChange(e.target.files?.[0] || null)}
-              className={`w-full px-3.5 py-2.5 text-[12px] text-slate-700 sm:text-[13px] ${fieldShell}`}
+              className={`w-full px-3.5 py-2.5 text-[12px] text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 sm:text-[13px] ${fieldShell}`}
             />
           </div>
 
@@ -508,8 +510,10 @@ export function TpvTab({
             <input
               type="date"
               value={tpvImportDate}
+              disabled={tpvImportDraftActive}
+              title={tpvImportDraftActive ? 'Descarta el borrador actual para cambiar la fecha' : undefined}
               onChange={(e) => onImportDateChange(e.target.value)}
-              className={`w-full px-3.5 py-2.5 text-[12px] text-slate-700 sm:text-[13px] ${fieldShell}`}
+              className={`w-full px-3.5 py-2.5 text-[12px] text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 sm:text-[13px] ${fieldShell}`}
             />
           </div>
 
@@ -547,7 +551,7 @@ export function TpvTab({
 
           <button
             type="button"
-            onClick={handleResetImport}
+            onClick={() => void handleResetImport()}
             disabled={tpvImportando || tpvAplicando || !tpvImportDraftActive}
             className={`w-full px-4 py-2.5 text-[12px] text-slate-600 disabled:cursor-not-allowed disabled:opacity-60 sm:text-[13px] ${ghostButton}`}
           >
