@@ -67,6 +67,12 @@ import {
   todayLocalInputDate,
 } from '@/features/home/utils'
 import { supabase } from '@/lib/supabase'
+import { isLatestArchiveStateEvent } from '@/lib/auditUndo'
+import { getAtomicProductError, parseAtomicProductResult } from '@/lib/productTransaction'
+import {
+  getAtomicProveedorError,
+  parseAtomicProveedorResult,
+} from '@/lib/proveedorTransaction'
 import {
   buildInventoryClosingReadiness,
   buildInventoryClosingComparison,
@@ -819,7 +825,7 @@ export default function HomePage() {
     removeAlbaranLinea,
     updateAlbaranLinea,
     guardarAlbaran,
-    resetAlbaranForm,
+    cancelAlbaranForm,
     analizarAlbaranConOCR,
     handleProductoSeleccionadoOCR,
     getProductoNombre,
@@ -840,6 +846,7 @@ export default function HomePage() {
     loadMovimientos,
     loadMapeosProductos,
     promptAction: requestPromptAction,
+    confirmAction: requestConfirmAction,
   })
 
   const {
@@ -1084,7 +1091,13 @@ export default function HomePage() {
   }
 
   function puedeDeshacerAuditoria(item: Auditoria) {
-    return item.accion === 'archivar' && (item.entidad === 'producto' || item.entidad === 'proveedor')
+    if (!isLatestArchiveStateEvent(item, auditoria)) return false
+
+    if (item.entidad === 'producto') {
+      return productos.some((producto) => producto.id === item.entidad_id && producto.archivado)
+    }
+
+    return proveedores.some((proveedor) => proveedor.id === item.entidad_id && proveedor.archivado)
   }
 
   async function deshacerAccionAuditoria(item: Auditoria) {
@@ -1095,6 +1108,11 @@ export default function HomePage() {
 
     if (!item.entidad_id) {
       setError('La acción no tiene entidad asociada')
+      return
+    }
+
+    if (!activeRestaurantId) {
+      setError('Selecciona un restaurante activo para continuar')
       return
     }
 
@@ -1111,23 +1129,22 @@ export default function HomePage() {
 
     try {
       if (item.entidad === 'producto' && item.accion === 'archivar') {
-        let query = supabase
-          .from('productos')
-          .update({
-            activo: true,
-            archivado: false,
-          })
-          .eq('id', item.entidad_id)
-
-        if (activeRestaurantId) {
-          query = query.eq('restaurant_id', activeRestaurantId)
+        const producto = productos.find((candidate) => candidate.id === item.entidad_id)
+        if (!producto?.archivado) {
+          throw new Error('El producto ya no está archivado')
         }
 
-        const { error } = await query
+        const { data, error } = await supabase.rpc('cambiar_estado_producto_atomico', {
+          p_producto_id: item.entidad_id,
+          p_archivado: false,
+          p_restaurant_id: activeRestaurantId,
+        })
 
         if (error) {
-          throw new Error(error.message)
+          throw new Error(getAtomicProductError(error))
         }
+
+        const productoReactivado = parseAtomicProductResult(data)
 
         await registrarAuditoria({
           entidad: 'producto',
@@ -1135,13 +1152,7 @@ export default function HomePage() {
           accion: 'deshacer_archivar',
           detalle: 'Se deshizo el archivado del producto',
           payload_antes: item.payload_despues ?? null,
-          payload_despues: {
-            ...(typeof item.payload_despues === 'object' && item.payload_despues !== null
-              ? item.payload_despues
-              : {}),
-            activo: true,
-            archivado: false,
-          },
+          payload_despues: productoReactivado,
         })
 
         setToast('Producto reactivado')
@@ -1150,23 +1161,22 @@ export default function HomePage() {
       }
 
       if (item.entidad === 'proveedor' && item.accion === 'archivar') {
-        let query = supabase
-          .from('proveedores')
-          .update({
-            activo: true,
-            archivado: false,
-          })
-          .eq('id', item.entidad_id)
-
-        if (activeRestaurantId) {
-          query = query.eq('restaurant_id', activeRestaurantId)
+        const proveedor = proveedores.find((candidate) => candidate.id === item.entidad_id)
+        if (!proveedor?.archivado) {
+          throw new Error('El proveedor ya no está archivado')
         }
 
-        const { error } = await query
+        const { data, error } = await supabase.rpc('cambiar_estado_proveedor_atomico', {
+          p_proveedor_id: item.entidad_id,
+          p_archivado: false,
+          p_restaurant_id: activeRestaurantId,
+        })
 
         if (error) {
-          throw new Error(error.message)
+          throw new Error(getAtomicProveedorError(error))
         }
+
+        const proveedorReactivado = parseAtomicProveedorResult(data)
 
         await registrarAuditoria({
           entidad: 'proveedor',
@@ -1174,13 +1184,7 @@ export default function HomePage() {
           accion: 'deshacer_archivar',
           detalle: 'Se deshizo el archivado del proveedor',
           payload_antes: item.payload_despues ?? null,
-          payload_despues: {
-            ...(typeof item.payload_despues === 'object' && item.payload_despues !== null
-              ? item.payload_despues
-              : {}),
-            activo: true,
-            archivado: false,
-          },
+          payload_despues: proveedorReactivado,
         })
 
         setToast('Proveedor reactivado')
@@ -2351,7 +2355,7 @@ export default function HomePage() {
             onLineaFieldChange={updateAlbaranLinea}
             onRemoveLinea={removeAlbaranLinea}
             onGuardar={() => void guardarAlbaran()}
-            onCancelar={resetAlbaranForm}
+            onCancelar={() => void cancelAlbaranForm()}
             onOpenCrearProveedor={openCrearProveedor}
             getOCRStatusClasses={getOCRStatusClasses}
             getOCRStatusLabel={getOCRStatusLabel}

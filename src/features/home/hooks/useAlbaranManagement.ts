@@ -14,9 +14,12 @@ import {
   parseAtomicMapeoProductoResult,
 } from '@/lib/albaranTransaction'
 import { normalizeOCRAlbaranLinea, resolveOCRUnitPrice } from '@/lib/albaranOcr'
+import { hasAlbaranDraft } from '@/lib/albaranDraft'
+import { getOwnedPublicStoragePath } from '@/lib/storageObject'
 import { supabase } from '@/lib/supabase'
 import type { Albaran, AlbaranLinea, Producto, Proveedor } from '@/types'
 import type { PromptActionRequest } from '@/components/ui/PromptActionDialog'
+import type { ConfirmActionRequest } from '@/components/ui/ConfirmActionDialog'
 
 type AuditoriaParams = {
   entidad: string
@@ -41,6 +44,7 @@ type UseAlbaranManagementOptions = {
   loadMovimientos: () => Promise<void>
   loadMapeosProductos: () => Promise<void>
   promptAction?: (request: PromptActionRequest) => Promise<string | null>
+  confirmAction?: (request: ConfirmActionRequest) => Promise<boolean>
 }
 
 export function useAlbaranManagement({
@@ -57,6 +61,7 @@ export function useAlbaranManagement({
   loadMovimientos,
   loadMapeosProductos,
   promptAction,
+  confirmAction,
 }: UseAlbaranManagementOptions) {
   const [albaranes, setAlbaranes] = useState<Albaran[]>([])
   const [loadingAlbaranes, setLoadingAlbaranes] = useState(true)
@@ -72,6 +77,7 @@ export function useAlbaranManagement({
   const [albaranNotas, setAlbaranNotas] = useState('')
   const [albaranLineas, setAlbaranLineas] = useState<AlbaranLineaForm[]>([{ ...initialLinea }])
   const [albaranFoto, setAlbaranFoto] = useState<File | null>(null)
+  const [editingAlbaranFotoUrl, setEditingAlbaranFotoUrl] = useState('')
   const [albaranSaving, setAlbaranSaving] = useState(false)
   const [albaranOCRLoading, setAlbaranOCRLoading] = useState(false)
   const [albaranOCRResumen, setAlbaranOCRResumen] = useState('')
@@ -491,6 +497,7 @@ export function useAlbaranManagement({
     setAlbaranFecha(albaran.fecha || todayLocalInputDate())
     setAlbaranNotas(albaran.notas || '')
     setAlbaranFoto(null)
+    setEditingAlbaranFotoUrl(albaran.foto_url || '')
     setAlbaranLineas(
       lineas.length
         ? lineas.map((l) => ({
@@ -535,8 +542,40 @@ export function useAlbaranManagement({
     setAlbaranNotas('')
     setAlbaranLineas([{ ...initialLinea }])
     setAlbaranFoto(null)
+    setEditingAlbaranFotoUrl('')
     setAlbaranOCRResumen('')
     setAlbaranOCRTotalDetectado(null)
+  }
+
+  async function cancelAlbaranForm() {
+    const hasDraft = hasAlbaranDraft({
+      editingId: editingAlbaranId,
+      numero: albaranNumero,
+      proveedorId: albaranProveedorId,
+      notas: albaranNotas,
+      lineas: albaranLineas,
+      hasFile: Boolean(albaranFoto),
+      hasOcrResult: Boolean(albaranOCRResumen) || albaranOCRTotalDetectado !== null,
+    })
+
+    if (hasDraft) {
+      const confirmed = confirmAction
+        ? await confirmAction({
+            title: editingAlbaranId ? 'Salir de la edición' : 'Descartar albarán',
+            description: editingAlbaranId
+              ? 'Se perderán los cambios no guardados de este albarán.'
+              : 'Se perderán la cabecera, las líneas y la revisión OCR de este borrador.',
+            confirmLabel: editingAlbaranId ? 'Salir sin guardar' : 'Descartar borrador',
+            tone: 'danger',
+          })
+        : false
+
+      if (!confirmed) return false
+    }
+
+    resetAlbaranForm()
+    onTabChange('albaranes')
+    return true
   }
 
   async function guardarAlbaran() {
@@ -602,6 +641,8 @@ export function useAlbaranManagement({
 
     setAlbaranSaving(true)
 
+    let uploadedImagePath: string | null = null
+
     try {
       let fotoUrl = ''
       const restaurantId = requireActiveRestaurant()
@@ -620,6 +661,7 @@ export function useAlbaranManagement({
           throw new Error(`Error subiendo imagen: ${uploadError.message}`)
         }
 
+        uploadedImagePath = fileName
         const { data: publicUrlData } = supabase.storage.from('albaranes').getPublicUrl(fileName)
         fotoUrl = publicUrlData.publicUrl
       }
@@ -647,6 +689,17 @@ export function useAlbaranManagement({
       const resultado = parseAtomicAlbaranResult(data)
       const albaranId = resultado.albaran_id
       const total = resultado.total
+
+      if (uploadedImagePath && editingAlbaranFotoUrl) {
+        const previousImagePath = getOwnedPublicStoragePath(
+          editingAlbaranFotoUrl,
+          'albaranes',
+          restaurantId
+        )
+        if (previousImagePath && previousImagePath !== uploadedImagePath) {
+          await supabase.storage.from('albaranes').remove([previousImagePath])
+        }
+      }
 
       await registrarAuditoria({
         entidad: 'albaran',
@@ -678,6 +731,9 @@ export function useAlbaranManagement({
       await Promise.all([loadProductos(), loadMovimientos(), loadAlbaranes()])
       onTabChange('albaranes')
     } catch (err) {
+      if (uploadedImagePath) {
+        await supabase.storage.from('albaranes').remove([uploadedImagePath])
+      }
       onError(getAtomicAlbaranError(err))
     } finally {
       setAlbaranSaving(false)
@@ -749,6 +805,7 @@ export function useAlbaranManagement({
     updateAlbaranLinea,
     guardarAlbaran,
     resetAlbaranForm,
+    cancelAlbaranForm,
     analizarAlbaranConOCR,
     handleProductoSeleccionadoOCR,
     getProductoNombre,
