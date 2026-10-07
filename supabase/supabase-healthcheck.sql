@@ -56,7 +56,7 @@ with expected_functions(function_name, expected_count, expected_args) as (
     (
       'guardar_receta_atomica',
       1,
-      'p_receta_id uuid, p_nombre text, p_nombre_tpv text, p_raciones numeric, p_precio_venta numeric, p_activo boolean, p_lineas jsonb, p_restaurant_id uuid'
+      'p_receta_id uuid, p_nombre text, p_nombre_tpv text, p_tipo_carta text, p_raciones numeric, p_precio_venta numeric, p_activo boolean, p_lineas jsonb, p_restaurant_id uuid'
     ),
     (
       'cambiar_estado_receta_atomica',
@@ -95,6 +95,10 @@ function_inventory as (
     count(*)::integer as found_count,
     string_agg(pg_get_function_identity_arguments(p.oid), ' | ' order by p.oid) as found_args,
     bool_or(pg_get_functiondef(p.oid) ilike '%coalesce(nullif(trim(coalesce(p_categoria_consumo%') as stock_category_safe,
+    bool_or(
+      pg_get_functiondef(p.oid) ilike '%solo se pueden anular desde historial los movimientos manuales%'
+      and pg_get_functiondef(p.oid) ilike '%anulado = true%'
+    ) as stock_cancel_safe,
     bool_or(pg_get_functiondef(p.oid) ilike '%delete from public.usuario_restaurantes%') as user_restaurants_sync_safe,
     bool_or(pg_get_functiondef(p.oid) ilike '%ya existe un restaurante con ese nombre%') as restaurant_atomic_safe,
     bool_or(pg_get_functiondef(p.oid) ilike '%where x.producto_id = p.id%') as albaran_lock_safe,
@@ -118,6 +122,7 @@ function_inventory as (
   where p.pronamespace = 'public'::regnamespace
     and p.proname in (
       'registrar_movimiento_stock_atomico',
+      'anular_movimiento_stock_atomico',
       'sincronizar_usuario_restaurantes',
       'guardar_restaurante_atomico',
       'guardar_albaran_atomico',
@@ -144,6 +149,7 @@ select
     when i.found_count <> e.expected_count then 'REVISAR_DUPLICADA'
     when i.found_args <> e.expected_args then 'REVISAR_FIRMA'
     when e.function_name = 'registrar_movimiento_stock_atomico' and not coalesce(i.stock_category_safe, false) then 'REVISAR_VERSION_ANTIGUA'
+    when e.function_name = 'anular_movimiento_stock_atomico' and not coalesce(i.stock_cancel_safe, false) then 'REVISAR_VERSION_ANTIGUA'
     when e.function_name = 'sincronizar_usuario_restaurantes' and not coalesce(i.user_restaurants_sync_safe, false) then 'REVISAR_VERSION_ANTIGUA'
     when e.function_name = 'guardar_restaurante_atomico' and not coalesce(i.restaurant_atomic_safe, false) then 'REVISAR_VERSION_ANTIGUA'
     when e.function_name = 'guardar_albaran_atomico' and not coalesce(i.albaran_lock_safe, false) then 'REVISAR_VERSION_ANTIGUA'

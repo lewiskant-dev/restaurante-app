@@ -155,6 +155,7 @@ join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public'
   and p.proname in (
     'registrar_movimiento_stock_atomico',
+    'anular_movimiento_stock_atomico',
     'sincronizar_usuario_restaurantes',
     'guardar_restaurante_atomico',
     'guardar_albaran_atomico',

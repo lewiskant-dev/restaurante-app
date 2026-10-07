@@ -19,7 +19,7 @@ npm run verify
   - `MASTER_LOGIN`
   - `NEXT_PUBLIC_ALLOW_SELF_REGISTER=false`
 
-Variables recomendadas si se usa IA:
+Variable opcional para enriquecimiento con IA:
 
 - `OPENAI_API_KEY` en Vercel para perfiles de vino y recomendaciones de carta.
 - `OPENAI_API_KEY` como secret de Supabase Edge Functions si se usa OCR de albaranes.
@@ -134,24 +134,27 @@ Función obligatoria esperada:
 - `guardar_proveedor_atomico`
 - `cambiar_estado_proveedor_atomico`
 
-Tablas recomendadas para finanzas:
+Tablas obligatorias para informes y cierres financieros:
 
 - `productos_precios_historial`
 - `inventario_cierres`
 - `inventario_cierre_lineas`
 
-Piezas recomendadas para adjuntos e imágenes:
+Piezas obligatorias para adjuntos e imágenes:
 
 - columnas `productos.imagen_url` y `productos.icono`
 - bucket `albaranes`
 
-Piezas recomendadas para Nexo Guest Experience:
+Piezas obligatorias para Nexo Guest Experience:
 
 - tabla `guest_menu_items`
 - bucket `guest-menu`
-- variable `OPENAI_API_KEY` en Vercel para generar perfiles IA de vino
 - policies públicas de lectura para restaurantes activos y elementos publicados
 - ruta pública `/g/<slug-restaurante>` para QR sin login
+
+Pieza opcional para Nexo Guest Experience:
+
+- variable `OPENAI_API_KEY` en Vercel para generar perfiles IA de vino
 
 Piezas obligatorias para importaciones TPV seguras:
 

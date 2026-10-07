@@ -43,9 +43,35 @@ npm run lint
 npm run typecheck
 npm run build
 npm run verify
+npm run audit:prod
+npm run test:e2e
 ```
 
-`npm run verify` ejecuta `lint + test + typecheck + build`.
+`npm run verify` ejecuta `lint + test + typecheck + build`. `npm run audit:prod`
+falla ante vulnerabilidades altas o criticas en las dependencias desplegadas.
+
+GitHub Actions ejecuta `verify` y los flujos E2E publicos en cada pull request y
+en cada push a `main`. Si una prueba de navegador falla, el workflow conserva el
+informe de Playwright durante siete dias.
+
+## Pruebas end-to-end
+
+La suite Playwright levanta Nexo localmente y ejecuta smoke tests públicos en escritorio y móvil:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+La prueba autenticada solo se activa con una cuenta dedicada del entorno de pruebas:
+
+```bash
+E2E_USER_EMAIL=usuario-e2e@example.com \
+E2E_USER_PASSWORD=contrasena-de-pruebas \
+npm run test:e2e
+```
+
+No uses credenciales de producción. La suite base no modifica datos; los futuros recorridos con escritura deben ejecutarse únicamente contra un proyecto Supabase exclusivo para E2E.
 
 ## Puesta en marcha de Supabase
 
@@ -109,9 +135,9 @@ El diagnóstico autenticado devuelve:
 
 - `ok`: `true` cuando no falta nada obligatorio.
 - `missing`: variables o tablas obligatorias pendientes.
-- `warnings`: piezas opcionales/recomendadas pendientes, por ejemplo tablas financieras.
+- `warnings`: capacidades opcionales pendientes, actualmente el enriquecimiento con IA.
 
-Si aparecen tablas o RPC en `missing`, revisa el orden de SQL de Supabase. Si aparecen tablas financieras en `warnings`, aplica `restaurant-finance-setup.sql` cuando vayas a usar informes avanzados. Antes de operar con productos, proveedores, stock, albaranes, recetas o TPV real aplica también `product-reliability-setup.sql`, `proveedor-reliability-setup.sql`, `stock-reliability-setup.sql`, `albaran-reliability-setup.sql`, `receta-reliability-setup.sql` y `tpv-reliability-setup.sql`. Si aparecen columnas o buckets en `warnings`, revisa `product-media-setup.sql` y las policies de storage.
+Si aparecen tablas, columnas, buckets o RPC en `missing`, revisa el orden de SQL de Supabase antes de operar. Nexo considera obligatorios los bloques de finanzas, imágenes, Carta pública, productos, proveedores, stock, albaranes, recetas y TPV porque todos forman parte de la aplicación activa. `OPENAI_API_KEY` permanece opcional: sin ella la app funciona, pero no genera perfiles IA de vino.
 
 Si quieres validar el aislamiento por restaurante en Supabase:
 
