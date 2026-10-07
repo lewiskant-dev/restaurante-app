@@ -133,7 +133,6 @@ export default function HomePage() {
   const [providerHealthFilter, setProviderHealthFilter] = useState<ProviderHealthFilter>('todos')
   const [albaranHealthFilter, setAlbaranHealthFilter] = useState<AlbaranHealthFilter>('todos')
   const [priorityNavigationKey, setPriorityNavigationKey] = useState(0)
-  const [proveedorRecienCreadoId, setProveedorRecienCreadoId] = useState('')
   const [confirmActionRequest, setConfirmActionRequest] =
     useState<ConfirmActionRequest | null>(null)
   const [promptActionRequest, setPromptActionRequest] = useState<PromptActionRequest | null>(null)
@@ -323,7 +322,6 @@ export default function HomePage() {
   const resetClientDomainState = useEffectEvent(() => {
     setAuditoria([])
     setMapeosProductos([])
-    setProveedorRecienCreadoId('')
     resetStockState()
     resetProveedorState()
     resetAlbaranState()
@@ -494,15 +492,21 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    if (!authReady || !currentUserId) {
-      setAccessibleRestaurants([])
-      setRestaurantsHydratedForKey(null)
-      return
-    }
+    const timer = window.setTimeout(() => {
+      if (!authReady || !currentUserId) {
+        setAccessibleRestaurants([])
+        setRestaurantsHydratedForKey(null)
+        return
+      }
 
-    if (restaurantsHydratedForKey === restaurantAccessKey && accessibleRestaurants.length > 0) return
+      if (restaurantsHydratedForKey === restaurantAccessKey && accessibleRestaurants.length > 0) {
+        return
+      }
 
-    void loadAccessibleRestaurantsEvent(accessibleRestaurants.length > 0)
+      void loadAccessibleRestaurantsEvent(accessibleRestaurants.length > 0)
+    }, 0)
+
+    return () => window.clearTimeout(timer)
   }, [
     authReady,
     currentUserId,
@@ -557,7 +561,8 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!authReady || !currentUserId) return
-    void loadInitialDataEvent()
+    const timer = window.setTimeout(() => void loadInitialDataEvent(), 0)
+    return () => window.clearTimeout(timer)
   }, [authReady, currentUserId, activeRestaurantId, currentUserRole])
 
   const syncManagedUsersForActiveTab = useEffectEvent(async () => {
@@ -583,19 +588,20 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!loadingAccessibleRestaurants && !switchingRestaurant) {
-      setShowRestaurantAccessLoader(false)
-      return
+      const timer = window.setTimeout(() => setShowRestaurantAccessLoader(false), 0)
+      return () => window.clearTimeout(timer)
     }
 
-    const timer = setTimeout(() => setShowRestaurantAccessLoader(true), 450)
-    return () => clearTimeout(timer)
+    const timer = window.setTimeout(() => setShowRestaurantAccessLoader(true), 450)
+    return () => window.clearTimeout(timer)
   }, [loadingAccessibleRestaurants, switchingRestaurant])
 
   useEffect(() => {
     const nextMainTab = getMainTabForTab(tab)
-    if (nextMainTab !== mainTab) {
-      setMainTab(nextMainTab)
-    }
+    if (nextMainTab === mainTab) return
+
+    const timer = window.setTimeout(() => setMainTab(nextMainTab), 0)
+    return () => window.clearTimeout(timer)
   }, [tab, mainTab])
 
   useEffect(() => {
@@ -627,8 +633,11 @@ export default function HomePage() {
       )
 
       if (fallbackTab && fallbackTab !== tab) {
-        setToast(`Tu usuario no puede acceder a ${getTabLabel(tab)}. Te he llevado a ${getTabLabel(fallbackTab)}.`)
-        setTab(fallbackTab)
+        const timer = window.setTimeout(() => {
+          setToast(`Tu usuario no puede acceder a ${getTabLabel(tab)}. Te he llevado a ${getTabLabel(fallbackTab)}.`)
+          setTab(fallbackTab)
+        }, 0)
+        return () => window.clearTimeout(timer)
       }
     }
   }, [tab, currentUser, authReady, tabHydrated])
@@ -776,7 +785,7 @@ export default function HomePage() {
     requirePermission,
     registrarAuditoria,
     onProveedorCreated: (proveedor) => {
-      setProveedorRecienCreadoId(proveedor.id)
+      setAlbaranProveedorId(proveedor.id)
     },
     confirmAction: requestConfirmAction,
   })
@@ -917,12 +926,6 @@ export default function HomePage() {
     loadMovimientos,
     loadAuditoria,
   })
-
-  useEffect(() => {
-    if (!proveedorRecienCreadoId) return
-    setAlbaranProveedorId(proveedorRecienCreadoId)
-    setProveedorRecienCreadoId('')
-  }, [proveedorRecienCreadoId, setAlbaranProveedorId])
 
   async function loadAuditoria() {
     setLoadingAuditoria(true)

@@ -249,7 +249,8 @@ export function InformesTab({
   }, [accessToken])
 
   useEffect(() => {
-    void loadDeploymentHealth()
+    const timer = window.setTimeout(() => void loadDeploymentHealth(), 0)
+    return () => window.clearTimeout(timer)
   }, [loadDeploymentHealth])
 
   const healthSummary = buildFinancialHealthSummary({

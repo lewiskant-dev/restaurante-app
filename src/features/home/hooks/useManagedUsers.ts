@@ -105,21 +105,25 @@ export function useManagedUsers({
     !newManagedUserRestaurantsError
 
   useEffect(() => {
-    if (currentUserRole === 'master') {
-      if (
-        currentRestaurantId &&
-        managedRestaurants.some((restaurant) => restaurant.id === currentRestaurantId) &&
-        newManagedUserRestaurantIds.length === 0
-      ) {
-        setNewManagedUserRestaurantIds([currentRestaurantId])
-        setNewManagedUserCurrentRestaurantId(currentRestaurantId)
+    const timer = window.setTimeout(() => {
+      if (currentUserRole === 'master') {
+        if (
+          currentRestaurantId &&
+          managedRestaurants.some((restaurant) => restaurant.id === currentRestaurantId) &&
+          newManagedUserRestaurantIds.length === 0
+        ) {
+          setNewManagedUserRestaurantIds([currentRestaurantId])
+          setNewManagedUserCurrentRestaurantId(currentRestaurantId)
+        }
+        return
       }
-      return
-    }
 
-    const nextRestaurantId = currentRestaurantId ?? ''
-    setNewManagedUserRestaurantIds(nextRestaurantId ? [nextRestaurantId] : [])
-    setNewManagedUserCurrentRestaurantId(nextRestaurantId)
+      const nextRestaurantId = currentRestaurantId ?? ''
+      setNewManagedUserRestaurantIds(nextRestaurantId ? [nextRestaurantId] : [])
+      setNewManagedUserCurrentRestaurantId(nextRestaurantId)
+    }, 0)
+
+    return () => window.clearTimeout(timer)
   }, [currentUserRole, currentRestaurantId, managedRestaurants, newManagedUserRestaurantIds.length])
 
   function sortManagedUsers(list: ManagedUser[]) {
