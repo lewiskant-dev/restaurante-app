@@ -41,6 +41,30 @@ La ruta devuelve:
 - `warnings` con fases recomendadas pendientes, como tablas financieras
 - `totals.by_scope` separado por `env`, `database`, `rpc` y `storage`
 
+## Monitor de disponibilidad
+
+El workflow de GitHub Actions `Production smoke` consulta `/api/ping` cada 15 minutos,
+reintenta fallos transitorios y valida el contrato JSON. Para activarlo:
+
+1. Abrir `Settings > Secrets and variables > Actions > Variables` en GitHub.
+2. Crear `PRODUCTION_URL` con el origen del despliegue, sin ruta final.
+3. Ejecutar `Production smoke` manualmente desde `Actions` para validar la configuracion.
+4. Activar las notificaciones de workflows fallidos para los responsables operativos.
+
+Si el monitor falla:
+
+1. comprobar el estado del proveedor de hosting y el ultimo despliegue
+2. abrir `${PRODUCTION_URL}/api/ping` desde otra red
+3. revisar logs y revertir el ultimo despliegue si el error comenzo tras publicarlo
+4. cuando `/api/ping` vuelva a responder, revisar el diagnostico autenticado en `Informes`
+
+Las respuestas de API incluyen `x-request-id`. Si un usuario informa de un fallo, pide
+ese identificador y buscalo en los logs del hosting bajo el campo `request_id`; cada
+entrada estructurada incluye tambien `method` y `path`, sin datos personales.
+
+Este smoke test verifica disponibilidad web. No sustituye el diagnostico autenticado ni
+la monitorizacion propia de Supabase.
+
 Si aparece algo roto, usa primero el bloque `Plan de acción`: resume si toca revisar Vercel, ejecutar un SQL concreto, crear un bucket o comprobar una firma RPC.
 
 Si `warnings` contiene `table:productos_precios_historial`, `table:inventario_cierres` o `table:inventario_cierre_lineas`, aplica [restaurant-finance-setup.sql](/Users/jorge/restaurante-app/supabase/restaurant-finance-setup.sql:1) antes de usar informes financieros avanzados.

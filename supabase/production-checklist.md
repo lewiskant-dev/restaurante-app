@@ -76,6 +76,10 @@ https://tu-dominio.com/api/ping
 
 Debe devolver `200`; esta ruta no consulta Supabase ni expone configuración interna.
 
+La respuesta web debe incluir también `Content-Security-Policy`, `X-Content-Type-Options`,
+`X-Frame-Options`, `Referrer-Policy` y `Permissions-Policy`. En producción debe incluir
+`Strict-Transport-Security`.
+
 Después, entrar como `administrador` o `master` y abrir `Informes > Diagnóstico del despliegue`. La ruta interna autenticada es:
 
 ```text
@@ -229,6 +233,10 @@ select public.crear_cierre_inventario(current_date, 'Prueba de cierre', '<restau
 - Si hay lentitud con datos reales, aplicar o revisar `performance-indexes.sql`.
 
 ## 8. Operación recurrente
+
+Configurar en GitHub la variable de repositorio `PRODUCTION_URL` y confirmar que el
+workflow `Production smoke` termina correctamente. GitHub debe notificar sus fallos a
+al menos una persona responsable de la operacion.
 
 Cada vez que añadas una fase sensible:
 

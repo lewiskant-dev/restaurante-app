@@ -129,7 +129,16 @@ La respuesta publica no consulta Supabase ni expone secretos. Devuelve:
 - `status`: `ok`.
 - `service`: `nexo`.
 
+El workflow `Production smoke` repite esta comprobacion cada 15 minutos. Para activarlo,
+crea la variable de repositorio `PRODUCTION_URL` en GitHub (`Settings > Secrets and
+variables > Actions > Variables`) con el origen publico, por ejemplo
+`https://nexo.example.com`. Tambien puede ejecutarse manualmente desde `Actions`.
+
 Para comprobar configuración crítica, tablas, columnas, buckets y RPCs, entra como `administrador` o `master` y abre `Informes > Diagnóstico del despliegue`. La ruta interna es `/api/health`, requiere token de sesión y no debe usarse como monitor público.
+
+Todas las respuestas `/api` incluyen `x-request-id`. Ante una incidencia, conserva ese
+identificador para localizar la petición correspondiente en los logs del hosting. Nexo
+registra únicamente método, ruta e identificador, sin query strings ni datos personales.
 
 El diagnóstico autenticado devuelve:
 

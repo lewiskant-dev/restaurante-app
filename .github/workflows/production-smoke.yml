@@ -1,0 +1,48 @@
+name: Production smoke
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-smoke
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    name: Check public availability
+    if: ${{ vars.PRODUCTION_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+    steps:
+      - name: Request production ping
+        run: |
+          base_url="${PRODUCTION_URL%/}"
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 3 \
+            --retry-all-errors \
+            --retry-delay 5 \
+            --max-time 15 \
+            "${base_url}/api/ping" \
+            --output ping.json
+
+      - name: Validate response contract
+        run: |
+          node -e "
+            const fs = require('node:fs');
+            const payload = JSON.parse(fs.readFileSync('ping.json', 'utf8'));
+            if (payload.ok !== true || payload.status !== 'ok' || payload.service !== 'nexo') {
+              console.error('Unexpected production ping response:', payload);
+              process.exit(1);
+            }
+            console.log('Nexo production ping is healthy:', payload.checked_at);
+          "
