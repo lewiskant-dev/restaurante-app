@@ -32,7 +32,7 @@ export function getCredentials(prefix: string): E2ECredentials | null {
 export async function login(page: Page, credentials: E2ECredentials, path = '/') {
   await page.goto(path)
   await page.getByLabel('Email o usuario master').fill(credentials.login)
-  await page.getByLabel('Contraseña').fill(credentials.password)
+  await page.getByLabel('Contraseña', { exact: true }).fill(credentials.password)
   await page.getByRole('button', { name: 'Entrar al panel' }).click()
 
   await expect(page.getByRole('heading', { name: 'Stock actual' })).toBeVisible({

@@ -35,7 +35,7 @@ test('muestra un acceso privado utilizable', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible()
   await expect(page.getByLabel('Email o usuario master')).toBeVisible()
-  await expect(page.getByLabel('Contraseña')).toBeVisible()
+  await expect(page.getByLabel('Contraseña', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Entrar al panel' })).toBeEnabled()
 
   const horizontalOverflow = await page.evaluate(
