@@ -1,0 +1,80 @@
+name: Authenticated E2E
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: authenticated-e2e
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Roles and restaurant isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: e2e
+    env:
+      E2E_BASE_URL: ${{ vars.E2E_BASE_URL }}
+      E2E_ENVIRONMENT_CONFIRMATION: ${{ vars.E2E_ENVIRONMENT_CONFIRMATION }}
+      E2E_EMPLEADO_EMAIL: ${{ secrets.E2E_EMPLEADO_EMAIL }}
+      E2E_EMPLEADO_PASSWORD: ${{ secrets.E2E_EMPLEADO_PASSWORD }}
+      E2E_ENCARGADO_EMAIL: ${{ secrets.E2E_ENCARGADO_EMAIL }}
+      E2E_ENCARGADO_PASSWORD: ${{ secrets.E2E_ENCARGADO_PASSWORD }}
+      E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+      E2E_MASTER_LOGIN: ${{ secrets.E2E_MASTER_LOGIN }}
+      E2E_MASTER_PASSWORD: ${{ secrets.E2E_MASTER_PASSWORD }}
+      E2E_RESTAURANT_A_EMAIL: ${{ secrets.E2E_RESTAURANT_A_EMAIL }}
+      E2E_RESTAURANT_A_PASSWORD: ${{ secrets.E2E_RESTAURANT_A_PASSWORD }}
+      E2E_RESTAURANT_A_MARKER: ${{ vars.E2E_RESTAURANT_A_MARKER }}
+      E2E_RESTAURANT_B_EMAIL: ${{ secrets.E2E_RESTAURANT_B_EMAIL }}
+      E2E_RESTAURANT_B_PASSWORD: ${{ secrets.E2E_RESTAURANT_B_PASSWORD }}
+      E2E_RESTAURANT_B_MARKER: ${{ vars.E2E_RESTAURANT_B_MARKER }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Validate E2E environment
+        run: |
+          test "$E2E_ENVIRONMENT_CONFIRMATION" = "dedicated-e2e"
+          test -n "$E2E_BASE_URL"
+          test -n "$E2E_EMPLEADO_EMAIL"
+          test -n "$E2E_EMPLEADO_PASSWORD"
+          test -n "$E2E_ENCARGADO_EMAIL"
+          test -n "$E2E_ENCARGADO_PASSWORD"
+          test -n "$E2E_ADMIN_EMAIL"
+          test -n "$E2E_ADMIN_PASSWORD"
+          test -n "$E2E_MASTER_LOGIN"
+          test -n "$E2E_MASTER_PASSWORD"
+          test -n "$E2E_RESTAURANT_A_EMAIL"
+          test -n "$E2E_RESTAURANT_A_PASSWORD"
+          test -n "$E2E_RESTAURANT_A_MARKER"
+          test -n "$E2E_RESTAURANT_B_EMAIL"
+          test -n "$E2E_RESTAURANT_B_PASSWORD"
+          test -n "$E2E_RESTAURANT_B_MARKER"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run authenticated E2E tests
+        run: npx playwright test --project=chromium authenticated.spec.ts roles.spec.ts isolation.spec.ts
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: authenticated-playwright-report
+          path: playwright-report/
+          retention-days: 7

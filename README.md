@@ -63,15 +63,32 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-La prueba autenticada solo se activa con una cuenta dedicada del entorno de pruebas:
+La prueba autenticada basica se activa con una cuenta administradora dedicada:
 
 ```bash
-E2E_USER_EMAIL=usuario-e2e@example.com \
-E2E_USER_PASSWORD=contrasena-de-pruebas \
+E2E_ADMIN_EMAIL=admin-e2e@example.com \
+E2E_ADMIN_PASSWORD=contrasena-de-pruebas \
 npm run test:e2e
 ```
 
-No uses credenciales de producción. La suite base no modifica datos; los futuros recorridos con escritura deben ejecutarse únicamente contra un proyecto Supabase exclusivo para E2E.
+La suite incluye una matriz opcional para `empleado`, `encargado`, `administrador` y
+`master`. Usa los prefijos `E2E_EMPLEADO_*`, `E2E_ENCARGADO_*`, `E2E_ADMIN_*` y
+`E2E_MASTER_*`, con sufijos `EMAIL` o `LOGIN` y `PASSWORD`.
+
+El aislamiento se verifica con dos cuentas limitadas a restaurantes distintos y un
+producto centinela exclusivo en cada uno:
+
+```text
+E2E_RESTAURANT_A_EMAIL / E2E_RESTAURANT_A_PASSWORD / E2E_RESTAURANT_A_MARKER
+E2E_RESTAURANT_B_EMAIL / E2E_RESTAURANT_B_PASSWORD / E2E_RESTAURANT_B_MARKER
+```
+
+El workflow manual `Authenticated E2E` utiliza un Environment de GitHub llamado `e2e`.
+Configura allí `E2E_BASE_URL`, los secretos anteriores y la variable
+`E2E_ENVIRONMENT_CONFIRMATION=dedicated-e2e`. El workflow falla si falta alguna pieza.
+
+No uses credenciales de producción. Esta fase sólo lee datos; los recorridos con escritura
+se habilitarán únicamente contra un proyecto Supabase exclusivo para E2E.
 
 ## Puesta en marcha de Supabase
 

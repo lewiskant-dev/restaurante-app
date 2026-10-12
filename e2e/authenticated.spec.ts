@@ -1,20 +1,16 @@
-import { expect, test } from '@playwright/test'
+import { test } from '@playwright/test'
+import { getRoleCredentials, login } from './support/auth'
 
-const email = process.env.E2E_USER_EMAIL
-const password = process.env.E2E_USER_PASSWORD
+const credentials =
+  getRoleCredentials('administrador') ||
+  (process.env.E2E_USER_EMAIL && process.env.E2E_USER_PASSWORD
+    ? { login: process.env.E2E_USER_EMAIL, password: process.env.E2E_USER_PASSWORD }
+    : null)
 
 test.describe('sesion autenticada de pruebas', () => {
-  test.skip(!email || !password, 'Configura E2E_USER_EMAIL y E2E_USER_PASSWORD')
+  test.skip(!credentials, 'Configura E2E_ADMIN_EMAIL y E2E_ADMIN_PASSWORD')
 
   test('inicia sesion y carga el panel operativo', async ({ page }) => {
-    await page.goto('/')
-    await page.getByLabel('Email o usuario master').fill(email || '')
-    await page.getByLabel('Contraseña').fill(password || '')
-    await page.getByRole('button', { name: 'Entrar al panel' }).click()
-
-    await expect(page.getByRole('heading', { name: 'Stock actual' })).toBeVisible({
-      timeout: 20_000,
-    })
-    await expect(page.getByText('Acceso privado')).toHaveCount(0)
+    await login(page, credentials!)
   })
 })

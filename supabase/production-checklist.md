@@ -26,24 +26,27 @@ Variable opcional para enriquecimiento con IA:
 
 ## 2. Orden de SQL en Supabase
 
-Ejecutar en `SQL Editor`, en este orden:
+Ejecutar en `SQL Editor`, en este orden. En un proyecto nuevo, `base-schema.sql`
+es obligatorio; en una instalación existente es idempotente y se puede aplicar
+para comprobar que el esquema base está completo.
 
-1. [auth-setup.sql](/Users/jorge/restaurante-app/supabase/auth-setup.sql:1)
-2. [multi-restaurant-setup.sql](/Users/jorge/restaurante-app/supabase/multi-restaurant-setup.sql:1)
-3. [restaurant-finance-setup.sql](/Users/jorge/restaurante-app/supabase/restaurant-finance-setup.sql:1)
-4. [stock-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/stock-reliability-setup.sql:1)
-5. [albaran-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/albaran-reliability-setup.sql:1)
-6. [receta-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/receta-reliability-setup.sql:1)
-7. [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1)
-8. [product-media-setup.sql](/Users/jorge/restaurante-app/supabase/product-media-setup.sql:1)
-9. [product-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/product-reliability-setup.sql:1)
-10. [proveedor-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/proveedor-reliability-setup.sql:1)
-11. [guest-experience-setup.sql](/Users/jorge/restaurante-app/supabase/guest-experience-setup.sql:1)
-12. [performance-indexes.sql](/Users/jorge/restaurante-app/supabase/performance-indexes.sql:1)
+1. [base-schema.sql](/Users/jorge/restaurante-app/supabase/base-schema.sql:1)
+2. [auth-setup.sql](/Users/jorge/restaurante-app/supabase/auth-setup.sql:1)
+3. [multi-restaurant-setup.sql](/Users/jorge/restaurante-app/supabase/multi-restaurant-setup.sql:1)
+4. [restaurant-finance-setup.sql](/Users/jorge/restaurante-app/supabase/restaurant-finance-setup.sql:1)
+5. [stock-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/stock-reliability-setup.sql:1)
+6. [albaran-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/albaran-reliability-setup.sql:1)
+7. [receta-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/receta-reliability-setup.sql:1)
+8. [tpv-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/tpv-reliability-setup.sql:1)
+9. [product-media-setup.sql](/Users/jorge/restaurante-app/supabase/product-media-setup.sql:1)
+10. [product-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/product-reliability-setup.sql:1)
+11. [proveedor-reliability-setup.sql](/Users/jorge/restaurante-app/supabase/proveedor-reliability-setup.sql:1)
+12. [guest-experience-setup.sql](/Users/jorge/restaurante-app/supabase/guest-experience-setup.sql:1)
+13. [performance-indexes.sql](/Users/jorge/restaurante-app/supabase/performance-indexes.sql:1)
 
 Si quieres empezar con datos operativos vacíos, ejecutar después:
 
-13. [reset-operational-data.sql](/Users/jorge/restaurante-app/supabase/reset-operational-data.sql:1)
+14. [reset-operational-data.sql](/Users/jorge/restaurante-app/supabase/reset-operational-data.sql:1)
 
 No ejecutes `reset-operational-data.sql` si ya hay productos, proveedores, albaranes, TPV o recetas reales que quieras conservar.
 
@@ -187,6 +190,12 @@ Operaciones obligatorias para mantener stock e historial sincronizados:
 - función `crear_cierre_inventario` de `restaurant-finance-setup.sql`
 
 ## 5. Prueba funcional mínima
+
+La matriz de roles y el aislamiento automatizado se ejecutan desde el workflow manual
+`Authenticated E2E` contra el Environment protegido `e2e`. Este entorno debe usar un
+proyecto Supabase y cuentas sin datos reales; nunca reutilizar credenciales de producción.
+En el proyecto dedicado se puede ejecutar `e2e-fixtures.sql` después de crear las seis
+cuentas `e2e-*@nexo.test`; el script no forma parte de las migraciones de producción.
 
 Entrar como `Master` y comprobar:
 
