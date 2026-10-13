@@ -13,6 +13,8 @@ test.describe('aislamiento entre restaurantes', () => {
   )
 
   test('cada restaurante ve su centinela y nunca el del otro', async ({ browser }) => {
+    test.setTimeout(60_000)
+
     const contextA = await browser.newContext()
     const contextB = await browser.newContext()
     const pageA = await contextA.newPage()

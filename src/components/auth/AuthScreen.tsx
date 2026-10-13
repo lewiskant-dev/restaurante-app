@@ -170,9 +170,14 @@ export function AuthScreen({
                 />
               </label>
 
-              <label className="block">
+              <div className="block">
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <span className="block text-sm font-medium text-slate-700">Contraseña</span>
+                  <label
+                    htmlFor="auth-password"
+                    className="block text-sm font-medium text-slate-700"
+                  >
+                    Contraseña
+                  </label>
                   {authMode === 'login' ? (
                     <button
                       type="button"
@@ -185,6 +190,7 @@ export function AuthScreen({
                   ) : null}
                 </div>
                 <input
+                  id="auth-password"
                   type="password"
                   value={authPassword}
                   onChange={(e) => onPasswordChange(e.target.value)}
@@ -193,7 +199,7 @@ export function AuthScreen({
                   minLength={6}
                   className={`w-full px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 ${fieldShell}`}
                 />
-              </label>
+              </div>
 
               {error ? (
                 <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
