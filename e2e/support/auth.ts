@@ -30,13 +30,37 @@ export function getCredentials(prefix: string): E2ECredentials | null {
 }
 
 export async function login(page: Page, credentials: E2ECredentials, path = '/') {
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+
   await page.goto(path)
   await page.getByLabel('Email o usuario master').fill(credentials.login)
   await page.getByLabel('Contraseña', { exact: true }).fill(credentials.password)
   await page.getByRole('button', { name: 'Entrar al panel' }).click()
 
-  await expect(page.getByRole('heading', { name: 'Stock actual' })).toBeVisible({
-    timeout: 20_000,
+  const panel = page.getByRole('heading', { name: 'Stock actual' })
+  const accessError = page.getByRole('heading', {
+    name: /Cuenta sin restaurante asignado|Restaurantes temporalmente inactivos/,
   })
+  const loginError = page.locator('.bg-red-50').filter({ hasText: /.+/ }).first()
+
+  await expect
+    .poll(
+      async () => {
+        if (await panel.isVisible()) return 'panel'
+        if (await accessError.isVisible()) return `acceso: ${await accessError.textContent()}`
+        if (await loginError.isVisible()) return `login: ${await loginError.textContent()}`
+        return 'esperando'
+      },
+      {
+        message: `El acceso no llegó al panel. URL: ${page.url()}. Errores del navegador: ${browserErrors.join(' | ') || 'ninguno'}`,
+        timeout: 20_000,
+      }
+    )
+    .toBe('panel')
+
   await expect(page.getByText('Acceso privado')).toHaveCount(0)
 }
