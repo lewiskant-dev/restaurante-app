@@ -115,6 +115,8 @@ Documentacion de apoyo:
 - [supabase/multi-restaurant-setup.md](supabase/multi-restaurant-setup.md)
 - [supabase/operacion-nexo.md](supabase/operacion-nexo.md)
 - [supabase/production-checklist.md](supabase/production-checklist.md)
+- [supabase/backup-recovery.md](supabase/backup-recovery.md)
+- [supabase/backup-restore-validation.sql](supabase/backup-restore-validation.sql)
 - [supabase/multi-restaurant-validation.sql](supabase/multi-restaurant-validation.sql)
 - [supabase/security-validation.sql](supabase/security-validation.sql)
 - [supabase/supabase-healthcheck.sql](supabase/supabase-healthcheck.sql)

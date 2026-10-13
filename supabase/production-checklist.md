@@ -256,3 +256,20 @@ Cada vez que añadas una fase sensible:
 5. comprobar `/api/ping`
 6. comprobar `Informes > Diagnóstico del despliegue`
 7. revisar logs del hosting
+
+## 9. Backups y recuperacion
+
+- Confirmar semanalmente la fecha y retencion del ultimo backup de Supabase.
+- Mantener una exportacion logica cifrada externa y una copia separada de Storage.
+- Seguir [backup-recovery.md](/Users/jorge/restaurante-app/supabase/backup-recovery.md:1).
+- Ejecutar [backup-restore-validation.sql](/Users/jorge/restaurante-app/supabase/backup-restore-validation.sql:1) solo en el proyecto restaurado.
+- Completar un simulacro trimestral en un proyecto aislado y registrar RPO, RTO y evidencias.
+- Mientras rija el modo de cero coste, no activar PITR ni crear proyectos adicionales; usar Supabase local para el simulacro.
+
+## 10. Observabilidad sin coste adicional
+
+- Confirmar que `Production smoke` se ejecuta cada 15 minutos y que GitHub notifica sus fallos.
+- Buscar incidencias de servidor por `request_id` en los logs del hosting.
+- Buscar errores del navegador por `event=client_error` y correlacionarlos mediante `operation_id`.
+- Revisar fallos de OCR e importacion TPV junto con la hora, el restaurante y el identificador de operacion, sin registrar documentos ni credenciales.
+- Escalar a una plataforma externa solo si el volumen o la retencion de logs incluida deja de ser suficiente.

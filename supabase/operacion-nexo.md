@@ -4,6 +4,8 @@ Guía práctica para operar Nexo con varios restaurantes sin depender de memoria
 
 Para una puesta en producción completa, usa también [production-checklist.md](/Users/jorge/restaurante-app/supabase/production-checklist.md:1).
 
+Para copias, restauraciones y simulacros, usa [backup-recovery.md](/Users/jorge/restaurante-app/supabase/backup-recovery.md:1). Una copia de Postgres no incluye los archivos fisicos de Storage; `albaranes` y `guest-menu` deben copiarse y validarse por separado.
+
 ## Verificación local del proyecto
 
 Antes de subir cambios importantes:
@@ -61,6 +63,11 @@ Si el monitor falla:
 Las respuestas de API incluyen `x-request-id`. Si un usuario informa de un fallo, pide
 ese identificador y buscalo en los logs del hosting bajo el campo `request_id`; cada
 entrada estructurada incluye tambien `method` y `path`, sin datos personales.
+
+Los errores no controlados del navegador se envian a `/api/client-errors` y aparecen en los
+logs del hosting con `event=client_error`, `request_id` y `operation_id`. El payload limita
+longitudes, no incluye query strings y la ruta aplica rate limiting. Esta captura usa la
+infraestructura existente y no requiere un servicio externo de pago.
 
 Este smoke test verifica disponibilidad web. No sustituye el diagnostico autenticado ni
 la monitorizacion propia de Supabase.

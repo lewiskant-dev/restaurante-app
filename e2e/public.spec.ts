@@ -23,6 +23,24 @@ test('protege el diagnostico de despliegue sin sesion', async ({ request }) => {
   await expect(response.json()).resolves.toEqual({ error: 'Sesión no válida' })
 })
 
+test('recibe errores de cliente validos y rechaza payloads incompletos', async ({ request }) => {
+  const invalidResponse = await request.post('/api/client-errors', {
+    data: { message: 'Falta el resto del contrato' },
+  })
+  expect(invalidResponse.status()).toBe(400)
+
+  const validResponse = await request.post('/api/client-errors', {
+    data: {
+      kind: 'runtime_error',
+      message: 'Error sintetico del smoke test',
+      stack: null,
+      pathname: '/prueba-observabilidad',
+      operation_id: '123e4567-e89b-42d3-a456-426614174000',
+    },
+  })
+  expect(validResponse.status()).toBe(202)
+})
+
 test('muestra un acceso privado utilizable', async ({ page }) => {
   const response = await page.goto('/')
 

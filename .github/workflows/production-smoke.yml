@@ -33,6 +33,7 @@ jobs:
             --retry-delay 5 \
             --max-time 15 \
             "${base_url}/api/ping" \
+            --dump-header ping-headers.txt \
             --output ping.json
 
       - name: Validate response contract
@@ -40,9 +41,15 @@ jobs:
           node -e "
             const fs = require('node:fs');
             const payload = JSON.parse(fs.readFileSync('ping.json', 'utf8'));
+            const headers = fs.readFileSync('ping-headers.txt', 'utf8');
+            const requestId = headers.match(/^x-request-id:\s*([^\r\n]+)/im)?.[1]?.trim();
             if (payload.ok !== true || payload.status !== 'ok' || payload.service !== 'nexo') {
               console.error('Unexpected production ping response:', payload);
               process.exit(1);
             }
-            console.log('Nexo production ping is healthy:', payload.checked_at);
+            if (!requestId || !/^[0-9a-f-]{36}$/i.test(requestId)) {
+              console.error('Production ping did not return a valid x-request-id');
+              process.exit(1);
+            }
+            console.log('Nexo production ping is healthy:', payload.checked_at, requestId);
           "
