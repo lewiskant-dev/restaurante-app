@@ -24,9 +24,9 @@ test.describe('aislamiento entre restaurantes', () => {
       await login(pageA, restaurantA!)
       await login(pageB, restaurantB!)
 
-      await expect(pageA.getByText(markerA!, { exact: true })).toBeVisible()
+      await expect(pageA.getByText(markerA!, { exact: true }).first()).toBeVisible()
       await expect(pageA.getByText(markerB!, { exact: true })).toHaveCount(0)
-      await expect(pageB.getByText(markerB!, { exact: true })).toBeVisible()
+      await expect(pageB.getByText(markerB!, { exact: true }).first()).toBeVisible()
       await expect(pageB.getByText(markerA!, { exact: true })).toHaveCount(0)
     } finally {
       await contextA.close()

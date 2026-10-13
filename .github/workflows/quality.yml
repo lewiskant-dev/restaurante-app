@@ -37,8 +37,17 @@ jobs:
       - name: Audit production dependencies
         run: npm run audit:prod
 
-      - name: Verify application
-        run: npm run verify
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: Build
+        run: npx next build --webpack
 
   e2e:
     name: Public browser flows
