@@ -20,6 +20,8 @@ import {
 import { getAtomicProductError, parseAtomicProductResult } from '@/lib/productTransaction'
 import { getAtomicStockMovementError, parseAtomicStockMovementResult } from '@/lib/stockMovement'
 import { normalizeSearchText } from '@/lib/userInputPolicy'
+import { hasFormDraft } from '@/lib/formDraft'
+import { getOperationFailureMessage } from '@/lib/networkResilience'
 import type { Producto } from '@/types'
 import type { ConfirmActionRequest } from '@/components/ui/ConfirmActionDialog'
 
@@ -71,6 +73,8 @@ export function useStockManagement({
   const [productoSaving, setProductoSaving] = useState(false)
   const [productoEditId, setProductoEditId] = useState<string | null>(null)
   const [productoForm, setProductoForm] = useState<NuevoProductoForm>(initialProductoForm)
+  const [productoFormBaseline, setProductoFormBaseline] =
+    useState<NuevoProductoForm>(initialProductoForm)
   const [productoHistorialPrecios, setProductoHistorialPrecios] = useState<ProductoPrecioHistorial[]>(
     []
   )
@@ -257,19 +261,40 @@ export function useStockManagement({
   function openNuevoProducto() {
     setProductoEditId(null)
     setProductoForm(initialProductoForm)
+    setProductoFormBaseline(initialProductoForm)
     setProductoHistorialPrecios([])
     setProductoHistorialLoading(false)
     onError('')
     setProductoModalOpen(true)
   }
 
-  function closeProductoModal() {
+  function discardProductoModal() {
     setProductoModalOpen(false)
     setProductoEditId(null)
     setProductoForm(initialProductoForm)
     setProductoHistorialPrecios([])
     setProductoHistorialLoading(false)
     onError('')
+  }
+
+  const productoDraftActive =
+    productoModalOpen && hasFormDraft(productoForm, productoFormBaseline)
+
+  async function closeProductoModal() {
+    if (productoDraftActive) {
+      const confirmed = confirmAction
+        ? await confirmAction({
+            title: productoEditId ? 'Salir de la edición' : 'Descartar producto',
+            description: 'Se perderán los cambios no guardados del producto.',
+            confirmLabel: 'Salir sin guardar',
+            tone: 'danger',
+          })
+        : false
+      if (!confirmed) return false
+    }
+
+    discardProductoModal()
+    return true
   }
 
   async function loadProductoHistorial(productoId: string) {
@@ -316,7 +341,7 @@ export function useStockManagement({
     }
 
     setProductoEditId(producto.id)
-    setProductoForm({
+    const nextForm: NuevoProductoForm = {
       nombre: producto.nombre || '',
       categoria: normalizeProductCategory(producto.categoria || 'Otros'),
       unidad: producto.unidad || 'uds',
@@ -329,7 +354,9 @@ export function useStockManagement({
       referencia: producto.referencia || '',
       imagen_url: producto.imagen_url || '',
       icono: '',
-    })
+    }
+    setProductoForm(nextForm)
+    setProductoFormBaseline(nextForm)
     onError('')
     setProductoModalOpen(true)
     void loadProductoHistorial(producto.id)
@@ -470,10 +497,10 @@ export function useStockManagement({
         onToast('Producto creado')
       }
 
-      closeProductoModal()
+      discardProductoModal()
       await loadProductos()
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Error guardando producto')
+      onError(getOperationFailureMessage(err, 'Error guardando producto'))
     } finally {
       setProductoSaving(false)
     }
@@ -640,7 +667,9 @@ export function useStockManagement({
       onToast('Stock ajustado')
       await Promise.all([loadProductos(), loadMovimientos()])
     } catch (err) {
-      onError(getAtomicStockMovementError(err))
+      onError(
+        getOperationFailureMessage(getAtomicStockMovementError(err), 'No se pudo ajustar el stock')
+      )
     } finally {
       setAjusteSaving(false)
     }
@@ -742,7 +771,9 @@ export function useStockManagement({
       onToast('Consumo registrado')
       await Promise.all([loadProductos(), loadMovimientos()])
     } catch (err) {
-      onError(getAtomicStockMovementError(err))
+      onError(
+        getOperationFailureMessage(getAtomicStockMovementError(err), 'No se pudo registrar el consumo')
+      )
     } finally {
       setConsumoSaving(false)
     }
@@ -808,7 +839,9 @@ export function useStockManagement({
       onToast('Movimiento anulado y stock restaurado')
       await Promise.all([loadProductos(), loadMovimientos()])
     } catch (err) {
-      onError(getAtomicStockMovementError(err))
+      onError(
+        getOperationFailureMessage(getAtomicStockMovementError(err), 'No se pudo anular el movimiento')
+      )
     }
   }
 
@@ -822,7 +855,7 @@ export function useStockManagement({
     setUnidadFiltro('todas')
     setBusquedaMov('')
     setProductoEstado('activos')
-    closeProductoModal()
+    discardProductoModal()
     closeConsumoModal()
     closeAjusteModal()
   }
@@ -841,6 +874,7 @@ export function useStockManagement({
     productoSaving,
     productoEditId,
     productoForm,
+    productoDraftActive,
     productoHistorialPrecios,
     productoHistorialLoading,
     consumoModalOpen,

@@ -21,6 +21,7 @@ import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import { ghostButton, softPanel, surfaceCard } from '@/components/ui/primitives'
 import { todayLocalInputDate } from '@/features/home/utils'
 import { getDeploymentHealthAction } from '@/lib/deploymentHealth'
+import { retryRecoverable } from '@/lib/networkResilience'
 import type { Producto } from '@/types'
 
 function formatEuro(value: number) {
@@ -226,12 +227,16 @@ export function InformesTab({
     setDeploymentHealthError('')
 
     try {
-      const response = await fetch('/api/health', {
-        cache: 'no-store',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      })
+      const response = await retryRecoverable(
+        () =>
+          fetch('/api/health', {
+            cache: 'no-store',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }),
+        { attempts: 2 }
+      )
       const payload = (await response.json()) as DeploymentHealthSummary | { error?: string }
 
       if (!response.ok && !('status' in payload)) {

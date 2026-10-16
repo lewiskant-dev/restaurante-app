@@ -18,6 +18,8 @@ import {
   todayLocalInputDate,
 } from '@/features/home/utils'
 import { createTpvCsvFingerprint, parseTpvCsvText } from '@/lib/tpvCsv'
+import { hasFormDraft } from '@/lib/formDraft'
+import { getOperationFailureMessage } from '@/lib/networkResilience'
 import {
   getAtomicTpvImportError,
   parseAtomicTpvCreateResult,
@@ -132,6 +134,15 @@ export function useRecetaTpvManagement({
   const [recetaPrecioVenta, setRecetaPrecioVenta] = useState('')
   const [recetaActiva, setRecetaActiva] = useState(true)
   const [recetaLineas, setRecetaLineas] = useState<RecetaLineaForm[]>([{ ...initialRecetaLinea }])
+  const [recetaFormBaseline, setRecetaFormBaseline] = useState({
+    nombre: '',
+    nombreTpv: '',
+    tipoCarta: 'comida' as 'comida' | 'bebida',
+    raciones: '1',
+    precioVenta: '',
+    activa: true,
+    lineas: [{ ...initialRecetaLinea }],
+  })
   const [tpvFile, setTpvFile] = useState<File | null>(null)
   const [tpvImportando, setTpvImportando] = useState(false)
   const [tpvAplicando, setTpvAplicando] = useState(false)
@@ -953,10 +964,42 @@ export function useRecetaTpvManagement({
     setRecetaLineas([{ ...initialRecetaLinea }])
   }
 
-  function closeRecetaModal() {
+  function getRecetaFormSnapshot() {
+    return {
+      nombre: recetaNombre,
+      nombreTpv: recetaNombreTPV,
+      tipoCarta: recetaTipoCarta,
+      raciones: recetaRaciones,
+      precioVenta: recetaPrecioVenta,
+      activa: recetaActiva,
+      lineas: recetaLineas,
+    }
+  }
+
+  function discardRecetaModal() {
     setRecetaModalOpen(false)
     resetRecetaForm()
     onError('')
+  }
+
+  const recetaDraftActive =
+    recetaModalOpen && hasFormDraft(getRecetaFormSnapshot(), recetaFormBaseline)
+
+  async function closeRecetaModal() {
+    if (recetaDraftActive) {
+      const confirmed = confirmAction
+        ? await confirmAction({
+            title: recetaEditId ? 'Salir de la edición' : 'Descartar receta',
+            description: 'Se perderán los cambios no guardados de la receta y sus ingredientes.',
+            confirmLabel: 'Salir sin guardar',
+            tone: 'danger',
+          })
+        : false
+      if (!confirmed) return false
+    }
+
+    discardRecetaModal()
+    return true
   }
 
   function addRecetaLinea() {
@@ -979,6 +1022,15 @@ export function useRecetaTpvManagement({
     }
 
     resetRecetaForm()
+    setRecetaFormBaseline({
+      nombre: '',
+      nombreTpv: '',
+      tipoCarta: 'comida',
+      raciones: '1',
+      precioVenta: '',
+      activa: true,
+      lineas: [{ ...initialRecetaLinea }],
+    })
     onError('')
     setRecetaModalOpen(true)
   }
@@ -994,6 +1046,15 @@ export function useRecetaTpvManagement({
     setRecetaNombreTPV(nombre)
     setRecetaTipoCarta('bebida')
     setRecetaActiva(true)
+    setRecetaFormBaseline({
+      nombre,
+      nombreTpv: nombre,
+      tipoCarta: 'bebida',
+      raciones: '1',
+      precioVenta: '',
+      activa: true,
+      lineas: [{ ...initialRecetaLinea }],
+    })
     onError('')
     setRecetaModalOpen(true)
   }
@@ -1034,14 +1095,25 @@ export function useRecetaTpvManagement({
     }
 
     const lineas = (data ?? []) as RecetaLinea[]
-    setRecetaLineas(
-      lineas.length
-        ? lineas.map((linea) => ({
+    const nextLineas = lineas.length
+      ? lineas.map((linea) => ({
             producto_id: linea.producto_id || '',
             cantidad: String(linea.cantidad ?? ''),
           }))
-        : [{ ...initialRecetaLinea }]
-    )
+      : [{ ...initialRecetaLinea }]
+    setRecetaLineas(nextLineas)
+    setRecetaFormBaseline({
+      nombre: receta.nombre || '',
+      nombreTpv: receta.nombre_tpv || '',
+      tipoCarta: receta.tipo_carta === 'bebida' ? 'bebida' : 'comida',
+      raciones: String(receta.raciones || 1),
+      precioVenta:
+        receta.precio_venta === undefined || receta.precio_venta === null
+          ? ''
+          : String(receta.precio_venta),
+      activa: receta.activo !== false,
+      lineas: nextLineas,
+    })
 
     setRecetaModalOpen(true)
   }
@@ -1154,10 +1226,10 @@ export function useRecetaTpvManagement({
       })
 
       onToast(recetaEditId ? 'Receta actualizada' : 'Receta creada')
-      closeRecetaModal()
+      discardRecetaModal()
       await loadRecetas()
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'No se pudo guardar la receta')
+      onError(getOperationFailureMessage(err, 'No se pudo guardar la receta'))
     } finally {
       setRecetaSaving(false)
     }
@@ -1312,9 +1384,11 @@ export function useRecetaTpvManagement({
     if (!file) setTpvImportDateState(todayLocalInputDate())
   }
 
+  const tpvDraftActive =
+    Boolean(tpvFile) || tpvVentasCrudas.length > 0 || Boolean(tpvImportacionId)
+
   async function resetTpvImportDraft() {
-    const hasDraft = Boolean(tpvFile) || tpvVentasCrudas.length > 0 || Boolean(tpvImportacionId)
-    if (!hasDraft) return false
+    if (!tpvDraftActive) return false
 
     const importApplied = Boolean(tpvImportacionId)
     const confirmed = confirmAction
@@ -1500,7 +1574,7 @@ export function useRecetaTpvManagement({
         }`
       )
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'No se pudo aplicar la importación del TPV')
+      onError(getOperationFailureMessage(err, 'No se pudo aplicar la importación del TPV'))
     } finally {
       setTpvAplicando(false)
     }
@@ -1509,7 +1583,7 @@ export function useRecetaTpvManagement({
   function resetRecetaTpvState() {
     setRecetas([])
     setLoadingRecetas(true)
-    closeRecetaModal()
+    discardRecetaModal()
     setTpvFile(null)
     setTpvImportando(false)
     setTpvAplicando(false)
@@ -1536,12 +1610,14 @@ export function useRecetaTpvManagement({
     recetaPrecioVenta,
     recetaActiva,
     recetaLineas,
+    recetaDraftActive,
     tpvFile,
     tpvImportando,
     tpvAplicando,
     tpvVentasCrudas,
     tpvImportacionId,
     tpvImportDate,
+    tpvDraftActive,
     tpvImportaciones,
     tpvMapeosSeleccionados,
     tpvArticulosIgnorados,

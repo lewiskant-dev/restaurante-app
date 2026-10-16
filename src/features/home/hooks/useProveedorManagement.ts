@@ -6,6 +6,8 @@ import { getAtomicProveedorError, parseAtomicProveedorResult } from '@/lib/prove
 import { supabase } from '@/lib/supabase'
 import type { Proveedor } from '@/types'
 import type { ConfirmActionRequest } from '@/components/ui/ConfirmActionDialog'
+import { hasFormDraft } from '@/lib/formDraft'
+import { getOperationFailureMessage } from '@/lib/networkResilience'
 
 type AuditoriaParams = {
   entidad: string
@@ -45,6 +47,8 @@ export function useProveedorManagement({
   const [proveedorSaving, setProveedorSaving] = useState(false)
   const [proveedorEditId, setProveedorEditId] = useState<string | null>(null)
   const [proveedorForm, setProveedorForm] = useState<ProveedorForm>(initialProveedorForm)
+  const [proveedorFormBaseline, setProveedorFormBaseline] =
+    useState<ProveedorForm>(initialProveedorForm)
   const deferredBusquedaProveedor = useDeferredValue(busquedaProveedor)
 
   function requireActiveRestaurant() {
@@ -116,6 +120,7 @@ export function useProveedorManagement({
 
     setProveedorEditId(null)
     setProveedorForm(initialProveedorForm)
+    setProveedorFormBaseline(initialProveedorForm)
     onError('')
     setProveedorModalOpen(true)
   }
@@ -126,22 +131,44 @@ export function useProveedorManagement({
     }
 
     setProveedorEditId(proveedor.id)
-    setProveedorForm({
+    const nextForm: ProveedorForm = {
       nombre: proveedor.nombre || '',
       cif: proveedor.cif || '',
       telefono: proveedor.telefono || '',
       email: proveedor.email || '',
       notas: proveedor.notas || '',
-    })
+    }
+    setProveedorForm(nextForm)
+    setProveedorFormBaseline(nextForm)
     onError('')
     setProveedorModalOpen(true)
   }
 
-  function closeProveedorModal() {
+  function discardProveedorModal() {
     setProveedorModalOpen(false)
     setProveedorEditId(null)
     setProveedorForm(initialProveedorForm)
     onError('')
+  }
+
+  const proveedorDraftActive =
+    proveedorModalOpen && hasFormDraft(proveedorForm, proveedorFormBaseline)
+
+  async function closeProveedorModal() {
+    if (proveedorDraftActive) {
+      const confirmed = confirmAction
+        ? await confirmAction({
+            title: proveedorEditId ? 'Salir de la edición' : 'Descartar proveedor',
+            description: 'Se perderán los cambios no guardados del proveedor.',
+            confirmLabel: 'Salir sin guardar',
+            tone: 'danger',
+          })
+        : false
+      if (!confirmed) return false
+    }
+
+    discardProveedorModal()
+    return true
   }
 
   async function guardarProveedor() {
@@ -229,10 +256,10 @@ export function useProveedorManagement({
         onToast('Proveedor creado')
       }
 
-      closeProveedorModal()
+      discardProveedorModal()
       await loadProveedores()
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'No se pudo guardar el proveedor')
+      onError(getOperationFailureMessage(err, 'No se pudo guardar el proveedor'))
     } finally {
       setProveedorSaving(false)
     }
@@ -281,7 +308,7 @@ export function useProveedorManagement({
       onToast('Proveedor archivado')
       await loadProveedores()
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'No se pudo archivar el proveedor')
+      onError(getOperationFailureMessage(err, 'No se pudo archivar el proveedor'))
     }
   }
 
@@ -320,7 +347,7 @@ export function useProveedorManagement({
       onToast('Proveedor reactivado')
       await loadProveedores()
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'No se pudo reactivar el proveedor')
+      onError(getOperationFailureMessage(err, 'No se pudo reactivar el proveedor'))
     }
   }
 
@@ -329,7 +356,7 @@ export function useProveedorManagement({
     setLoadingProveedores(true)
     setBusquedaProveedor('')
     setProveedorEstado('activos')
-    closeProveedorModal()
+    discardProveedorModal()
   }
 
   return {
@@ -341,6 +368,7 @@ export function useProveedorManagement({
     proveedorSaving,
     proveedorEditId,
     proveedorForm,
+    proveedorDraftActive,
     proveedoresFiltrados,
     setBusquedaProveedor,
     setProveedorEstado,

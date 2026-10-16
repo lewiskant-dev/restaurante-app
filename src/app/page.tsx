@@ -97,6 +97,42 @@ import {
   getRestaurantScopeFromAppMetadata,
   getRestaurantScopeLabel,
 } from '@/lib/restaurantMetadata'
+import { isRecoverableNetworkError, retryRecoverable } from '@/lib/networkResilience'
+
+function NetworkStatusBanner({
+  isOnline,
+  isRecovering,
+  onRetry,
+}: {
+  isOnline: boolean
+  isRecovering: boolean
+  onRetry: () => void
+}) {
+  if (isOnline && !isRecovering) return null
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className={`fixed left-1/2 top-3 z-[140] flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 items-center gap-3 rounded-full border px-3.5 py-2 text-[12px] font-semibold shadow-lg backdrop-blur ${
+        isOnline
+          ? 'border-slate-200 bg-white/95 text-slate-700'
+          : 'border-amber-200 bg-amber-50/95 text-amber-900'
+      }`}
+    >
+      <span>{isOnline ? 'Actualizando datos...' : 'Sin conexión. Conservamos tus cambios.'}</span>
+      {!isOnline ? (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[11px] text-amber-900 transition hover:bg-amber-100"
+        >
+          Reintentar
+        </button>
+      ) : null}
+    </div>
+  )
+}
 
 export default function HomePage() {
   const allowSelfRegister = process.env.NEXT_PUBLIC_ALLOW_SELF_REGISTER === 'true'
@@ -128,6 +164,8 @@ export default function HomePage() {
   const [operarioActual, setOperarioActual] = useState('')
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
+  const [isOnline, setIsOnline] = useState(true)
+  const [networkRecovering, setNetworkRecovering] = useState(false)
   const [recipeHealthFilter, setRecipeHealthFilter] = useState<RecipeHealthFilter>('todas')
   const [guestMenuHealthFilter, setGuestMenuHealthFilter] = useState<GuestMenuHealthFilter>('todas')
   const [providerHealthFilter, setProviderHealthFilter] = useState<ProviderHealthFilter>('todos')
@@ -339,6 +377,14 @@ export default function HomePage() {
 
   async function activateRestaurant(restaurantId: string, silent = false) {
     if (!session?.access_token) return
+    if (restaurantId === activeRestaurantId) return
+
+    if (!silent) {
+      const confirmed = await confirmLeavingUnsavedWork(
+        'Se perderán los formularios y borradores pendientes al cambiar de restaurante.'
+      )
+      if (!confirmed) return
+    }
 
     setSwitchingRestaurant(true)
     setError('')
@@ -387,11 +433,15 @@ export default function HomePage() {
     }
 
     try {
-      const response = await fetch('/api/auth/restaurants', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      })
+      const response = await retryRecoverable(
+        () =>
+          fetch('/api/auth/restaurants', {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          }),
+        { attempts: 2 }
+      )
 
       const payload = (await response.json()) as {
         error?: string
@@ -559,6 +609,49 @@ export default function HomePage() {
     await Promise.all(tasks)
   })
 
+  const recoverNetworkDataEvent = useEffectEvent(async (notify = true) => {
+    if (!navigator.onLine || !currentUserId) return
+
+    setNetworkRecovering(true)
+    setError('')
+    try {
+      await Promise.all([loadAccessibleRestaurantsEvent(true), loadInitialDataEvent()])
+      if (notify) setToast('Conexión recuperada. Hemos solicitado los datos de nuevo')
+    } finally {
+      setNetworkRecovering(false)
+    }
+  })
+
+  function retryNetworkRecovery() {
+    if (!navigator.onLine) {
+      setToast('La conexión sigue sin estar disponible')
+      return
+    }
+
+    window.dispatchEvent(new Event('online'))
+  }
+
+  useEffect(() => {
+    const handleOffline = () => {
+      setIsOnline(false)
+      setNetworkRecovering(false)
+    }
+    const handleOnline = () => {
+      setIsOnline(true)
+      void recoverNetworkDataEvent()
+    }
+
+    const timer = window.setTimeout(() => setIsOnline(navigator.onLine), 0)
+    window.addEventListener('offline', handleOffline)
+    window.addEventListener('online', handleOnline)
+
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('online', handleOnline)
+    }
+  }, [])
+
   useEffect(() => {
     if (!authReady || !currentUserId) return
     const timer = window.setTimeout(() => void loadInitialDataEvent(), 0)
@@ -674,6 +767,7 @@ export default function HomePage() {
     productoSaving,
     productoEditId,
     productoForm,
+    productoDraftActive,
     productoHistorialPrecios,
     productoHistorialLoading,
     consumoModalOpen,
@@ -734,6 +828,7 @@ export default function HomePage() {
     guestMenuEditId,
     guestMenuForm,
     guestMenuImageFile,
+    guestMenuDraftActive,
     publicGuestMenuItems,
     loadGuestMenuItems,
     setGuestMenuFormField,
@@ -766,6 +861,7 @@ export default function HomePage() {
     proveedorSaving,
     proveedorEditId,
     proveedorForm,
+    proveedorDraftActive,
     proveedoresFiltrados,
     setBusquedaProveedor,
     setProveedorEstado,
@@ -809,6 +905,7 @@ export default function HomePage() {
     albaranOCRResumen,
     albaranOCRTotalDetectado,
     editingAlbaranId,
+    albaranDraftActive,
     detalleAlbaranOpen,
     detalleAlbaran,
     albaranesFiltrados,
@@ -871,12 +968,14 @@ export default function HomePage() {
     recetaPrecioVenta,
     recetaActiva,
     recetaLineas,
+    recetaDraftActive,
     tpvFile,
     tpvImportando,
     tpvAplicando,
     tpvVentasCrudas,
     tpvImportacionId,
     tpvImportDate,
+    tpvDraftActive,
     tpvImportaciones,
     tpvMapeosSeleccionados,
     tpvIgnoredSummary,
@@ -926,6 +1025,43 @@ export default function HomePage() {
     loadMovimientos,
     loadAuditoria,
   })
+
+  const hasUnsavedWork =
+    productoDraftActive ||
+    proveedorDraftActive ||
+    recetaDraftActive ||
+    guestMenuDraftActive ||
+    albaranDraftActive ||
+    tpvDraftActive
+
+  useEffect(() => {
+    if (!hasUnsavedWork) return
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedWork])
+
+  async function confirmLeavingUnsavedWork(description: string) {
+    if (!hasUnsavedWork) return true
+    return requestConfirmAction({
+      title: 'Cambios sin guardar',
+      description,
+      confirmLabel: 'Salir sin guardar',
+      tone: 'danger',
+    })
+  }
+
+  async function requestSignOutWithDraftProtection() {
+    const confirmed = await confirmLeavingUnsavedWork(
+      'Se perderán los cambios pendientes antes de cerrar la sesión.'
+    )
+    if (confirmed) await handleSignOut()
+  }
 
   async function loadAuditoria() {
     setLoadingAuditoria(true)
@@ -1994,42 +2130,62 @@ export default function HomePage() {
 
   if (!authReady || authMode === 'recovery' || !session || !currentUser) {
     return (
-      <AuthScreen
-        authReady={authReady}
-        allowSelfRegister={allowSelfRegister}
-        authMode={authMode}
-        authName={authName}
-        authEmail={authEmail}
-        authPassword={authPassword}
-        authSaving={authSaving}
-        recoveringPassword={recoveringPassword}
-        recoveryPasswordDraft={recoveryPasswordDraft}
-        recoveryConfirmDraft={recoveryConfirmDraft}
-        completingRecoveryPassword={completingRecoveryPassword}
-        recoveryPasswordError={recoveryPasswordError}
-        recoveryPasswordMatchError={recoveryPasswordMatchError}
-        error={error}
-        onModeChange={setAuthMode}
-        onNameChange={setAuthName}
-        onEmailChange={setAuthEmail}
-        onPasswordChange={setAuthPassword}
-        onRecoveryPasswordChange={setRecoveryPasswordDraft}
-        onRecoveryConfirmChange={setRecoveryConfirmDraft}
-        onSubmit={handleAuthSubmit}
-        onRecoverPassword={() => void sendPasswordRecovery()}
-        onCompleteRecovery={() => void completePasswordRecovery()}
-        onCancelRecovery={closeRecoveryMode}
-      />
+      <>
+        <NetworkStatusBanner
+          isOnline={isOnline}
+          isRecovering={networkRecovering}
+          onRetry={retryNetworkRecovery}
+        />
+        <AuthScreen
+          authReady={authReady}
+          allowSelfRegister={allowSelfRegister}
+          authMode={authMode}
+          authName={authName}
+          authEmail={authEmail}
+          authPassword={authPassword}
+          authSaving={authSaving}
+          recoveringPassword={recoveringPassword}
+          recoveryPasswordDraft={recoveryPasswordDraft}
+          recoveryConfirmDraft={recoveryConfirmDraft}
+          completingRecoveryPassword={completingRecoveryPassword}
+          recoveryPasswordError={recoveryPasswordError}
+          recoveryPasswordMatchError={recoveryPasswordMatchError}
+          error={error}
+          onModeChange={setAuthMode}
+          onNameChange={setAuthName}
+          onEmailChange={setAuthEmail}
+          onPasswordChange={setAuthPassword}
+          onRecoveryPasswordChange={setRecoveryPasswordDraft}
+          onRecoveryConfirmChange={setRecoveryConfirmDraft}
+          onSubmit={handleAuthSubmit}
+          onRecoverPassword={() => void sendPasswordRecovery()}
+          onCompleteRecovery={() => void completePasswordRecovery()}
+          onCancelRecovery={closeRecoveryMode}
+        />
+      </>
     )
   }
 
   if (isCheckingRestaurantAccess && !showRestaurantAccessFeedback) {
-    return <main className="min-h-screen bg-[#f6f8fc]" />
+    return (
+      <main className="min-h-screen bg-[#f6f8fc]">
+        <NetworkStatusBanner
+          isOnline={isOnline}
+          isRecovering={networkRecovering}
+          onRetry={retryNetworkRecovery}
+        />
+      </main>
+    )
   }
 
   if (isCheckingRestaurantAccess && showRestaurantAccessFeedback) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f6f8fc] px-4 text-slate-900">
+        <NetworkStatusBanner
+          isOnline={isOnline}
+          isRecovering={networkRecovering}
+          onRetry={retryNetworkRecovery}
+        />
         <div className="w-full max-w-lg rounded-[32px] border border-white/80 bg-white/95 p-8 text-center shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
           <div className="mx-auto mb-6 flex items-center justify-center gap-2.5">
             <NexoBrandMark className="h-8 w-8" />
@@ -2047,6 +2203,11 @@ export default function HomePage() {
   if (currentUserRole !== 'master' && !hasAnyAssignedRestaurant) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f6f8fc] px-4 text-slate-900">
+        <NetworkStatusBanner
+          isOnline={isOnline}
+          isRecovering={networkRecovering}
+          onRetry={retryNetworkRecovery}
+        />
         <div className="w-full max-w-xl rounded-[32px] border border-white/80 bg-white/95 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
           <h1 className="text-2xl font-semibold text-slate-950">Cuenta sin restaurante asignado</h1>
           <p className="mt-3 text-sm leading-7 text-slate-600">
@@ -2063,7 +2224,7 @@ export default function HomePage() {
             </button>
             <button
               type="button"
-              onClick={() => void handleSignOut()}
+              onClick={() => void requestSignOutWithDraftProtection()}
               className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700"
             >
               Cerrar sesión
@@ -2077,6 +2238,11 @@ export default function HomePage() {
   if (currentUserRole !== 'master' && hasAnyAssignedRestaurant && !hasAnyActiveRestaurant) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f6f8fc] px-4 text-slate-900">
+        <NetworkStatusBanner
+          isOnline={isOnline}
+          isRecovering={networkRecovering}
+          onRetry={retryNetworkRecovery}
+        />
         <div className="w-full max-w-xl rounded-[32px] border border-white/80 bg-white/95 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
           <h1 className="text-2xl font-semibold text-slate-950">Restaurantes temporalmente inactivos</h1>
           <p className="mt-3 text-sm leading-7 text-slate-600">
@@ -2093,7 +2259,7 @@ export default function HomePage() {
             </button>
             <button
               type="button"
-              onClick={() => void handleSignOut()}
+              onClick={() => void requestSignOutWithDraftProtection()}
               className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700"
             >
               Cerrar sesión
@@ -2106,6 +2272,11 @@ export default function HomePage() {
 
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-[#f6f8fc] pb-28 text-slate-900 lg:pb-16">
+      <NetworkStatusBanner
+        isOnline={isOnline}
+        isRecovering={networkRecovering}
+        onRetry={retryNetworkRecovery}
+      />
       {showRestaurantAccessFeedback && !isCheckingRestaurantAccess ? (
         <div className="fixed right-4 top-4 z-[130] rounded-full border border-slate-200 bg-white/95 px-3.5 py-2 text-[12px] font-semibold text-slate-600 shadow-[0_14px_30px_rgba(15,23,42,0.1)] backdrop-blur">
           {switchingRestaurant ? 'Cambiando restaurante...' : 'Actualizando acceso...'}
@@ -2141,7 +2312,7 @@ export default function HomePage() {
           visibleMainGroups={visibleMainGroups}
           visibleTabsByGroup={visibleTabsByGroup}
           onOpenProfile={openProfilePanel}
-          onSignOut={() => void handleSignOut()}
+          onSignOut={() => void requestSignOutWithDraftProtection()}
           onReviewStockAlert={reviewStockAlert}
           onRestaurantChange={(restaurantId) => void activateRestaurant(restaurantId)}
           onMainTabChange={(item) => {
@@ -2655,8 +2826,18 @@ export default function HomePage() {
         )}
 
         {error && (
-          <div className="mt-3 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">
-            {error}
+          <div className="mt-3 flex flex-col gap-3 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700 sm:flex-row sm:items-center sm:justify-between">
+            <span>{error}</span>
+            {isRecoverableNetworkError(error) ? (
+              <button
+                type="button"
+                onClick={retryNetworkRecovery}
+                disabled={!isOnline || networkRecovering}
+                className="shrink-0 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Reintentar carga
+              </button>
+            ) : null}
           </div>
         )}
       </section>

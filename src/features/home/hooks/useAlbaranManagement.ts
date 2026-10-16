@@ -15,6 +15,7 @@ import {
 } from '@/lib/albaranTransaction'
 import { normalizeOCRAlbaranLinea, resolveOCRUnitPrice } from '@/lib/albaranOcr'
 import { hasAlbaranDraft } from '@/lib/albaranDraft'
+import { getOperationFailureMessage } from '@/lib/networkResilience'
 import { getOwnedPublicStoragePath } from '@/lib/storageObject'
 import { supabase } from '@/lib/supabase'
 import type { Albaran, AlbaranLinea, Producto, Proveedor } from '@/types'
@@ -465,7 +466,7 @@ export function useAlbaranManagement({
 
       await Promise.all([loadProductos(), loadMovimientos(), loadAlbaranes()])
     } catch (err) {
-      onError(getAtomicAlbaranError(err))
+      onError(getOperationFailureMessage(getAtomicAlbaranError(err), 'No se pudo anular el albarán'))
     }
   }
 
@@ -547,18 +548,18 @@ export function useAlbaranManagement({
     setAlbaranOCRTotalDetectado(null)
   }
 
-  async function cancelAlbaranForm() {
-    const hasDraft = hasAlbaranDraft({
-      editingId: editingAlbaranId,
-      numero: albaranNumero,
-      proveedorId: albaranProveedorId,
-      notas: albaranNotas,
-      lineas: albaranLineas,
-      hasFile: Boolean(albaranFoto),
-      hasOcrResult: Boolean(albaranOCRResumen) || albaranOCRTotalDetectado !== null,
-    })
+  const albaranDraftActive = hasAlbaranDraft({
+    editingId: editingAlbaranId,
+    numero: albaranNumero,
+    proveedorId: albaranProveedorId,
+    notas: albaranNotas,
+    lineas: albaranLineas,
+    hasFile: Boolean(albaranFoto),
+    hasOcrResult: Boolean(albaranOCRResumen) || albaranOCRTotalDetectado !== null,
+  })
 
-    if (hasDraft) {
+  async function cancelAlbaranForm() {
+    if (albaranDraftActive) {
       const confirmed = confirmAction
         ? await confirmAction({
             title: editingAlbaranId ? 'Salir de la edición' : 'Descartar albarán',
@@ -734,7 +735,7 @@ export function useAlbaranManagement({
       if (uploadedImagePath) {
         await supabase.storage.from('albaranes').remove([uploadedImagePath])
       }
-      onError(getAtomicAlbaranError(err))
+      onError(getOperationFailureMessage(getAtomicAlbaranError(err), 'No se pudo guardar el albarán'))
     } finally {
       setAlbaranSaving(false)
     }
@@ -779,6 +780,7 @@ export function useAlbaranManagement({
     albaranOCRResumen,
     albaranOCRTotalDetectado,
     editingAlbaranId,
+    albaranDraftActive,
     detalleAlbaranOpen,
     detalleAlbaran,
     albaranesFiltrados,

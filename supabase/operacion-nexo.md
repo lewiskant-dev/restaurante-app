@@ -108,6 +108,12 @@ Después de aplicar SQL críticos, ejecuta [supabase-healthcheck.sql](/Users/jor
 
 La auditoría guarda eventos operativos con restaurante activo, actor y detalle del cambio. Los payloads de auditoría se sanean en la API: claves sensibles como contraseñas, tokens, cookies o API keys se redaccionan y los objetos grandes se recortan para mantener el histórico útil, ligero y seguro.
 
+## Trabajo no guardado
+
+Nexo avisa antes de descartar cambios en productos, proveedores, recetas, Carta, albaranes y
+TPV. La misma protección se aplica al cambiar de restaurante, cerrar sesión, recargar o cerrar
+la pestaña. Tras guardar correctamente, el formulario se limpia sin mostrar un aviso falso.
+
 ## Alta de un restaurante nuevo
 
 1. Entrar como `Master`.
@@ -216,3 +222,16 @@ No mezclar en la misma tanda:
 - migraciones multi-restaurante
 
 Es más seguro subirlos por bloques, validar y luego continuar.
+
+## Pérdidas de conexión
+
+Nexo muestra un aviso global cuando el navegador pierde la conexión. Al recuperarla, solicita de
+nuevo los datos operativos del restaurante activo; también se puede forzar el intento desde
+`Reintentar`.
+
+- Las lecturas recuperables se reintentan una vez con una espera breve.
+- Las escrituras no se repiten automáticamente para evitar altas, movimientos o cierres duplicados.
+- Si una escritura pierde la respuesta, Nexo avisa de que pudo haberse completado. Antes de repetirla,
+  hay que recuperar la conexión y comprobar el listado o historial correspondiente.
+- Los formularios con cambios sin guardar siguen protegidos durante una desconexión y al cambiar de
+  restaurante, cerrar sesión o abandonar la página.

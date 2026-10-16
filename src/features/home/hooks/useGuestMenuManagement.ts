@@ -12,6 +12,8 @@ import { getOwnedPublicStoragePath } from '@/lib/storageObject'
 import { supabase } from '@/lib/supabase'
 import type { Producto } from '@/types'
 import type { PermissionKey, Receta } from '@/features/home/types'
+import { hasFormDraft } from '@/lib/formDraft'
+import { getOperationFailureMessage } from '@/lib/networkResilience'
 
 type AuditoriaParams = {
   entidad: string
@@ -140,6 +142,8 @@ export function useGuestMenuManagement({
   const [guestMenuEditId, setGuestMenuEditId] = useState<string | null>(null)
   const [guestMenuForm, setGuestMenuForm] = useState<GuestMenuForm>(initialGuestMenuForm)
   const [guestMenuImageFile, setGuestMenuImageFile] = useState<File | null>(null)
+  const [guestMenuFormBaseline, setGuestMenuFormBaseline] =
+    useState<GuestMenuForm>(initialGuestMenuForm)
 
   const publicGuestMenuItems = useMemo(
     () => guestMenuItems.filter((item) => item.publicado).length,
@@ -209,10 +213,33 @@ export function useGuestMenuManagement({
     setLoadingGuestMenu(false)
   }
 
-  function resetGuestMenuForm() {
+  function discardGuestMenuForm() {
     setGuestMenuEditId(null)
     setGuestMenuForm(initialGuestMenuForm)
     setGuestMenuImageFile(null)
+    setGuestMenuFormBaseline(initialGuestMenuForm)
+  }
+
+  const guestMenuDraftActive =
+    hasFormDraft(guestMenuForm, guestMenuFormBaseline) || Boolean(guestMenuImageFile)
+
+  async function confirmGuestMenuDiscard() {
+    if (!guestMenuDraftActive) return true
+
+    return confirmAction
+      ? confirmAction({
+          title: guestMenuEditId ? 'Salir de la edición' : 'Descartar ficha de carta',
+          description: 'Se perderán los cambios no guardados de esta ficha de Carta.',
+          confirmLabel: 'Salir sin guardar',
+          tone: 'danger',
+        })
+      : false
+  }
+
+  async function resetGuestMenuForm() {
+    if (!(await confirmGuestMenuDiscard())) return false
+    discardGuestMenuForm()
+    return true
   }
 
   function setGuestMenuFormField<Key extends keyof GuestMenuForm>(
@@ -234,23 +261,26 @@ export function useGuestMenuManagement({
     }))
   }
 
-  function openNewGuestMenuItem(producto?: Producto) {
-    setGuestMenuEditId(null)
-    setGuestMenuImageFile(null)
-    setGuestMenuForm({
+  async function openNewGuestMenuItem(producto?: Producto) {
+    if (!(await confirmGuestMenuDiscard())) return false
+    const nextForm = {
       ...initialGuestMenuForm,
       producto_id: producto?.id || '',
       nombre_publico: producto?.nombre || '',
       categoria_publica: producto?.categoria || '',
       tipo: inferGuestKind(producto),
       foto_url: producto?.imagen_url || '',
-    })
+    }
+    setGuestMenuEditId(null)
+    setGuestMenuImageFile(null)
+    setGuestMenuForm(nextForm)
+    setGuestMenuFormBaseline(nextForm)
+    return true
   }
 
-  function openEditGuestMenuItem(item: GuestMenuAdminItem) {
-    setGuestMenuEditId(item.id)
-    setGuestMenuImageFile(null)
-    setGuestMenuForm({
+  async function openEditGuestMenuItem(item: GuestMenuAdminItem) {
+    if (!(await confirmGuestMenuDiscard())) return false
+    const nextForm: GuestMenuForm = {
       producto_id: item.producto_id || '',
       nombre_publico: item.nombre,
       categoria_publica: item.categoria,
@@ -275,7 +305,12 @@ export function useGuestMenuManagement({
       destacado: item.destacado,
       publicado: item.publicado,
       orden: String(item.orden),
-    })
+    }
+    setGuestMenuEditId(item.id)
+    setGuestMenuImageFile(null)
+    setGuestMenuForm(nextForm)
+    setGuestMenuFormBaseline(nextForm)
+    return true
   }
 
   async function saveGuestMenuItem() {
@@ -419,13 +454,13 @@ export function useGuestMenuManagement({
       })
 
       onToast(guestMenuEditId ? 'Ficha de carta actualizada' : 'Ficha de carta creada')
-      resetGuestMenuForm()
+      discardGuestMenuForm()
       await loadGuestMenuItems()
     } catch (error) {
       if (uploadedImagePath) {
         await supabase.storage.from('guest-menu').remove([uploadedImagePath])
       }
-      onError(error instanceof Error ? error.message : 'No se pudo guardar la ficha de carta')
+      onError(getOperationFailureMessage(error, 'No se pudo guardar la ficha de carta'))
     } finally {
       setGuestMenuSaving(false)
     }
@@ -528,7 +563,7 @@ export function useGuestMenuManagement({
     })
 
     if (guestMenuEditId === item.id) {
-      resetGuestMenuForm()
+      discardGuestMenuForm()
     }
 
     onToast('Ficha de carta eliminada')
@@ -644,7 +679,7 @@ export function useGuestMenuManagement({
     setLoadingGuestMenu(false)
     setGuestMenuSaving(false)
     setGuestMenuEnriching(false)
-    resetGuestMenuForm()
+    discardGuestMenuForm()
   }
 
   return {
@@ -655,6 +690,7 @@ export function useGuestMenuManagement({
     guestMenuEditId,
     guestMenuForm,
     guestMenuImageFile,
+    guestMenuDraftActive,
     publicGuestMenuItems,
     loadGuestMenuItems,
     setGuestMenuFormField,
