@@ -93,6 +93,7 @@ export function NotificationsBell({
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setOpen(false)
+        triggerRef.current?.focus()
       }
     }
 
@@ -117,6 +118,7 @@ export function NotificationsBell({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
+        aria-label={hasAlerts ? `Notificaciones: ${alerts.length} alertas` : 'Notificaciones sin alertas'}
         onClick={() => setOpen((current) => !current)}
         className={`relative flex items-center justify-center text-slate-600 ${
           mobile ? `h-[44px] w-[44px] ${ghostButton}` : `h-9 w-9 ${ghostButton}`

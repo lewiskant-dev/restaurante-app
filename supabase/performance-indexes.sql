@@ -4,6 +4,9 @@ create index if not exists productos_restaurant_nombre_idx
 create index if not exists productos_restaurant_categoria_idx
   on public.productos (restaurant_id, categoria);
 
+create index if not exists productos_restaurant_estado_nombre_idx
+  on public.productos (restaurant_id, activo, archivado, nombre);
+
 create index if not exists movimientos_stock_restaurant_created_at_idx
   on public.movimientos_stock (restaurant_id, created_at desc);
 
@@ -15,6 +18,9 @@ create index if not exists movimientos_stock_restaurant_categoria_created_at_idx
 
 create index if not exists albaranes_restaurant_fecha_idx
   on public.albaranes (restaurant_id, fecha desc);
+
+create index if not exists albaranes_restaurant_estado_fecha_idx
+  on public.albaranes (restaurant_id, anulado, fecha desc);
 
 create index if not exists albaran_lineas_restaurant_albaran_idx
   on public.albaran_lineas (restaurant_id, albaran_id);
@@ -71,5 +77,17 @@ create index if not exists inventario_cierre_lineas_producto_idx
 create index if not exists auditoria_restaurant_created_at_idx
   on public.auditoria (restaurant_id, created_at desc);
 
+create index if not exists auditoria_restaurant_entidad_created_at_idx
+  on public.auditoria (restaurant_id, entidad, created_at desc);
+
+create index if not exists auditoria_restaurant_accion_created_at_idx
+  on public.auditoria (restaurant_id, accion, created_at desc);
+
 create index if not exists mapeos_productos_restaurant_nombre_idx
   on public.mapeos_productos (restaurant_id, nombre_externo);
+
+create index if not exists guest_menu_items_restaurant_publicacion_orden_idx
+  on public.guest_menu_items (restaurant_id, publicado, orden, nombre_publico);
+
+create index if not exists tpv_importaciones_restaurant_created_at_idx
+  on public.tpv_importaciones (restaurant_id, created_at desc);

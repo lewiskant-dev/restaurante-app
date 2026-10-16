@@ -4,6 +4,7 @@ import type { Producto } from '@/types'
 import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import { fieldShell, ghostButton } from '@/components/ui/primitives'
 import { getStockConsumptionReadiness } from '@/lib/stockMovementReadiness'
+import { useDialogAccessibility } from '@/components/ui/useDialogAccessibility'
 
 const consumoMotivoOptions = [
   { value: 'Uso en cocina', label: 'Uso en cocina' },
@@ -39,6 +40,7 @@ export function ConsumoModal({
   onMotivoChange,
   onGuardar,
 }: ConsumoModalProps) {
+  const { dialogRef, titleId, descriptionId } = useDialogAccessibility(open, onClose)
   if (!open || !producto) return null
 
   const formReadiness = getStockConsumptionReadiness({
@@ -61,17 +63,23 @@ export function ConsumoModal({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        tabIndex={-1}
         className="w-full overflow-hidden rounded-t-3xl border border-white/80 bg-white shadow-xl lg:max-w-[520px] lg:rounded-[28px] lg:shadow-[0_30px_90px_rgba(15,23,42,0.18)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-4 pb-3 pt-4 lg:px-5 lg:pb-4 lg:pt-5">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">Registrar consumo</h3>
-            <p className="mt-1 text-sm text-slate-500">
+            <h3 id={titleId} className="text-base font-semibold text-slate-900">Registrar consumo</h3>
+            <p id={descriptionId} className="mt-1 text-sm text-slate-500">
               {producto.nombre} · stock actual: {producto.stock_actual} {producto.unidad}
             </p>
           </div>
-          <button type="button" onClick={onClose} className={`px-3 py-2 text-sm ${ghostButton}`}>
+          <button type="button" onClick={onClose} aria-label="Cerrar registro de consumo" className={`px-3 py-2 text-sm ${ghostButton}`}>
             ×
           </button>
         </div>

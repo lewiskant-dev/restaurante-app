@@ -581,9 +581,7 @@ export default function HomePage() {
       resetAlbaranState()
     }
 
-    if (hasPermission(role, 'auditoria_view')) {
-      tasks.push(loadAuditoria())
-    } else {
+    if (!hasPermission(role, 'auditoria_view')) {
       setAuditoria([])
     }
 
@@ -1088,6 +1086,21 @@ export default function HomePage() {
     setLoadingAuditoria(false)
   }
 
+  const loadAuditoriaEvent = useEffectEvent(loadAuditoria)
+
+  useEffect(() => {
+    if (
+      tab !== 'auditoria' ||
+      !activeRestaurantId ||
+      !hasPermission(currentUserRole, 'auditoria_view')
+    ) {
+      return
+    }
+
+    const timer = window.setTimeout(() => void loadAuditoriaEvent(), 0)
+    return () => window.clearTimeout(timer)
+  }, [tab, activeRestaurantId, currentUserRole])
+
   async function loadMapeosProductos() {
     if (!activeRestaurantId) {
       setMapeosProductos([])
@@ -1226,7 +1239,9 @@ export default function HomePage() {
       return
     }
 
-    await loadAuditoria()
+    if (tab === 'auditoria') {
+      await loadAuditoria()
+    }
   }
 
   function puedeDeshacerAuditoria(item: Auditoria) {

@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { ActionMenu } from '@/components/ui/ActionMenu'
 import type { Albaran, AlbaranLinea } from '@/types'
 import { formatEuro, formatFecha } from '@/features/home/utils'
+import { useDialogAccessibility } from '@/components/ui/useDialogAccessibility'
 
 type DetalleAlbaranModalProps = {
   open: boolean
@@ -24,6 +25,7 @@ export function DetalleAlbaranModal({
   onEditar,
   onAnular,
 }: DetalleAlbaranModalProps) {
+  const { dialogRef, titleId, descriptionId } = useDialogAccessibility(open, onClose)
   if (!open || !detalleAlbaran) return null
 
   return (
@@ -32,13 +34,19 @@ export function DetalleAlbaranModal({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        tabIndex={-1}
         className="max-h-[90vh] w-full overflow-y-auto rounded-t-3xl bg-white p-4 shadow-xl lg:max-w-[860px] lg:rounded-[28px] lg:border lg:border-white/80 lg:p-5 lg:shadow-[0_30px_90px_rgba(15,23,42,0.18)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 lg:pb-4">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">{detalleAlbaran.numero}</h3>
-            <p className="mt-1 text-sm text-slate-500">
+            <h3 id={titleId} className="text-base font-semibold text-slate-900">{detalleAlbaran.numero}</h3>
+            <p id={descriptionId} className="mt-1 text-sm text-slate-500">
               {detalleAlbaran.proveedor_nombre || 'Sin proveedor'}
             </p>
           </div>

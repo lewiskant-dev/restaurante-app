@@ -4,6 +4,7 @@ import { useMemo, type ReactNode } from 'react'
 import type { Albaran } from '@/types'
 import { formatEuro, formatFecha } from '@/features/home/utils'
 import { fieldShell, ghostButton, surfaceCard } from '@/components/ui/primitives'
+import { ProgressiveListFooter, useProgressiveList } from '@/components/ui/ProgressiveList'
 import {
   albaranMatchesHealthFilter,
   buildAlbaranHealthSummary,
@@ -106,6 +107,7 @@ export function AlbaranesTab({
       ),
     [albaranHealthFilter, albaranesFiltrados]
   )
+  const progressiveAlbaranes = useProgressiveList(albaranesOperativosFiltrados)
   const albaranHealthFilterOptions: Array<{ value: AlbaranHealthFilter; label: string; count: number }> = [
     { value: 'todos', label: 'Todos', count: albaranesFiltrados.length },
     {
@@ -251,7 +253,7 @@ export function AlbaranesTab({
         )}
 
         {!loadingAlbaranes &&
-          albaranesOperativosFiltrados.map((alb) => (
+          progressiveAlbaranes.visibleItems.map((alb) => (
             <div key={alb.id} className="mb-2 last:mb-0">
               <button
                 type="button"
@@ -302,6 +304,14 @@ export function AlbaranesTab({
               })()}
             </div>
           ))}
+        {!loadingAlbaranes ? (
+          <ProgressiveListFooter
+            visibleCount={progressiveAlbaranes.visibleCount}
+            totalCount={progressiveAlbaranes.totalCount}
+            hasMore={progressiveAlbaranes.hasMore}
+            onShowMore={progressiveAlbaranes.showMore}
+          />
+        ) : null}
       </div>
     </div>
   )

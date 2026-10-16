@@ -81,7 +81,8 @@ Debe devolver `200`; esta ruta no consulta Supabase ni expone configuración int
 
 La respuesta web debe incluir también `Content-Security-Policy`, `X-Content-Type-Options`,
 `X-Frame-Options`, `Referrer-Policy` y `Permissions-Policy`. En producción debe incluir
-`Strict-Transport-Security`.
+`Strict-Transport-Security`. Las rutas `/api` deben incluir `Cache-Control: no-store`, `Pragma:
+no-cache` y `x-request-id`.
 
 Después, entrar como `administrador` o `master` y abrir `Informes > Diagnóstico del despliegue`. La ruta interna autenticada es:
 
@@ -273,3 +274,28 @@ Cada vez que añadas una fase sensible:
 - Buscar errores del navegador por `event=client_error` y correlacionarlos mediante `operation_id`.
 - Revisar fallos de OCR e importacion TPV junto con la hora, el restaurante y el identificador de operacion, sin registrar documentos ni credenciales.
 - Escalar a una plataforma externa solo si el volumen o la retencion de logs incluida deja de ser suficiente.
+
+## 11. Seguridad operativa y privacidad
+
+- Revisar mensualmente usuarios privilegiados, bloqueados e inactivos.
+- Mantener corta la caducidad de JWT y configurar límites de sesión incluidos en el plan.
+- Probar el bloqueo de una cuenta desde una sesión distinta y confirmar que no puede renovarse.
+- Aprobar por escrito los plazos de conservación antes de automatizar cualquier borrado.
+- Atender exportaciones o supresiones en Auth, base de datos y Storage como una única operación.
+- Seguir [security-privacy.md](/Users/jorge/restaurante-app/supabase/security-privacy.md:1).
+
+## 12. Accesibilidad y QA visual
+
+- Recorrer acceso, navegación, selectores, menús y modales usando solo teclado.
+- Confirmar entrada, contención y devolución de foco en todos los diálogos.
+- Probar con reducción de movimiento y revisar que el foco siga siendo visible.
+- Revisar móvil, tablet y escritorio sin solapes, cortes de texto ni desplazamiento horizontal.
+- Seguir [accessibility-qa.md](/Users/jorge/restaurante-app/supabase/accessibility-qa.md:1).
+
+## 13. Rendimiento con datos reales
+
+- Aplicar `performance-indexes.sql` después de las migraciones multi-restaurante y financieras.
+- Probar volumen sintético exclusivamente en Supabase local o en una restauración aislada.
+- Confirmar carga progresiva en movimientos, auditoría y albaranes con miles de registros.
+- Revisar planes de consulta e índices antes de ampliar infraestructura o contratar servicios.
+- Seguir [performance-indexes.md](/Users/jorge/restaurante-app/supabase/performance-indexes.md:1).

@@ -12,6 +12,7 @@ import {
 } from '@/lib/recipePricing'
 import { getRecipeFormReadiness } from '@/lib/recipeFormReadiness'
 import type { Producto } from '@/types'
+import { useDialogAccessibility } from '@/components/ui/useDialogAccessibility'
 
 type RecetaModalProps = {
   open: boolean
@@ -62,6 +63,7 @@ export function RecetaModal({
   onRemoveLinea,
   onGuardar,
 }: RecetaModalProps) {
+  const { dialogRef, titleId, descriptionId } = useDialogAccessibility(open, onClose)
   const productosById = useMemo(
     () => new Map(productos.map((producto) => [producto.id, producto])),
     [productos]
@@ -146,15 +148,21 @@ export function RecetaModal({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        tabIndex={-1}
         className="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/80 bg-white shadow-xl lg:max-h-[90vh] lg:max-w-[760px] lg:rounded-[30px] lg:shadow-[0_30px_90px_rgba(15,23,42,0.18)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-100 bg-white px-4 pb-3 pt-4 lg:px-5 lg:pb-4 lg:pt-5">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">
+            <h3 id={titleId} className="text-base font-semibold text-slate-900">
               {recetaEditId ? 'Editar receta' : 'Nueva receta'}
             </h3>
-            <p className="mt-0.5 text-[12px] text-slate-500">
+            <p id={descriptionId} className="mt-0.5 text-[12px] text-slate-500">
               Define ingredientes, raciones y precio para calcular consumo y margen.
             </p>
           </div>

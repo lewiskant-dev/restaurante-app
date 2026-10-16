@@ -18,7 +18,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <a href="#main-content" className="skip-link">
+          Saltar al contenido
+        </a>
+        <div id="main-content" tabIndex={-1} className="flex min-h-full flex-1 flex-col">
+          {children}
+        </div>
+      </body>
     </html>
   )
 }

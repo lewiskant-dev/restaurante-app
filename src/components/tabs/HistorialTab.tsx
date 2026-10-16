@@ -3,6 +3,7 @@
 import type { MovimientoConProducto } from '@/features/home/types'
 import { formatFechaHora } from '@/features/home/utils'
 import { fieldShell, ghostButton, softPanel, surfaceCard } from '@/components/ui/primitives'
+import { ProgressiveListFooter, useProgressiveList } from '@/components/ui/ProgressiveList'
 
 type HistorialTabProps = {
   movimientosFiltrados: MovimientoConProducto[]
@@ -21,6 +22,8 @@ export default function HistorialTab({
   onExportar,
   onAnularMovimiento,
 }: HistorialTabProps) {
+  const progressiveMovements = useProgressiveList(movimientosFiltrados)
+
   return (
     <div className="space-y-4 sm:space-y-5">
       <div>
@@ -84,7 +87,7 @@ export default function HistorialTab({
         )}
 
         {!loadingMovimientos &&
-          movimientosFiltrados.map((mov) => {
+          progressiveMovements.visibleItems.map((mov) => {
             const canAnular = !mov.anulado && (!mov.origen_tipo || mov.origen_tipo === 'manual')
             return (
               <div
@@ -142,6 +145,14 @@ export default function HistorialTab({
             </div>
             )
           })}
+        {!loadingMovimientos ? (
+          <ProgressiveListFooter
+            visibleCount={progressiveMovements.visibleCount}
+            totalCount={progressiveMovements.totalCount}
+            hasMore={progressiveMovements.hasMore}
+            onShowMore={progressiveMovements.showMore}
+          />
+        ) : null}
       </div>
     </div>
   )

@@ -63,6 +63,7 @@ export function ActionMenu({ children, label = 'Acciones' }: ActionMenuProps) {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setOpen(false)
+        triggerRef.current?.focus()
       }
     }
 
@@ -87,6 +88,7 @@ export function ActionMenu({ children, label = 'Acciones' }: ActionMenuProps) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
+        aria-label={isDots ? 'Abrir menú de acciones' : label}
         onClick={() => setOpen((current) => !current)}
         className={`cursor-pointer text-xs font-semibold text-slate-700 ${
           isDots

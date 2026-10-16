@@ -2,6 +2,7 @@
 
 import { IntegratedSelect } from '@/components/ui/IntegratedSelect'
 import { fieldShell, ghostButton, primaryGradientButton, softPanel } from '@/components/ui/primitives'
+import { useDialogAccessibility } from '@/components/ui/useDialogAccessibility'
 
 type ProfilePanelProps = {
   open: boolean
@@ -64,6 +65,7 @@ export function ProfilePanel({
   onUpdatePassword,
   onRestaurantChange,
 }: ProfilePanelProps) {
+  const { dialogRef, titleId, descriptionId } = useDialogAccessibility(open, onClose)
   if (!open) return null
   const restaurantOptions = accessibleRestaurants.map((restaurant) => ({
     value: restaurant.id,
@@ -82,13 +84,19 @@ export function ProfilePanel({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        tabIndex={-1}
         className="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/80 bg-white shadow-xl lg:max-w-[760px] lg:rounded-[30px] lg:shadow-[0_30px_90px_rgba(15,23,42,0.18)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-4 pb-3 pt-4 lg:pb-4 lg:pt-5">
           <div>
-            <h3 className="text-base font-semibold text-slate-900 lg:text-[1.1rem]">Información personal</h3>
-            <p className="mt-1 text-sm text-slate-500">Gestiona tu perfil y seguridad.</p>
+            <h3 id={titleId} className="text-base font-semibold text-slate-900 lg:text-[1.1rem]">Información personal</h3>
+            <p id={descriptionId} className="mt-1 text-sm text-slate-500">Gestiona tu perfil y seguridad.</p>
           </div>
           <button
             type="button"

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { fieldShell } from '@/components/ui/primitives'
 
 export type IntegratedSelectOption = {
@@ -47,6 +47,8 @@ export function IntegratedSelect({
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const listboxId = useId()
   const selectedOption = options.find((option) => option.value === value)
   const visibleOptions = useMemo(() => {
     const search = normalize(query)
@@ -64,13 +66,25 @@ export function IntegratedSelect({
       }
     }
 
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setOpen(false)
+      triggerRef.current?.focus()
+    }
+
     document.addEventListener('pointerdown', handlePointerDown)
-    return () => document.removeEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleEscape)
+    }
   }, [open])
 
   return (
     <div ref={rootRef} className={`relative ${className}`}>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => {
           if (disabled) return
@@ -81,6 +95,16 @@ export function IntegratedSelect({
         className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left ${fieldShell} ${buttonClassName}`}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-controls={open ? listboxId : undefined}
+        aria-label={label || placeholder}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+            if (open) return
+            event.preventDefault()
+            setQuery('')
+            setOpen(true)
+          }
+        }}
       >
         <span className="min-w-0">
           {label ? (
@@ -97,11 +121,14 @@ export function IntegratedSelect({
 
       {open ? (
         <div
+          id={listboxId}
           role="listbox"
+          aria-label={label || placeholder}
           className={`absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 max-h-72 overflow-y-auto rounded-[18px] border border-slate-200 bg-white p-2 shadow-[0_20px_48px_rgba(15,23,42,0.18)] ${menuClassName}`}
         >
           {searchable ? (
             <input
+              aria-label={`Buscar en ${label || placeholder}`}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Buscar..."

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { fieldShell, ghostButton } from '@/components/ui/primitives'
+import { useDialogAccessibility } from '@/components/ui/useDialogAccessibility'
 
 export type PromptActionRequest = {
   title: string
@@ -43,6 +44,7 @@ function PromptActionDialogContent({
   onConfirm: (value: string) => void
 }) {
   const [value, setValue] = useState(request.initialValue ?? '')
+  const { dialogRef, titleId, descriptionId } = useDialogAccessibility(true, onCancel)
 
   const isDanger = request.tone === 'danger'
 
@@ -52,6 +54,12 @@ function PromptActionDialogContent({
       onClick={onCancel}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        tabIndex={-1}
         className="w-full max-w-lg overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_30px_90px_rgba(15,23,42,0.22)]"
         onClick={(event) => event.stopPropagation()}
       >
@@ -76,8 +84,8 @@ function PromptActionDialogContent({
               <path d="M10.3 4.7 2.9 17.4A2 2 0 0 0 4.6 20h14.8a2 2 0 0 0 1.7-2.6L13.7 4.7a2 2 0 0 0-3.4 0Z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold tracking-tight text-slate-950">{request.title}</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{request.description}</p>
+          <h3 id={titleId} className="text-lg font-semibold tracking-tight text-slate-950">{request.title}</h3>
+          <p id={descriptionId} className="mt-2 text-sm leading-6 text-slate-600">{request.description}</p>
 
           <label className="mt-5 block">
             <span className="mb-2 block text-sm font-semibold text-slate-700">{request.label}</span>

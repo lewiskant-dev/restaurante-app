@@ -11,6 +11,7 @@ import {
   getAuditEntries,
 } from '@/features/home/utils'
 import { fieldShell, ghostButton, softPanel, surfaceCard } from '@/components/ui/primitives'
+import { ProgressiveListFooter, useProgressiveList } from '@/components/ui/ProgressiveList'
 
 type AuditoriaTabProps = {
   auditoria: Auditoria[]
@@ -71,6 +72,7 @@ export function AuditoriaTab({
   onDeshacer,
   puedeDeshacerAuditoria,
 }: AuditoriaTabProps) {
+  const progressiveAudit = useProgressiveList(auditoriaFiltrada)
   const sessionEvents = auditoriaFiltrada.filter((item) => item.entidad === 'sesion').length
   const profileEvents = auditoriaFiltrada.filter((item) => item.entidad === 'perfil').length
   const userEvents = auditoriaFiltrada.filter((item) => item.entidad === 'usuario').length
@@ -272,7 +274,7 @@ export function AuditoriaTab({
         )}
 
         {!loadingAuditoria &&
-          auditoriaFiltrada.map((item) => (
+          progressiveAudit.visibleItems.map((item) => (
             <details key={item.id} className="group border-b border-slate-100 py-3 last:border-b-0">
               <summary className="cursor-pointer list-none">
                 <div className="flex items-start justify-between gap-3">
@@ -367,6 +369,14 @@ export function AuditoriaTab({
               )}
             </details>
           ))}
+        {!loadingAuditoria ? (
+          <ProgressiveListFooter
+            visibleCount={progressiveAudit.visibleCount}
+            totalCount={progressiveAudit.totalCount}
+            hasMore={progressiveAudit.hasMore}
+            onShowMore={progressiveAudit.showMore}
+          />
+        ) : null}
         </div>
       </div>
     </>

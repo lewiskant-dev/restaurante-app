@@ -3,6 +3,7 @@
 import type { ProveedorForm } from '@/features/home/types'
 import { fieldShell, ghostButton, primaryGradientButton } from '@/components/ui/primitives'
 import { getProviderFormReadiness } from '@/lib/providerFormReadiness'
+import { useDialogAccessibility } from '@/components/ui/useDialogAccessibility'
 
 type ProveedorModalProps = {
   open: boolean
@@ -23,6 +24,7 @@ export function ProveedorModal({
   onFormChange,
   onGuardar,
 }: ProveedorModalProps) {
+  const { dialogRef, titleId } = useDialogAccessibility(open, onClose)
   if (!open) return null
 
   const formReadiness = getProviderFormReadiness({
@@ -44,16 +46,22 @@ export function ProveedorModal({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         className="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/80 bg-white shadow-xl lg:max-w-[640px] lg:rounded-[30px] lg:shadow-[0_30px_90px_rgba(15,23,42,0.18)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-4 pb-3 pt-4 lg:px-5 lg:pb-4 lg:pt-5">
-          <h3 className="text-base font-semibold text-slate-900">
+          <h3 id={titleId} className="text-base font-semibold text-slate-900">
             {proveedorEditId ? 'Editar proveedor' : 'Nuevo proveedor'}
           </h3>
           <button
             type="button"
             onClick={onClose}
+            aria-label="Cerrar proveedor"
             className={`px-3 py-2 text-sm ${ghostButton}`}
           >
             ×
