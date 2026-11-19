@@ -2,7 +2,7 @@ name: Production smoke
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '17 6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -24,6 +24,14 @@ jobs:
       - name: Request production ping
         run: |
           base_url="${PRODUCTION_URL%/}"
+          case "$base_url" in
+            https://*) ;;
+            *)
+              echo "::error::PRODUCTION_URL must be an HTTPS origin without /api/ping"
+              exit 1
+              ;;
+          esac
+          echo "Checking ${base_url}/api/ping"
           curl \
             --fail \
             --silent \
@@ -40,8 +48,15 @@ jobs:
         run: |
           node -e "
             const fs = require('node:fs');
-            const payload = JSON.parse(fs.readFileSync('ping.json', 'utf8'));
+            const body = fs.readFileSync('ping.json', 'utf8');
             const headers = fs.readFileSync('ping-headers.txt', 'utf8');
+            let payload;
+            try {
+              payload = JSON.parse(body);
+            } catch {
+              console.error('Production ping did not return JSON:', body.slice(0, 500));
+              process.exit(1);
+            }
             const requestId = headers.match(/^x-request-id:\s*([^\r\n]+)/im)?.[1]?.trim();
             if (payload.ok !== true || payload.status !== 'ok' || payload.service !== 'nexo') {
               console.error('Unexpected production ping response:', payload);

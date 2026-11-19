@@ -111,6 +111,10 @@ Orden recomendado:
 Si quieres empezar de cero sin tocar funcionalidades, ejecutar después [supabase/reset-operational-data.sql](supabase/reset-operational-data.sql).
 
 Documentacion de apoyo:
+- [docs/manual-por-rol.md](docs/manual-por-rol.md)
+- [docs/procedimientos-operativos.md](docs/procedimientos-operativos.md)
+- [docs/alta-restaurante.md](docs/alta-restaurante.md)
+- [docs/respuesta-incidencias.md](docs/respuesta-incidencias.md)
 - [supabase/roles-setup.md](supabase/roles-setup.md)
 - [supabase/multi-restaurant-setup.md](supabase/multi-restaurant-setup.md)
 - [supabase/operacion-nexo.md](supabase/operacion-nexo.md)
@@ -148,7 +152,8 @@ La respuesta publica no consulta Supabase ni expone secretos. Devuelve:
 - `status`: `ok`.
 - `service`: `nexo`.
 
-El workflow `Production smoke` repite esta comprobacion cada 15 minutos. Para activarlo,
+El workflow `Production smoke` repite esta comprobacion una vez al dia para mantenerse
+dentro de la cuota gratuita de GitHub Actions. Para activarlo,
 crea la variable de repositorio `PRODUCTION_URL` en GitHub (`Settings > Secrets and
 variables > Actions > Variables`) con el origen publico, por ejemplo
 `https://nexo.example.com`. Tambien puede ejecutarse manualmente desde `Actions`.

@@ -6,6 +6,13 @@ Para una puesta en producción completa, usa también [production-checklist.md](
 
 Para copias, restauraciones y simulacros, usa [backup-recovery.md](/Users/jorge/restaurante-app/supabase/backup-recovery.md:1). Una copia de Postgres no incluye los archivos fisicos de Storage; `albaranes` y `guest-menu` deben copiarse y validarse por separado.
 
+Manuales para el equipo:
+
+- [Manual por rol](/Users/jorge/restaurante-app/docs/manual-por-rol.md:1)
+- [Procedimientos operativos](/Users/jorge/restaurante-app/docs/procedimientos-operativos.md:1)
+- [Alta de restaurante](/Users/jorge/restaurante-app/docs/alta-restaurante.md:1)
+- [Respuesta ante incidencias](/Users/jorge/restaurante-app/docs/respuesta-incidencias.md:1)
+
 ## Verificación local del proyecto
 
 Antes de subir cambios importantes:
@@ -45,11 +52,12 @@ La ruta devuelve:
 
 ## Monitor de disponibilidad
 
-El workflow de GitHub Actions `Production smoke` consulta `/api/ping` cada 15 minutos,
+El workflow de GitHub Actions `Production smoke` consulta `/api/ping` una vez al dia,
+con ejecucion manual disponible para comprobaciones posteriores a un despliegue,
 reintenta fallos transitorios y valida el contrato JSON. Para activarlo:
 
 1. Abrir `Settings > Secrets and variables > Actions > Variables` en GitHub.
-2. Crear `PRODUCTION_URL` con el origen del despliegue, sin ruta final.
+2. Crear `PRODUCTION_URL` con el origen HTTPS del despliegue, sin `/api/ping` ni barra final.
 3. Ejecutar `Production smoke` manualmente desde `Actions` para validar la configuracion.
 4. Activar las notificaciones de workflows fallidos para los responsables operativos.
 

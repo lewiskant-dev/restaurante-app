@@ -269,7 +269,8 @@ Cada vez que añadas una fase sensible:
 
 ## 10. Observabilidad sin coste adicional
 
-- Confirmar que `Production smoke` se ejecuta cada 15 minutos y que GitHub notifica sus fallos.
+- Confirmar que `Production smoke` se ejecuta diariamente y que GitHub notifica sus fallos.
+  Ejecutarlo tambien manualmente despues de cada despliegue relevante.
 - Buscar incidencias de servidor por `request_id` en los logs del hosting.
 - Buscar errores del navegador por `event=client_error` y correlacionarlos mediante `operation_id`.
 - Revisar fallos de OCR e importacion TPV junto con la hora, el restaurante y el identificador de operacion, sin registrar documentos ni credenciales.
@@ -299,3 +300,11 @@ Cada vez que añadas una fase sensible:
 - Confirmar carga progresiva en movimientos, auditoría y albaranes con miles de registros.
 - Revisar planes de consulta e índices antes de ampliar infraestructura o contratar servicios.
 - Seguir [performance-indexes.md](/Users/jorge/restaurante-app/supabase/performance-indexes.md:1).
+
+## 14. Documentación operativa
+
+- Entregar y revisar el manual correspondiente con cada rol.
+- Formar al equipo en cierres, anulaciones, importaciones TPV y resolución de descuadres.
+- Completar el checklist de alta antes de entregar un restaurante nuevo.
+- Usar una plantilla común para registrar y cerrar incidencias.
+- Revisar los documentos tras cualquier cambio de permisos o flujo operativo.
