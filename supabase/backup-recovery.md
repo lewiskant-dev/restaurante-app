@@ -53,15 +53,36 @@ forma explicita cuando el RPO de 24 horas no sea aceptable.
 Ejecutar en una maquina controlada con Supabase CLI y Docker. La URL debe proceder del gestor
 de secretos y no quedar en el historial del shell.
 
+En el Mac operativo de Nexo, el flujo recomendado es:
+
+```bash
+npm run backup:prod
+```
+
+El script solicita la URI **Transaction pooler** que muestra Supabase en `Connect`, conservando
+el marcador `[YOUR-PASSWORD]`, y despues pide la contrasena de forma oculta. Esta conexion usa
+IPv4 y evita el fallo de la conexion directa en redes sin IPv6. Codifica automaticamente los
+caracteres reservados de la contrasena, descarga temporalmente la CLI mediante `npx` y guarda
+la copia con permisos privados en `~/NexoBackups/<fecha-UTC>`. Rechaza destinos dentro del
+repositorio y genera hashes verificables. Para revisar una copia existente:
+
+```bash
+npm run backup:verify -- "$HOME/NexoBackups/<fecha-UTC>"
+```
+
+Este proceso cubre Postgres y descarga tambien los objetos fisicos de `albaranes` y
+`guest-menu` usando la credencial local de servicio. Cada bloque genera sus propios hashes y
+el resumen de Storage conserva solo conteos y bytes por bucket.
+
 ```bash
 read -s NEXO_DB_URL
 export NEXO_DB_URL
 mkdir -p "backups/$(date -u +%Y%m%dT%H%M%SZ)"
 BACKUP_DIR="$(find backups -mindepth 1 -maxdepth 1 -type d | sort | tail -1)"
 
-supabase db dump --db-url "$NEXO_DB_URL" -f "$BACKUP_DIR/roles.sql" --role-only
-supabase db dump --db-url "$NEXO_DB_URL" -f "$BACKUP_DIR/schema.sql"
-supabase db dump --db-url "$NEXO_DB_URL" -f "$BACKUP_DIR/data.sql" --use-copy --data-only \
+supabase db dump --remote="$NEXO_DB_URL" -f "$BACKUP_DIR/roles.sql" --role-only
+supabase db dump --remote="$NEXO_DB_URL" -f "$BACKUP_DIR/schema.sql"
+supabase db dump --remote="$NEXO_DB_URL" -f "$BACKUP_DIR/data.sql" --use-copy --data-only \
   -x "storage.buckets_vectors" -x "storage.vector_indexes"
 
 shasum -a 256 "$BACKUP_DIR"/*.sql > "$BACKUP_DIR/SHA256SUMS"

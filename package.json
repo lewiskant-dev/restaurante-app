@@ -10,6 +10,9 @@
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --experimental-strip-types tests/**/*.test.mts",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
+    "backup:prod": "bash scripts/backup-production.sh",
+    "backup:storage": "node --env-file=.env.local scripts/backup-storage.mjs",
+    "backup:verify": "bash scripts/verify-backup.sh",
     "audit:prod": "npm audit --omit=dev --audit-level=high",
     "typecheck": "tsc --noEmit",
     "verify": "npm run lint && npm run test && npm run typecheck && npx next build --webpack"
