@@ -70,6 +70,26 @@ repositorio y genera hashes verificables. Para revisar una copia existente:
 npm run backup:verify -- "$HOME/NexoBackups/<fecha-UTC>"
 ```
 
+Para conservar una segunda copia sin contratar almacenamiento, conectar un disco externo y
+exportar el backup como imagen cifrada AES-256:
+
+```bash
+npm run backup:export -- "$HOME/NexoBackups/<fecha-UTC>" "/Volumes/<disco-externo>"
+```
+
+El comando rechaza destinos situados en el mismo volumen que el backup original, solicita la
+contrasena dos veces sin mostrarla, verifica el backup antes de copiarlo y valida la imagen y
+su hash al terminar. La contrasena debe guardarse fuera del Mac; no se incluye en la imagen,
+el repositorio ni el historial del terminal.
+
+Para recuperar la copia, comprobar primero el hash desde el volumen externo y abrir la imagen:
+
+```bash
+cd "/Volumes/<disco-externo>"
+shasum -a 256 -c "NexoBackup-<fecha-UTC>.dmg.sha256"
+open "NexoBackup-<fecha-UTC>.dmg"
+```
+
 Este proceso cubre Postgres y descarga tambien los objetos fisicos de `albaranes` y
 `guest-menu` usando la credencial local de servicio. Cada bloque genera sus propios hashes y
 el resumen de Storage conserva solo conteos y bytes por bucket.
@@ -129,6 +149,18 @@ la API de Storage o un cliente S3 compatible.
 Una restauracion administrada sobre el mismo proyecto provoca indisponibilidad. Antes de usarla
 en produccion se debe comunicar la ventana y confirmar que no hay escrituras en curso.
 
+Para el simulacro local, una vez restaurado Postgres en el stack de Supabase, los archivos
+fisicos pueden reponerse con:
+
+```bash
+SUPABASE_URL=http://127.0.0.1:54321 \
+SUPABASE_SERVICE_ROLE_KEY='<service-role-local>' \
+npm run restore:storage:local -- "$HOME/NexoBackups/<fecha-UTC>"
+```
+
+El script rechaza cualquier host que no sea `127.0.0.1` o `localhost`; no puede utilizarse
+contra produccion.
+
 ## Criterios de exito
 
 - Los hashes del backup son validos.
@@ -140,6 +172,8 @@ en produccion se debe comunicar la ventana y confirmar que no hay escrituras en 
 - El RPO y RTO reales quedan medidos y dentro del objetivo o generan una accion correctiva.
 
 ## Registro de simulacro
+
+Primer ejercicio completado: [simulacro-recuperacion-2026-11-20.md](../docs/simulacro-recuperacion-2026-11-20.md).
 
 Crear una copia de esta tabla en el sistema interno de incidencias por cada ejercicio:
 

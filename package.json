@@ -13,6 +13,8 @@
     "backup:prod": "bash scripts/backup-production.sh",
     "backup:storage": "node --env-file=.env.local scripts/backup-storage.mjs",
     "backup:verify": "bash scripts/verify-backup.sh",
+    "backup:export": "bash scripts/export-encrypted-backup.sh",
+    "restore:storage:local": "node scripts/restore-storage-local.mjs",
     "audit:prod": "npm audit --omit=dev --audit-level=high",
     "typecheck": "tsc --noEmit",
     "verify": "npm run lint && npm run test && npm run typecheck && npx next build --webpack"
