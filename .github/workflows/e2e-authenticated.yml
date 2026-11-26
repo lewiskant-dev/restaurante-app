@@ -76,7 +76,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run authenticated E2E tests
-        run: npx playwright test --project=chromium authenticated.spec.ts roles.spec.ts isolation.spec.ts
+        run: npx playwright test --project=chromium authenticated.spec.ts roles.spec.ts isolation.spec.ts operations.spec.ts
 
       - name: Upload Playwright report
         if: failure()

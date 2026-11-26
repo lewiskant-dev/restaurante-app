@@ -197,6 +197,8 @@ La matriz de roles y el aislamiento automatizado se ejecutan desde el workflow m
 proyecto Supabase y cuentas sin datos reales; nunca reutilizar credenciales de producción.
 En el proyecto dedicado se puede ejecutar `e2e-fixtures.sql` después de crear las seis
 cuentas `e2e-*@nexo.test`; el script no forma parte de las migraciones de producción.
+El mismo workflow prueba escrituras reales de producto, ajuste y consumo de stock y proveedor;
+los registros creados se archivan al finalizar el recorrido correcto.
 
 Entrar como `Master` y comprobar:
 

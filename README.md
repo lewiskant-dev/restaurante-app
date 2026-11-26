@@ -87,8 +87,10 @@ El workflow manual `Authenticated E2E` utiliza un Environment de GitHub llamado 
 Configura allí `E2E_BASE_URL`, los secretos anteriores y la variable
 `E2E_ENVIRONMENT_CONFIRMATION=dedicated-e2e`. El workflow falla si falta alguna pieza.
 
-No uses credenciales de producción. Esta fase sólo lee datos; los recorridos con escritura
-se habilitarán únicamente contra un proyecto Supabase exclusivo para E2E.
+No uses credenciales de producción. Los recorridos con escritura solo se habilitan cuando
+`E2E_ENVIRONMENT_CONFIRMATION=dedicated-e2e`: crean un producto y un proveedor, verifican
+ajuste y consumo de stock y archivan los registros al terminar. Deben ejecutarse únicamente
+contra un proyecto Supabase exclusivo para E2E.
 
 ## Puesta en marcha de Supabase
 
